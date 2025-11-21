@@ -42,21 +42,8 @@
 
 // SendProp::m_Flags.
 #define SPROP_UNSIGNED			(1<<0)	// Unsigned integer data.
-
-#define SPROP_COORD				(1<<1)	// If this is set, the float/vector is treated like a world coordinate.
-										// Note that the bit count is ignored in this case.
-
-#define SPROP_NOSCALE			(1<<2)	// For floating point, don't scale into range, just take value as is.
-
-#define SPROP_ROUNDDOWN			(1<<3)	// For floating point, limit high value to range minus one bit unit
-
-#define SPROP_ROUNDUP			(1<<4)	// For floating point, limit low value to range minus one bit unit
-
-#define SPROP_NORMAL			(1<<5)	// If this is set, the vector is treated like a normal (only valid for vectors)
 							
 #define SPROP_EXCLUDE			(1<<6)	// This is an exclude prop (not excludED, but it points at another prop to be excluded).
-
-#define SPROP_XYZE				(1<<7)	// Use XYZ/Exponent encoding for vectors.
 
 #define SPROP_INSIDEARRAY		(1<<8)	// This tells us that the property is inside an array, so it shouldn't be put into the
 										// flattened property list. Its array will point at it when it needs to.
@@ -72,12 +59,6 @@
 										// (ie: for all automatically-chained base classes).
 										// In this case, it can get rid of this SendPropDataTable altogether and spare the
 										// trouble of walking the hierarchy more than necessary.
-
-#define SPROP_COORD_MP					(1<<13) // Like SPROP_COORD, but special handling for multiplayer games
-#define SPROP_COORD_MP_LOWPRECISION 	(1<<14) // Like SPROP_COORD, but special handling for multiplayer games where the fractional component only gets a 3 bits instead of 5
-#define SPROP_COORD_MP_INTEGRAL			(1<<15) // SPROP_COORD_MP, but coordinates are rounded to integral boundaries
-
-#define SPROP_VARINT					SPROP_NORMAL	// reuse existing flag so we don't break demo. note you want to include SPROP_UNSIGNED if needed, its more efficient
 
 #define SPROP_NUMFLAGBITS_NETWORKED		16
 

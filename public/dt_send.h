@@ -657,7 +657,7 @@ SendProp SendPropVector(
 	int offset,
 	int sizeofVar=SIZEOF_IGNORE,
 	int nBits=32,					// Number of bits (for each floating-point component) to use when encoding.
-	int flags=SPROP_NOSCALE,
+	int flags=0,
 	float fLowValue=0.0f,			// For floating point, low and high values.
 	float fHighValue=HIGH_DEFAULT,	// High value. If HIGH_DEFAULT, it's (1<<nBits).
 	SendVarProxyFn varProxy=SendProxy_VectorToVector
@@ -668,7 +668,7 @@ SendProp SendPropVectorXY(
 	int offset,
 	int sizeofVar=SIZEOF_IGNORE,
 	int nBits=32,					// Number of bits (for each floating-point component) to use when encoding.
-	int flags=SPROP_NOSCALE,
+	int flags=0,
 	float fLowValue=0.0f,			// For floating point, low and high values.
 	float fHighValue=HIGH_DEFAULT,	// High value. If HIGH_DEFAULT, it's (1<<nBits).
 	SendVarProxyFn varProxy=SendProxy_VectorXYToVectorXY
