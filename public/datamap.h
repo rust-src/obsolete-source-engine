@@ -302,6 +302,46 @@ struct datamap_t
 #if defined( _DEBUG )
 	bool				bValidityChecked = false;
 #endif // _DEBUG
+
+#if defined( GAME_DLL ) // serverside only - exposed for plugins to make iterating over all datamaps easy.
+	datamap_t()
+	{
+		if (!g_pHeadDataMap)
+			g_pHeadDataMap = this;
+
+		previousDataMap = g_pCurrentDataMap;
+		if (previousDataMap) // For the first dataMap this will be null
+			previousDataMap->nextDataMap = this
+
+		g_pCurrentDataMap = this;
+	}
+
+	// Should NOT be needed as datamap_t are all normally static
+	// though idk if the engine got some secret fancy code that does actually remove them.
+	~datamap_t()
+	{
+		if (previousDataMap)
+			previousDataMap->nextDataMap = nextDataMap;
+
+		if (nextDataMap)
+			nextDataMap->previousDataMap = previousDataMap;
+
+		if (g_pHeadDataMap == this)
+			g_pHeadDataMap = nextDataMap;
+
+		if (g_pCurrentDataMap == this)
+			g_pCurrentDataMap = previousDataMap;
+	}
+
+	// Double linked for easy iteration and for easy removal in case a datamap is deleted (though should normally never be done)
+	datamap_t			*previousDataMap = NULL;
+	datamap_t			*nextDataMap = NULL;
+
+	static datamap_t* g_pHeadDataMap = NULL;
+
+	// We could like ServerClass just while loop until nextDataMap is null - but thats slower - we can just use 4 more bytes...
+	static datamap_t* g_pCurrentDataMap = NULL;
+#endif
 };
 
 
