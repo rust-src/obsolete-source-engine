@@ -4,8 +4,9 @@
 //
 //=============================================================================//
 
-#include "vgui_basebudgetpanel.h"
 #include "vgui_budgethistorypanel.h"
+
+#include "vgui_basebudgetpanel.h"
 #include <vgui/ISurface.h>
 #include "tier0/vprof.h"
 #include "tier1/convar.h"
@@ -28,7 +29,8 @@ CBudgetHistoryPanel::CBudgetHistoryPanel( CBaseBudgetPanel *pParent, const char 
 	m_fRangeMin = -1;
 	m_fRangeMax = -1;
 
-	SetProportional( false );
+	// dimhotepus: Scale UI.
+	// SetProportional( false );
 	SetKeyBoardInputEnabled( false );
 	SetMouseInputEnabled( false );
 	SetVisible( true );

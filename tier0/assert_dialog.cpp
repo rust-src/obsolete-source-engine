@@ -6,7 +6,9 @@
 
 #if defined( _WIN32 )
 #include "winlite.h"
+#include "commctrl.h"
 #include "windows/dpi_wnd_behavior.h"
+#include "windows/com_error_category.h"
 
 // dimhotepus: Launcher icon id.
 #include "../launcher_main/resource.h"
@@ -338,6 +340,20 @@ static INT_PTR CALLBACK AssertDialogProc(
 				? TRUE : FALSE;
 		}
 
+		case WM_SETTINGCHANGE:
+		{
+			// dimhotepus: Handle Dark / Light mode change.
+			const char *area = reinterpret_cast<const char *>( lParam );
+			if ( area && strcmp( area, "ImmersiveColorSet" ) == 0 )
+			{
+				// dimhotepus: Reapply Dark or Light mode if any and Mica styles to window title bar.
+				Plat_ApplySystemTitleBarTheme( hDlg, SystemBackdropType::TransientWindow );
+				return TRUE;
+			}
+		}
+		break;
+
+
 		case WM_DESTROY:
 		{
 			g_dpi_window_behavior.OnDestroyWindow();
@@ -452,6 +468,25 @@ static void SpewBacktrace()
 
 #endif
 
+#ifdef _WIN32
+
+template<intp size>
+wchar_t* Utf8ToWide( const char *utf8, wchar_t (&buffer)[size] ) noexcept
+{
+	const int written_chars{ ::MultiByteToWideChar( CP_UTF8, 0, utf8, -1, buffer, size ) };
+
+	if ( !written_chars )
+	{
+		wcsncpy( buffer, L"N/A", size - 1 );
+	}
+
+	buffer[ size - 1] = L'\0';
+
+	return buffer;
+}
+
+#endif
+
 DBG_INTERFACE bool DoNewAssertDialog( const tchar *pFilename, int line, const tchar *pExpression )
 {
 	LOCAL_THREAD_LOCK();
@@ -504,15 +539,30 @@ DBG_INTERFACE bool DoNewAssertDialog( const tchar *pFilename, int line, const tc
 
 	if ( !ThreadInMainThread() )
 	{
-		int result = MessageBox( nullptr, pExpression, "Source - Assertion Failed", MB_SYSTEMMODAL | MB_CANCELTRYCONTINUE | MB_ICONQUESTION );
+		int nButtonPressed;
+		wchar_t wideExpression[512];
 
-		if ( result == IDCANCEL )
+		const HRESULT hr{ TaskDialog( nullptr,
+			nullptr,
+			L"Source - Assertion Failed",
+			L"Assert Failed",
+			Utf8ToWide( pExpression, wideExpression ),
+			TDCBF_CANCEL_BUTTON | TDCBF_RETRY_BUTTON,
+			TD_INFORMATION_ICON,
+			&nButtonPressed ) };
+		if ( FAILED(hr) )
 		{
-			IgnoreAssertsNearby( 0 );
+			// If nice dialog fail (ex. out of memory), then use message box as fallback.
+			nButtonPressed = MessageBox( nullptr, pExpression, "Source - Assertion Failed", MB_SYSTEMMODAL | MB_RETRYCANCEL | MB_ICONQUESTION );
 		}
-		else if ( result == IDCONTINUE )
+
+		if ( IDRETRY == nButtonPressed )
 		{
 			g_bBreak = true;
+		}
+		else if ( IDCANCEL == nButtonPressed )
+		{
+			IgnoreAssertsNearby( 0 );
 		}
 	}
 	else

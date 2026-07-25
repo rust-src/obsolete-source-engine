@@ -15,9 +15,9 @@
 #include "toolframework/ienginetool.h"
 #include "dmevmfentity.h"
 #include "datamodel/idatamodel.h"
-#include "toolutils/attributeelementchoicelist.h"
+#include "toolutils/AttributeElementChoiceList.h"
 #include "infotargetbrowserpanel.h"
-#include "vgui_controls/messagebox.h"
+#include "vgui_controls/MessageBox.h"
 
 
 //-----------------------------------------------------------------------------
@@ -125,14 +125,14 @@ bool CVcdBlockDoc::LoadFromFile( const char *pFileName )
 
 	// Build map name
 	char mapname[ 256 ];
-	Q_StripExtension( pFileName, mapname, sizeof(mapname) );
+	V_StripExtension( pFileName, mapname );
 	char *pszFileName = (char*)Q_UnqualifiedFileName(mapname);
 
-	int nLen = (int)( (size_t)pGame - (size_t)pFileName ) + 1;
+	intp nLen = (intp)( pGame - pFileName ) + 1;
 	Q_strncpy( m_pVMFFileName, pFileName, nLen );
 	Q_strncat( m_pVMFFileName, "\\content\\", sizeof(m_pVMFFileName) );
 	Q_strncat( m_pVMFFileName, pGame + 6, sizeof(m_pVMFFileName) );
-	Q_SetExtension( m_pVMFFileName, ".vmf", sizeof(m_pVMFFileName) );
+	V_SetExtension( m_pVMFFileName, ".vmf" );
 
 	// Make sure new entities start with ids at 0
 	CDmeVMFEntity::SetNextEntityId( 0 );
@@ -143,12 +143,14 @@ bool CVcdBlockDoc::LoadFromFile( const char *pFileName )
 
 	// Store the BSP file name
 	Q_strncpy( m_pBSPFileName, pFileName, sizeof( m_pBSPFileName ) );
+	// dimhotepus: Check for nullptr.
+	const char *pszExt = Q_GetFileExtension( pFileName );
 
 	// Set the txt file name. 
 	// If we loaded a .bsp, clear out what we're doing
 	// load the Edits file into memory, assign it as our "root"
 	CDmElement *pEdit = NULL;
-	if ( !V_stricmp( Q_GetFileExtension( pFileName ), "vle" ) )
+	if ( pszExt && !V_stricmp( pszExt, "vle" ) )
 	{
 		if ( g_pDataModel->RestoreFromFile( m_pEditFileName, NULL, "vmf", &pEdit ) != DMFILEID_INVALID )
 		{
@@ -264,14 +266,14 @@ void CVcdBlockDoc::AddNewInfoTarget( void )
 void CVcdBlockDoc::DeleteInfoTarget( CDmeVMFEntity *pNode )
 {
 	CDmrElementArray<CDmElement> entities = GetEntityList();
-	int nCount = entities.Count();
-	for ( int i = 0; i < nCount; ++i )
+	intp nCount = entities.Count();
+	for ( intp i = 0; i < nCount; ++i )
 	{
 		if ( pNode == entities[i] )
 		{
 			CAppUndoScopeGuard guard( NOTIFY_SETDIRTYFLAG, "Delete Info Target", "Delete Info Target" );
-			CDmeVMFEntity *pNode = CastElement< CDmeVMFEntity >( entities[ i ] );
-			pNode->DrawInEngine( false );
+			CDmeVMFEntity *pNodeElement = CastElement< CDmeVMFEntity >( entities[ i ] );
+			pNodeElement->DrawInEngine( false );
 			entities.FastRemove( i );
 			return;
 		}
@@ -287,8 +289,8 @@ void CVcdBlockDoc::DeleteInfoTarget( CDmeVMFEntity *pNode )
 CDmeVMFEntity *CVcdBlockDoc::GetInfoTargetForLocation( Vector &vecOrigin, QAngle &angAbsAngles )
 {
 	const CDmrElementArray<> entities = GetEntityList();
-	int nCount = entities.Count();
-	for ( int i = 0; i < nCount; ++i )
+	intp nCount = entities.Count();
+	for ( intp i = 0; i < nCount; ++i )
 	{
 		CDmeVMFEntity *pNode = CastElement< CDmeVMFEntity >( entities[ i ] );
 		Vector &vecAngles = *(Vector*)(&pNode->GetRenderAngles());
@@ -319,8 +321,8 @@ CDmeVMFEntity *CVcdBlockDoc::GetInfoTargetForLocation( Vector &vecStart, Vector 
 	float flMinDistFromLine = 1E30;
 
 	const CDmrElementArray<CDmElement> entities = GetEntityList();
-	int nCount = entities.Count();
-	for ( int i = 0; i < nCount; ++i )
+	intp nCount = entities.Count();
+	for ( intp i = 0; i < nCount; ++i )
 	{
 		CDmeVMFEntity *pNode = CastElement< CDmeVMFEntity >( entities[ i ] );
 		float flDistAway = DotProduct( pNode->GetRenderOrigin() - vecStart, vecDelta );
@@ -342,8 +344,8 @@ CDmeVMFEntity *CVcdBlockDoc::GetInfoTargetForLocation( Vector &vecStart, Vector 
 //-----------------------------------------------------------------------------
 // Populate string choice lists
 //-----------------------------------------------------------------------------
-bool CVcdBlockDoc::GetStringChoiceList( const char *pChoiceListType, CDmElement *pElement, 
-									const char *pAttributeName, bool bArrayElement, StringChoiceList_t &list )
+bool CVcdBlockDoc::GetStringChoiceList( const char *pChoiceListType, [[maybe_unused]] CDmElement *pElement, 
+									[[maybe_unused]] const char *pAttributeName, [[maybe_unused]] bool bArrayElement, StringChoiceList_t &list )
 {
 	if ( !Q_stricmp( pChoiceListType, "info_targets" ) )
 	{
@@ -354,16 +356,16 @@ bool CVcdBlockDoc::GetStringChoiceList( const char *pChoiceListType, CDmElement 
 		sChoice.m_pChoiceString = "";
 		list.AddToTail( sChoice );
 
-		int nCount = entities.Count();
-		for ( int i = 0; i < nCount; ++i )
+		intp nCount = entities.Count();
+		for ( intp i = 0; i < nCount; ++i )
 		{
 			CDmeVMFEntity *pNode = CastElement< CDmeVMFEntity >( entities[ i ] );
 			if ( !V_stricmp( pNode->GetClassName(), "info_target" ) )
 			{
-				StringChoice_t sChoice;
-				sChoice.m_pValue = pNode->GetTargetName();
-				sChoice.m_pChoiceString = pNode->GetTargetName();
-				list.AddToTail( sChoice );
+				StringChoice_t sChoiceChild;
+				sChoiceChild.m_pValue = pNode->GetTargetName();
+				sChoiceChild.m_pChoiceString = pNode->GetTargetName();
+				list.AddToTail( sChoiceChild );
 			}
 		}
 		return true;
@@ -375,8 +377,8 @@ bool CVcdBlockDoc::GetStringChoiceList( const char *pChoiceListType, CDmElement 
 //-----------------------------------------------------------------------------
 // Populate element choice lists
 //-----------------------------------------------------------------------------
-bool CVcdBlockDoc::GetElementChoiceList( const char *pChoiceListType, CDmElement *pElement, 
-									 const char *pAttributeName, bool bArrayElement, ElementChoiceList_t &list )
+bool CVcdBlockDoc::GetElementChoiceList( const char *pChoiceListType, [[maybe_unused]] CDmElement *pElement, 
+									 [[maybe_unused]] const char *pAttributeName, [[maybe_unused]] bool bArrayElement, ElementChoiceList_t &list )
 {
 	if ( !Q_stricmp( pChoiceListType, "allelements" ) )
 	{
@@ -389,8 +391,8 @@ bool CVcdBlockDoc::GetElementChoiceList( const char *pChoiceListType, CDmElement
 		const CDmrElementArray<> entities = GetEntityList();
 
 		bool bFound = false;
-		int nCount = entities.Count();
-		for ( int i = 0; i < nCount; ++i )
+		intp nCount = entities.Count();
+		for ( intp i = 0; i < nCount; ++i )
 		{
 			CDmeVMFEntity *pNode = CastElement< CDmeVMFEntity >( entities[ i ] );
 			if ( !V_stricmp( pNode->GetClassName(), "info_target" ) )
@@ -421,17 +423,6 @@ void CVcdBlockDoc::OnDataChanged( const char *pReason, int nNotifySource, int nN
 	m_pCallback->OnDocChanged( pReason, nNotifySource, nNotifyFlags );
 }
 
-
-
-//-----------------------------------------------------------------------------
-// List of all entity classnames to copy over from the original block
-//-----------------------------------------------------------------------------
-static const char *s_pUseOriginalClasses[] =
-{
-	"worldspawn",
-	"func_occluder",
-	NULL
-};
 
 
 //-----------------------------------------------------------------------------
@@ -499,7 +490,7 @@ void CVcdBlockDoc::InitializeFromServer( CDmrElementArray<> &entityList )
 void CVcdBlockDoc::VerifyAllEdits( const CDmrElementArray<> &entityList )
 {
     // already filled in
-	for (int i = 0; i < entityList.Count(); i++)
+	for (intp i = 0; i < entityList.Count(); i++)
 	{
 		CDmeVMFEntity *pEntity = CastElement<CDmeVMFEntity>( entityList[i] );
 
@@ -542,8 +533,8 @@ bool CVcdBlockDoc::CopyEditsToVMF( )
 
 	CDmrElementArray<CDmElement> vmfEntities( pVMF, "entities" );
 
-	int nVMFCount = vmfEntities.Count();
-	for (int i = 0; i < nVMFCount; i++)
+	intp nVMFCount = vmfEntities.Count();
+	for (intp i = 0; i < nVMFCount; i++)
 	{
 		CDmElement *pVMFEntity = vmfEntities[i];
 
@@ -556,8 +547,8 @@ bool CVcdBlockDoc::CopyEditsToVMF( )
 		int nHammerID = atoi( pVMFEntity->GetName() );
 
 		// find a match.
-		int nCount = entityList.Count();
-		for (int j = 0; j < nCount; j++)
+		intp nCount = entityList.Count();
+		for (intp j = 0; j < nCount; j++)
 		{
 			CDmeVMFEntity *pEntity = CastElement<CDmeVMFEntity>( entityList[j] );
 
@@ -577,8 +568,8 @@ bool CVcdBlockDoc::CopyEditsToVMF( )
 	}
 
 	// add the new entities
-	int nCount = entityList.Count();
-	for (int j = 0; j < nCount; j++)
+	intp nCount = entityList.Count();
+	for (intp j = 0; j < nCount; j++)
 	{
 		CDmeVMFEntity *pEntity = CastElement<CDmeVMFEntity>( entityList[j] );
 
@@ -604,8 +595,8 @@ bool CVcdBlockDoc::CopyEditsToVMF( )
 
 	// currently, don't overwrite the vmf, not sure if this is serializing correctly yet
 	char tmpname[ 256 ];
-	Q_StripExtension( m_pVMFFileName, tmpname, sizeof(tmpname) );
-	Q_SetExtension( tmpname, ".vme", sizeof(tmpname) );
+	V_StripExtension( m_pVMFFileName, tmpname );
+	V_SetExtension( tmpname, ".vme" );
 
 	if (!g_pDataModel->SaveToFile( tmpname, NULL, "keyvalues", "vmf", pVMF ))
 	{

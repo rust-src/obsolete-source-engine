@@ -8,13 +8,13 @@
 #include "MapCycleEditDialog.h"
 
 #include <vgui/KeyCode.h>
-#include <tier1/KeyValues.h>
 
 #include <vgui_controls/Button.h>
 #include <vgui_controls/ListPanel.h>
 
 #include "RemoteServer.h"
 #include "tier1/utlbuffer.h"
+#include "tier1/KeyValues.h"
 
 using namespace vgui;
 
@@ -23,15 +23,18 @@ using namespace vgui;
 //-----------------------------------------------------------------------------
 CMapCycleEditDialog::CMapCycleEditDialog(vgui::Panel *parent, const char *name) : BaseClass(parent, name)
 {
-	SetSize(480, 320);
+	// dimhotepus: Scale UI.
+	SetSize(QuickPropScale( 480 ), QuickPropScale( 320 ));
 	SetSizeable(false);
 
 	m_pAvailableMapList = new ListPanel(this, "AvailableMapList");
-	m_pAvailableMapList->AddColumnHeader(0, "Map", "#Available_Maps", 128);
+	// dimhotepus: Scale UI.
+	m_pAvailableMapList->AddColumnHeader(0, "Map", "#Available_Maps", QuickPropScale( 128 ));
 	m_pAvailableMapList->SetColumnSortable(0, false);
 
 	m_pMapCycleList = new ListPanel(this, "MapCycleList");
-	m_pMapCycleList->AddColumnHeader(0, "Map", "#Map_Cycle", 128);
+	// dimhotepus: Scale UI.
+	m_pMapCycleList->AddColumnHeader(0, "Map", "#Map_Cycle", QuickPropScale( 128 ));
 	m_pMapCycleList->SetColumnSortable(0, false);
 
 	m_RightArrow = new Button(this, "RightButton", "");
@@ -62,11 +65,11 @@ void CMapCycleEditDialog::Activate(vgui::Panel *updateTarget, CUtlVector<CUtlSym
 	m_pMapCycleList->DeleteAllItems();
 
 	// build lists
-	for (int i = 0; i < availableMaps.Count(); i++)
+	for (intp i = 0; i < availableMaps.Count(); i++)
 	{
 		// only add to the available maps list if it's not in mapCycle
 		bool inMapCycle = false;
-		for (int j = 0; j < mapCycle.Count(); j++)
+		for (intp j = 0; j < mapCycle.Count(); j++)
 		{
 			if (!stricmp(mapCycle[j].String(), availableMaps[i].String()))
 			{
@@ -80,7 +83,7 @@ void CMapCycleEditDialog::Activate(vgui::Panel *updateTarget, CUtlVector<CUtlSym
 			m_pAvailableMapList->AddItem(KeyValuesAD( new KeyValues("MapItem", "Map", availableMaps[i].String()) ), 0, false, false);
 		}
 	}
-	for (int i = 0; i < mapCycle.Count(); i++)
+	for (intp i = 0; i < mapCycle.Count(); i++)
 	{
 		m_pMapCycleList->AddItem(KeyValuesAD( new KeyValues("MapItem", "Map", mapCycle[i].String()) ), 0, false, false);
 	}
@@ -108,7 +111,7 @@ void CMapCycleEditDialog::PerformLayout()
 
 		if (m_pMapCycleList->GetSelectedItemsCount() == 1)
 		{
-			int row = m_pMapCycleList->GetSelectedItem(0);
+			intp row = m_pMapCycleList->GetSelectedItem(0);
 			if (row > 0)
 			{
 				m_UpArrow->SetEnabled(true);
@@ -238,7 +241,7 @@ void CMapCycleEditDialog::OnCommand(const char *command)
 
 		for (intp i = 0; i < m_pMapCycleList->GetItemCount(); i++)
 		{
-			int itemID = m_pMapCycleList->GetItemIDFromRow(i);
+			intp itemID = m_pMapCycleList->GetItemIDFromRow(i);
 			KeyValues *kv = m_pMapCycleList->GetItem(itemID);
 			if ( kv )
 			{

@@ -4,18 +4,21 @@
 //
 //===========================================================================//
 
+#include "host.h"
+
 #include "tier0/fasttimer.h"
-
-#ifdef _WIN32
-#include "tier0/memdbgon.h" // needed because in release builds crtdbg.h is handled specially if USE_MEM_DEBUG is defined
-#include "tier0/memdbgoff.h"
-#include <crtdbg.h>   // For getting at current heap size
-
-#include "winlite.h"
-#endif
-
+#include "tier0/etwprof.h"
+#include "tier0/vcrmode.h"
+#include "tier0/vprof.h"
+#include "tier0/icommandline.h"
 #include "tier1/fmtstr.h"
+// dimhotepus: Moved from tier1 to not register twice.
+#include "tier1/stringpool.h"
+#include "tier1/strtools.h"
+#include "tier2/tier2.h"
 #include "vstdlib/jobthread.h"
+#include "vgui/ISurface.h"
+#include "vgui_controls/Controls.h"
 
 #ifdef USE_SDL
 	#include "appframework/ilaunchermgr.h"
@@ -37,7 +40,6 @@
 #include "ivideomode.h"
 #include "vprof_engine.h"
 #include "iengine.h"
-#include "tier2/tier2.h"
 #include "enginethreads.h"
 #include "steam/steam_api.h"
 #include "LoadScreenUpdate.h"
@@ -55,7 +57,6 @@
 #include "cl_pred.h"
 #include "console.h"
 #include "view.h"
-#include "host.h"
 #include "decal.h"
 #include "gl_matsysiface.h"
 #include "gl_shader.h"
@@ -66,8 +67,6 @@
 #endif
 #include "filesystem.h"
 #include "filesystem_engine.h"
-#include "tier0/etwprof.h"
-#include "tier0/vcrmode.h"
 #include "traceinit.h"
 #include "host_saverestore.h"
 #include "l_studio.h"
@@ -81,11 +80,8 @@
 #include "bitbuf_errorhandler.h"
 #include "soundflags.h"
 #include "enginestats.h"
-#include "tier1/strtools.h"
 #include "testscriptmgr.h"
 #include "tmessage.h"
-#include "tier0/vprof.h"
-#include "tier0/icommandline.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "MapReslistGenerator.h"
 #include "DownloadListGenerator.h"
@@ -175,7 +171,7 @@ BEGIN_BYTESWAP_DATADESC( player_info_s )
 END_BYTESWAP_DATADESC()
 
 //------------------------------------------
-enum
+enum class FrameSegment
 {
 	FRAME_SEGMENT_INPUT = 0,
 	FRAME_SEGMENT_CLIENT,
@@ -193,31 +189,33 @@ class CFrameTimer
 public:
 	void ResetDeltas();
 
-	CFrameTimer() : swaptime(0)
+	// dimhotepus: Make clear timer writes stats.
+	explicit CFrameTimer( CEngineStats &engineStats )
+		: m_engineStats{engineStats}, swaptime(0)
 	{
 		ResetDeltas();
 	}
 
 	void MarkFrame();
-	void StartFrameSegment( int i )
+	void StartFrameSegment( FrameSegment i )
 	{
-		starttime[i] = Sys_FloatTime();
+		starttime[to_underlying( i )] = Sys_FloatTime();
 	}
 
-	void EndFrameSegment( int i )
+	void EndFrameSegment( FrameSegment i )
 	{
-		double dt = Sys_FloatTime() - starttime[i];
-		deltas[ i ] += dt;
+		double dt = Sys_FloatTime() - starttime[to_underlying( i )];
+		deltas[to_underlying( i )] += dt;
 	}
-	void MarkSwapTime( )
+	void MarkSwapTime()
 	{
 		double newswaptime = Sys_FloatTime();
 		frametime = newswaptime - swaptime;
 		swaptime = newswaptime;
 
 		ComputeFrameVariability();
-		g_EngineStats.SetFrameTime( frametime );
-		g_EngineStats.SetFPSVariability( m_flFPSVariability );
+		m_engineStats.SetFrameTime( frametime );
+		m_engineStats.SetFPSVariability( m_flFPSVariability );
 
 		host_frametime_stddeviation = m_flFPSStdDeviationSeconds;
 	}
@@ -225,26 +223,51 @@ public:
 private:
 	enum
 	{
-		FRAME_HISTORY_COUNT = 50		
+		FRAME_HISTORY_COUNT = 50
 	};
 
 	friend void Host_Speeds();
 	void ComputeFrameVariability();
+
+	// dimhotepus: Make clear timer writes stats.
+	CEngineStats &m_engineStats;
 
 	double times[9];
 	double swaptime;
 	double frametime;
 	double m_flFPSVariability;
 	double m_flFPSStdDeviationSeconds;
-	double starttime[NUM_FRAME_SEGMENTS];
-	double deltas[NUM_FRAME_SEGMENTS];
+	double starttime[to_underlying( FrameSegment::NUM_FRAME_SEGMENTS )];
+	double deltas[to_underlying( FrameSegment::NUM_FRAME_SEGMENTS )];
 
 	double m_pFrameTimeHistory[FRAME_HISTORY_COUNT];
 	int m_nFrameTimeHistoryIndex;
 };
 
 
-static CFrameTimer g_HostTimes;
+static CFrameTimer g_HostTimes{ g_EngineStats };
+
+// dimhotepus: Simple RAII frame segment scope wrapper.
+class ScopedFrameSegment
+{
+public:
+	ScopedFrameSegment( CFrameTimer &timer, FrameSegment segment )
+		: m_timer{ timer }, m_segment{ segment }
+	{
+		timer.StartFrameSegment( segment );
+	}
+	~ScopedFrameSegment()
+	{
+		m_timer.EndFrameSegment( m_segment );
+	}
+
+	ScopedFrameSegment( const ScopedFrameSegment& ) = delete;
+	ScopedFrameSegment& operator=( const ScopedFrameSegment& ) = delete;
+
+ private:
+	CFrameTimer &m_timer;
+	const FrameSegment m_segment;
+};
 
 
 //------------------------------------------
@@ -274,7 +297,7 @@ void Snd_Restart_f()
 		const char *pPreviousCodec = Voice_ConfiguredCodec();
 		if ( pPreviousCodec && *pPreviousCodec )
 		{
-			V_strncpy( szVoiceCodec, pPreviousCodec, sizeof( szVoiceCodec ) );
+			V_strcpy_safe( szVoiceCodec, pPreviousCodec );
 		}
 	}
 
@@ -284,18 +307,18 @@ void Snd_Restart_f()
 	S_Init();
 
 	// Restart voice if it was running
-	if ( szVoiceCodec[0] )
+	if ( !Q_isempty( szVoiceCodec ) )
 		Voice_Init( szVoiceCodec, nVoiceSampleRate );
 
 	// Do this or else it won't have anything in the cache.
-	if ( audiosourcecache && sv.GetMapName()[0] )
+	if ( audiosourcecache && !Q_isempty( sv.GetMapName() ) )
 	{
 		audiosourcecache->LevelInit( sv.GetMapName() );
 	}
 
 	// Flush soundscapes so they don't stop. We don't insert text in the buffer here because 
 	// cl_soundscape_flush is normally cheat-protected.
-	ConCommand *pCommand = dynamic_cast< ConCommand* >( g_pCVar->FindCommand( "cl_soundscape_flush" ) );
+	auto *pCommand = dynamic_cast< ConCommand* >( g_pCVar->FindCommand( "cl_soundscape_flush" ) );
 	if ( pCommand )
 	{
 		char const *argv[ 1 ] = { "cl_soundscape_flush" };
@@ -309,7 +332,6 @@ void Snd_Restart_f()
 static ConCommand snd_restart( "snd_restart", Snd_Restart_f, "Restart sound system." );
 
 // In other C files.
-void Shader_Shutdown( void );
 void R_Shutdown( void );
 
 bool g_bAbortServerSet = false;
@@ -341,7 +363,7 @@ CON_COMMAND( mem_compact, "" )
 
 CON_COMMAND( mem_eat, "" )
 {
-	MemAlloc_Alloc( 1024* 1024 );
+	MemAlloc_Alloc( static_cast<size_t>( 1024 ) * 1024 );
 }
 
 CON_COMMAND( mem_test, "" )
@@ -354,8 +376,8 @@ static ConVar host_competitive_ever_enabled( "host_competitive_ever_enabled", "0
 static ConVar mem_test_each_frame( "mem_test_each_frame", "0", 0, "Run heap check at end of every frame\n" );
 static ConVar mem_test_every_n_seconds( "mem_test_every_n_seconds", "0", 0, "Run heap check at a specified interval\n" );
 
-static ConVar	singlestep( "singlestep", "0", FCVAR_CHEAT, "Run engine in single step mode ( set next to 1 to advance a frame )" );
-static ConVar	cvarNext( "next", "0", FCVAR_CHEAT, "Set to 1 to advance to next frame ( when singlestep == 1 )" );
+static ConVar singlestep( "singlestep", "0", FCVAR_CHEAT, "Run engine in single step mode ( set next to 1 to advance a frame )" );
+static ConVar cvarNext( "next", "0", FCVAR_CHEAT, "Set to 1 to advance to next frame ( when singlestep == 1 )" );
 // Print a debug message when the client or server cache is missed
 ConVar host_showcachemiss( "host_showcachemiss", "0", 0, "Print a debug message when the client or server cache is missed." );
 static ConVar mem_dumpstats( "mem_dumpstats", "0", 0, "Dump current and max heap usage info to console at end of frame ( set to 2 for continuous output )\n" );
@@ -432,8 +454,6 @@ ConVar telemetry_demostart( "telemetry_demostart", "0", 0, "When playing demo, s
 ConVar telemetry_demoend( "telemetry_demoend", "0", 0, "When playing demo, stop telemetry on tick #", OnChangeTelemetryDemoEnd );
 #endif
 
-extern bool gfBackground;
-
 static bool host_checkheap = false;
 
 CCommonHostState host_state;
@@ -441,14 +461,15 @@ CCommonHostState host_state;
 
 //-----------------------------------------------------------------------------
 
-enum HostThreadMode
+enum class HostThreadMode
 {
 	HTM_DISABLED,
 	HTM_DEFAULT,
 	HTM_FORCED,
 };
 
-ConVar host_thread_mode( "host_thread_mode", ( IsX360() ) ? "1" : "0", 0, "Run the host in threaded mode, (0 == off, 1 == if multicore, 2 == force)" );
+// dimhotepus: Bound to allowed set.
+ConVar host_thread_mode( "host_thread_mode", ( IsX360() ) ? "1" : "0", 0, "Run the host in threaded mode, (0 == off, 1 == if multicore, 2 == force)", true, to_underlying( HostThreadMode::HTM_DISABLED ), true, to_underlying( HostThreadMode::HTM_FORCED ) );
 extern ConVar threadpool_affinity;
 void OnChangeThreadAffinity( IConVar *var, const char *pOldValue, float flOldValue )
 {
@@ -503,7 +524,8 @@ ConVar	host_framerate( "host_framerate","0", 0, "Set to lock per-frame time elap
 ConVar	host_timescale( "host_timescale","1.0", FCVAR_REPLICATED, "Prescale the clock by this amount.", true, 0.0001f, true, 1.2f );
 ConVar	host_speeds( "host_speeds","0", 0, "Show general system running times." );		// set for running times
 
-ConVar	host_flush_threshold( "host_flush_threshold", "20", 0, "Memory threshold below which the host should flush caches between server instances" );
+// dimhotepus: X360 only, dropped.
+// ConVar	host_flush_threshold( "host_flush_threshold", "20", 0, "Memory threshold below which the host should flush caches between server instances" );
 
 void HostTimerSpinMsChangedCallback( IConVar *var, const char *pOldString, float flOldValue );
 ConVar host_timer_spin_ms( "host_timer_spin_ms", "0", FCVAR_NONE, "Use CPU busy-loop for improved timer precision (dedicated only)", HostTimerSpinMsChangedCallback );
@@ -533,7 +555,7 @@ CON_COMMAND( host_timer_report, "Spew CPU timer jitter for the last 128 frames i
 	}
 }
 
-#ifdef REL_TO_STAGING_MERGE_TODO							 
+#ifdef REL_TO_STAGING_MERGE_TODO
 // Do this when merging the game DLLs so FCVAR_CHEAT can be set on them at the same time.
 ConVar  developer( "developer", "0", FCVAR_CHEAT, "Set developer message level");
 #else
@@ -550,12 +572,9 @@ ConVar	r_ForceRestore( "r_ForceRestore", "0", 0 );
 
 ConVar vcr_verbose( "vcr_verbose", "0", 0, "Write extra information into .vcr file." );
 
-#ifndef SWDS
-void CL_CheckToDisplayStartupMenus(); // in cl_main.cpp
-#endif
-
-
-bool GetFileFromRemoteStorage( ISteamRemoteStorage *pRemoteStorage, const char *pszRemoteFileName, const char *pszLocalFileName )
+// dimhotepus: NO_STEAM
+#ifndef NO_STEAM
+static bool GetFileFromRemoteStorage( ISteamRemoteStorage *pRemoteStorage, const char *pszRemoteFileName, const char *pszLocalFileName )
 {
 	bool bSuccess = false;
 
@@ -569,7 +588,7 @@ bool GetFileFromRemoteStorage( ISteamRemoteStorage *pRemoteStorage, const char *
 		{
 
 			char filepath[ 512 ];
-			Q_strncpy( filepath, pszLocalFileName, sizeof( filepath ) );
+			V_strcpy_safe( filepath, pszLocalFileName );
 			V_StripFilename( filepath );
 			g_pFullFileSystem->CreateDirHierarchy( filepath, "MOD" );
 
@@ -594,6 +613,7 @@ bool GetFileFromRemoteStorage( ISteamRemoteStorage *pRemoteStorage, const char *
 
 	return bSuccess;
 }
+#endif
 
 
 void CCommonHostState::SetWorldModel( model_t *pModel )
@@ -630,112 +650,6 @@ bool Host_IsSinglePlayerGame( void )
 	{
 		return cl.m_nMaxClients == 1;
 	}
-}
-
-void CheckForFlushMemory( const char *pCurrentMapName, const char *pDestMapName )
-{
-	if ( host_flush_threshold.GetInt() == 0 )
-		return;
-
-#if defined(_X360)
-	// There are three cases in which we flush memory
-	//   Case 1: changing from one map to another
-	//          -> flush temp data caches
-	//   Case 2: loading any map (inc. A to A) and free memory is below host_flush_threshold MiB
-	//          -> flush everything
-	//   Case 3: loading a 'blacklisted' map (the known biggest memory users, or where texture sets change)
-	//          -> flush everything
-	static const char *mapBlackList[] = 
-	{
-		// --hl2--
-		"d1_canals_01",
-		"d1_canals_05",
-		"d1_eli_01",
-		"d1_town_01",
-		"d2_coast_01",
-		"d2_prison_01",
-		"d3_c17_01",
-		"d3_c17_05",
-		"d3_c17_09",
-		"d3_citadel_01",
-		"d3_breen_01",
-		// --ep1--
-		"ep1_c17_02",
-		"ep1_c17_02b",
-		"ep1_c17_05",
-		"ep1_c17_06",
-		// --ep2--
-		"ep2_outland_06a",
-		"ep2_outland_09",
-		"ep2_outland_11",
-		"ep2_outland_12",
-		"ep2_outland_12a",
-		// --tf--
-		"tc_hydro"
-	};
-
-	char szCurrentMapName[MAX_PATH];
-	char szDestMapName[MAX_PATH];
-	if ( pCurrentMapName )
-	{
-		V_FileBase( pCurrentMapName, szCurrentMapName );
-	}
-	else
-	{
-		szCurrentMapName[0] = '\0';
-	}
-	pCurrentMapName = szCurrentMapName;
-
-	if ( pDestMapName )
-	{
-		V_FileBase( pDestMapName, szDestMapName );
-	}
-	else
-	{
-		szDestMapName[0] = '\0';
-	}
-	pDestMapName = szDestMapName;
-
-	bool bIsMapChanging = pCurrentMapName[0] && V_stricmp( pCurrentMapName, pDestMapName );
-
-	bool bIsDestMapBlacklisted = false;
-	for ( int i = 0; i < ARRAYSIZE( mapBlackList ); i++ )
-	{
-		if ( pDestMapName && !V_stricmp( pDestMapName, mapBlackList[i] ) )
-		{
-			bIsDestMapBlacklisted = true;
-		}
-	}
-
-	DevMsg( "---CURRENT(%s), NEXT(%s)\n", (pCurrentMapName[0] ? pCurrentMapName : "----"), (pDestMapName[0] ? pDestMapName : "----") );
-	if ( bIsMapChanging )
-	{
-		DevMsg( "---CHANGING MAPS!\n" );
-	}
-	if ( bIsDestMapBlacklisted )
-	{
-		DevMsg( "---BLACKLISTED!\n" );
-	}
-
-	MEMORYSTATUS stat;
-	GlobalMemoryStatus( &stat );
-	if ( ( stat.dwAvailPhys < host_flush_threshold.GetInt() * 1024 * 1024 ) ||
-		 ( bIsDestMapBlacklisted && bIsMapChanging ) )
-	{
-		// Flush everything; ALL data is reloaded from scratch
-		SV_FlushMemoryOnNextServer();
-		g_pDataCache->Flush();
-		DevWarning( "---FULL FLUSH\n" );
-	}
-	else if ( bIsMapChanging )
-	{
-		// Flush temporary data (async anim, non-locked async audio)
-		g_pMDLCache->Flush( MDLCACHE_FLUSH_ANIMBLOCK );
-		wavedatacache->Flush();
-		DevWarning( "---PARTIAL FLUSH\n" );
-	}
-	DevMsg( "---- --- ----\n" );
-#endif
 }
 
 void Host_AbortServer()
@@ -821,10 +735,6 @@ void Host_Error ( PRINTF_FORMAT_STRING const char *error, ...) FMTFUNCTION( 1, 2
 	}
 	inerror = true;
 
-#ifndef SWDS
-	//	CL_WriteMessageHistory();	TODO must be done by network layer
-#endif
-
 	va_start (argptr,error); //-V2019
 	V_vsprintf_safe(string,error,argptr);
 	va_end (argptr);
@@ -838,7 +748,7 @@ void Host_Error ( PRINTF_FORMAT_STRING const char *error, ...) FMTFUNCTION( 1, 2
 
 #ifndef SWDS
 	// Reenable screen updates
-	SCR_EndLoadingPlaque ();		
+	SCR_EndLoadingPlaque ();
 #endif
 	ConMsg( "\nHost_Error: %s\n\n", string );
 
@@ -856,7 +766,7 @@ void Host_Error ( PRINTF_FORMAT_STRING const char *error, ...) FMTFUNCTION( 1, 2
 
 #ifndef SWDS
 
-ButtonCode_t nInvalidKeyBindings[] =
+constexpr ButtonCode_t nInvalidKeyBindings[] =
 {
 	KEY_PAD_0,
 	KEY_PAD_1,
@@ -911,12 +821,12 @@ ButtonCode_t nInvalidKeyBindings[] =
 // bind those keys, based on a file called
 // newbindings.txt.
 //******************************************
-void SetupNewBindings()
+static void SetupNewBindings()
 {
 	char szBindCmd[ 256 ];
 
 	// Load the file
-	const char *pFilename = "scripts\\newbindings.txt";
+	constexpr char pFilename[]{ "scripts\\newbindings.txt" };
 	KeyValuesAD pNewBindingsData( pFilename );
 	if ( !pNewBindingsData->LoadFromFile( g_pFileSystem, pFilename ) )
 	{
@@ -943,7 +853,7 @@ void SetupNewBindings()
 			const char *pCurrentBindingForKey = ::Key_BindingForKey( g_pInputSystem->StringToButtonCode( pIdealKey ) );
 			if ( !pCurrentBindingForKey  || !V_stricmp( pOverrideIfCmd, pCurrentBindingForKey ) )
 			{
-				V_snprintf( szBindCmd, sizeof( szBindCmd ), "bind \"%s\" \"%s\"", pIdealKey, pBinding );
+				V_sprintf_safe( szBindCmd, "bind \"%s\" \"%s\"", pIdealKey, pBinding );
 				Cbuf_AddText( szBindCmd );
 				continue;
 			}
@@ -959,7 +869,7 @@ void SetupNewBindings()
 		if ( !pCurrentBindingForIdealKey )
 		{
 			// Yes - bind to the ideal key.
-			V_snprintf( szBindCmd, sizeof( szBindCmd ), "bind \"%s\" \"%s\"", pIdealKey, pBinding );
+			V_sprintf_safe( szBindCmd, "bind \"%s\" \"%s\"", pIdealKey, pBinding );
 			Cbuf_AddText( szBindCmd );
 			continue;
 		}
@@ -967,13 +877,13 @@ void SetupNewBindings()
 		// Ideal key already bound - find another key at random and bind it
 		bool bFound = false;
 		int nNumAttempts = 1;
-		for ( int nCurButton = (int)KEY_0; nCurButton <= (int)KEY_LAST; ++nCurButton, ++nNumAttempts )
+		for ( int nCurButton = to_underlying( ButtonCode_t::KEY_0 ); nCurButton <= to_underlying( ButtonCode_t::KEY_LAST ); ++nCurButton, ++nNumAttempts )
 		{
 			// Don't consider numpad, windows keys, etc
 			bool bFoundInvalidKey = false;
-			for ( size_t iKeyIndex = 0; iKeyIndex < std::size( nInvalidKeyBindings ); iKeyIndex++ )
+			for ( auto &invalid : nInvalidKeyBindings )
 			{
-				if ( nCurButton == (int)nInvalidKeyBindings[iKeyIndex] )
+				if ( nCurButton == to_underlying( invalid ) )
 				{
 					bFoundInvalidKey = true;
 					break;
@@ -984,11 +894,11 @@ void SetupNewBindings()
 				continue;
 
 			// Key available?
-			ButtonCode_t bcCurButton = (ButtonCode_t)nCurButton;
+			const auto bcCurButton = static_cast<ButtonCode_t>(nCurButton);
 			if ( !::Key_BindingForKey( bcCurButton ) )
 			{
 				// Yes - use it.
-				V_snprintf( szBindCmd, sizeof( szBindCmd ), "bind \"%s\" \"%s\"", g_pInputSystem->ButtonCodeToString( bcCurButton ), pBinding );
+				V_sprintf_safe( szBindCmd, "bind \"%s\" \"%s\"", g_pInputSystem->ButtonCodeToString( bcCurButton ), pBinding );
 				Cbuf_AddText( szBindCmd );
 				bFound = true;
 				break;
@@ -1010,16 +920,18 @@ void SetupNewBindings()
 // function is called to set the default key
 // bindings to match those defined in kb_def.lst
 //******************************************
-void UseDefaultBindings( void )
+static void UseDefaultBindings()
 {
-	FileHandle_t f;
+	// dimhotepus: This can take a while, put up a waiting cursor.
+	const vgui::ScopedSurfaceWaitCursor scopedWaitCursor{vgui::surface()};
+
 	char szFileName[ MAX_PATH ];
 	char token[ 1024 ];
 	char szKeyName[ 256 ];
 
 	// read kb_def file to get default key binds
-	Q_snprintf( szFileName, sizeof( szFileName ), "%skb_def.lst", SCRIPT_DIR );
-	f = g_pFileSystem->Open( szFileName, "r");
+	V_sprintf_safe( szFileName, "%skb_def.lst", SCRIPT_DIR );
+	FileHandle_t f = g_pFileSystem->Open( szFileName, "r");
 	if ( !f )
 	{
 		ConMsg( "Couldn't open kb_def.lst\n" );
@@ -1028,17 +940,20 @@ void UseDefaultBindings( void )
 
 	// read file into memory
 	int size = g_pFileSystem->Size(f);
-	char *startbuf = new char[ size ];
-	g_pFileSystem->Read( startbuf, size, f );
-	g_pFileSystem->Close( f );
 
-	const char *buf = startbuf;
-	while ( 1 )
+	// dimhotepus: ASAN catch. Missed space for '\0'.
+	std::unique_ptr<char[]> startbuf = std::make_unique<char[]>( static_cast<intp>( size ) + 1 );
+	g_pFileSystem->Read( startbuf.get(), size, f );
+	g_pFileSystem->Close( f );
+	startbuf[ size ] = '\0';
+
+	const char *buf = startbuf.get();
+	while ( true )
 	{
 		buf = COM_ParseFile( buf, token );
 		if ( Q_isempty( token ) )
 			break;
-		Q_strncpy ( szKeyName, token, sizeof( szKeyName ) );
+		V_strcpy_safe ( szKeyName, token );
 
 		buf = COM_ParseFile( buf, token );
 		if ( Q_isempty( token ) )  // Error
@@ -1047,7 +962,6 @@ void UseDefaultBindings( void )
 		// finally, bind key
 		Key_SetBinding ( g_pInputSystem->StringToButtonCode( szKeyName ), token );
 	}
-	delete [] startbuf;		// cleanup on the way out
 }
 
 static bool g_bConfigCfgExecuted = false;
@@ -1090,7 +1004,7 @@ void Host_WriteConfiguration( const char *filename, bool bAllVars )
 	if ( sv.IsDedicated() )
 		return;
 
-	if ( IsPC() && Key_CountBindings() <= 1 )
+	if ( Key_CountBindings() <= 1 )
 	{
 		ConMsg( "skipping %s output, no keys bound\n", filename );
 		return;
@@ -1103,7 +1017,7 @@ void Host_WriteConfiguration( const char *filename, bool bAllVars )
 	char		szFileName[MAX_PATH];
 	CUtlBuffer	configBuff( (intp)0, 0, CUtlBuffer::TEXT_BUFFER);
 
-	Q_snprintf( szFileName, sizeof(szFileName), "cfg/%s", filename );
+	V_sprintf_safe( szFileName, "cfg/%s", filename );
 	g_pFileSystem->CreateDirHierarchy( "cfg", "MOD" );
 	if ( g_pFileSystem->FileExists( szFileName, "MOD" ) && !g_pFileSystem->IsFileWritable( szFileName, "MOD" ) )
 	{
@@ -1118,11 +1032,10 @@ void Host_WriteConfiguration( const char *filename, bool bAllVars )
 	cv->WriteVariables( configBuff, bAllVars );
 
 #if !defined( SWDS )
-		bool down;
-		if ( g_ClientDLL->IN_IsKeyDown( "in_jlook", down ) && down )
-		{
-			configBuff.Printf( "+jlook\n" );
-		}
+	if ( bool down = true; g_ClientDLL->IN_IsKeyDown( "in_jlook", down ) && down )
+	{
+		configBuff.Printf( "+jlook\n" );
+	}
 #endif // SWDS
 
 	if ( !configBuff.TellMaxPut() )
@@ -1216,153 +1129,16 @@ void Host_WriteConfiguration( const char *filename, bool bAllVars )
 		}
 #endif
 
-
 	// make a persistent copy that async will use and free
-	char *tempBlock = new char[configBuff.TellMaxPut()];
-	Q_memcpy( tempBlock, configBuff.Base(), configBuff.TellMaxPut() );
+	const intp blockSize = configBuff.TellMaxPut();
+
+	char *tempBlock = new char[blockSize];
+	Q_memcpy( tempBlock, configBuff.Base(), blockSize );
 
 	// async write the buffer, and then free it
-	g_pFileSystem->AsyncWrite( szFileName, tempBlock, configBuff.TellMaxPut(), true );
+	g_pFileSystem->AsyncWrite( szFileName, tempBlock, blockSize, true );
 
 	ConMsg( "Host_WriteConfiguration: Wrote %s\n", szFileName );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Retrieve and set any defaults from the user's gamer profile
-//-----------------------------------------------------------------------------
-bool XBX_SetProfileDefaultSettings( void )
-{
-	// These defined values can't play nicely with the PC, so we need to ignore them for that build target
-#ifdef _X360
-	// These will act as indices into the array that is returned by the API
-	enum
-	{
-		XPS_GAMER_DIFFICULTY,
-		XPS_GAMER_ACTION_MOVEMENT_CONTROL,
-		XPS_GAMER_YAXIS_INVERSION,
-		XPS_OPTION_CONTROLLER_VIBRATION,
-		NUM_PROFILE_SETTINGS
-	};
-
-	// These are the values we're interested in having returned (must match the indices above)
-	const DWORD dwSettingIds[ NUM_PROFILE_SETTINGS ] =
-	{
-		XPROFILE_GAMER_DIFFICULTY,
-		XPROFILE_GAMER_ACTION_MOVEMENT_CONTROL,
-		XPROFILE_GAMER_YAXIS_INVERSION,
-		XPROFILE_OPTION_CONTROLLER_VIBRATION
-	};
-
-	// Must have a valid primary user by this point
-	int nPrimaryID = XBX_GetPrimaryUserId();
-
-	// First, we call with a NULL pointer and zero size to retrieve the buffer size we'll get back
-	DWORD dwResultSize = 0;	// Must be zero to get the correct size back
-	XUSER_READ_PROFILE_SETTING_RESULT *pResults = NULL;
-	DWORD dwError = XUserReadProfileSettings(	0,			// Family ID (current title)
-												nPrimaryID,	// User ID
-												NUM_PROFILE_SETTINGS,
-												dwSettingIds,
-												&dwResultSize,
-												pResults,
-												NULL );
-
-	// We need this to inform us that it's given us a size back for the buffer
-	if ( dwError != ERROR_INSUFFICIENT_BUFFER )
-		return false;
-
-	// Now we allocate that buffer and supply it to the call
-	byte *pData = (byte *) stackalloc( dwResultSize );
-	ZeroMemory( pData, dwResultSize );
-
-	pResults = (XUSER_READ_PROFILE_SETTING_RESULT *) pData;
-
-	dwError = XUserReadProfileSettings(	0,			// Family ID (current title)
-										nPrimaryID,	// User ID
-										NUM_PROFILE_SETTINGS,
-										dwSettingIds,
-										&dwResultSize,
-										pResults,
-										NULL );	// Not overlapped, must be synchronous
-
-	// We now have a raw buffer of results
-	if ( dwError != ERROR_SUCCESS )
-		return false;
-
-	//
-	// Skill
-	//
-
-	XUSER_PROFILE_SETTING *pSetting = pResults->pSettings + XPS_GAMER_DIFFICULTY;
-	Assert( pSetting->data.type == XUSER_DATA_TYPE_INT32 );
-	
-	int nSkillSetting = pSetting->data.nData;
-	int nResultSkill = 0;
-	switch( nSkillSetting )
-	{
-	case XPROFILE_GAMER_DIFFICULTY_NORMAL:
-		nResultSkill = 2;
-		break;
-	
-	case XPROFILE_GAMER_DIFFICULTY_HARD:
-		nResultSkill = 3;
-		break;
-	
-	case XPROFILE_GAMER_DIFFICULTY_EASY:
-	default:
-		nResultSkill = 1;
-		break;
-	}
-
-	// If the mod has no difficulty setting, only easy is allowed
-	KeyValuesAD modinfo("ModInfo");
-	if ( modinfo->LoadFromFile( g_pFileSystem, "gameinfo.txt" ) )
-	{
-		if ( stricmp(modinfo->GetString("nodifficulty", "0"), "1") == 0 )
-			nResultSkill = 1;
-	}
-
-	char szScratch[MAX_PATH];
-	Q_snprintf( szScratch, sizeof(szScratch), "skill %d", nResultSkill );
-	Cbuf_AddText( szScratch );
-
-	// 
-	// Movement control
-	//
-
-	pSetting = pResults->pSettings + XPS_GAMER_ACTION_MOVEMENT_CONTROL;
-	Assert( pSetting->data.type == XUSER_DATA_TYPE_INT32 );
-	Q_snprintf( szScratch, sizeof(szScratch), "joy_movement_stick %d", ( pSetting->data.nData == XPROFILE_ACTION_MOVEMENT_CONTROL_L_THUMBSTICK ) ? 0 : 1 );
-	Cbuf_AddText( szScratch );
-	Q_snprintf( szScratch, sizeof(szScratch), "joy_movement_stick_default %d", ( pSetting->data.nData == XPROFILE_ACTION_MOVEMENT_CONTROL_L_THUMBSTICK ) ? 0 : 1 );
-	Cbuf_AddText( szScratch );
-	Cbuf_AddText( "joyadvancedupdate" );
-
-	// 
-	// Y-Inversion
-	//
-
-	pSetting = pResults->pSettings + XPS_GAMER_YAXIS_INVERSION;
-	Assert( pSetting->data.type == XUSER_DATA_TYPE_INT32 );
-	Q_snprintf( szScratch, sizeof(szScratch), "joy_inverty %d", pSetting->data.nData );
-	Cbuf_AddText( szScratch );
-	Q_snprintf( szScratch, sizeof(szScratch), "joy_inverty_default %d", pSetting->data.nData );
-	Cbuf_AddText( szScratch );
-	
-	//
-	// Vibration control
-	//
-
-	pSetting = pResults->pSettings + XPS_OPTION_CONTROLLER_VIBRATION;
-	Assert( pSetting->data.type == XUSER_DATA_TYPE_INT32 );
-	Q_snprintf( szScratch, sizeof(szScratch), "cl_rumblescale %d", ( pSetting->data.nData != 0 ) ? 1 : 0 );
-	Cbuf_AddText( szScratch );
-
-	// Execute all commands we've queued up
-	Cbuf_Execute();
-#endif // _X360
-
-	return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -1456,7 +1232,7 @@ void Host_ReadConfiguration()
 	Key_SetBinding( KEY_ESCAPE, "cancelselect" );
 
 	// Make sure that something is always bound to console
-	if (NULL == Key_NameForBinding("toggleconsole"))
+	if (!Key_NameForBinding("toggleconsole"))
 	{
 		// If nothing is bound to it then bind it to '
 		Key_SetBinding( KEY_BACKQUOTE, "toggleconsole" );
@@ -1469,8 +1245,7 @@ void Host_ReadConfiguration()
 	if ( saveconfig )
 	{
 		// An ugly hack, but we can probably save this safely
-		bool saveinit = host_initialized;
-		host_initialized = true;
+		const bool saveinit = std::exchange( host_initialized, true );
 		Host_WriteConfiguration();
 		host_initialized = saveinit;
 	}
@@ -1491,21 +1266,21 @@ CON_COMMAND( host_writeconfig, "Store current settings to config.cfg (or specifi
 		bool bWriteAll = ( args.ArgC() == 3 && V_stricmp( args[ 2 ], "full" ) == 0 );
 
 		char const *filename = args[ 1 ];
-		if ( !filename || !filename[ 0 ] )
+		if ( Q_isempty( filename ) )
 		{
 			return;
 		}
 
 		char outfile[ MAX_QPATH ];
 		// Strip path and extension from filename
-		Q_FileBase( filename, outfile );
+		V_FileBase( filename, outfile );
 		Host_WriteConfiguration( va( "%s.cfg", outfile ), bWriteAll );
 		if  ( !bWriteAll )
 			ConMsg( "Wrote partial config file \"%s\" out, to write full file use host_writeconfig \"%s\" full\n", outfile, outfile );
 	}
 	else
 	{
-		Host_WriteConfiguration( NULL, true );
+		Host_WriteConfiguration( nullptr, true );
 	}
 }
 
@@ -1518,19 +1293,22 @@ CON_COMMAND( host_writeconfig, "Store current settings to config.cfg (or specifi
 //-----------------------------------------------------------------------------
 void Host_ReadPreStartupConfiguration()
 {
+	// dimhotepus: This can take a while, put up a waiting cursor.
+	const vgui::ScopedSurfaceWaitCursor scopedWaitCursor{vgui::surface()};
+
 	FileHandle_t f = g_pFileSystem->Open( "//mod/cfg/config.cfg", "rt" );
 	if ( !f )
 		return;
 
 	// read file into memory
 	int size = g_pFileSystem->Size(f);
-	char *configBuffer = new char[ size + 1 ];
-	g_pFileSystem->Read( configBuffer, size, f );
+	std::unique_ptr<char[]> configBuffer = std::make_unique<char[]>(size + 1);
+	g_pFileSystem->Read( configBuffer.get(), size, f );
 	configBuffer[size] = 0;
 	g_pFileSystem->Close( f );
 
 	// parse out file
-	static const char *s_PreStartupConfigConVars[] =
+	constexpr char *s_PreStartupConfigConVars[] =
 	{
 		"sv_unlockedchapters",		// needed to display the startup graphic while loading
 		"snd_legacy_surround",		// needed to init the sound system
@@ -1540,7 +1318,7 @@ void Host_ReadPreStartupConfiguration()
 	// loop through looking for all the cvars to apply
 	for ( const auto *configVar : s_PreStartupConfigConVars )
 	{
-		const char *search = Q_stristr(configBuffer, configVar);
+		const char *search = Q_stristr(configBuffer.get(), configVar);
 		if (search)
 		{
 			// read over the token
@@ -1557,12 +1335,9 @@ void Host_ReadPreStartupConfiguration()
 			}
 		}
 	}
-
-	// free
-	delete [] configBuffer;
 }
 
-void Host_RecomputeSpeed_f( void )
+static void Host_RecomputeSpeed_f()
 {
 	ConMsg( "Recomputing clock speed...\n" );
 
@@ -1572,7 +1347,7 @@ void Host_RecomputeSpeed_f( void )
 
 static ConCommand recompute_speed( "recompute_speed", Host_RecomputeSpeed_f, "Recomputes clock speed (for debugging purposes).", FCVAR_CHEAT );
 
-void DTI_Flush_f()
+static void DTI_Flush_f()
 {
 	DTI_Flush();
 	ServerDTI_Flush();
@@ -1619,7 +1394,7 @@ void Host_ShutdownServer( void )
 // Input  : time - 
 // Output : bool
 //-----------------------------------------------------------------------------
-void Host_AccumulateTime( float dt )
+static void Host_AccumulateTime( float dt )
 {
 	// Accumulate some time
 	realtime += dt;
@@ -1730,7 +1505,7 @@ float g_fFramesPerSecond = 0.0f;
 Host_PostFrameRate
 ==================
 */
-void Host_PostFrameRate( float frameTime )
+static void Host_PostFrameRate( float frameTime )
 {
 	frameTime = clamp( frameTime, 0.0001f, 1.0f );
 
@@ -1853,7 +1628,7 @@ char const * Host_CleanupConVarStringValue( char const *invalue )
 	return clean;
 }
 
-int Host_CountVariablesWithFlags( int flags, bool nonDefault )
+static int Host_CountVariablesWithFlags( int flags, bool nonDefault )
 {
 	int i = 0;
 	const ConCommandBase *var;
@@ -1954,25 +1729,6 @@ void CL_SendVoicePacket(bool bFinal)
 #endif
 }
 
-#if defined ( _X360 )
-
-
-void CL_ProcessXboxVoiceData()
-{
-	if ( Audio_GetXVoice() == NULL )
-		return;
-
-	if ( Audio_GetXVoice()->VoiceUpdateData() == true )
-	{
-		if ( cl.IsActive() )
-		{
-			Audio_GetXVoice()->VoiceSendData( cl.m_NetChannel );
-		}
-	}
-}
-
-#endif
-
 void CL_ProcessVoiceData()
 {
 	VPROF_BUDGET( "CL_ProcessVoiceData", VPROF_BUDGETGROUP_OTHER_NETWORKING );
@@ -1981,18 +1737,8 @@ void CL_ProcessVoiceData()
 	Voice_Idle(host_frametime);
 	CL_SendVoicePacket(false);
 #endif
-
-#if defined ( _X360 )
-
-	CL_ProcessXboxVoiceData();
-#endif
-
 }
 #endif
-
-
-
-
 
 
 /*
@@ -2002,7 +1748,7 @@ Host_UpdateScreen
 Refresh the screen
 =====================
 */
-void Host_UpdateScreen( void )
+static void Host_UpdateScreen( void )
 {
 #ifndef SWDS 
 
@@ -2026,7 +1772,7 @@ Host_UpdateSounds
 Update sound subsystem and cd audio
 ====================
 */
-void Host_UpdateSounds( void )
+static void Host_UpdateSounds( void )
 {
 #if !defined( SWDS )
 	// update audio
@@ -2049,9 +1795,9 @@ Host_Speeds
 */
 void CFrameTimer::ResetDeltas()
 {
-	for ( int i = 0; i < NUM_FRAME_SEGMENTS; i++ )
+	for ( auto &d : deltas )
 	{
-		deltas[ i ] = 0.0f;
+		d = 0.0f;
 	}
 }
 
@@ -2062,13 +1808,13 @@ void CFrameTimer::MarkFrame()
 
 	// ConDMsg("%f %f %f\n", time1, time2, time3 );
 
-	double fs_input = (deltas[FRAME_SEGMENT_INPUT])*1000.0;
-	double fs_client = (deltas[FRAME_SEGMENT_CLIENT])*1000.0;
-	double fs_server = (deltas[FRAME_SEGMENT_SERVER])*1000.0;
-	double fs_render = (deltas[FRAME_SEGMENT_RENDER])*1000.0;
-	double fs_sound = (deltas[FRAME_SEGMENT_SOUND])*1000.0;
-	double fs_cldll = (deltas[FRAME_SEGMENT_CLDLL])*1000.0;
-	double fs_exec = (deltas[FRAME_SEGMENT_CMD_EXECUTE])*1000.0;
+	double fs_input = (deltas[to_underlying( FrameSegment::FRAME_SEGMENT_INPUT )])*1000.0;
+	double fs_client = (deltas[to_underlying( FrameSegment::FRAME_SEGMENT_CLIENT )])*1000.0;
+	double fs_server = (deltas[to_underlying( FrameSegment::FRAME_SEGMENT_SERVER )])*1000.0;
+	double fs_render = (deltas[to_underlying( FrameSegment::FRAME_SEGMENT_RENDER )])*1000.0;
+	double fs_sound = (deltas[to_underlying( FrameSegment::FRAME_SEGMENT_SOUND )])*1000.0;
+	double fs_cldll = (deltas[to_underlying( FrameSegment::FRAME_SEGMENT_CLDLL )])*1000.0;
+	double fs_exec = (deltas[to_underlying( FrameSegment::FRAME_SEGMENT_CMD_EXECUTE )])*1000.0;
 
 	ResetDeltas();
 
@@ -2100,7 +1846,7 @@ void CFrameTimer::MarkFrame()
 		}
 
 		char sz[ 256 ];
-		Q_snprintf( sz, sizeof( sz ),
+		V_sprintf_safe( sz,
 			"%3i fps -- inp(%.2f) sv(%.2f) cl(%.2f) render(%.2f) snd(%.2f) cl_dll(%.2f) exec(%.2f) ents(%d) ticks(%d)",
 			(int)fps, 
 			fs_input, 
@@ -2285,7 +2031,7 @@ static double g_flLastPeriodicMemDump = -1.0f;
 // Purpose: 
 //-----------------------------------------------------------------------------
 static double g_TimeLastMemTest;
-void Host_CheckDumpMemoryStats( void )
+static void Host_CheckDumpMemoryStats()
 {
 	if ( mem_test_each_frame.GetBool() )
 	{
@@ -2322,7 +2068,7 @@ void Host_CheckDumpMemoryStats( void )
 			}
 
 			char mapname[ 256 ];
-			Q_FileBase( pTest, mapname );
+			V_FileBase( pTest, mapname );
 #if defined( _MEMTEST )
 			MemAlloc_SetStatsExtraInfo( pTest, "" );
 #endif
@@ -2340,7 +2086,7 @@ void Host_CheckDumpMemoryStats( void )
 		mem_dumpstats.SetValue( 0 ); // reset cvar, dump stats only once
 
 	_CrtMemState state;
-	Q_memset( &state, 0, sizeof( state ) );
+	BitwiseClear( state );
 	_CrtMemCheckpoint( &state );
 
 	size_t size = 0;
@@ -2351,18 +2097,18 @@ void Host_CheckDumpMemoryStats( void )
 
 	Msg("MEMORY:  Run-time Heap\n------------------------------------\n");
 
-	Msg( "\tHigh water %s\n", Q_pretifymem( state.lHighWaterCount,4 ) );
-	Msg( "\tCurrent mem %s\n", Q_pretifymem( size,4 ) );
+	Msg( "\tHigh water %s\n", V_pretifymem( state.lHighWaterCount,4 ) );
+	Msg( "\tCurrent mem %s\n", V_pretifymem( size,4 ) );
 	Msg("------------------------------------\n");
 	intp hunk = Hunk_MallocSize();
-	Msg("\tAllocated outside hunk:  %s\n", Q_pretifymem( size - hunk ) );
+	Msg("\tAllocated outside hunk:  %s\n", V_pretifymem( size - hunk ) );
 #endif
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void _Host_SetGlobalTime()
+static void _Host_SetGlobalTime()
 {
 	// Server
 	g_ServerGlobalVariables.realtime			= realtime;
@@ -2387,7 +2133,7 @@ Runs all active servers
 ==================
 */
 
-void _Host_RunFrame_Input( float accumulated_extra_samples, bool bFinalTick )
+static void _Host_RunFrame_Input( float accumulated_extra_samples, bool bFinalTick )
 {
 	VPROF_BUDGET( "_Host_RunFrame_Input", _T("Input") );
 
@@ -2406,43 +2152,40 @@ void _Host_RunFrame_Input( float accumulated_extra_samples, bool bFinalTick )
 		}
 	}
 
-	g_HostTimes.StartFrameSegment( FRAME_SEGMENT_INPUT );
+	{
+		const ScopedFrameSegment input_segment{ g_HostTimes, FrameSegment::FRAME_SEGMENT_INPUT };
 
 #ifndef SWDS
-	// Client can process input
-	ClientDLL_ProcessInput( );
+		// Client can process input
+		ClientDLL_ProcessInput( );
 
-	g_HostTimes.StartFrameSegment( FRAME_SEGMENT_CMD_EXECUTE );
+		{
+			const ScopedFrameSegment cmd_segment{ g_HostTimes, FrameSegment::FRAME_SEGMENT_CMD_EXECUTE };
 
-	// process console commands
-	Cbuf_Execute ();
+			// process console commands
+			Cbuf_Execute ();
+		}
 
-	g_HostTimes.EndFrameSegment( FRAME_SEGMENT_CMD_EXECUTE );
-
-	// Send any current movement commands to server and flush reliable buffer even if not moving yet.
-	CL_Move( accumulated_extra_samples, bFinalTick );
-
+		// Send any current movement commands to server and flush reliable buffer even if not moving yet.
+		CL_Move( accumulated_extra_samples, bFinalTick );
 #endif
-
-	g_HostTimes.EndFrameSegment( FRAME_SEGMENT_INPUT );
+	}
 }
 
-void _Host_RunFrame_Server( bool finaltick )
+static void _Host_RunFrame_Server( bool finaltick )
 {
 	VPROF_BUDGET( "_Host_RunFrame_Server", VPROF_BUDGETGROUP_GAME );
 	VPROF_INCREMENT_COUNTER( "ticks", 1 );
 	tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "%s", __FUNCTION__ );
 
 	// Run the Server frame ( read, run physics, respond )
-	g_HostTimes.StartFrameSegment( FRAME_SEGMENT_SERVER );
+	const ScopedFrameSegment server_segment{ g_HostTimes, FrameSegment::FRAME_SEGMENT_SERVER };
 	SV_Frame ( finaltick );
-	g_HostTimes.EndFrameSegment( FRAME_SEGMENT_SERVER );
-
 	// Look for connectionless rcon packets on dedicated servers
 	// SV_CheckRcom(); TODO 
 }
 
-void _Host_RunFrame_Server_Async( int numticks )
+static void _Host_RunFrame_Server_Async( int numticks )
 {
 	tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "%s %d", __FUNCTION__, numticks );
 
@@ -2456,31 +2199,31 @@ void _Host_RunFrame_Server_Async( int numticks )
 }
 
 
-void _Host_RunFrame_Client( bool framefinished )
+static void _Host_RunFrame_Client( bool framefinished )
 {
 #ifndef SWDS
 	VPROF( "_Host_RunFrame_Client" );
 	tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "%s %d", __FUNCTION__, framefinished );
 
-	g_HostTimes.StartFrameSegment( FRAME_SEGMENT_CLIENT );
+	{
+		const ScopedFrameSegment client_segment{ g_HostTimes, FrameSegment::FRAME_SEGMENT_CLIENT };
 
-	// Get any current state update from server, etc.
-	CL_ReadPackets( framefinished );
+		// Get any current state update from server, etc.
+		CL_ReadPackets( framefinished );
 
 #if defined( VOICE_OVER_IP )
-	// Send any enqueued voice data to the server
-	CL_ProcessVoiceData();
+		// Send any enqueued voice data to the server
+		CL_ProcessVoiceData();
 #endif // VOICE_OVER_IP
 
-	cl.CheckUpdatingSteamResources();
-	cl.CheckFileCRCsWithServer();
+		cl.CheckUpdatingSteamResources();
+		cl.CheckFileCRCsWithServer();
 
-	// Resend connection request if needed.
-	cl.RunFrame();
+		// Resend connection request if needed.
+		cl.RunFrame();
 
-	Steam3Client().RunFrame();
-
-	g_HostTimes.EndFrameSegment( FRAME_SEGMENT_CLIENT );
+		Steam3Client().RunFrame();
+	}
 
 	// This takes 1 usec, so it's pretty cheap...
 	CL_SetPagedPoolInfo();
@@ -2507,15 +2250,19 @@ bool CheckVarRange_Generic( ConVar *pVar, int minVal, int maxVal )
 }
 
 
-void CheckSpecialCheatVars()
+static void CheckSpecialCheatVars()
 {
-	static ConVar *mat_picmip = NULL;
+	static ConVar *mat_picmip = nullptr;
 	if ( !mat_picmip )
 		mat_picmip = g_pCVar->FindVar( "mat_picmip" );
 
-	// In multiplayer, don't allow them to set mat_picmip > 2.	
+	// In multiplayer, don't allow them to set mat_picmip > 2.
 	if ( mat_picmip )
-		CheckVarRange_Generic( mat_picmip, -1, 2 );
+	{
+		// dimhotepus: TF2 allows mat_picmip -10, do not see a reason to disallow for other games.
+		// See https://developer.valvesoftware.com/wiki/Mat_picmip
+		CheckVarRange_Generic( mat_picmip, -10, 2 );
+	}
 	
 	CheckVarRange_r_rootlod();
 	CheckVarRange_r_lod();
@@ -2523,7 +2270,7 @@ void CheckSpecialCheatVars()
 }
 
 
-void _Host_RunFrame_Render()
+static void _Host_RunFrame_Render()
 {
 #ifndef SWDS
 	VPROF( "_Host_RunFrame_Render" );
@@ -2539,23 +2286,23 @@ void _Host_RunFrame_Render()
 		mat_norendering.SetValue( 0 );
 	}
 
-	// update video if not running in background
-	g_HostTimes.StartFrameSegment( FRAME_SEGMENT_RENDER );
-
-	CL_LatchInterpolationAmount();
-
 	{
-		VPROF( "_Host_RunFrame_Render - UpdateScreen" );
-		tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "_Host_RunFrame_Render - UpdateScreen" );
-		Host_UpdateScreen();
-	}
-	{
-		VPROF( "_Host_RunFrame_Render - CL_DecayLights" );
-		tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "_Host_RunFrame_Render - CL_DecayLights" );
-		CL_DecayLights ();
-	}
+		// update video if not running in background
+		const ScopedFrameSegment render_segment{ g_HostTimes, FrameSegment::FRAME_SEGMENT_RENDER };
 
-	g_HostTimes.EndFrameSegment( FRAME_SEGMENT_RENDER );
+		CL_LatchInterpolationAmount();
+
+		{
+			VPROF( "_Host_RunFrame_Render - UpdateScreen" );
+			tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "_Host_RunFrame_Render - UpdateScreen" );
+			Host_UpdateScreen();
+		}
+		{
+			VPROF( "_Host_RunFrame_Render - CL_DecayLights" );
+			tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "_Host_RunFrame_Render - CL_DecayLights" );
+			CL_DecayLights ();
+		}
+	}
 
 	saverestore->OnFrameRendered();
 
@@ -2570,7 +2317,7 @@ void _Host_RunFrame_Render()
 #endif
 }
 
-void CL_FindInterpolatedAddAngle( float t, float& frac, AddAngle **prev, AddAngle **next )
+static void CL_FindInterpolatedAddAngle( float t, float& frac, AddAngle **prev, AddAngle **next )
 {
 	int c = cl.addangle.Count();
 
@@ -2612,7 +2359,7 @@ void CL_FindInterpolatedAddAngle( float t, float& frac, AddAngle **prev, AddAngl
 	}
 }
 
-void CL_DiscardOldAddAngleEntries( float t )
+static void CL_DiscardOldAddAngleEntries( float t )
 {
 	float killtime = t - host_state.interval_per_tick - 0.1f;
 
@@ -2634,7 +2381,7 @@ void CL_DiscardOldAddAngleEntries( float t )
 }
 
 #ifndef SWDS
-void CL_ApplyAddAngle()
+static void CL_ApplyAddAngle()
 {
 	tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "%s", __FUNCTION__ );
 
@@ -2670,17 +2417,14 @@ void CL_ApplyAddAngle()
 }
 #endif
 
-void _Host_RunFrame_Sound()
+static void _Host_RunFrame_Sound()
 {
 #ifndef SWDS
-
 	VPROF_BUDGET( "_Host_RunFrame_Sound", VPROF_BUDGETGROUP_OTHER_SOUND );
 
-	g_HostTimes.StartFrameSegment( FRAME_SEGMENT_SOUND );
+	const ScopedFrameSegment sound_segment{ g_HostTimes, FrameSegment::FRAME_SEGMENT_SOUND };
 
 	Host_UpdateSounds();
-
-	g_HostTimes.EndFrameSegment( FRAME_SEGMENT_SOUND );
 #endif
 }
 
@@ -2744,7 +2488,7 @@ S_API int SteamGameServer_GetIPCCallCount();
 #else
 S_API int SteamGameServer_GetIPCCallCount() { return 0; }
 #endif
-void Host_ShowIPCCallCount()
+static void Host_ShowIPCCallCount()
 {
 	// If set to 0 then get out.
 	if ( host_ShowIPCCallCount.GetInt() == 0 )
@@ -2767,7 +2511,7 @@ void Host_ShowIPCCallCount()
 	{
 		uint32 callCount = 0;
 
-	  // dimhotepus: NO_STEAM
+		// dimhotepus: NO_STEAM
 #ifndef NO_STEAM
 		ISteamClient *pSteamClient = SteamClient();
 		if ( pSteamClient )
@@ -2796,7 +2540,7 @@ void Host_ShowIPCCallCount()
 	}
 }
 
-void Host_SetClientInSimulation( bool bInSimulation )
+static void Host_SetClientInSimulation( bool bInSimulation )
 {
 #ifndef SWDS
 	// Tracker 77931:  If the game is paused, then lock the client clock at the previous tick boundary 
@@ -2817,7 +2561,7 @@ static ConVar host_Sleep( "host_sleep", "0", FCVAR_CHEAT, "Force the host to sle
 extern ConVar sv_alternateticks;
 #define LOG_FRAME_OUTPUT 0
 
-void _Host_RunFrame (float time)
+static void _Host_RunFrame (float time)
 {
 	MDLCACHE_COARSE_LOCK_(g_pMDLCache);
 	static double host_remainder = 0.0f;
@@ -2914,16 +2658,16 @@ void _Host_RunFrame (float time)
 		VPROF( "_Host_RunFrame" );
 		tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "_Host_RunFrame" );
 
-		g_HostTimes.StartFrameSegment( FRAME_SEGMENT_CMD_EXECUTE );
+		{
+			const ScopedFrameSegment cmd_segment{ g_HostTimes, FrameSegment::FRAME_SEGMENT_CMD_EXECUTE };
 
-		// process console commands
-		Cbuf_Execute ();
+			// process console commands
+			Cbuf_Execute ();
 
-		// initialize networking for dedicated server after commandline & autoexec.cfg have been parsed
-		if ( NET_IsDedicated() && !NET_IsMultiplayer() )
-			NET_SetMutiplayer( true );
-
-		g_HostTimes.EndFrameSegment( FRAME_SEGMENT_CMD_EXECUTE );
+			// initialize networking for dedicated server after commandline & autoexec.cfg have been parsed
+			if ( NET_IsDedicated() && !NET_IsMultiplayer() )
+				NET_SetMutiplayer( true );
+		}
 
 		// Msg( "Running %i ticks (%f remainder) for frametime %f total %f tick %f delta %f\n", numticks, remainder, host_frametime, host_time );
 		g_ServerGlobalVariables.interpolation_amount = 0.0f;
@@ -3231,10 +2975,6 @@ void _Host_RunFrame (float time)
 			// set net_time once before running the server
 			NET_SetTime( Plat_FloatTime() );
 			pGameJob = new CFunctorJob( CreateFunctor( _Host_RunFrame_Server_Async, serverticks ) );
-			if ( IsX360() )
-			{
-				pGameJob->SetServiceThread( g_nServerThread );
-			}
 			g_pThreadPool->AddJob( pGameJob );
 #if LOG_FRAME_OUTPUT
 			if ( !cl.IsPaused() || !sv.IsPaused() )
@@ -3293,11 +3033,9 @@ void _Host_RunFrame (float time)
 			tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "_Host_RunFrame - ClientDLL_Update" );
 
 			// Client-side simulation
-			g_HostTimes.StartFrameSegment( FRAME_SEGMENT_CLDLL );
+			const ScopedFrameSegment cldll_segment{ g_HostTimes, FrameSegment::FRAME_SEGMENT_CLDLL };
 
 			ClientDLL_Update();
-
-			g_HostTimes.EndFrameSegment( FRAME_SEGMENT_CLDLL );
 		}
 #endif
 		if ( pGameJob )
@@ -3372,9 +3110,15 @@ void Host_RunFrame( float time )
 	{
 		switch ( host_thread_mode.GetInt() )
 		{
-		case HTM_DISABLED:	g_bThreadedEngine = false;									break;
-		case HTM_DEFAULT:	g_bThreadedEngine = ( g_pThreadPool->NumThreads() > 0 );	break;
-		case HTM_FORCED:	g_bThreadedEngine = true;									break;
+		case to_underlying(HostThreadMode::HTM_DISABLED):
+			g_bThreadedEngine = false;
+			break;
+		case to_underlying(HostThreadMode::HTM_DEFAULT):
+			g_bThreadedEngine = ( g_pThreadPool->NumThreads() > 0 );
+			break;
+		case to_underlying(HostThreadMode::HTM_FORCED):
+			g_bThreadedEngine = true;
+			break;
 		}
 	}
 	else
@@ -3415,7 +3159,7 @@ void Host_RunFrame( float time )
 //-----------------------------------------------------------------------------
 // A more secure means of enforcing low violence.
 //-----------------------------------------------------------------------------
-bool IsLowViolence_Secure()
+static bool IsLowViolence_Secure()
 {
 #ifndef DEDICATED
 	if ( Steam3Client().SteamApps() )
@@ -3433,7 +3177,7 @@ bool IsLowViolence_Secure()
 // If "User Token 2" exists in HKEY_CURRENT_USER/Software/Valve/Half-Life/Settings
 // then we disable gore. Obviously not very secure.
 //-----------------------------------------------------------------------------
-bool IsLowViolence_Registry()
+static bool IsLowViolence_Registry()
 {
 	char szSubKey[128];
 	int nBufferLen;
@@ -3443,10 +3187,10 @@ bool IsLowViolence_Registry()
 	memset( szBuffer, 0, 128 );
 
 	char const *appname = "Source";
-	Q_snprintf(szSubKey, sizeof( szSubKey ), "Software\\Valve\\%s\\Settings", appname );
+	V_sprintf_safe(szSubKey, "Software\\Valve\\%s\\Settings", appname );
 
 	nBufferLen = 127;
-	Q_strncpy( szBuffer, "", sizeof( szBuffer ) );
+	V_strcpy_safe( szBuffer, "" );
 
 	Sys_GetRegKeyValue( szSubKey, "User Token 2", szBuffer,	nBufferLen, szBuffer );
 
@@ -3460,7 +3204,7 @@ bool IsLowViolence_Registry()
 	}
 
 	char gamedir[MAX_OSPATH];
-	Q_FileBase( com_gamedir, gamedir );
+	V_FileBase( com_gamedir, gamedir );
 
 	// also check mod specific directories for LV changes
 	V_sprintf_safe(szSubKey, "Software\\Valve\\%s\\%s\\Settings", appname, gamedir );
@@ -3526,7 +3270,7 @@ void Host_CheckGore( void )
 }
 
 
-void Host_InitCpu()
+static void Host_InitCpu()
 {
 	Cbuf_AddText("star_cpu");
 
@@ -3539,22 +3283,22 @@ void Host_InitCpu()
 #endif
 }
 
-void Host_InitRam()
+static void Host_InitRam()
 {
 	Cbuf_AddText("star_memory");
 }
 
-void Host_InitGpu()
+static void Host_InitGpu()
 {
 	Cbuf_AddText("star_gpu");
 }
 
-void Host_InitAudio()
+static void Host_InitAudio()
 {
 	Cbuf_AddText("star_audio_render");
 }
 
-void Host_InitOperatingSystem()
+static void Host_InitOperatingSystem()
 {
 	Cbuf_AddText("star_os");
 }
@@ -3585,7 +3329,7 @@ int Host_GetServerCount( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void Host_PostInit()
+static void Host_PostInit()
 {
 	if ( serverGameDLL )
 	{
@@ -3608,13 +3352,13 @@ void Host_PostInit()
 #endif
 }
 
-void HLTV_Init()
+static void HLTV_Init()
 {
 	Assert ( hltv == NULL );
 	Assert ( hltvtest == NULL );
 }
 
-void HLTV_Shutdown()
+static void HLTV_Shutdown()
 {
 	if ( hltv )
 	{
@@ -3631,7 +3375,7 @@ void HLTV_Shutdown()
 }
 
 // Check with steam to see if the requested file (requires full path) is a valid, signed binary
-bool DLL_LOCAL Host_IsValidSignature( const char *pFilename, bool bAllowUnknown )
+static bool Host_IsValidSignature( const char *pFilename, bool bAllowUnknown )
 {
 #if defined( SWDS )
 	return true;
@@ -3822,9 +3566,6 @@ void Host_Init( bool bDedicated )
 	TRACEINIT( Filter_Init(), Filter_Shutdown() );
 
 #ifndef SWDS
-#ifndef _X360
-	TRACEINIT( InitMixerControls(), ShutdownMixerControls() );
-#endif
 
 	TRACEINIT( Key_Init(), Key_Shutdown() );
 #endif
@@ -4020,14 +3761,6 @@ void Host_Init( bool bDedicated )
 	pRenderContext->SetNonInteractivePacifierTexture( NULL, 0, 0, 0 );
 }
 
-//-----------------------------------------------------------------------------
-// Adds hints to the loader to keep resources that are in the transition volume,
-// as they may not be part of the next map's reslist.
-//-----------------------------------------------------------------------------
-void AddTransitionResources( CSaveRestoreData *pSaveData, const char *pLevelName, const char *pLandmarkName )
-{
-}
-
 bool Host_Changelevel( bool loadfromsavedgame, const char *mapname, const char *start )
 {
 	char			_startspot[MAX_QPATH];
@@ -4123,12 +3856,12 @@ bool Host_Changelevel( bool loadfromsavedgame, const char *mapname, const char *
 	}
 
 	Warning( "---- Host_Changelevel ----\n" );
-	CheckForFlushMemory( sv.GetMapName(), szMapName );
 
 #if !defined( SWDS )
 	// Add on time passed since the last time we kept track till this transition
-	int iAdditionalSeconds = g_ServerGlobalVariables.curtime - saverestore->GetMostRecentElapsedTimeSet();
-	int iElapsedSeconds = saverestore->GetMostRecentElapsedSeconds() + iAdditionalSeconds;
+	// dimhotepus: int -> float
+	float fAdditionalSeconds = g_ServerGlobalVariables.curtime - saverestore->GetMostRecentElapsedTimeSet();
+	int iElapsedSeconds = saverestore->GetMostRecentElapsedSeconds() + (int)floor( fAdditionalSeconds );
 	int iElapsedMinutes = saverestore->GetMostRecentElapsedMinutes() + ( iElapsedSeconds / 60 );
 	saverestore->SetMostRecentElapsedMinutes( iElapsedMinutes );
 	saverestore->SetMostRecentElapsedSeconds( ( iElapsedSeconds % 60 ) );
@@ -4151,7 +3884,8 @@ bool Host_Changelevel( bool loadfromsavedgame, const char *mapname, const char *
 		}
 
 		// Not going to load a save after the transition, so add this map's elapsed time to the total elapsed time
-		int totalSeconds = g_ServerGlobalVariables.curtime + saverestore->GetMostRecentElapsedSeconds();
+		// dimhotepus: int -> float
+		float totalSeconds = g_ServerGlobalVariables.curtime + saverestore->GetMostRecentElapsedSeconds();
 		saverestore->SetMostRecentElapsedMinutes( (int)( totalSeconds / 60.0f ) + saverestore->GetMostRecentElapsedMinutes() );
 		saverestore->SetMostRecentElapsedSeconds( (int)fmod( totalSeconds, 60.0f ) );
 	}
@@ -4174,9 +3908,6 @@ bool Host_Changelevel( bool loadfromsavedgame, const char *mapname, const char *
 				return false;
 			}
 		}
-
-		// ensure resources in the transition volume stay
-		AddTransitionResources( pSaveData, szMapName, startspot );
 	}
 #endif
 	g_pServerPluginHandler->LevelShutdown();
@@ -4237,7 +3968,8 @@ bool Host_Changelevel( bool loadfromsavedgame, const char *mapname, const char *
 
 #if !defined(SWDS)
 	// Offset stored elapsed time by the current elapsed time for this new map
-	int maptime = sv.GetTime();
+	// dimhotepus: int -> float
+	float maptime = sv.GetTime();
 	int minutes = (int)( maptime / 60.0f );
 	int seconds = (int)fmod( maptime, 60.0f );
 	saverestore->SetMostRecentElapsedMinutes( saverestore->GetMostRecentElapsedMinutes() - minutes );
@@ -4299,8 +4031,6 @@ bool Host_NewGame( char *mapName, bool loadGame, bool bBackgroundLevel, const ch
 
 	DevMsg( "---- Host_NewGame ----\n" );
 	host_map.SetValue( szMapName );
-
-	CheckForFlushMemory( previousMapName, szMapName );
 
 	if (MapReslistGenerator().IsEnabled())
 	{
@@ -4647,3 +4377,26 @@ bool Host_AllowQueuedMaterialSystem( bool bAllow )
 	return false;
 #endif
 }
+
+// dimhotepus: Moved from tier1 to not register twice.
+#ifdef _DEBUG
+CON_COMMAND( test_stringpool, "Tests the class CStringPool" )
+{
+	CStringPool pool;
+	Assert(pool.Count() == 0);
+
+	Assert(pool.Allocate("test") && pool.Count() == 1);
+	Assert(pool.Allocate("test") && pool.Count() == 1);
+	Assert(pool.Allocate("test2") && pool.Count() == 2);
+
+	Assert( pool.Find("test2") != nullptr );
+	Assert( pool.Find("TEST") != nullptr );
+	Assert( pool.Find("Test2") != nullptr );
+	Assert( pool.Find("test") != nullptr );
+
+	pool.FreeAll();
+	Assert(pool.Count() == 0);
+
+	Msg("Pass.");
+}
+#endif

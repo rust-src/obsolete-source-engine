@@ -1249,6 +1249,13 @@ CON_COMMAND( kickid, "Kick a player by userid or uniqueid, with a message." )
 			return;
 		}
 
+		// dimhotepus: RaphaelIT7: Preventing kick of local server host
+		if ( host_client == client )
+		{
+			ConWarning( "Preventing kick of local server host!\n" );
+			return;
+		}
+
 		if ( iSearchIndex != -1 || !client->IsFakeClient() )
 		{
 			if ( who == NULL )
@@ -1358,6 +1365,13 @@ CON_COMMAND( kick, "Kick a player by name." )
 			// can't kick yourself!
 			if ( cmd_source != src_command && host_client == client && !sv.IsDedicated() )
 				return;
+			
+			// dimhotepus: RaphaelIT7: Preventing kick of local server host
+			if ( host_client == client )
+			{
+				ConWarning( "Preventing kick of local server host!\n" );
+				return;
+			}
 
 			if ( who )
 			{
@@ -1412,6 +1426,13 @@ CON_COMMAND( kickall, "Kicks everybody connected with a message." )
 
 		if ( client->IsHLTV() )
 			continue;
+		
+		// dimhotepus: RaphaelIT7: Preventing kick of local server host
+		if ( host_client == client )
+		{
+			ConWarning( "Preventing kick of local server host!\n" );
+			continue;
+		}
 
 		if ( who )
 		{

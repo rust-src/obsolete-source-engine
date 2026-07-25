@@ -4,21 +4,21 @@
 //
 //===========================================================================//
 
-#include "InfoTargetBrowserPanel.h"
+#include "infotargetbrowserpanel.h"
 #include "tier1/KeyValues.h"
 #include "tier1/utlbuffer.h"
 #include "iregistry.h"
-#include "vgui/ivgui.h"
-#include "vgui_controls/listpanel.h"
-#include "vgui_controls/textentry.h"
-#include "vgui_controls/checkbutton.h"
-#include "vgui_controls/combobox.h"
-#include "vgui_controls/radiobutton.h"
-#include "vgui_controls/messagebox.h"
+#include "vgui/IVGui.h"
+#include "vgui_controls/ListPanel.h"
+#include "vgui_controls/TextEntry.h"
+#include "vgui_controls/CheckButton.h"
+#include "vgui_controls/ComboBox.h"
+#include "vgui_controls/RadioButton.h"
+#include "vgui_controls/MessageBox.h"
 #include "vcdblockdoc.h"
 #include "vcdblocktool.h"
 #include "datamodel/dmelement.h"
-#include "vgui/keycode.h"
+#include "vgui/KeyCode.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include <tier0/memdbgon.h>
@@ -29,7 +29,7 @@ using namespace vgui;
 //-----------------------------------------------------------------------------
 // Sort by target name
 //-----------------------------------------------------------------------------
-static int __cdecl TargetNameSortFunc( vgui::ListPanel *pPanel, const ListPanelItem &item1, const ListPanelItem &item2 )
+static int __cdecl TargetNameSortFunc( [[maybe_unused]] vgui::ListPanel *pPanel, const ListPanelItem &item1, const ListPanelItem &item2 )
 {
 	const char *string1 = item1.kv->GetString("targetname");
 	const char *string2 = item2.kv->GetString("targetname");
@@ -68,8 +68,9 @@ CInfoTargetBrowserPanel::CInfoTargetBrowserPanel( CVcdBlockDoc *pDoc, vgui::Pane
 	SetPaintBackgroundEnabled( true );
 
 	m_pEntities = new vgui::ListPanel( this, "Entities" );
-	m_pEntities->AddColumnHeader( 0, "targetname", "Name", 52, ListPanel::COLUMN_RESIZEWITHWINDOW );
- 	m_pEntities->AddColumnHeader( 1, "classname", "Class Name", 52, ListPanel::COLUMN_RESIZEWITHWINDOW );
+	// dimhotepus: Scale UI.
+	m_pEntities->AddColumnHeader( 0, "targetname", "Name", QuickPropScale( 52 ), ListPanel::COLUMN_RESIZEWITHWINDOW );
+ 	m_pEntities->AddColumnHeader( 1, "classname", "Class Name", QuickPropScale( 52 ), ListPanel::COLUMN_RESIZEWITHWINDOW );
 	m_pEntities->SetColumnSortable( 0, true );
 	m_pEntities->SetColumnSortable( 1, true );
 	m_pEntities->SetEmptyListText( "No info_targets" );
@@ -95,7 +96,7 @@ CInfoTargetBrowserPanel::~CInfoTargetBrowserPanel()
 //-----------------------------------------------------------------------------
 void CInfoTargetBrowserPanel::OnProperties(void)
 {
-	int iSel = m_pEntities->GetSelectedItem( 0 );
+	intp iSel = m_pEntities->GetSelectedItem( 0 );
 	KeyValues *kv = m_pEntities->GetItem( iSel );
 	CDmeVMFEntity *pEntity = CastElement< CDmeVMFEntity >( (CDmElement *)kv->GetPtr( "entity" ) );
 	g_pVcdBlockTool->ShowEntityInEntityProperties( pEntity );
@@ -107,7 +108,7 @@ void CInfoTargetBrowserPanel::OnProperties(void)
 //-----------------------------------------------------------------------------
 void CInfoTargetBrowserPanel::OnDeleteEntities(void)
 {		
-	int iSel = m_pEntities->GetSelectedItem( 0 );
+	intp iSel = m_pEntities->GetSelectedItem( 0 );
 
 	{
 		// This is undoable
@@ -116,10 +117,10 @@ void CInfoTargetBrowserPanel::OnDeleteEntities(void)
 		//
 		// Build a list of objects to delete.
 		//
-		int nCount = m_pEntities->GetSelectedItemsCount();
-		for (int i = 0; i < nCount; i++)
+		intp nCount = m_pEntities->GetSelectedItemsCount();
+		for (intp i = 0; i < nCount; i++)
 		{
-			int nItemID = m_pEntities->GetSelectedItem(i);
+			intp nItemID = m_pEntities->GetSelectedItem(i);
 			KeyValues *kv = m_pEntities->GetItem( nItemID );
 			CDmeVMFEntity *pEntity = (CDmeVMFEntity *)kv->GetPtr( "entity" );
 			if ( pEntity )
@@ -169,7 +170,7 @@ void CInfoTargetBrowserPanel::OnItemSelected( void )
 void CInfoTargetBrowserPanel::SelectNode( CDmeVMFEntity *pNode )
 {
 	m_pEntities->ClearSelectedItems();
-	for ( int nItemID = m_pEntities->FirstItem(); nItemID != m_pEntities->InvalidItemID(); nItemID = m_pEntities->NextItem( nItemID ) )
+	for ( intp nItemID = m_pEntities->FirstItem(); nItemID != m_pEntities->InvalidItemID(); nItemID = m_pEntities->NextItem( nItemID ) )
 	{
 		KeyValues *kv = m_pEntities->GetItem( nItemID );
 		CDmElement *pEntity = (CDmElement *)kv->GetPtr( "entity" );
@@ -245,8 +246,8 @@ void CInfoTargetBrowserPanel::UpdateEntityList(void)
 	if ( !entityList.IsValid() )
 		return;
 
-	int nCount = entityList.Count();
-	for ( int i = 0; i < nCount; ++i )
+	intp nCount = entityList.Count();
+	for ( intp i = 0; i < nCount; ++i )
 	{
 		CDmElement *pEntity = entityList[i];
 
@@ -267,7 +268,7 @@ void CInfoTargetBrowserPanel::UpdateEntityList(void)
 		}
 		kv->SetString( "targetname", pTargetname ); 
 
-		int nItemID = m_pEntities->AddItem( kv, 0, false, false );
+		intp nItemID = m_pEntities->AddItem( kv, 0, false, false );
 
 		// Hide everything that isn't an info_target
 		m_pEntities->SetItemVisible( nItemID, !Q_stricmp( pClassName, "info_target" ) );
@@ -281,7 +282,7 @@ void CInfoTargetBrowserPanel::UpdateEntityList(void)
 //-----------------------------------------------------------------------------
 void CInfoTargetBrowserPanel::Refresh(void)
 {
-	for ( int nItemID = m_pEntities->FirstItem(); nItemID != m_pEntities->InvalidItemID(); nItemID = m_pEntities->NextItem( nItemID ) )
+	for ( intp nItemID = m_pEntities->FirstItem(); nItemID != m_pEntities->InvalidItemID(); nItemID = m_pEntities->NextItem( nItemID ) )
 	{
 		KeyValues *kv = m_pEntities->GetItem( nItemID );
 		CDmElement *pEntity = (CDmElement *)kv->GetPtr( "entity" );

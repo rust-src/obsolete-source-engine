@@ -24,22 +24,22 @@ void EngineTool_InstallQuitHandler( void *pvUserData, FnQuitHandler func );
 //-----------------------------------------------------------------------------
 // Purpose: -tools loads framework
 //-----------------------------------------------------------------------------
-class CToolFrameworkInternal : public IToolFrameworkInternal
+class CToolFrameworkInternal final : public IToolFrameworkInternal
 {
 public:
 	// Here's where the app systems get to learn about each other 
-	virtual bool	Connect( CreateInterfaceFn factory );
-	virtual void	Disconnect();
+	bool	Connect( CreateInterfaceFn factory ) override;
+	void	Disconnect() override;
 
 	// Here's where systems can access other interfaces implemented by this object
 	// Returns NULL if it doesn't implement the requested interface
-	virtual void	*QueryInterface( const char *pInterfaceName );
+	void	*QueryInterface( const char *pInterfaceName ) override;
 
 	// Init, shutdown
-	virtual InitReturnVal_t Init();
-	virtual void	Shutdown();
+	InitReturnVal_t Init() override;
+	void	Shutdown() override;
 
-	virtual bool	CanQuit();
+	bool	CanQuit() override;
 
 public:
 	// Level init, shutdown
@@ -157,10 +157,8 @@ IToolFrameworkInternal *toolframework = &g_ToolFrameworkInternal;
 //-----------------------------------------------------------------------------
 void CToolFrameworkInternal::InvokeMethod( ToolSystemFunc_t f )
 {
-	int toolCount = m_ToolSystems.Count();
-	for ( int i = 0; i < toolCount; ++i )
+	for ( auto *sys : m_ToolSystems )
 	{
-		IToolSystem *sys = m_ToolSystems[i];
 		(sys->*f)();
 	}
 }
@@ -171,10 +169,8 @@ void CToolFrameworkInternal::InvokeMethod( ToolSystemFunc_t f )
 //-----------------------------------------------------------------------------
 void CToolFrameworkInternal::InvokeMethodInt( ToolSystemFunc_Int_t f, int arg )
 {
-	int toolCount = m_ToolSystems.Count();
-	for ( int i = 0; i < toolCount; ++i )
+	for ( auto *sys : m_ToolSystems )
 	{
-		IToolSystem *sys = m_ToolSystems[i];
 		(sys->*f)( arg );
 	}
 }
@@ -215,7 +211,7 @@ void *CToolFrameworkInternal::QueryInterface( const char *pInterfaceName )
 //-----------------------------------------------------------------------------
 static bool CToolFrameworkInternal_QuitHandler( void *pvUserData )
 {
-	CToolFrameworkInternal *tfm = reinterpret_cast< CToolFrameworkInternal * >( pvUserData );
+	auto *tfm = reinterpret_cast< CToolFrameworkInternal * >( pvUserData );
 	if ( tfm )
 	{
 		return tfm->CanQuit();
@@ -256,14 +252,11 @@ InitReturnVal_t CToolFrameworkInternal::Init()
 bool CToolFrameworkInternal::PostInit()
 {
 	bool bRetVal = true;
-
-	int toolCount = m_ToolSystems.Count();
-	for ( int i = 0; i < toolCount; ++i )
+	
+	for ( auto *sys : m_ToolSystems )
 	{
-		IToolSystem *system = m_ToolSystems[ i ];
-
 		// FIXME: Should this really get access to a list if factories
-		bool success = system->Init( );
+		bool success = sys->Init( );
 		if ( !success )
 		{
 			bRetVal = false;
@@ -297,11 +290,9 @@ void CToolFrameworkInternal::Shutdown()
 //-----------------------------------------------------------------------------
 void CToolFrameworkInternal::Think( bool finalTick )
 {
-	int toolCount = m_ToolSystems.Count();
-	for ( int i = 0; i < toolCount; ++i )
+	for ( auto *sys : m_ToolSystems )
 	{
-		IToolSystem *system = m_ToolSystems[ i ];
-		system->Think( finalTick );
+		sys->Think( finalTick );
 	}
 }
 
@@ -313,13 +304,11 @@ void CToolFrameworkInternal::Think( bool finalTick )
 bool CToolFrameworkInternal::ServerInit( CreateInterfaceFn serverFactory )
 {
 	bool retval = true;
-
-	int toolCount = m_ToolSystems.Count();
-	for ( int i = 0; i < toolCount; ++i )
+	
+	for ( auto *sys : m_ToolSystems )
 	{
-		IToolSystem *system = m_ToolSystems[ i ];
 		// FIXME: Should this really get access to a list if factories
-		bool success = system->ServerInit( serverFactory );
+		bool success = sys->ServerInit( serverFactory );
 		if ( !success )
 		{
 			retval = false;
@@ -336,13 +325,11 @@ bool CToolFrameworkInternal::ServerInit( CreateInterfaceFn serverFactory )
 bool CToolFrameworkInternal::ClientInit( CreateInterfaceFn clientFactory )
 {
 	bool retval = true;
-
-	int toolCount = m_ToolSystems.Count();
-	for ( int i = 0; i < toolCount; ++i )
+	
+	for ( auto *sys : m_ToolSystems )
 	{
-		IToolSystem *system = m_ToolSystems[ i ];
 		// FIXME: Should this really get access to a list if factories
-		bool success = system->ClientInit( clientFactory );
+		bool success = sys->ClientInit( clientFactory );
 		if ( !success )
 		{
 			retval = false;
@@ -358,8 +345,8 @@ bool CToolFrameworkInternal::ClientInit( CreateInterfaceFn clientFactory )
 void CToolFrameworkInternal::ServerShutdown()
 {
 	// Reverse order
-	int toolCount = m_ToolSystems.Count();
-	for ( int i = toolCount - 1; i >= 0; --i )
+	intp toolCount = m_ToolSystems.Count();
+	for ( intp i = toolCount - 1; i >= 0; --i )
 	{
 		IToolSystem *system = m_ToolSystems[ i ];
 		system->ServerShutdown();
@@ -374,8 +361,8 @@ void CToolFrameworkInternal::ServerShutdown()
 void CToolFrameworkInternal::ClientShutdown()
 {
 	// Reverse order
-	int toolCount = m_ToolSystems.Count();
-	for ( int i = toolCount - 1; i >= 0; --i )
+	intp toolCount = m_ToolSystems.Count();
+	for ( intp i = toolCount - 1; i >= 0; --i )
 	{
 		IToolSystem *system = m_ToolSystems[ i ];
 		system->ClientShutdown();
@@ -390,11 +377,9 @@ void CToolFrameworkInternal::ClientShutdown()
 //-----------------------------------------------------------------------------
 bool CToolFrameworkInternal::CanQuit()
 {
-	int toolCount = m_ToolSystems.Count();
-	for ( int i = 0; i < toolCount; ++i )
+	for ( auto *sys : m_ToolSystems )
 	{
-		IToolSystem *system = m_ToolSystems[ i ];
-		bool canquit = system->CanQuit();
+		bool canquit = sys->CanQuit();
 		if ( !canquit )
 		{
 			return false;
@@ -410,7 +395,7 @@ bool CToolFrameworkInternal::CanQuit()
 void CToolFrameworkInternal::ShutdownModules()
 {
 	// Shutdown dictionaries
-	int i;
+	intp i;
 	for ( i = m_Modules.Count(); --i >= 0; )
 	{
 		Sys_UnloadModule( m_Modules[i] );
@@ -426,7 +411,7 @@ void CToolFrameworkInternal::ShutdownModules()
 void CToolFrameworkInternal::ShutdownToolDictionaries()
 {
 	// Shutdown dictionaries
-	int i;
+	intp i;
 	for ( i = m_Dictionaries.Count(); --i >= 0; )
 	{
 		m_Dictionaries[i]->Shutdown();
@@ -451,9 +436,8 @@ void CToolFrameworkInternal::ShutdownTools()
 	SwitchToTool( -1 );
 
 	// Reverse order
-	int i;
-	int toolCount = m_ToolSystems.Count();
-	for ( i = toolCount - 1; i >= 0; --i )
+	intp toolCount = m_ToolSystems.Count();
+	for ( intp i = toolCount - 1; i >= 0; --i )
 	{
 		IToolSystem *system = m_ToolSystems[ i ];
 		system->Shutdown();
@@ -472,6 +456,21 @@ void CToolFrameworkInternal::ShutdownTools()
 //-----------------------------------------------------------------------------
 void CToolFrameworkInternal::LoadToolsFromLibrary( const char *dllname )
 {
+	char fixedDllName[ MAX_PATH ];
+	// dimhotepus: x86-64 support.
+	if ( ssize( PLATFORM_DIR ) > 0 && V_stristr( dllname, PLATFORM_DIR ) == nullptr )
+	{
+		if ( V_strncmp( dllname, "tools", ssize( "tools" ) - 1 ) == 0 ) 
+		{
+			V_strcpy_safe( fixedDllName, "tools" PLATFORM_DIR CORRECT_PATH_SEPARATOR_S );
+			V_strcat_safe( fixedDllName, dllname + ssize( "tools/" ) - 1 );
+
+			V_FixSlashes( fixedDllName );
+
+			dllname = fixedDllName;
+		}
+	}
+
 	CSysModule *module = Sys_LoadModule( dllname );
 	if ( !module )
 	{
@@ -511,8 +510,8 @@ void CToolFrameworkInternal::LoadToolsFromLibrary( const char *dllname )
 
 	dictionary->CreateTools();
 
-	int toolCount = dictionary->GetToolCount();
-	for ( int i = 0; i < toolCount; ++i )
+	intp toolCount = dictionary->GetToolCount();
+	for ( intp i = 0; i < toolCount; ++i )
 	{
 		IToolSystem *tool = dictionary->GetTool( i );
 		if ( tool )
@@ -576,7 +575,7 @@ void CToolFrameworkInternal::LoadTools()
 {
 	m_bInToolMode = true;
 
-	// Load rootdir/bin/enginetools.txt
+	// Load rootdir/bin{/x64}/enginetools.txt
 	KeyValuesAD kv( "enginetools" );
 	Assert( kv );
 
@@ -591,7 +590,7 @@ void CToolFrameworkInternal::LoadTools()
 		{
 			if ( !Q_stricmp( tool->GetName(),  "library" ) )
 			{
-				// CHECK both bin/tools and gamedir/bin/tools
+				// CHECK both bin{/x64}/tools and gamedir/bin{/x64}/tools
 				LoadToolsFromLibrary( tool->GetString() );
 			}
 		}
@@ -768,13 +767,11 @@ void CToolFrameworkInternal::ServerPreSetupVisibilityAllTools()
 void CToolFrameworkInternal::PostToolMessage( HTOOLHANDLE hEntity, KeyValues *msg )
 {
 	// FIXME: Only message topmost tool?
-
-	int toolCount = m_ToolSystems.Count();
-	for ( int i = 0; i < toolCount; ++i )
+	
+	for ( auto *sys : m_ToolSystems )
 	{
-		IToolSystem *tool = m_ToolSystems[ i ];
-		Assert( tool );
-		tool->PostMessage( hEntity, msg );
+		Assert( sys );
+		sys->PostMessage( hEntity, msg );
 	}
 }
 
@@ -1013,20 +1010,20 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CToolFrameworkInternal, IToolFrameworkInterna
 class CClientEngineTools final : public IClientEngineTools
 {
 public:
-	virtual void LevelInitPreEntityAllTools();
-	virtual void LevelInitPostEntityAllTools();
-	virtual void LevelShutdownPreEntityAllTools();
-	virtual void LevelShutdownPostEntityAllTools();
-	virtual void PreRenderAllTools();
-	virtual void PostRenderAllTools();
-	virtual void PostToolMessage( HTOOLHANDLE hEntity, KeyValues *msg );
-	virtual void AdjustEngineViewport( int& x, int& y, int& width, int& height );
-	virtual bool SetupEngineView( Vector &origin, QAngle &angles, float &fov );
-	virtual bool SetupAudioState( AudioState_t &audioState );
-	virtual void VGui_PreRenderAllTools( int paintMode );
-	virtual void VGui_PostRenderAllTools( int paintMode );
-	virtual bool IsThirdPersonCamera( );
-	virtual bool InToolMode();
+	void LevelInitPreEntityAllTools() override;
+	void LevelInitPostEntityAllTools() override;
+	void LevelShutdownPreEntityAllTools() override;
+	void LevelShutdownPostEntityAllTools() override;
+	void PreRenderAllTools() override;
+	void PostRenderAllTools() override;
+	void PostToolMessage( HTOOLHANDLE hEntity, KeyValues *msg ) override;
+	void AdjustEngineViewport( int& x, int& y, int& width, int& height ) override;
+	bool SetupEngineView( Vector &origin, QAngle &angles, float &fov ) override;
+	bool SetupAudioState( AudioState_t &audioState ) override;
+	void VGui_PreRenderAllTools( int paintMode ) override;
+	void VGui_PostRenderAllTools( int paintMode ) override;
+	bool IsThirdPersonCamera( ) override;
+	bool InToolMode() override;
 };
 
 EXPOSE_SINGLE_INTERFACE( CClientEngineTools, IClientEngineTools, VCLIENTENGINETOOLS_INTERFACE_VERSION );
@@ -1149,20 +1146,20 @@ bool CClientEngineTools::InToolMode()
 //-----------------------------------------------------------------------------
 // Purpose: Exposed to server.dll
 //-----------------------------------------------------------------------------
-class CServerEngineTools : public IServerEngineTools
+class CServerEngineTools final : public IServerEngineTools
 {
 public:
 	// Inherited from IServerEngineTools
-	virtual void LevelInitPreEntityAllTools();
-	virtual void LevelInitPostEntityAllTools();
-	virtual void LevelShutdownPreEntityAllTools();
-	virtual void LevelShutdownPostEntityAllTools();
-	virtual void FrameUpdatePreEntityThinkAllTools();
-	virtual void FrameUpdatePostEntityThinkAllTools();
-	virtual void PreClientUpdateAllTools();
-	virtual void PreSetupVisibilityAllTools();
-	virtual const char* GetEntityData( const char *pActualEntityData );
-	virtual bool InToolMode();
+	void LevelInitPreEntityAllTools() override;
+	void LevelInitPostEntityAllTools() override;
+	void LevelShutdownPreEntityAllTools() override;
+	void LevelShutdownPostEntityAllTools() override;
+	void FrameUpdatePreEntityThinkAllTools() override;
+	void FrameUpdatePostEntityThinkAllTools() override;
+	void PreClientUpdateAllTools() override;
+	void PreSetupVisibilityAllTools() override;
+	const char* GetEntityData( const char *pActualEntityData ) override;
+	bool InToolMode() override;
 };
 
 EXPOSE_SINGLE_INTERFACE( CServerEngineTools, IServerEngineTools, VSERVERENGINETOOLS_INTERFACE_VERSION );

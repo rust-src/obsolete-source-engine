@@ -36,7 +36,7 @@ class CSaveGamePanel : public vgui::EditablePanel
 {
 	DECLARE_CLASS_SIMPLE_OVERRIDE( CSaveGamePanel, vgui::EditablePanel );
 public:
-	CSaveGamePanel( PanelListPanel *parent, const char *name, int saveGameListItemID ) : BaseClass( parent, name )
+	CSaveGamePanel( PanelListPanel *parent, const char *name, intp saveGameListItemID ) : BaseClass( parent, name )
 	{
 		m_iSaveGameListItemID = saveGameListItemID;
 		m_pParent = parent;
@@ -49,7 +49,7 @@ public:
 		m_pElapsedTimeLabel = new Label( this, "ElapsedTimeLabel", "" );
 		m_pFileTimeLabel = new Label( this, "FileTimeLabel", "" );
 
-		CMouseMessageForwardingPanel *panel = new CMouseMessageForwardingPanel(this, NULL);
+		auto *panel = new CMouseMessageForwardingPanel(this, NULL);
 		panel->SetZPos(2);
 
 		// dimhotepus: Scale UI.
@@ -136,7 +136,7 @@ public:
 		PostMessage( m_pParent->GetParent(), new KeyValues("Command", "command", "loadsave") );
 	}
 
-	int GetSaveGameListItemID()
+	intp GetSaveGameListItemID() const
 	{
 		return m_iSaveGameListItemID;
 	}
@@ -154,7 +154,7 @@ private:
 	Label *m_pFileTimeLabel;
 	Color m_TextColor, m_FillColor, m_SelectedColor;
 
-	int m_iSaveGameListItemID;
+	intp m_iSaveGameListItemID;
 };
 
 
@@ -262,6 +262,8 @@ void CBaseSaveGameDialog::ScanSavedGames()
 	{
 		vgui::Label *pNoSavesLabel = SETUP_PANEL(new Label(m_pGameList, "NoSavesLabel", "#GameUI_NoSaveGamesToDisplay"));
 		pNoSavesLabel->SetTextColorState(vgui::Label::CS_DULL);
+		// dimhotepus: Ensure label looks good regarding of UI scaling.
+		pNoSavesLabel->SizeToContents();
 		m_pGameList->AddItem( NULL, pNoSavesLabel );
 	}
 
@@ -294,6 +296,9 @@ bool CBaseSaveGameDialog::ParseSaveData( char const *pszFileName, char const *ps
 
 	V_strcpy_safe( save.szShortName, pszShortName );
 	V_strcpy_safe( save.szFileName, pszFileName );
+
+	// dimhotepus: This can take a while, put up a waiting cursor.
+	const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
 
 	FileHandle_t fh = g_pFullFileSystem->Open( pszFileName, "rb", "MOD" );
 	if (fh == FILESYSTEM_INVALID_HANDLE)
@@ -332,7 +337,7 @@ bool CBaseSaveGameDialog::ParseSaveData( char const *pszFileName, char const *ps
 		}
 
 		// Chop elapsed out of comment.
-		int n = i - 6;
+		intp n = i - 6;
 		szComment[n] = '\0';
 	
 		n--;
@@ -491,6 +496,11 @@ void CBaseSaveGameDialog::OnKeyCodePressed( vgui::KeyCode code )
 			m_pLoadButton->DoClick();
 			return;
 		}
+	}
+	// dimhotepus: Support deletion of saves by delete button.
+	else if ( code == KEY_DELETE )
+	{
+		OnCommand( "Delete" );
 	}
 
 	BaseClass::OnKeyCodePressed( code );

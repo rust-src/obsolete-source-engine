@@ -5,17 +5,18 @@
 // $NoKeywords: $
 //=============================================================================
 
-#include <winlite.h>
+#include "winlite.h"
 #undef CreateDialog
 #ifdef WIN32
 #include <direct.h>
 #include <io.h>
 #endif
-#include <stdio.h>
-#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <time.h>
+
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
 
 #include "vstdlib/pch_vstdlib.h"
 #include "tier0/memdbgoff.h"
@@ -64,7 +65,6 @@
 #include "LanGames.h"
 #include "FriendsGames.h"
 #include "HistoryGames.h"
-#include "SpectateGames.h"
 #include "CustomGames.h"
 #include "ServerBrowserDialog.h"
 #include "QuickListPanel.h"
@@ -74,8 +74,6 @@
 
 extern bool GameSupportsReplay();
 extern bool IsReplayServer( gameserveritem_t &server );
-
-#pragma warning( disable: 4355 )  //  warning C4355: 'this' : used in base member initializer list
 
 #if defined( STEAM )
 #define IsSteam()	true

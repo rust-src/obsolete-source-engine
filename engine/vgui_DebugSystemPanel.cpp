@@ -5,25 +5,25 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "client_pch.h"
-#include "ivideomode.h"
 #include "vgui_DebugSystemPanel.h"
+#include "ivideomode.h"
+#include "tier1/CommandBuffer.h"
+#include "tier1/tier1.h"
 #include <vgui/ISurface.h>
+#include <vgui/Cursor.h>
+#include <vgui/IScheme.h>
+#include <vgui/IVGui.h>
 #include <vgui_controls/Controls.h>
 #include <vgui_controls/MenuButton.h>
 #include <vgui_controls/Menu.h>
 #include <vgui_controls/MenuItem.h>
-#include <vgui/Cursor.h>
 #include <vgui_controls/TreeView.h>
 #include <vgui_controls/ImageList.h>
-#include <vgui/IScheme.h>
-#include <vgui/IVGui.h>
 #include <vgui_controls/Frame.h>
 #include <vgui_controls/CheckButton.h>
 #include <vgui_controls/PropertyPage.h>
 #include <vgui_controls/PropertyDialog.h>
 #include <vgui_controls/PropertySheet.h>
-#include "tier1/CommandBuffer.h"
-#include "tier1/tier1.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -33,7 +33,7 @@ using namespace vgui;
 //-----------------------------------------------------------------------------
 // Purpose: A menu button that knows how to parse cvar/command menu data from gamedir\scripts\debugmenu.txt
 //-----------------------------------------------------------------------------
-class CDebugMenuButton : public MenuButton
+class CDebugMenuButton final : public MenuButton
 {
 	typedef MenuButton BaseClass;
 
@@ -46,9 +46,9 @@ private:
 	Menu	*m_pMenu;
 };
 
-class CDebugCommandButton : public vgui::Button
+class CDebugCommandButton final : public vgui::Button
 {
-typedef vgui::Button BaseClass;
+	typedef vgui::Button BaseClass;
 public:
 	CDebugCommandButton( vgui::Panel *parent, const char *panelName, const char *labelText, const char *command )
 		: BaseClass( parent, panelName, labelText )
@@ -57,33 +57,33 @@ public:
 		SetCommand( command );
 	}
 
-	virtual void OnCommand( const char *command )
+	void OnCommand( const char *command ) override
 	{
 		Cbuf_AddText( va( "%s\n", command ) );
 	}
 
-	virtual void OnTick( void )
+	void OnTick( void ) override
 	{
 	}
 };
 
-class CDebugCommandCheckbox : public vgui::CheckButton
+class CDebugCommandCheckbox final : public vgui::CheckButton
 {
-typedef vgui::CheckButton BaseClass;
+	typedef vgui::CheckButton BaseClass;
 public:
 	CDebugCommandCheckbox( vgui::Panel *parent, const char *panelName, const char *labelText, const char *command )
 		: BaseClass( parent, panelName, labelText )
 	{
-		m_pVar = ( ConVar * )g_pCVar->FindVar( command );
+		m_pVar = g_pCVar->FindVar( command );
 		SetCommand( command );
 		AddActionSignalTarget( this );
 	}
 
-	virtual void OnCommand( const char *command )
+	void OnCommand( const char *command ) override
 	{
 		if ( m_pVar )
 		{
-			Cbuf_AddText( va( "%s %d\n", m_pVar->GetName(), !m_pVar->GetInt() ) );
+			Cbuf_AddText( va( "%s %d\n", m_pVar->GetName(), m_pVar->GetInt() ? 0 : 1 ) );
 		}
 	}
 
@@ -91,9 +91,9 @@ private:
 	ConVar		*m_pVar;
 };
 
-class CDebugIncrementCVarButton : public vgui::Button
+class CDebugIncrementCVarButton final : public vgui::Button
 {
-typedef vgui::Button BaseClass;
+	typedef vgui::Button BaseClass;
 public:
 	CDebugIncrementCVarButton( vgui::Panel *pParent, const char *pPanelName, const char *pLabelText, const char *pCommand )
 		: BaseClass( pParent, pPanelName, pLabelText )
@@ -101,14 +101,15 @@ public:
 		CCommand args;
 		args.Tokenize( pCommand );
 
-		m_pVar = NULL;
+		m_pVar = nullptr;
 		if ( args.ArgC() >= 4 )
 		{
-			m_pVar = ( ConVar * )g_pCVar->FindVar( args[0] );
+			m_pVar = g_pCVar->FindVar( args[0] );
 
-			m_flMinvalue = (float)atof( args[1] );
-			m_flMaxvalue = (float)atof( args[2] );
-			m_flIncrement = (float)atof( args[3] );
+			// dimhotepus: atof -> strtof
+			m_flMinvalue = strtof( args[1], nullptr );
+			m_flMaxvalue = strtof( args[2], nullptr );
+			m_flIncrement = strtof( args[3], nullptr );
 		}
 
 		SetCommand( "increment" );
@@ -120,7 +121,7 @@ public:
 		OnTick();
 	}
 
-	virtual void OnCommand( const char *command )
+	void OnCommand( const char *command ) override
 	{
 		//
 		if ( !m_pVar )
@@ -139,7 +140,7 @@ public:
 		m_pVar->SetValue( curValue );
 	}
 
-	virtual void OnTick( void )
+	void OnTick() override
 	{
 		if ( !m_pVar )
 			return;
@@ -148,7 +149,7 @@ public:
 			return;
 
 		char sz[ 512 ];
-		Q_snprintf( sz, sizeof( sz ), "%s %.2f", m_pVar->GetName(), m_pVar->GetFloat() );
+		V_sprintf_safe( sz, "%s %.2f", m_pVar->GetName(), m_pVar->GetFloat() );
 		SetText( sz );
 		SizeToContents();
 		m_flPreviousValue = m_pVar->GetFloat();
@@ -165,7 +166,7 @@ private:
 
 };
 
-class CDebugOptionsPage : public vgui::PropertyPage
+class CDebugOptionsPage final : public vgui::PropertyPage
 {
 	typedef vgui::PropertyPage BaseClass;
 public:
@@ -175,46 +176,44 @@ public:
 		vgui::ivgui()->AddTickSignal( GetVPanel(), 250 );
 	}
 
-	virtual void OnTick( void )
+	void OnTick() override
 	{
 		BaseClass::OnTick();
 
 		if ( !IsVisible() )
 			return;
 
-		int c = m_LayoutItems.Count();
-		for ( int i = 0; i < c; i++ )
+		for ( auto *p : m_LayoutItems )
 		{
-			vgui::Panel *p = m_LayoutItems[ i ];
 			p->OnTick();
 		}
 	}
 
-	virtual void PerformLayout( void )
+	void PerformLayout() override
 	{
 		BaseClass::PerformLayout();
 
-		int c = m_LayoutItems.Count();
-		int x = 5;
-		int y = 5;
+		// dimhotepus: Scale UI.
+		int x = QuickPropScale( 5 );
+		int y = QuickPropScale( 5 );
 
-		int w = 150;
-		int h = 18;
-		int gap = 2;
+		int w = QuickPropScale( 150 );
+		int h = QuickPropScale( 18 );
+		int gap = QuickPropScale( 2 );
 
 		int tall = GetTall();
 
 		// LoadControlSettings( va( "resource\\%s.res", kv->GetName() ) );
-		for ( int i = 0; i < c; i++ )
+		for ( auto *p : m_LayoutItems )
 		{
-			vgui::Panel *p = m_LayoutItems[ i ];
 			p->SetBounds( x, y, w, h );
 
 			y += ( h + gap );
 			if ( y >= tall - h )
 			{
 				x += ( w + gap );
-				y = 5;
+				// dimhotepus: Scale UI.
+				y = QuickPropScale( 5 );
 			}
 		}
 	}
@@ -222,28 +221,26 @@ public:
 	void Init( KeyValues *kv )
 	{
 		// LoadControlSettings( va( "resource\\%s.res", kv->GetName() ) );
-		for (KeyValues *control = kv->GetFirstSubKey(); control != NULL; control = control->GetNextKey())
+		for (KeyValues *control = kv->GetFirstSubKey(); control != nullptr; control = control->GetNextKey())
 		{
-			const char *t;
-			
-			t = control->GetString( "command", "" );
-			if ( t && t[0] )
+			const char *t = control->GetString( "command", "" );
+			if ( !Q_isempty( t ) )
 			{
-				CDebugCommandButton *btn = new CDebugCommandButton( this, "CommandButton", control->GetName(), t );
+				auto *btn = new CDebugCommandButton( this, "CommandButton", control->GetName(), t );
 				m_LayoutItems.AddToTail( btn );
 				continue;
 			}
 			t = control->GetString( "togglecvar", "" );
-			if ( t && t[0] )
+			if ( !Q_isempty( t ) )
 			{
-				CDebugCommandCheckbox *checkbox = new CDebugCommandCheckbox( this, "CommandCheck", control->GetName(), t );
+				auto *checkbox = new CDebugCommandCheckbox( this, "CommandCheck", control->GetName(), t );
 				m_LayoutItems.AddToTail( checkbox );
 				continue;
 			}
 			t = control->GetString( "incrementcvar", "" );
-			if ( t && t[0] )
+			if ( !Q_isempty( t ) )
 			{
-				CDebugIncrementCVarButton *increment = new CDebugIncrementCVarButton( this, "IncrementCVar", control->GetName(), t );
+				auto *increment = new CDebugIncrementCVarButton( this, "IncrementCVar", control->GetName(), t );
 				m_LayoutItems.AddToTail( increment );
 				continue;
 			}
@@ -269,28 +266,30 @@ public:
 		KeyValuesAD kv( "DebugOptions" );
 		if ( kv->LoadFromFile(g_pFullFileSystem, "scripts/DebugOptions.txt") )
 		{
-			for (KeyValues *dat = kv->GetFirstSubKey(); dat != NULL; dat = dat->GetNextKey())
+			for (KeyValues *dat = kv->GetFirstSubKey(); dat != nullptr; dat = dat->GetNextKey())
 			{
 				if ( !Q_strcasecmp( dat->GetName(), "width" ) )
 				{
-					SetWide( dat->GetInt() );
+					// dimhotepus: Scale UI.
+					SetWide( QuickPropScale( dat->GetInt() ) );
 					continue;
 				}
 				else if ( !Q_strcasecmp( dat->GetName(), "height" ) )
 				{
-					SetTall( dat->GetInt() );
+					// dimhotepus: Scale UI.
+					SetTall( QuickPropScale( dat->GetInt() ) );
 					continue;
 				}
 
-				CDebugOptionsPage *page = new CDebugOptionsPage( this, dat->GetName() );
+				auto *page = new CDebugOptionsPage( this, dat->GetName() );
 				page->Init( dat );
 	
 				AddPage( page, dat->GetName() );
 			}
 		}
-	
-		GetPropertySheet()->SetTabWidth(72);
-		SetPos( videomode->GetModeStereoWidth() - GetWide() - 10 , 10 );
+		// dimhotepus: Scale UI.
+		GetPropertySheet()->SetTabWidth(QuickPropScale( 72 ));
+		SetPos( videomode->GetModeStereoWidth() - GetWide() - QuickPropScale( 10 ), QuickPropScale( 10 ) );
 		SetVisible( true );
 
 		if ( g_pFullFileSystem->FileExists( "resource/DebugOptionsPanel.res" ) )
@@ -332,7 +331,6 @@ CDebugMenuButton::CDebugMenuButton(Panel *parent, const char *panelName, const c
 CDebugSystemPanel::CDebugSystemPanel( Panel *parent, const char *panelName )
 	: BaseClass( parent, panelName )
 {
-
 	SetBounds( 0, 0, videomode->GetModeStereoWidth(), videomode->GetModeStereoHeight() );
 
 	// Show arrow cursor while in this mode
@@ -343,10 +341,10 @@ CDebugSystemPanel::CDebugSystemPanel( Panel *parent, const char *panelName )
 
 	m_pDebugMenu = new CDebugMenuButton( this, "Debug Menu", "Debug Menu" );
 	
-	int h = 24;
 	// Locate it at top left
 	m_pDebugMenu->SetPos( 0, 0 );
-	m_pDebugMenu->SetSize( 110, h );
+	// dimhotepus: Scale UI.
+	m_pDebugMenu->SetSize( QuickPropScale( 110 ), QuickPropScale( 24 ) );
 
 	m_hDebugOptions = new CDebugOptionsPanel( this, "DebugOptions" );
 }

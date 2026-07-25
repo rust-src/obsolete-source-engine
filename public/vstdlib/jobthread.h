@@ -981,7 +981,7 @@ class CParallelProcessor
 public:
 	CParallelProcessor( const char *pszDescription )
 	{
-		m_pItems = m_pLimit = 0;
+		m_pItems = m_pLimit = nullptr;
 		m_szDescription = pszDescription;
 	}
 
@@ -1015,7 +1015,7 @@ public:
 
 		if ( nJobs > 1 )
 		{
-			CJob **jobs = (CJob **)stackalloc( nJobs * sizeof(CJob **) );
+			CJob **jobs = stackallocT( CJob*, nJobs );
 			intp i = nJobs;
 
 			while( i-- )
@@ -1159,7 +1159,7 @@ private:
 
 		m_ItemProcessor.End();
 
-		--m_nActive;
+		m_nActive.fetch_sub(1, std::memory_order::memory_order_relaxed);
 	}
 	
 #ifdef PLATFORM_64BITS

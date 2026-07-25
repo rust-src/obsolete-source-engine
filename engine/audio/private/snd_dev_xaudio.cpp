@@ -46,9 +46,9 @@ const char *PrefixMessageGroup(char (&out)[out_size], const char *group,
                                const char *message) {
   const size_t length{strlen(message)};
   if (length > 1 && message[length - 1] == '\n') {
-    Q_snprintf(out, std::size(out), "[%.3f][%s] %s", Plat_FloatTime(), group, message);
+    V_sprintf_safe(out, "[%.3f][%s] %s", Plat_FloatTime(), group, message);
   } else {
-    Q_snprintf(out, std::size(out), "%s", message);
+    V_sprintf_safe(out, "%s", message);
   }
 
   return out;
@@ -65,7 +65,7 @@ void DebugWarn(PRINTF_FORMAT_STRING const char *format, ...) {
   tmp[0] = '\0';
 
   va_list argptr;
-  va_start(argptr, format); //-V2019 //-V2018
+  va_start(argptr, format);  //-V2019 //-V2018
   V_vsprintf_safe(tmp, format, argptr);
   va_end(argptr);
 
@@ -378,10 +378,7 @@ static bool GetDefaultAudioDeviceFormFactor(
     // May fail.
     if (device_physical_speakers.as_uint(physical_speakers_mask)) {
       if ((physical_speakers_mask & KSAUDIO_SPEAKER_7POINT1_SURROUND) ==
-              KSAUDIO_SPEAKER_7POINT1_SURROUND ||
-          // Obsolete, but still.
-          (physical_speakers_mask & KSAUDIO_SPEAKER_7POINT1) &
-              KSAUDIO_SPEAKER_7POINT1) {
+              KSAUDIO_SPEAKER_7POINT1_SURROUND) {
         form_factor = AudioDeviceFormFactor::Digital7Dot1Surround;
         return true;
       }

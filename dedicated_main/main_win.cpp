@@ -7,6 +7,8 @@
 
 #include <system_error>
 
+#include "tier0/platform.h"
+
 #include "scoped_dll.h"
 #include "winlite.h"
 
@@ -48,8 +50,8 @@ template <size_t buffer_size>
     fprintf(stderr, "%s\n", entire_error_message);
     OutputDebugStringA(entire_error_message);
   } else {
-    // Note, uses delay load to allow
-    MessageBoxA(nullptr, entire_error_message, "Dedicated Server - Error",
+    // Note, uses delay load to allow run in no Win32 mode.
+    MessageBoxA(nullptr, entire_error_message, "SRCDS - Error",
                 MB_OK | MB_ICONERROR | MB_SETFOREGROUND);
   }
 
@@ -299,11 +301,7 @@ int APIENTRY WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE old_instance,
   char base_directory_path[MAX_PATH], dedicated_dll_path[MAX_PATH];
   // Assemble the full path to our "dedicated.dll".
   _snprintf_s(dedicated_dll_path, _TRUNCATE,
-#if !defined(_WIN64)
-              "%s\\bin\\dedicated.dll",
-#else
-              "%s\\bin\\x64\\dedicated.dll",
-#endif
+              "%s\\" PLATFORM_BIN_DIR "\\dedicated.dll",
               GetBaseDirectory(module_name, base_directory_path));
 
   char user_error[1024];
@@ -338,5 +336,5 @@ int APIENTRY WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE old_instance,
       dedicated_main(instance, old_instance, cmd_line, window_flags);
 
   // Prevent tail call optimization and incorrect stack traces.
-  exit(rc); //-V2014
+  exit(rc);  //-V2014
 }

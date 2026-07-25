@@ -30,7 +30,7 @@
 
 #define	ROCKET_TURRET_RANGE		8192
 #define ROCKET_TURRET_EMITER_OFFSET 0.0
-#define ROCKET_TURRET_THINK_RATE 0.05
+#define ROCKET_TURRET_THINK_RATE 0.05f
 #define ROCKET_TURRET_DEATH_EFFECT_TIME 1.5f
 #define ROCKET_TURRET_LOCKON_TIME 2.0f
 #define ROCKET_TURRET_HALF_LOCKON_TIME 1.0f
@@ -974,7 +974,7 @@ bool CNPC_RocketTurret::TestPortalsForLOS( Vector* pOutVec, bool bConsiderNonPor
 	}
 	Vector vAimPoint = pTarget->GetAbsOrigin() + (pTarget->WorldAlignMins() + pTarget->WorldAlignMaxs()) * 0.5f;
 
-	int iPortalCount = CProp_Portal_Shared::AllPortals.Count();
+	intp iPortalCount = CProp_Portal_Shared::AllPortals.Count();
 	if( iPortalCount == 0 )
 	{
 		*pOutVec = vAimPoint;
@@ -991,7 +991,7 @@ bool CNPC_RocketTurret::TestPortalsForLOS( Vector* pOutVec, bool bConsiderNonPor
 	float *fPortalDot = (float *)stackalloc( sizeof( float ) * iPortalCount );
 
 	// Test through any active portals: This may be a shorter distance to the target
-	for( int i = 0; i != iPortalCount; ++i )
+	for( intp i = 0; i != iPortalCount; ++i )
 	{
 		CProp_Portal *pTempPortal = pPortals[i];
 
@@ -1007,7 +1007,6 @@ bool CNPC_RocketTurret::TestPortalsForLOS( Vector* pOutVec, bool bConsiderNonPor
 		bUsable[i] = FindAimPointThroughPortal( pPortals[ i ], &portalAimPoints[ i ] );
 		if ( 1 )
 		{
-			QAngle goalAngles;
 			Vector vecToEnemy = portalAimPoints[ i ] - EyePosition();
 			vecToEnemy.NormalizeInPlace();
 
@@ -1023,7 +1022,6 @@ bool CNPC_RocketTurret::TestPortalsForLOS( Vector* pOutVec, bool bConsiderNonPor
 	float fHighestDot = -1.0;
 	if ( bConsiderNonPortalAimPoint )
 	{
-		QAngle enemyRotToFace;
 		Vector vecToEnemy = vAimPoint - EyePosition();
 		vecToEnemy.NormalizeInPlace();
 	
@@ -1135,7 +1133,7 @@ void CNPC_RocketTurret::Enable( void )
 	ResetSequence( LookupSequence("open") );
 
 	SetThink( &CNPC_RocketTurret::OpeningThink );
-	SetNextThink( gpGlobals->curtime + 0.05 );
+	SetNextThink( gpGlobals->curtime + 0.05f );
 }
 
 //-----------------------------------------------------------------------------
@@ -1152,7 +1150,7 @@ void CNPC_RocketTurret::Disable( void )
 	ResetSequence(LookupSequence("close"));
 
 	SetThink( &CNPC_RocketTurret::ClosingThink );
-	SetNextThink( gpGlobals->curtime + 0.05 );
+	SetNextThink( gpGlobals->curtime + 0.05f );
 	SetEnemy( NULL );
 }
 

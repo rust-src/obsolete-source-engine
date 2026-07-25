@@ -6,16 +6,16 @@
 //=============================================================================
 
 #include "VarEditDialog.h"
-#include "RemoteServer.h"
 
-#include <stdio.h>
+#include "RemoteServer.h"
 
 #include <vgui/IInput.h>
 
 #include <vgui_controls/Button.h>
 #include <vgui_controls/ComboBox.h>
 #include <vgui_controls/TextEntry.h>
-#include <tier1/KeyValues.h>
+
+#include "tier1/KeyValues.h"
 
 using namespace vgui;
 
@@ -24,7 +24,8 @@ using namespace vgui;
 //-----------------------------------------------------------------------------
 CVarEditDialog::CVarEditDialog(vgui::Panel *parent, const char *name) : Frame(parent, name)
 {
-	SetSize(280, 180);
+	// dimhotepus: Scale UI.
+	SetSize(QuickPropScale( 280 ), QuickPropScale( 180 ));
 	SetSizeable(false);
 	m_pOKButton = new Button(this, "OKButton", "OK");
 	m_pCancelButton = new Button(this, "CancelButton", "Cancel");

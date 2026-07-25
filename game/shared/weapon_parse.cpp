@@ -17,7 +17,7 @@
 // The sound categories found in the weapon classname.txt files
 // This needs to match the WeaponSound_t enum in weapon_parse.h
 #if !defined(_STATIC_LINKED) || defined(CLIENT_DLL)
-const char *pWeaponSoundCategories[ NUM_SHOOT_SOUND_TYPES ] = 
+constexpr char *pWeaponSoundCategories[ NUM_SHOOT_SOUND_TYPES ] = 
 {
 	"empty",
 	"single_shot",
@@ -58,7 +58,7 @@ struct itemFlags_t
 	int m_iFlagValue;
 };
 #if !defined(_STATIC_LINKED) || defined(CLIENT_DLL)
-itemFlags_t g_ItemFlags[8] =
+constexpr itemFlags_t g_ItemFlags[8] =
 {
 	{ "ITEM_FLAG_SELECTONEMPTY",	ITEM_FLAG_SELECTONEMPTY },
 	{ "ITEM_FLAG_NOAUTORELOAD",		ITEM_FLAG_NOAUTORELOAD },
@@ -197,14 +197,14 @@ KeyValues* ReadEncryptedKVFile( IFileSystem *pFilesystem, const char *szFilename
 	// Open the weapon data file, and abort if we can't
 	KeyValues *pKV = new KeyValues( "WeaponDatafile" );
 
-	Q_snprintf(szFullName,sizeof(szFullName), "%s.txt", szFilenameWithoutExtension);
+	V_sprintf_safe(szFullName, "%s.txt", szFilenameWithoutExtension);
 
 	if ( bForceReadEncryptedFile || !pKV->LoadFromFile( pFilesystem, szFullName, pSearchPath ) ) // try to load the normal .txt file first
 	{
 #ifndef _XBOX
 		if ( pICEKey )
 		{
-			Q_snprintf(szFullName,sizeof(szFullName), "%s.ctx", szFilenameWithoutExtension); // fall back to the .ctx file
+			V_sprintf_safe(szFullName, "%s.ctx", szFilenameWithoutExtension); // fall back to the .ctx file
 
 			FileHandle_t f = pFilesystem->Open( szFullName, "rb", pSearchPath );
 
@@ -269,7 +269,7 @@ bool ReadWeaponDataFromFileForSlot( IFileSystem* pFilesystem, const char *szWeap
 		return true;
 
 	char sz[128];
-	Q_snprintf( sz, sizeof( sz ), "scripts/%s", szWeaponName );
+	V_sprintf_safe( sz, "scripts/%s", szWeaponName );
 
 	KeyValuesAD pKV = KeyValuesAD{ReadEncryptedKVFile( pFilesystem, sz, pICEKey,
 #if defined( DOD_DLL )
@@ -344,26 +344,25 @@ void FileWeaponInfo_t::Parse( KeyValues *pKeyValuesData, const char *szWeaponNam
 	bParsedScript = true;
 
 	// Classname
-	Q_strncpy( szClassName, szWeaponName, MAX_WEAPON_STRING );
+	V_strcpy_safe( szClassName, szWeaponName );
 	// Printable name
-	Q_strncpy( szPrintName, pKeyValuesData->GetString( "printname", WEAPON_PRINTNAME_MISSING ), MAX_WEAPON_STRING );
+	V_strcpy_safe( szPrintName, pKeyValuesData->GetString( "printname", WEAPON_PRINTNAME_MISSING ) );
 	// View model & world model
-	Q_strncpy( szViewModel, pKeyValuesData->GetString( "viewmodel" ), MAX_WEAPON_STRING );
-	Q_strncpy( szWorldModel, pKeyValuesData->GetString( "playermodel" ), MAX_WEAPON_STRING );
-	Q_strncpy( szAnimationPrefix, pKeyValuesData->GetString( "anim_prefix" ), MAX_WEAPON_PREFIX );
+	V_strcpy_safe( szViewModel, pKeyValuesData->GetString( "viewmodel" ) );
+	V_strcpy_safe( szWorldModel, pKeyValuesData->GetString( "playermodel" ) );
+	V_strcpy_safe( szAnimationPrefix, pKeyValuesData->GetString( "anim_prefix" ) );
 	iSlot = pKeyValuesData->GetInt( "bucket", 0 );
 	iPosition = pKeyValuesData->GetInt( "bucket_position", 0 );
 	
 	// Use the console (X360) buckets if hud_fastswitch is set to 2.
 #ifdef CLIENT_DLL
 	if ( hud_fastswitch.GetInt() == 2 )
-#else
-	if ( IsX360() )
-#endif
 	{
 		iSlot = pKeyValuesData->GetInt( "bucket_360", iSlot );
 		iPosition = pKeyValuesData->GetInt( "bucket_position_360", iPosition );
 	}
+#endif
+	
 	iMaxClip1 = pKeyValuesData->GetInt( "clip_size", WEAPON_NOCLIP );					// Max primary clips gun can hold (assume they don't use clips by default)
 	iMaxClip2 = pKeyValuesData->GetInt( "clip2_size", WEAPON_NOCLIP );					// Max secondary clips gun can hold (assume they don't use clips by default)
 	iDefaultClip1 = pKeyValuesData->GetInt( "default_clip", iMaxClip1 );		// amount of primary ammo placed in the primary clip when it's picked up
@@ -429,16 +428,16 @@ void FileWeaponInfo_t::Parse( KeyValues *pKeyValuesData, const char *szWeaponNam
 	iAmmo2Type = GetAmmoDef()->Index( szAmmo2 );
 
 	// Now read the weapon sounds
-	memset( aShootSounds, 0, sizeof( aShootSounds ) );
+	BitwiseClear( aShootSounds );
 	KeyValues *pSoundData = pKeyValuesData->FindKey( "SoundData" );
 	if ( pSoundData )
 	{
 		for ( int i = EMPTY; i < NUM_SHOOT_SOUND_TYPES; i++ )
 		{
 			const char *soundname = pSoundData->GetString( pWeaponSoundCategories[i] );
-			if ( soundname && soundname[0] )
+			if ( !Q_isempty( soundname ) )
 			{
-				Q_strncpy( aShootSounds[i], soundname, MAX_WEAPON_STRING );
+				V_strcpy_safe( aShootSounds[i], soundname );
 			}
 		}
 	}

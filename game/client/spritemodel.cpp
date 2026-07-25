@@ -221,9 +221,9 @@ static unsigned int spriteOrientationCache = 0;
 bool CEngineSprite::Init( const char *pName )
 {
 	m_VideoMaterial = NULL;
-	for ( int i = 0; i < kRenderModeCount; ++i )
+	for ( auto *&m : m_material )
 	{
-		m_material[ i ] = NULL;
+		m = nullptr;
 	}
 
 	m_width = m_height = m_numFrames = 1;
@@ -240,9 +240,9 @@ bool CEngineSprite::Init( const char *pName )
 		IMaterial *pMaterial = m_VideoMaterial->GetMaterial();
 		m_VideoMaterial->GetVideoImageSize( &m_width, &m_height );
 		m_numFrames = m_VideoMaterial->GetFrameCount();
-		for ( int i = 0; i < kRenderModeCount; ++i )
+		for ( auto *&m : m_material )
 		{
-			m_material[i] = pMaterial;
+			m = pMaterial;
 			pMaterial->IncrementReferenceCount();
 		}
 	}
@@ -251,23 +251,23 @@ bool CEngineSprite::Init( const char *pName )
 		char pTemp[MAX_PATH];
 		char pMaterialName[MAX_PATH];
 		char pMaterialPath[MAX_PATH];
-		Q_StripExtension( pName, pTemp, sizeof(pTemp) );
-		Q_strlower( pTemp );
-		Q_FixSlashes( pTemp, '/' );
+		V_StripExtension( pName, pTemp );
+		V_strlower( pTemp );
+		V_FixSlashes( pTemp, '/' );
 
 		// Check to see if this is a UNC-specified material name
 		bool bIsUNC = pTemp[0] == '/' && pTemp[1] == '/' && pTemp[2] != '/';
 		if ( !bIsUNC )
 		{
-			Q_strncpy( pMaterialName, "materials/", sizeof(pMaterialName) );
-			Q_strncat( pMaterialName, pTemp, sizeof(pMaterialName), COPY_ALL_CHARACTERS );
+			V_strcpy_safe( pMaterialName, "materials/" );
+			V_strcat_safe( pMaterialName, pTemp );
 		}
 		else
 		{
-			Q_strncpy( pMaterialName, pTemp, sizeof(pMaterialName) );
+			V_strcpy_safe( pMaterialName, pTemp );
 		}
-		Q_strncpy( pMaterialPath, pMaterialName, sizeof(pMaterialPath) );
-		Q_SetExtension( pMaterialPath, ".vmt", sizeof(pMaterialPath) );
+		V_strcpy_safe( pMaterialPath, pMaterialName );
+		V_SetExtension( pMaterialPath, ".vmt" );
 
 		KeyValuesAD kv( "vmt" );
 		if ( !kv->LoadFromFile( g_pFullFileSystem, pMaterialPath, "GAME" ) )
@@ -284,7 +284,7 @@ bool CEngineSprite::Init( const char *pName )
 				continue;
 			}
 
-			Q_snprintf( pMaterialPath, sizeof(pMaterialPath), "%s_rendermode_%d", pMaterialName, i );
+			V_sprintf_safe( pMaterialPath, "%s_rendermode_%d", pMaterialName, i );
 			KeyValues *pMaterialKV = kv->MakeCopy();
 			pMaterialKV->SetInt( "$spriteRenderMode", i );
 			m_material[i] = g_pMaterialSystem->FindProceduralMaterial( pMaterialPath, TEXTURE_GROUP_CLIENT_EFFECTS, pMaterialKV );

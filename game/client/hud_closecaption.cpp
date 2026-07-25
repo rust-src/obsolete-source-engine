@@ -7,10 +7,10 @@
 
 
 #include "cbase.h"
-#include <ctype.h>
-#include "sentence.h"
 #include "hud_closecaption.h"
+#include "sentence.h"
 #include "tier1/strtools.h"
+#include "tier1/checksum_crc.h"
 #include <vgui_controls/Controls.h>
 #include <vgui/IVGui.h>
 #include <vgui/ISurface.h>
@@ -18,7 +18,6 @@
 #include <vgui/ILocalize.h>
 #include "iclientmode.h"
 #include "hud_macros.h"
-#include "checksum_crc.h"
 #include "filesystem.h"
 #include "datacache/idatacache.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
@@ -519,7 +518,7 @@ struct AsyncCaptionData_t
 
 		// async load the file	
 		FileAsyncRequest_t fileRequest;
-		fileRequest.pContext    = (void *)this;
+		fileRequest.pContext    = this;
 		fileRequest.pfnCallback = ::CaptionAsyncLoaderCallback;
 		fileRequest.pData       = m_pBlockData;
 		fileRequest.pszFilename = fileName;
@@ -960,12 +959,11 @@ void CHudCloseCaption::Paint( void )
 	int avail_height = rcText.bottom - rcText.top - 2 * CC_INSET;
 
 	int totalheight = 0;
-	int i;
 	CUtlVector< VisibleStreamItem > visibleitems;
-	int c = m_Items.Count();
+	intp c = m_Items.Count();
 	int maxwidth = 0;
 
-	for  ( i = 0; i < c; i++ )
+	for  ( intp i = 0; i < c; i++ )
 	{
 		CCloseCaptionItem *item = m_Items[ i ];
 
@@ -1091,7 +1089,7 @@ void CHudCloseCaption::Paint( void )
 
 	// Now draw them
 	c = visibleitems.Count();
-	for ( i = 0; i < c; i++ )
+	for ( intp i = 0; i < c; i++ )
 	{
 		VisibleStreamItem *si = &visibleitems[ i ];
 
@@ -1206,8 +1204,8 @@ void CHudCloseCaption::OnTick( void )
 
 	float dt = gpGlobals->frametime;
 
-	int c = m_Items.Count();
-	int i;
+	intp c = m_Items.Count();
+	intp i;
 
 	if ( m_bVisibleDueToDirect )
 	{
@@ -1554,7 +1552,7 @@ void CHudCloseCaption::Process( const wchar_t *stream, float duration, const cha
 				continue;
 			}
 
-			int copychars = curpos - prevpos;
+			intp copychars = curpos - prevpos;
 			while ( --copychars >= 0 )
 			{
 				*out++ = *prevpos++;
@@ -1595,7 +1593,8 @@ void CHudCloseCaption::CreateFonts( void )
 	m_hFonts[CCFONT_ITALIC] = pScheme->GetFont( "CloseCaption_Italic", true );
 	m_hFonts[CCFONT_ITALICBOLD] = pScheme->GetFont( "CloseCaption_BoldItalic", true );
 
-	m_nLineHeight = MAX( 6, vgui::surface()->GetFontTall( m_hFonts[ CCFONT_NORMAL ] ) );
+	// dimhotepus: Scale UI.
+	m_nLineHeight = MAX( QuickPropScale( 6 ), vgui::surface()->GetFontTall( m_hFonts[ CCFONT_NORMAL ] ) );
 }
 
 struct WorkUnitParams
@@ -1794,7 +1793,7 @@ void CHudCloseCaption::ComputeStreamWork( int available_width, CCloseCaptionItem
 			if ( most_recent_space && curpos >= most_recent_space + 1 )
 			{
 				// Roll back to previous space character if there is one...
-				int goback = curpos - most_recent_space - 1;
+				intp goback = curpos - most_recent_space - 1;
 				params.out -= ( goback + 1 );
 				params.width = most_recent_space_w;
 				
@@ -1971,8 +1970,8 @@ public:
 
 	~CAsyncCaption()
 	{
-		int c = m_Tokens.Count();
-		for ( int i = 0; i < c; ++i )
+		intp c = m_Tokens.Count();
+		for ( intp i = 0; i < c; ++i )
 		{
 			delete m_Tokens[ i ];
 		}
@@ -1982,8 +1981,8 @@ public:
 	void StartRequesting( CHudCloseCaption *hudCloseCaption, CUtlVector< AsyncCaption_t >& directories )
 	{
 		// Issue pending async requests for each token in string
-		int c = m_Tokens.Count();
-		for ( int i = 0; i < c; ++i )
+		intp c = m_Tokens.Count();
+		for ( intp i = 0; i < c; ++i )
 		{
 			caption_t *caption = m_Tokens[ i ];
 			Assert( !caption->stream );
@@ -1998,8 +1997,8 @@ public:
 
 	void OnDataArrived( CUtlVector< AsyncCaption_t >& directories, int nFileIndex, int nBlockNum, AsyncCaptionData_t *pData )
 	{
-		int c = m_Tokens.Count();
-		for ( int i = 0; i < c; ++i )
+		intp c = m_Tokens.Count();
+		for ( intp i = 0; i < c; ++i )
 		{
 			caption_t *caption = m_Tokens[ i ];
 			if ( caption->stream != NULL )
@@ -2024,8 +2023,8 @@ public:
 
 	void ProcessAsyncWork( CHudCloseCaption *hudCloseCaption, CUtlVector< AsyncCaption_t >& directories )
 	{
-		int c = m_Tokens.Count();
-		for ( int i = 0; i < c; ++i )
+		intp c = m_Tokens.Count();
+		for ( intp i = 0; i < c; ++i )
 		{
 			caption_t *caption = m_Tokens[ i ];
 			if ( caption->stream != NULL )
@@ -2097,7 +2096,7 @@ public:
 		intp dc = directories.Count();
 		int fileindex = RandomInt( 0, dc - 1 );
 
-		int c = directories[ fileindex ].m_CaptionDirectory.Count();
+		intp c = directories[ fileindex ].m_CaptionDirectory.Count();
 		int idx = RandomInt( 0, c - 1 );
 
 		caption_t *caption = new caption_t;

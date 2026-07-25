@@ -45,7 +45,8 @@
 const char *g_pLaserDotThink = "LaserThinkContext";
 
 static ConVar sk_apc_missile_damage("sk_apc_missile_damage", "15");
-#define APC_MISSILE_DAMAGE	sk_apc_missile_damage.GetFloat()
+// dimhotepus: GetFloat -> GetInt as magnitude is int.
+#define APC_MISSILE_DAMAGE	sk_apc_missile_damage.GetInt()
 
 #endif
 
@@ -343,7 +344,7 @@ void CMissile::ShotDown( void )
 	SetThink( &CMissile::AugerThink );
 	SetNextThink( gpGlobals->curtime );
 	m_flAugerTime = gpGlobals->curtime + 1.5f;
-	m_flMarkDeadTime = gpGlobals->curtime + 0.75;
+	m_flMarkDeadTime = gpGlobals->curtime + 0.75f;
 
 	// Let the RPG start reloading immediately
 	if ( m_hOwner != NULL )
@@ -596,7 +597,6 @@ void CMissile::SeekThink( void )
 	Vector	targetPos;
 
 	float flHomingSpeed; 
-	Vector vecLaserDotPosition;
 	ComputeActualDotPosition( pLaserDot, &targetPos, &flHomingSpeed );
 
 	if ( IsSimulatingOnAlternateTicks() )
@@ -1248,7 +1248,8 @@ void CAPCMissile::ComputeActualDotPosition( CLaserDot *pLaserDot, Vector *pActua
 
 #define	RPG_BEAM_SPRITE		"effects/laser1.vmt"
 #define	RPG_BEAM_SPRITE_NOZ	"effects/laser1_noz.vmt"
-#define	RPG_LASER_SPRITE	"sprites/redglow1"
+// dimhotepus: Add vmt to fix ambiguity.
+#define	RPG_LASER_SPRITE	"sprites/redglow1.vmt"
 
 //=============================================================================
 // RPG
@@ -1361,7 +1362,6 @@ void CWeaponRPG::Precache( void )
 	PrecacheScriptSound( "Missile.Accelerate" );
 
 	// Laser dot...
-	PrecacheModel( "sprites/redglow1.vmt" );
 	PrecacheModel( RPG_LASER_SPRITE );
 	PrecacheModel( RPG_BEAM_SPRITE );
 	PrecacheModel( RPG_BEAM_SPRITE_NOZ );
@@ -1437,9 +1437,6 @@ void CWeaponRPG::PrimaryAttack( void )
 	// Can't be reloading
 	if ( GetActivity() == ACT_VM_RELOAD )
 		return;
-
-	Vector vecOrigin;
-	Vector vecForward;
 
 	m_flNextPrimaryAttack = gpGlobals->curtime + 0.5f;
 
@@ -1990,7 +1987,6 @@ void CWeaponRPG::DrawEffects( void )
 
 	color32 color={255,255,255,255};
 	Vector	vecAttachment, vecDir;
-	QAngle	angles;
 
 	float scale = 8.0f + random->RandomFloat( -2.0f, 2.0f );
 
@@ -2221,7 +2217,6 @@ int CLaserDot::DrawModel( int flags )
 {
 	color32 color={255,255,255,255};
 	Vector	vecAttachment, vecDir;
-	QAngle	angles;
 
 	float	scale;
 	Vector	endPos;

@@ -147,12 +147,12 @@ CMDLPicker::CMDLPicker( vgui::Panel *pParent, int nFlags ) :
 		m_pSequencesPage = new vgui::PropertyPage( m_pViewsSheet, "SequencesPage" );
 
 		m_pSequencesList = new vgui::ListPanel( m_pSequencesPage, "SequencesList" );
-		m_pSequencesList->AddColumnHeader( 0, "sequence", "sequence", 52, 0 );
+		m_pSequencesList->AddColumnHeader( 0, "sequence", "sequence", QuickPropScale( 52 ), 0 );
 		m_pSequencesList->AddActionSignalTarget( this );
 		m_pSequencesList->SetSelectIndividualCells( true );
 		m_pSequencesList->SetEmptyListText("No .MDL file currently selected.");
 		m_pSequencesList->SetDragEnabled( true );
-		m_pSequencesList->SetAutoResize( Panel::PIN_TOPLEFT, Panel::AUTORESIZE_DOWNANDRIGHT, 6, 6, -6, -6 );
+		m_pSequencesList->SetAutoResize( Panel::PIN_TOPLEFT, Panel::AUTORESIZE_DOWNANDRIGHT, QuickPropScale( 6 ), QuickPropScale( 6 ), QuickPropScale( -6 ), QuickPropScale( -6 ) );
 	}
 
 	if ( nFlags & PAGE_ACTIVITIES )
@@ -160,12 +160,12 @@ CMDLPicker::CMDLPicker( vgui::Panel *pParent, int nFlags ) :
 		m_pActivitiesPage = new vgui::PropertyPage( m_pViewsSheet, "ActivitiesPage" );
 
 		m_pActivitiesList = new vgui::ListPanel( m_pActivitiesPage, "ActivitiesList" );
-		m_pActivitiesList->AddColumnHeader( 0, "activity", "activity", 52, 0 );
+		m_pActivitiesList->AddColumnHeader( 0, "activity", "activity", QuickPropScale( 52 ), 0 );
 		m_pActivitiesList->AddActionSignalTarget( this );
 		m_pActivitiesList->SetSelectIndividualCells( true );
 		m_pActivitiesList->SetEmptyListText( "No .MDL file currently selected." );
 		m_pActivitiesList->SetDragEnabled( true );
-		m_pActivitiesList->SetAutoResize( Panel::PIN_TOPLEFT, Panel::AUTORESIZE_DOWNANDRIGHT, 6, 6, -6, -6 );
+		m_pActivitiesList->SetAutoResize( Panel::PIN_TOPLEFT, Panel::AUTORESIZE_DOWNANDRIGHT, QuickPropScale( 6 ), QuickPropScale( 6 ), QuickPropScale( -6 ), QuickPropScale( -6 ) );
 	}
 
 	if ( nFlags & PAGE_SKINS )
@@ -173,12 +173,12 @@ CMDLPicker::CMDLPicker( vgui::Panel *pParent, int nFlags ) :
 		m_pSkinsPage = new vgui::PropertyPage( m_pViewsSheet, "SkinsPage" );
 
 		m_pSkinsList = new vgui::ListPanel( m_pSkinsPage, "SkinsList" );
-		m_pSkinsList->AddColumnHeader( 0, "skin", "skin", 52, 0 );
+		m_pSkinsList->AddColumnHeader( 0, "skin", "skin", QuickPropScale( 52 ), 0 );
 		m_pSkinsList->AddActionSignalTarget( this );
 		m_pSkinsList->SetSelectIndividualCells( true );
 		m_pSkinsList->SetEmptyListText( "No .MDL file currently selected." );
 		m_pSkinsList->SetDragEnabled( true );
-		m_pSkinsList->SetAutoResize( Panel::PIN_TOPLEFT, Panel::AUTORESIZE_DOWNANDRIGHT, 6, 6, -6, -6 );		
+		m_pSkinsList->SetAutoResize( Panel::PIN_TOPLEFT, Panel::AUTORESIZE_DOWNANDRIGHT, QuickPropScale( 6 ), QuickPropScale( 6 ), QuickPropScale( -6 ), QuickPropScale( -6 ) );
 	}
 
 	if ( nFlags & PAGE_INFO )
@@ -200,13 +200,13 @@ CMDLPicker::CMDLPicker( vgui::Panel *pParent, int nFlags ) :
 		pTempCheck->SetDisabledFgColor2( pTempCheck->GetFgColor());
 
 		m_pPropDataList = new vgui::ListPanel( m_pInfoPage, "PropData" );
-		m_pPropDataList->AddColumnHeader( 0, "key", "key", 250, ListPanel::COLUMN_FIXEDSIZE );		
-		m_pPropDataList->AddColumnHeader( 1, "value", "value", 52, 0 );
+		m_pPropDataList->AddColumnHeader( 0, "key", "key", QuickPropScale( 250 ), ListPanel::COLUMN_FIXEDSIZE );		
+		m_pPropDataList->AddColumnHeader( 1, "value", "value", QuickPropScale( 52 ), 0 );
 		m_pPropDataList->AddActionSignalTarget( this );
 		m_pPropDataList->SetSelectIndividualCells( false );
 		m_pPropDataList->SetEmptyListText( "No prop_data available." );
 		m_pPropDataList->SetDragEnabled( true );
-		m_pPropDataList->SetAutoResize( Panel::PIN_TOPLEFT, Panel::AUTORESIZE_DOWNANDRIGHT, 6, 72, -6, -6 );
+		m_pPropDataList->SetAutoResize( Panel::PIN_TOPLEFT, Panel::AUTORESIZE_DOWNANDRIGHT, QuickPropScale( 6 ), QuickPropScale( 72 ), QuickPropScale( -6 ), QuickPropScale( -6 ) );
 
 		RefreshRenderSettings();
 	}
@@ -720,6 +720,9 @@ void CMDLPicker::WriteBackbackVMTFiles( const char *pAssetName )
 	Q_FixSlashes( pBaseTextureName );
 	
 	{
+		// dimhotepus: This can take a while, put up a waiting cursor.
+    	const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
+
 		CP4AutoEditAddFile autop4( pVMTFilename );
 		FileHandle_t fileHandle = g_pFullFileSystem->Open( pVMTFilename, "w" );
 		if ( fileHandle )
@@ -745,6 +748,8 @@ void CMDLPicker::WriteBackbackVMTFiles( const char *pAssetName )
 	Q_FixSlashes( pBaseTextureName );
 
 	{
+		const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
+
 		CP4AutoEditAddFile autop4( pVMTFilename );
 		FileHandle_t fileHandle = g_pFullFileSystem->Open( pVMTFilename, "w" );
 		if ( fileHandle )
@@ -888,6 +893,9 @@ void CMDLPicker::GenerateBackpackIcons( void )
 	V_SetExtension( pVTexOptionsFileName, ".txt" );
 
 	{
+		// dimhotepus: This can take a while, put up a waiting cursor.
+    	const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
+
 		CP4AutoEditAddFile autop4( pVTexOptionsFileName );
 		FileHandle_t hVTexOptionsFile = g_pFullFileSystem->Open( pVTexOptionsFileName, "w" );
 		if ( hVTexOptionsFile )
@@ -926,7 +934,12 @@ void CMDLPicker::GenerateBackpackIcons( void )
 	vTexArgv[ vTexArgc++ ] = pOutputPathGame;
 	vTexArgv[ vTexArgc++ ] = (char *)pLargeTGAName;
 
-	g_pVTex->VTex( MdlPickerFSFactory, pOutputPathGame, vTexArgc, vTexArgv );
+	{
+		// dimhotepus: This can take a while, put up a waiting cursor.
+		const ScopedPanelWaitCursor scopedWaitCursor{this};
+
+		g_pVTex->VTex( MdlPickerFSFactory, pOutputPathGame, vTexArgc, vTexArgv );
+	}
 
 	// Generale small TGA name, by removing the "large" part
 	char pSmallTGAName[ MAX_PATH ];
@@ -943,22 +956,27 @@ void CMDLPicker::GenerateBackpackIcons( void )
 	CUtlBuffer largeTGAFileData;
 	CUtlMemory<unsigned char> largeTGAImageData;
 
-	if ( !g_pFullFileSystem->ReadFile( pLargeTGAName, NULL, largeTGAFileData )
-		|| !TGALoader::GetInfo( largeTGAFileData, &nCheckWidth, &nCheckHeight, &largeFmt, &gamma )
-		|| nCheckWidth != width || nCheckHeight != height )
 	{
-		Error( "Failed to reload image header %s", pLargeTGAName );
-		Assert( false );
-		return;
-	}
+		// dimhotepus: This can take a while, put up a waiting cursor.
+		const ScopedPanelWaitCursor scopedWaitCursor{this};
 
-	largeTGAFileData.SeekGet( CUtlBuffer::SEEK_HEAD, 0 );
-	if ( !TGALoader::LoadRGBA8888( largeTGAFileData, largeTGAImageData, nCheckWidth, nCheckHeight )
-		|| nCheckWidth != width || nCheckHeight != height )
-	{
-		Error( "Failed to reload image data %s", pLargeTGAName );
-		Assert( false );
-		return;
+		if ( !g_pFullFileSystem->ReadFile( pLargeTGAName, NULL, largeTGAFileData )
+			|| !TGALoader::GetInfo( largeTGAFileData, &nCheckWidth, &nCheckHeight, &largeFmt, &gamma )
+			|| nCheckWidth != width || nCheckHeight != height )
+		{
+			Error( "Failed to reload image header %s", pLargeTGAName );
+			Assert( false );
+			return;
+		}
+
+		largeTGAFileData.SeekGet( CUtlBuffer::SEEK_HEAD, 0 );
+		if ( !TGALoader::LoadRGBA8888( largeTGAFileData, largeTGAImageData, nCheckWidth, nCheckHeight )
+			|| nCheckWidth != width || nCheckHeight != height )
+		{
+			Error( "Failed to reload image data %s", pLargeTGAName );
+			Assert( false );
+			return;
+		}
 	}
 
 	//
@@ -1003,6 +1021,9 @@ void CMDLPicker::GenerateBackpackIcons( void )
 	V_SetExtension( pVTexOptionsFileName, ".txt" );
 
 	{
+		// dimhotepus: This can take a while, put up a waiting cursor.
+    	const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
+
 		CP4AutoEditAddFile autop4( pVTexOptionsFileName );
 		FileHandle_t hVTexOptionsFile = g_pFullFileSystem->Open( pVTexOptionsFileName, "w" );
 		if ( hVTexOptionsFile )
@@ -1023,8 +1044,13 @@ void CMDLPicker::GenerateBackpackIcons( void )
 	vTexArgv[ vTexArgc++ ] = (char*)"-outdir";
 	vTexArgv[ vTexArgc++ ] = pOutputPathGame;
 	vTexArgv[ vTexArgc++ ] = (char *)pSmallTGAName;
-	g_pVTex->VTex( MdlPickerFSFactory, pOutputPathGame, vTexArgc, vTexArgv );
 
+	{
+		// dimhotepus: This can take a while, put up a waiting cursor.
+		const ScopedPanelWaitCursor scopedWaitCursor{this};
+
+		g_pVTex->VTex( MdlPickerFSFactory, pOutputPathGame, vTexArgc, vTexArgv );
+	}
 
 	// restore the preview panel to its original state
 	m_pMDLPreview->SetParent( pParent );

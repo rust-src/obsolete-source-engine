@@ -86,7 +86,8 @@ class CInlineEditPanel : public vgui::Panel
 	DECLARE_CLASS_SIMPLE_OVERRIDE( CInlineEditPanel, vgui::Panel );
 
 public:
-	CInlineEditPanel() : vgui::Panel(NULL, "InlineEditPanel")
+	// dimhotepus: Add parent to support scaling.
+	CInlineEditPanel( vgui::Panel *parent ) : vgui::Panel(parent, "InlineEditPanel")
 	{
 	}
 
@@ -136,7 +137,7 @@ VControlsListPanel::VControlsListPanel( vgui::Panel *parent, const char *listNam
 	m_bCaptureMode	= false;
 	m_nClickRow		= 0;
 	m_hFont = INVALID_FONT;
-	m_pInlineEditPanel = new CInlineEditPanel();
+	m_pInlineEditPanel = new CInlineEditPanel( parent );
 	m_iMouseX = m_iMouseY = -1;
 }
 
@@ -145,7 +146,6 @@ VControlsListPanel::VControlsListPanel( vgui::Panel *parent, const char *listNam
 //-----------------------------------------------------------------------------
 VControlsListPanel::~VControlsListPanel()
 {
-	m_pInlineEditPanel->MarkForDeletion();
 }
 
 //-----------------------------------------------------------------------------
@@ -278,9 +278,10 @@ CKeyBoardEditorPage::CKeyBoardEditorPage( Panel *parent, Panel *panelToEdit, Key
 
 	m_pList = new VControlsListPanel( this, "KeyBindings" );
 	m_pList->SetIgnoreDoubleClick( true );
-	m_pList->AddColumnHeader(0, "Action", "#KBEditorBindingName", 175, 0);
-	m_pList->AddColumnHeader(1, "Binding", "#KBEditorBinding", 175, 0);
-	m_pList->AddColumnHeader(2, "Description", "#KBEditorDescription", 300, 0);
+	// dimhotepus: Scale UI.
+	m_pList->AddColumnHeader(0, "Action", "#KBEditorBindingName", QuickPropScale( 175 ), 0);
+	m_pList->AddColumnHeader(1, "Binding", "#KBEditorBinding", QuickPropScale( 175 ), 0);
+	m_pList->AddColumnHeader(2, "Description", "#KBEditorDescription", QuickPropScale( 300 ), 0);
 
 	LoadControlSettings( "resource/KeyBoardEditorPage.res" );
 
@@ -751,6 +752,9 @@ void CKeyBoardEditorSheet::OnSaveChanges()
 		CKeyBoardEditorPage *page = static_cast< CKeyBoardEditorPage * >( GetPage( i ) );
 		page->OnSaveChanges();
 	}
+	
+	// dimhotepus: This can take a while, put up a waiting cursor.
+	const ScopedPanelWaitCursor scopedWaitCursor{this};
 
 	if ( m_bSaveToExternalFile )
 	{
@@ -797,7 +801,8 @@ CKeyBoardEditorDialog::CKeyBoardEditorDialog( Panel *parent, Panel *panelToEdit,
 	SetTitle( "#KBEditorTitle", true );
 
 	SetSmallCaption( true );
-	SetMinimumSize( BASE_WIDTH, 200 );
+	// dimhotepus: Scale UI.
+	SetMinimumSize( QuickPropScale( BASE_WIDTH ), QuickPropScale( 200 ) );
 	SetMinimizeButtonVisible( false );
 	SetMaximizeButtonVisible( false );
 	SetSizeable( true );

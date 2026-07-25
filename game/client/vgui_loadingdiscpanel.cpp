@@ -22,20 +22,19 @@ extern vgui::ILocalize *g_pVGuiLocalize;
 //-----------------------------------------------------------------------------
 // Purpose: Displays the loading plaque
 //-----------------------------------------------------------------------------
-class CLoadingDiscPanel : public vgui::EditablePanel
+class CLoadingDiscPanel final : public vgui::EditablePanel
 {
 	typedef vgui::EditablePanel BaseClass;
 public:
 	CLoadingDiscPanel( vgui::VPANEL parent );
 	~CLoadingDiscPanel();
 
-	virtual void ApplySchemeSettings( vgui::IScheme *pScheme )
+	void ApplySchemeSettings( vgui::IScheme *pScheme ) override
 	{
 		BaseClass::ApplySchemeSettings( pScheme );
 
-		int w, h;
-		w = ScreenWidth();
-		h = ScreenHeight();
+		int w = ScreenWidth();
+		int h = ScreenHeight();
 
 		if ( w != m_ScreenSize[ 0 ] || 
 			 h != m_ScreenSize[ 1 ] )
@@ -53,14 +52,14 @@ public:
 		SetPos( ( w - wide ) / 2, ( h - tall ) / 2 );
 	}
 
-	virtual void PaintBackground()
+	void PaintBackground() override
 	{
 		SetBgColor( Color(0, 0, 0, 128) );
 		SetPaintBackgroundType( 2 );
 		BaseClass::PaintBackground();
 	}
 
-	virtual void SetText( const char *text )
+	void SetText( const char *text )
 	{
 		m_pLoadingLabel->SetText( text );
 	}
@@ -75,9 +74,8 @@ private:
 //-----------------------------------------------------------------------------
 CLoadingDiscPanel::CLoadingDiscPanel( vgui::VPANEL parent ) : BaseClass( NULL, "CLoadingDiscPanel" )
 {
-	int w, h;
-	w = ScreenWidth();
-	h = ScreenHeight();
+	int w = ScreenWidth();
+	int h = ScreenHeight();
 
 	SetParent( parent );
 	SetProportional( true );
@@ -106,7 +104,7 @@ CLoadingDiscPanel::~CLoadingDiscPanel()
 {
 }
 
-class CLoadingDisc : public ILoadingDisc
+class CLoadingDisc final : public ILoadingDisc
 {
 private:
 	CLoadingDiscPanel *loadingDiscPanel;
@@ -118,8 +116,8 @@ private:
 public:
 	CLoadingDisc( void )
 	{
-		loadingDiscPanel = NULL;
-		m_pPauseDiscPanel = NULL;
+		loadingDiscPanel = nullptr;
+		m_pPauseDiscPanel = nullptr;
 		m_hParent = std::numeric_limits<vgui::VPANEL>::max();
 		m_nPrevTimeRemaining = -1;
 	}
@@ -136,14 +134,14 @@ public:
 		{
 			loadingDiscPanel->SetParent( nullptr );
 			loadingDiscPanel->MarkForDeletion();
-			loadingDiscPanel = NULL;
+			loadingDiscPanel = nullptr;
 		}
 
 		if ( m_pPauseDiscPanel )
 		{
 			m_pPauseDiscPanel->SetParent( nullptr );
 			m_pPauseDiscPanel->MarkForDeletion();
-			m_pPauseDiscPanel = NULL;
+			m_pPauseDiscPanel = nullptr;
 		}
 
 		m_hParent = NULL;

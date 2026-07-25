@@ -130,8 +130,8 @@ static const matrix3x4_t *ComputeSkinMatrix( int nBoneCount, const float *pJoint
 		return &result;
 	}
 
-	Assert(0);
-	return NULL;
+	// dimhotepus: Unreachable.
+	unreachable();
 }
 
 
@@ -2362,7 +2362,7 @@ bool CDmeMesh::GetControlDeltaIndices(
 			++pNext;
 		}
 
-		if ( Q_strlen( pCurr ) )
+		if ( !Q_isempty( pCurr ) )
 		{
 			const int controlDeltaIndex( FindDeltaStateIndex( pCurr ) );
 			if ( controlDeltaIndex >= 0 )

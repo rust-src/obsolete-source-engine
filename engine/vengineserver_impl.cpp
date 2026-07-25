@@ -138,10 +138,14 @@ void SeedRandomNumberGenerator( bool random_invariant )
 	{
 		long iSeed;
 		g_pVCR->Hook_Time( &iSeed );
-		float flAppTime = Plat_FloatTime();
+		double flAppTime = Plat_FloatTime();
 		ThreadId_t threadId = ThreadGetCurrentId();
 
-		iSeed ^= (*((int *)&flAppTime));
+		long iRand;
+		// dimhotepus: Use memcpy as casts are UB.
+		memcpy( &iRand, &flAppTime, min( sizeof(iRand), sizeof(flAppTime) ) );
+
+		iSeed ^= iRand;
 		iSeed ^= threadId;
 
 		RandomSeed( iSeed );
@@ -647,7 +651,7 @@ public:
 	{
 #if defined( _DEBUG ) && defined( WIN32 )
 		// set the memory to a known value
-		int size = _msize( pEntity );
+		size_t size = _msize( pEntity );
 		memset( pEntity, 0xDD, size );
 #endif
 		
@@ -785,7 +789,7 @@ public:
 	//
 	//-----------------------------------------------------------------------------
 	
-	int SentenceGroupPick( int groupIndex, char *name, int nameLen ) override
+	int SentenceGroupPick( int groupIndex, OUT_Z_CAP(nameLen) char *name, int nameLen ) override
 	{
 		if ( !name )
 		{
@@ -798,7 +802,7 @@ public:
 	}
 	
 	
-	int SentenceGroupPickSequential( int groupIndex, char *name, int nameLen, int sentenceIndex, int reset ) override
+	int SentenceGroupPickSequential( int groupIndex, OUT_Z_CAP(nameLen) char *name, int nameLen, int sentenceIndex, int reset ) override
 	{
 		if ( !name )
 		{
@@ -1300,7 +1304,7 @@ public:
 		return sv.GetClient( clientIndex - 1 )->GetUserSetting( name );
 	}
 	
-	const char *ParseFile(const char *data, char *token, int maxlen) override
+	const char *ParseFile(IN_Z const char *data, OUT_Z_CAP(maxlen) char *token, int maxlen) override
 	{
 		return ::COM_ParseFile(data, token, maxlen );
 	}
@@ -1747,7 +1751,7 @@ void CVEngineServer::PlaybackTempEntity( IRecipientFilter& filter, float delay, 
 	newEvent->bits = buffer.GetNumBitsWritten();
 	int size = Bits2Bytes( buffer.GetNumBitsWritten() );
 	newEvent->pData = new byte[size];
-	Q_memcpy( newEvent->pData, data, size );
+	Q_memcpy( newEvent->pData, data, size ); //-V614
 
 	// add to list
 	sv.m_TempEntities[sv.m_TempEntities.AddToTail()] = newEvent;

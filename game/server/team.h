@@ -89,13 +89,14 @@ public:
 	int		m_iDeaths;
 
 	// Spawnpoints
-	int		m_iLastSpawn;		// Index of the last spawnpoint used
+	// dimhotepus: int -> intp.
+	intp	m_iLastSpawn;		// Index of the last spawnpoint used
 
 	CNetworkVar( int, m_iTeamNum );			// Which team is this?
 };
 
 extern CUtlVector< CTeam * > g_Teams;
 extern CTeam *GetGlobalTeam( int iIndex );
-extern int GetNumberOfTeams( void );
+extern intp GetNumberOfTeams( void );
 
 #endif // TEAM_H

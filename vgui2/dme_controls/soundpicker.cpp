@@ -72,7 +72,8 @@ CSoundPicker::CSoundPicker( vgui::Panel *pParent, int nFlags ) :
 	{
 		m_pGameSoundPage = new PropertyPage( m_pViewsSheet, "GameSoundPage" );
 		m_pGameSoundList = new ListPanel( m_pGameSoundPage, "GameSoundsList" );
- 		m_pGameSoundList->AddColumnHeader( 0, "GameSound", "Game Sound", 52, 0 );
+		// dimhotepus: Scale UI.
+ 		m_pGameSoundList->AddColumnHeader( 0, "GameSound", "Game Sound", QuickPropScale( 52 ), 0 );
 		m_pGameSoundList->AddActionSignalTarget( this );
 		m_pGameSoundList->SetSelectIndividualCells( true );
  		m_pGameSoundList->SetEmptyListText("No game sounds");
@@ -205,7 +206,7 @@ void CSoundPicker::BuildGameSoundList()
 	m_pGameSoundList->RemoveAll();
 
 	int nTotalCount = 0;
-	int i = SoundEmitterSystem()->First();
+	auto i = SoundEmitterSystem()->First();
 	while ( i != SoundEmitterSystem()->InvalidIndex() )
 	{
 		const char *pSoundName = SoundEmitterSystem()->GetSoundName( i );
@@ -575,7 +576,7 @@ void CSoundPickerFrame::OnCommand( const char *pCommand )
 				for ( int i = 0; i < nSoundCount; ++i )
 				{
 					char pBuf[32];
-					Q_snprintf( pBuf, sizeof(pBuf), "%d", i );
+					V_to_chars( pBuf, i );
 					pSoundName = pPicker->GetSelectedSoundName( i );
 
 					len = V_strlen( pSoundName );

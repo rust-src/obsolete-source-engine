@@ -5,6 +5,7 @@
 //=============================================================================//
 
 #include "vgui_basebudgetpanel.h"
+
 #include "vgui_controls/Label.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -16,7 +17,8 @@ CBaseBudgetPanel::CBaseBudgetPanel( vgui::Panel *pParent, const char *pElementNa
 	m_BudgetHistoryOffset = 0;
 	m_hFont = vgui::INVALID_FONT;
 
-	SetProportional( false );
+	// dimhotepus: Scale UI.
+	// SetProportional( false );
 	SetKeyBoardInputEnabled( false );
 	SetMouseInputEnabled( false );
 	SetVisible( true );
@@ -62,8 +64,7 @@ const double *CBaseBudgetPanel::GetBudgetGroupData( intp &nGroups, int &nSamples
 
 void CBaseBudgetPanel::ClearTimesForAllGroupsForThisFrame()
 {
-	intp i;
-	for( i = 0; i < m_ConfigData.m_BudgetGroupInfo.Count(); i++ )
+	for( intp i = 0; i < m_ConfigData.m_BudgetGroupInfo.Count(); i++ )
 	{
 		m_BudgetGroupTimes[i].m_Time[m_BudgetHistoryOffset] = 0.0;
 	}
@@ -71,12 +72,12 @@ void CBaseBudgetPanel::ClearTimesForAllGroupsForThisFrame()
 
 void CBaseBudgetPanel::ClearAllTimesForGroup( intp groupID )
 {
-	intp i;
-	for( i = 0; i < BUDGET_HISTORY_COUNT; i++ )
-	{
-		m_BudgetGroupTimes[groupID].m_Time[i] = 0.0;
+	using time_type = std::remove_pointer_t<std::decay_t<decltype(m_BudgetGroupTimes[0].m_Time)>>;
+	static_assert(std::numeric_limits<time_type>::is_iec559);
+
+	// dimhotepus: Fast zeroing to +0 for IEEE-754.
+	BitwiseClear( m_BudgetGroupTimes[groupID].m_Time );
 	}
-}
 
 
 void CBaseBudgetPanel::OnConfigDataChanged( const CBudgetPanelConfigData &data )
@@ -327,7 +328,7 @@ void CBaseBudgetPanel::PerformLayout()
 		m_TimeLabels[i]->GetContentSize( labelWidth, labelHeight );
 		x = maxLabelWidth + ( i * m_ConfigData.m_flTimeLabelInterval ) / fRange * ( totalWidth - maxLabelWidth );
 		
-		m_TimeLabels[i]->SetPos( x - ( labelWidth * 0.5f ), totalHeight - labelHeight );
+		m_TimeLabels[i]->SetPos( x - labelWidth / 2, totalHeight - labelHeight );
 		m_TimeLabels[i]->SetSize( labelWidth, labelHeight );
 		m_TimeLabels[i]->SetContentAlignment( vgui::Label::a_east );
 	}
@@ -339,8 +340,8 @@ void CBaseBudgetPanel::PerformLayout()
 	{
 		int labelWidth, labelHeight;
 		m_HistoryLabels[i]->GetContentSize( labelWidth, labelHeight );
-		y = (fRange != 0) ? budgetHistoryHeight * m_ConfigData.m_HistoryLabelValues[i] / fRange : 0.0f;
-		int top = ( int )( budgetHistoryHeight - y - 1 - labelHeight * 0.5f );
+		y = (fRange != 0) ? budgetHistoryHeight * m_ConfigData.m_HistoryLabelValues[i] / fRange : 0;
+		int top = budgetHistoryHeight - y - 1 - labelHeight / 2;
 		m_HistoryLabels[i]->SetPos( totalWidth - maxFPSLabelWidth, top );
 		m_HistoryLabels[i]->SetSize( labelWidth, labelHeight );
 		m_HistoryLabels[i]->SetContentAlignment( vgui::Label::a_east );
@@ -391,7 +392,8 @@ void CBaseBudgetPanel::ApplySchemeSettings( vgui::IScheme *pScheme )
 		}
 	}
 
-	m_hFont = pScheme->GetFont( "DefaultFixed" );
+	// dimhotepus: Scale UI.
+	m_hFont = pScheme->GetFont( "DefaultFixed", IsProportional() );
 
 	if ( m_bDedicated )
 	{

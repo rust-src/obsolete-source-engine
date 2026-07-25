@@ -146,6 +146,7 @@ const mstudioanim_t *mstudioanimdesc_t::pAnim( int *piFrame, float &flStall ) co
 	flStall = 0.0f;
 	if (panim == nullptr && section <= 0)
 	{
+		// dimhotepus: Can't make this double as it breaks file format.
 		zeroframestalltime = Plat_FloatTime();
 		flStall = 1.0f;
 	}
@@ -1708,7 +1709,7 @@ void CStudioHdr::CActivityToSequenceMapping::Initialize( CStudioHdr * __restrict
 	// so far for each activity. (This is basically a very simple way of doing a map.)
 	// This stack may potentially grow very large; so if you have problems with it, 
 	// go to a utlmap or similar structure.
-	const unsigned int allocsize = AlignValue((topActivity + 1) * sizeof(int), 16);
+	const unsigned int allocsize = AlignValue((topActivity + 1) * static_cast<int>(sizeof(int)), 16);
 	int * __restrict seqsPerAct = stackallocT( int, topActivity + 1 );
 	memset(seqsPerAct, 0, allocsize);
 

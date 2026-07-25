@@ -104,23 +104,30 @@ unsigned short Interpolator_CurveTypeForName( const char *name )
 	{
 		char *p = sz + skip;
 		char *second = Q_stristr( p, "_to_curve_" );
-		
-		char save = *second;
-		*second = '\0';
 
-		leftcurve = Interpolator_InterpolatorForName( p );
+		// dimhotepus: Check curve name is expected and exit if not.
+		Assert(second);
 
-		*second = save;
+		if (second)
+		{
+			char save = *second;
+			*second = '\0';
 
-		p = second + ssize( "_to_curve_" ) - 1;
+			leftcurve = Interpolator_InterpolatorForName( p );
 
-		rightcurve = Interpolator_InterpolatorForName( p );
+			*second = save;
+
+			p = second + ssize( "_to_curve_" ) - 1;
+
+			rightcurve = Interpolator_InterpolatorForName( p );
+		}
 	}
 
 	return MAKE_CURVE_TYPE( leftcurve, rightcurve );
 }
 
-const char *Interpolator_NameForCurveType( int type, bool printname )
+// dimhotepus: int -> unsigned short.
+const char *Interpolator_NameForCurveType( unsigned short type, bool printname )
 {
 	static char outname[ 256 ];
 
@@ -143,7 +150,8 @@ const char *Interpolator_NameForCurveType( int type, bool printname )
 	return outname;
 }
 
-void Interpolator_CurveInterpolatorsForType( int type, int& inbound, int& outbound )
+// dimhotepus: int -> unsigned short.
+void Interpolator_CurveInterpolatorsForType( unsigned short type, int& inbound, int& outbound )
 {
 	inbound = GET_LEFT_CURVE( type );
 	outbound = GET_RIGHT_CURVE( type );
@@ -438,10 +446,10 @@ void Interpolator_CurveInterpolate_NonNormalized( int interpolationType,
 
 
 void Interpolator_CurveInterpolate_NonNormalized( int interpolationType,
-												 const Quaternion &vPre,
+												 [[maybe_unused]] const Quaternion &vPre,
 												 const Quaternion &vStart,
 												 const Quaternion &vEnd,
-												 const Quaternion &vNext,
+												 [[maybe_unused]] const Quaternion &vNext,
 												 float f,
 												 Quaternion &vOut )
 {

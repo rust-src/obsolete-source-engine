@@ -157,7 +157,7 @@ void CPortalRenderable_FlatBasic::PortalMoved( void )
 	{
 		for( int i = 0; i != PORTALRENDERFIXMESH_OUTERBOUNDPLANES; ++i )
 		{
-			float fCirclePos = ((float)(i)) * ((M_PI * 2.0f) / (float)PORTALRENDERFIXMESH_OUTERBOUNDPLANES);
+			float fCirclePos = ((float)(i)) * ((M_PI_F * 2.0f) / (float)PORTALRENDERFIXMESH_OUTERBOUNDPLANES);
 			float fUpBlend = cosf( fCirclePos );
 			float fRightBlend = sinf( fCirclePos );
 
@@ -243,7 +243,6 @@ bool CPortalRenderable_FlatBasic::CalcFrustumThroughPortal( const Vector &ptCurr
 	int iInputFrustumPlaneCount = g_pPortalRender->m_RecursiveViewComplexFrustums[iViewRecursionLevel].Count();
 	Assert( iInputFrustumPlaneCount > 0 );
 
-	Vector ptTempWork[2];
 	int iAllocSize = 4 + iInputFrustumPlaneCount;
 
 	Vector *pInVerts = (Vector *)stackalloc( sizeof( Vector ) * iAllocSize * 2 ); //possible to add 1 point per cut, 4 starting points, iInputFrustumPlaneCount cuts

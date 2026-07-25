@@ -26,10 +26,11 @@
 #include <fcntl.h>
 #endif
 #define GetLastError() errno
-#elif defined( _X360 )
 #else
 #error "Please define your platform"
 #endif
+
+#include "posix_file_stream.h"
 
 #include "client.h"
 #include <vgui_controls/Frame.h>
@@ -201,11 +202,22 @@ MSVC_END_WARNING_OVERRIDE_SCOPE()
 		// Display version, service pack (if any), and build number.
 		
 		char build[256];
-		Q_snprintf (build, sizeof( build ), "%s (Build %lu) version %lu.%lu (super user: %s)",
+		Q_snprintf (build, sizeof( build ), "%s (Build %lu) version %lu.%lu (%s) (super user: %s)",
 			osvi.szCSDVersion,
 			osvi.dwBuildNumber & 0xFFFF,
 			osvi.dwMajorVersion,
 			osvi.dwMinorVersion,
+#ifdef PLATFORM_ARM_64
+			"AArch64",
+#elif defined(PLATFORM_ARM_32)
+			"ARM32",
+#elif defined(PLATFORM_X86) && (PLATFORM_X86 == 64)
+			"x86-64",
+#elif defined(PLATFORM_X86) && (PLATFORM_X86 == 32)
+			"x86",
+#else
+			"N/A",
+#endif
 			Plat_IsUserAnAdmin() ? "yes" : "no" );
 		Q_strncat ( osversion, build, maxlen, COPY_ALL_CHARACTERS );
 		break;
@@ -217,18 +229,18 @@ MSVC_END_WARNING_OVERRIDE_SCOPE()
 		break;
 	}
 #elif defined(OSX)
-	FILE *fpVersionInfo = popen( "/usr/bin/sw_vers", "r" );
-	const char *pszSearchString = "ProductVersion:\t";
-	const intp cchSearchString = Q_strlen( pszSearchString );
+	auto [fpVersionInfo, rc] = se::posix::posix_file_stream_factory::open( "/usr/bin/sw_vers", "r" );
+	constexpr char pszSearchString[]{"ProductVersion:\t"};
+	constexpr intp cchSearchString = ssize( pszSearchString ) - 1;
 	char rgchVersionLine[1024];
 		
-	if ( !fpVersionInfo )
+	if ( rc )
 		Q_strncpy ( osversion, "OSXU ", maxlen );
 	else
 	{
-		Q_strncpy ( osversion, "OSX10", maxlen );
+		Q_strncpy ( osversion, "OSX ", maxlen );
 
-		while ( fgets( rgchVersionLine, sizeof(rgchVersionLine), fpVersionInfo ) )
+		while ( !std::get<std::error_code>( fpVersionInfo.gets( rgchVersionLine ) ) )
 		{
 			if ( !Q_strnicmp( rgchVersionLine, pszSearchString, cchSearchString ) )
 			{
@@ -237,32 +249,65 @@ MSVC_END_WARNING_OVERRIDE_SCOPE()
 				intp ccVersion = Q_strlen(pchVersion); // trim the \n
 				Q_strncpy ( osversion, pchVersion, ccVersion );
 				osversion[ ccVersion ] = 0;
-				Q_strncat ( osversion, " (super user: " );
-				Q_strncat ( osversion, Plat_IsUserAnAdmin() ? "yes)" : "no)" );
+
+				Q_strncat ( osversion,
+#ifdef PLATFORM_ARM_64
+					" AArch64",
+#elif defined(PLATFORM_ARM_32)
+					" ARM32",
+#elif defined(PLATFORM_64BITS)
+					" x86-64",
+#elif defined(PLATFORM_X86)
+					" x86",
+#else
+					" N/A",
+#endif
+					maxlen
+				);
+				Q_strncat ( osversion, " (super user: ", maxlen );
+				Q_strncat ( osversion, Plat_IsUserAnAdmin() ? "yes)" : "no)", maxlen );
 				break;
 			}
 		}
-		pclose( fpVersionInfo );
 	}
 #elif defined(LINUX)
-	FILE *fpKernelVer = fopen( "/proc/version_signature", "r" );
+	auto [fpKernelVer, rc] = se::posix::posix_file_stream_factory::open( "/proc/version_signature", "r" );
 
-	if ( !fpKernelVer )
+	if ( rc )
 	{
 		Q_strncat ( osversion, "Linux ", maxlen, COPY_ALL_CHARACTERS );
 	}
 	else
 	{
-		fgets( osversion, maxlen, fpKernelVer );
-		osversion[ maxlen - 1 ] = 0;
-		Q_strncat ( osversion, " (super user: " );
-		Q_strncat ( osversion, Plat_IsUserAnAdmin() ? "yes)" : "no)" );
+		char rgchVersionLine[1024];
+		std::tie(std::ignore, rc) = fpKernelVer.gets( rgchVersionLine );
+
+		if ( !rc )
+		{
+			Q_strncat ( osversion, rgchVersionLine, maxlen, COPY_ALL_CHARACTERS );
+		}
+
+		Q_strncat ( osversion,
+#ifdef PLATFORM_ARM_64
+			" AArch64",
+#elif defined(PLATFORM_ARM_32)
+			" ARM32",
+#elif defined(PLATFORM_X86) && (PLATFORM_X86 == 64)
+			" x86-64",
+#elif defined(PLATFORM_X86) && (PLATFORM_X86 == 32)
+			" x86",
+#else
+			" N/A",
+#endif
+			maxlen
+		);
+
+		Q_strncat ( osversion, " (super user: ", maxlen );
+		Q_strncat ( osversion, Plat_IsUserAnAdmin() ? "yes)" : "no)", maxlen );
 
 		char *szlf = Q_strrchr( osversion, '\n' );
 		if( szlf )
 			*szlf = '\0';
-
-		fclose( fpKernelVer );
 	}
 #endif
 }
@@ -860,7 +905,8 @@ bool CBugUIPanel::Init()
 	V_to_chars(buffer, build_number());
 	m_pBuildNumber->SetText( buffer );
 
-	return false;
+	// dimhotepus: Return true if exit ok.
+	return true;
 }
 
 void CBugUIPanel::Shutdown()
@@ -1868,11 +1914,7 @@ void CBugUIPanel::OnSubmit()
 	
 	if ( m_szSaveGameName[ 0 ] )
 	{
-#ifdef PLATFORM_64BITS
-		Msg( "save file save/x64/%s.sav\n", m_szSaveGameName );
-#else
-		Msg( "save file save/%s.sav\n", m_szSaveGameName );
-#endif
+		Msg( "save file save" PLATFORM_DIR CORRECT_PATH_SEPARATOR_S "%s.sav\n", m_szSaveGameName );
 	}
 	else
 	{
@@ -2012,11 +2054,7 @@ void CBugUIPanel::OnSubmit()
 		// Only attach .sav files in single player
 		if ( ( cl.m_nMaxClients == 1 ) && m_szSaveGameName[ 0 ] )
 		{
-#ifdef PLATFORM_64BITS
-			Q_snprintf( fn, sizeof( fn ), "save/x64/%s.sav", m_szSaveGameName );
-#else
-			Q_snprintf( fn, sizeof( fn ), "save/%s.sav", m_szSaveGameName );
-#endif
+			V_sprintf_safe( fn, "save" PLATFORM_DIR CORRECT_PATH_SEPARATOR_S "%s.sav", m_szSaveGameName );
 			Q_FixSlashes( fn );
 			attachedSave = AddFileToZip( fn );
 		}
@@ -2033,6 +2071,9 @@ void CBugUIPanel::OnSubmit()
 		{
 			void *mem = nullptr;
 			unsigned long len;
+			
+			// dimhotepus: This can take a while, put up a waiting cursor.
+			const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
 
 			if ( ZipGetMemory( m_hZip, &mem, &len ) == ZR_OK && mem != NULL && len > 0 )
 			{
@@ -2219,6 +2260,9 @@ int copyfile( const char *local, const char *remote, void *ignored, int ignoredF
 
 bool CBugUIPanel::UploadFile( char const *local, char const *remote, bool bDeleteLocal )
 {
+	// dimhotepus: This can take a while, put up a waiting cursor.
+    const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
+
 	Msg( "Uploading %s to %s\n", local, remote );
 	FileHandle_t hLocal = g_pFileSystem->Open( local, "rb" );
 	if ( FILESYSTEM_INVALID_HANDLE == hLocal )
@@ -2227,8 +2271,8 @@ bool CBugUIPanel::UploadFile( char const *local, char const *remote, bool bDelet
 		return false;
 	}
 
-	int nLocalFileSize = g_pFileSystem->Size( hLocal );
-	if ( nLocalFileSize <= 0 )
+	unsigned nLocalFileSize = g_pFileSystem->Size( hLocal );
+	if ( nLocalFileSize == 0 )
 	{
 		Warning( "CBugUIPanel::UploadFile:  Local file has 0 size '%s'\n", local );
 		g_pFileSystem->Close( hLocal );
@@ -2250,40 +2294,41 @@ bool CBugUIPanel::UploadFile( char const *local, char const *remote, bool bDelet
 	}
 	else
 	{
-
-		FILE *r = fopen( va( "%s", remote ), "wb" );
-		if ( !r )
+		auto [r, rc] = se::posix::posix_file_stream_factory::open( va( "%s", remote ), "wb" );
+		if ( rc )
 		{
-			Warning( "CBugUIPanel::UploadFile:  Unable to open remote path '%s'\n", remote );
+			Warning( "CBugUIPanel::UploadFile:  Unable to open remote path '%s': %s\n", remote, rc.message().c_str() );
 			g_pFileSystem->Close( hLocal );
 			return false;
 		}
 
-		int nCopyBufferSize = 2 * 1024 * 1024;
+		constexpr size_t nCopyBufferSize = 4 * 1024 * 1024;
 
-		byte *pCopyBuf = new byte[ nCopyBufferSize ];
+		auto pCopyBuf = std::make_unique<byte[]>( nCopyBufferSize );
 		Assert( pCopyBuf );
 		if ( !pCopyBuf )
 		{
-			Warning( "CBugUIPanel::UploadFile:  Unable to allocate copy buffer of %d bytes\n", nCopyBufferSize );
-			fclose( r );
+			Warning( "CBugUIPanel::UploadFile:  Unable to allocate copy buffer of %zu bytes\n", nCopyBufferSize );
 			g_pFileSystem->Close( hLocal );
 			return false;
 		}
 
-		int nRemainingBytes = nLocalFileSize;
+		unsigned nRemainingBytes = nLocalFileSize;
 		while ( nRemainingBytes > 0 )
 		{
-			int nBytesToCopy = MIN( nRemainingBytes, nCopyBufferSize );
-			g_pFileSystem->Read( pCopyBuf, nBytesToCopy, hLocal );
-			fwrite( pCopyBuf, nBytesToCopy, 1, r );
+			unsigned nBytesToCopy = MIN( nRemainingBytes, nCopyBufferSize );
+			g_pFileSystem->Read( pCopyBuf.get(), nBytesToCopy, hLocal );
+			std::tie(std::ignore, rc) = r.write( pCopyBuf.get(), 1, nBytesToCopy );
+			if ( rc )
+			{
+				Warning( "CBugUIPanel::UploadFile:  Unable to copy file: %s\n", rc.message().c_str() );
+				g_pFileSystem->Close( hLocal );
+				return false;
+			}
 			nRemainingBytes -= nBytesToCopy;
 		}
 
-		fclose( r );
 		g_pFileSystem->Close( hLocal );
-
-		delete[] pCopyBuf;
 
 		bResult = true;
 	}
@@ -2318,11 +2363,7 @@ CCallQueue g_UploadQueue;
 // 
 // 	if ( savefile && savefile[ 0 ] )
 // 	{
-// #ifdef PLATFORM_64BITS
-// 		Q_snprintf( localfile, sizeof( localfile ), "%s/save/x64/%s.sav", com_gamedir, savefile );
-// #else
-// 		Q_snprintf( localfile, sizeof( localfile ), "%s/save/%s.sav", com_gamedir, savefile );
-// #endif
+// 		Q_snprintf( localfile, sizeof( localfile ), "%s/save" PLATFORM_DIR CORRECT_PATH_SEPARATOR_S "%s.sav", com_gamedir, savefile );
 // 		Q_snprintf( remotefile, sizeof( remotefile ), "%s/%s.sav", GetSubmissionURL(bugId), savefile );
 // 		Q_FixSlashes( localfile );
 // 		Q_FixSlashes( remotefile );
@@ -2647,7 +2688,10 @@ void CBugUIPanel::OnKeyCodePressed(KeyCode code)
 // Load game-specific bug reporter defaults as params
 void CBugUIPanel::ParseDefaultParams( void )
 {
-	const char *szDefaults = "scripts/bugreporter_defaults.txt";
+	// dimhotepus: This can take a while, put up a waiting cursor.
+    const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
+
+	constexpr char szDefaults[]{ "scripts/bugreporter_defaults.txt" };
 
 	FileHandle_t hLocal = g_pFileSystem->Open( szDefaults, "rb" );
 	if ( FILESYSTEM_INVALID_HANDLE == hLocal )

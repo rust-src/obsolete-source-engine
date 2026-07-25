@@ -4,18 +4,18 @@
 //
 //===========================================================================//
 
-#include "EntityReportPanel.h"
+#include "entityreportpanel.h"
 #include "tier1/KeyValues.h"
 #include "tier1/utlbuffer.h"
 #include "iregistry.h"
-#include "vgui/ivgui.h"
-#include "vgui_controls/listpanel.h"
-#include "vgui_controls/textentry.h"
-#include "vgui_controls/checkbutton.h"
-#include "vgui_controls/combobox.h"
-#include "vgui_controls/radiobutton.h"
-#include "vgui_controls/messagebox.h"
-#include "dmevmfentity.h"
+#include "vgui/IVGui.h"
+#include "vgui_controls/ListPanel.h"
+#include "vgui_controls/TextEntry.h"
+#include "vgui_controls/CheckButton.h"
+#include "vgui_controls/ComboBox.h"
+#include "vgui_controls/RadioButton.h"
+#include "vgui_controls/MessageBox.h"
+#include "DmeVMFEntity.h"
 #include "foundrydoc.h"
 #include "foundrytool.h"
 
@@ -28,7 +28,7 @@ using namespace vgui;
 //-----------------------------------------------------------------------------
 // Sort by target name
 //-----------------------------------------------------------------------------
-static int __cdecl TargetNameSortFunc( vgui::ListPanel *pPanel, const ListPanelItem &item1, const ListPanelItem &item2 )
+static int __cdecl TargetNameSortFunc( [[maybe_unused]] vgui::ListPanel *pPanel, const ListPanelItem &item1, const ListPanelItem &item2 )
 {
 	const char *string1 = item1.kv->GetString("targetname");
 	const char *string2 = item2.kv->GetString("targetname");
@@ -44,7 +44,7 @@ static int __cdecl TargetNameSortFunc( vgui::ListPanel *pPanel, const ListPanelI
 //-----------------------------------------------------------------------------
 // Sort by class name
 //-----------------------------------------------------------------------------
-static int __cdecl ClassNameSortFunc( vgui::ListPanel *pPanel, const ListPanelItem &item1, const ListPanelItem &item2 )
+static int __cdecl ClassNameSortFunc( [[maybe_unused]] vgui::ListPanel *pPanel, const ListPanelItem &item1, const ListPanelItem &item2 )
 {
 	const char *string1 = item1.kv->GetString("classname");
 	const char *string2 = item2.kv->GetString("classname");
@@ -76,8 +76,9 @@ CEntityReportPanel::CEntityReportPanel( CFoundryDoc *pDoc, vgui::Panel* pParent,
 	SetPaintBackgroundEnabled( true );
 
 	m_pEntities = new vgui::ListPanel( this, "Entities" );
-	m_pEntities->AddColumnHeader( 0, "targetname", "Name", 52, ListPanel::COLUMN_RESIZEWITHWINDOW );
- 	m_pEntities->AddColumnHeader( 1, "classname", "Class Name", 52, ListPanel::COLUMN_RESIZEWITHWINDOW );
+	// dimhotepus: Scale UI.
+	m_pEntities->AddColumnHeader( 0, "targetname", "Name", QuickPropScale( 52 ), ListPanel::COLUMN_RESIZEWITHWINDOW );
+ 	m_pEntities->AddColumnHeader( 1, "classname", "Class Name", QuickPropScale( 52 ), ListPanel::COLUMN_RESIZEWITHWINDOW );
 	m_pEntities->SetColumnSortable( 0, true );
 	m_pEntities->SetColumnSortable( 1, true );
 	m_pEntities->SetEmptyListText( "No Entities" );
@@ -177,7 +178,7 @@ void CEntityReportPanel::SaveSettingsToRegistry()
 //-----------------------------------------------------------------------------
 void CEntityReportPanel::OnProperties(void)
 {
-	int iSel = m_pEntities->GetSelectedItem( 0 );
+	intp iSel = m_pEntities->GetSelectedItem( 0 );
 	KeyValues *kv = m_pEntities->GetItem( iSel );
 	CDmeVMFEntity *pEntity = (CDmeVMFEntity *)kv->GetPtr( "entity" );
 	g_pFoundryTool->ShowEntityInEntityProperties( pEntity );
@@ -192,15 +193,15 @@ void CEntityReportPanel::OnDeleteEntities(void)
 	// This is undoable
 	CAppUndoScopeGuard guard( NOTIFY_SETDIRTYFLAG, "Delete Entities", "Delete Entities" );
 
-	int iSel = m_pEntities->GetSelectedItem( 0 );
+	intp iSel = m_pEntities->GetSelectedItem( 0 );
 
 	//
 	// Build a list of objects to delete.
 	//
-	int nCount = m_pEntities->GetSelectedItemsCount();
-	for (int i = 0; i < nCount; i++)
+	intp nCount = m_pEntities->GetSelectedItemsCount();
+	for (intp i = 0; i < nCount; i++)
 	{
-		int nItemID = m_pEntities->GetSelectedItem(i);
+		intp nItemID = m_pEntities->GetSelectedItem(i);
 		KeyValues *kv = m_pEntities->GetItem( nItemID );
 		CDmeVMFEntity *pEntity = (CDmeVMFEntity *)kv->GetPtr( "entity" );
 		if ( pEntity )
@@ -253,7 +254,7 @@ void CEntityReportPanel::OnCommand( const char *pCommand )
 //-----------------------------------------------------------------------------
 void CEntityReportPanel::MarkDirty( bool bFilterDirty )
 {
-	float flTime = Plat_FloatTime();
+	double flTime = Plat_FloatTime();
 	m_bRegistrySettingsChanged = true;
 	m_flRegistryTime = flTime;
 	if ( bFilterDirty && !m_bFilterTextChanged )
@@ -334,7 +335,7 @@ void CEntityReportPanel::OnTextChanged( KeyValues *kv )
 {
 	TextEntry *pPanel = (TextEntry*)kv->GetPtr( "panel", NULL );
 
-	int nLength = pPanel->GetTextLength();
+	intp nLength = pPanel->GetTextLength();
 	char *pBuf = (char*)_alloca( nLength + 1 );
 	pPanel->GetText( pBuf, nLength+1 );
 
@@ -453,7 +454,7 @@ void CEntityReportPanel::OnTick( )
 	BaseClass::OnTick();
 
 	// check filters
-	float flTime = Plat_FloatTime();
+	double flTime = Plat_FloatTime();
 	if ( m_bFilterTextChanged )
 	{
 		if ( (flTime - m_flFilterTime) > 1e-3 )
@@ -537,8 +538,8 @@ void CEntityReportPanel::UpdateEntityList(void)
 	m_pEntities->RemoveAll();
 
 	const CDmrElementArray<CDmElement> entityList( m_pDoc->GetEntityList() );
-	int nCount = entityList.Count();
-	for ( int i = 0; i < nCount; ++i )
+	intp nCount = entityList.Count();
+	for ( intp i = 0; i < nCount; ++i )
 	{
 		CDmeVMFEntity *pEntity = CastElement<CDmeVMFEntity>( entityList[i] );
 		if ( ShouldAddEntityToList( pEntity ) )

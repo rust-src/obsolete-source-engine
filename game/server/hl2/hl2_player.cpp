@@ -1590,7 +1590,7 @@ void CHL2_Player::CommanderUpdate()
 // a suitable candidate. (like picking up a single weapon. We don't wish for
 // all allies to respond and try to pick up one weapon).
 //----------------------------------------------------------------------------- 
-bool CHL2_Player::CommanderExecuteOne( CAI_BaseNPC *pNpc, const commandgoal_t &goal, CAI_BaseNPC **Allies, int numAllies )
+bool CHL2_Player::CommanderExecuteOne( CAI_BaseNPC *pNpc, const commandgoal_t &goal, CAI_BaseNPC **Allies, intp numAllies )
 {
 	if ( goal.m_pGoalEntity )
 	{
@@ -1616,7 +1616,6 @@ void CHL2_Player::CommanderExecute( CommanderCommand_t command )
 		return;
 	}
 
-	int i;
 	CUtlVector<CAI_BaseNPC *> Allies;
 	commandgoal_t goal;
 
@@ -1669,7 +1668,7 @@ void CHL2_Player::CommanderExecute( CommanderCommand_t command )
 	// If the trace hits an NPC, send all ally NPCs a "target" order. Always
 	// goes to targeted one first
 #ifdef DBGFLAG_ASSERT
-	int nAIs = g_AI_Manager.NumAIs();
+	intp nAIs = g_AI_Manager.NumAIs();
 #endif
 	CAI_BaseNPC * pTargetNpc = (goal.m_pGoalEntity) ? goal.m_pGoalEntity->MyNPCPointer() : NULL;
 	
@@ -1679,7 +1678,7 @@ void CHL2_Player::CommanderExecute( CommanderCommand_t command )
 		bHandled = !CommanderExecuteOne( pTargetNpc, goal, Allies.Base(), Allies.Count() );
 	}
 	
-	for ( i = 0; !bHandled && i < Allies.Count(); i++ )
+	for ( intp i = 0; !bHandled && i < Allies.Count(); i++ )
 	{
 		if ( Allies[i] != pTargetNpc && Allies[i]->IsPlayerAlly() )
 		{
@@ -1813,10 +1812,19 @@ void CHL2_Player::SuitPower_Update( void )
 		{
 			if( SuitPower_IsDeviceActive(SuitDeviceSprint) )
 			{
-				if( !fabs(GetAbsVelocity().x) && !fabs(GetAbsVelocity().y) )
+				// dimhotepus: TF2 backport. If abs velocity is near 0 than assume it affects suit power.
+				if ( CloseEnough( fabs( GetAbsVelocity().x ), 0.0f ) && CloseEnough( fabs( GetAbsVelocity().y ), 0.0f ) )
 				{
-					// If player's not moving, don't drain sprint juice.
-					flPowerLoad -= SuitDeviceSprint.GetDeviceDrainRate();
+					// dimhotepus: TF2 backport. If suit device sprint near drain rate than use 0.
+					if ( CloseEnough( flPowerLoad, SuitDeviceSprint.GetDeviceDrainRate() ) )
+					{
+						flPowerLoad = 0.0f;
+					}
+					else
+					{
+						// If player's not moving, don't drain sprint juice.
+						flPowerLoad -= SuitDeviceSprint.GetDeviceDrainRate();
+					}
 				}
 			}
 		}
@@ -2152,7 +2160,7 @@ void CHL2_Player::CheckFlashlight( void )
 	m_flNextFlashlightCheckTime = gpGlobals->curtime + FLASHLIGHT_NPC_CHECK_INTERVAL;
 
 	// Loop through NPCs looking for illuminated ones
-	for ( int i = 0; i < g_AI_Manager.NumAIs(); i++ )
+	for ( intp i = 0; i < g_AI_Manager.NumAIs(); i++ )
 	{
 		CAI_BaseNPC *pNPC = g_AI_Manager.AccessAIs()[i];
 
@@ -2276,7 +2284,7 @@ void CHL2_Player::NotifyFriendsOfDamage( CBaseEntity *pAttackerEntity )
 	if ( pAttacker )
 	{
 		const Vector &origin = GetAbsOrigin();
-		for ( int i = 0; i < g_AI_Manager.NumAIs(); i++ )
+		for ( intp i = 0; i < g_AI_Manager.NumAIs(); i++ )
 		{
 			constexpr float NEAR_Z = 12*12;
 			constexpr float NEAR_XY_SQ = Square( 50.0f*12 );
@@ -2462,7 +2470,7 @@ void CHL2_Player::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo
 
 	CAI_BaseNPC **ppAIs = g_AI_Manager.AccessAIs();
 
-	for ( int i = 0; i < g_AI_Manager.NumAIs(); i++ )
+	for ( intp i = 0; i < g_AI_Manager.NumAIs(); i++ )
 	{
 		if ( ppAIs[i] && ppAIs[i]->IRelationType(this) == D_LI )
 		{

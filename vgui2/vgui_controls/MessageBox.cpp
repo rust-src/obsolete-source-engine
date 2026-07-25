@@ -21,9 +21,10 @@
 
 using namespace vgui;
 
-vgui::Panel *MessageBox_Factory()
+// dimhotepus: Add parent to scale UI.
+vgui::Panel *MessageBox_Factory( vgui::Panel* parent )
 {
-	return new MessageBox("MessageBox", "MessageBoxText");
+	return new MessageBox("MessageBox", "MessageBoxText", parent);
 }
 
 DECLARE_BUILD_FACTORY_CUSTOM( MessageBox, MessageBox_Factory );
@@ -268,8 +269,9 @@ void MessageBox::PerformLayout()
 		m_pCancelButton->GetSize(oldWide, oldTall);
 		
 		m_pCancelButton->GetContentSize(btnWide2, btnTall2);
-		btnWide2 = max(oldWide, btnWide2 + 10);
-		btnTall2 = max(oldTall, btnTall2 + 10);
+		// dimhotepus: Scale UI.
+		btnWide2 = max(oldWide, btnWide2 + QuickPropScale( 10 ));
+		btnTall2 = max(oldTall, btnTall2 + QuickPropScale( 10 ));
 		m_pCancelButton->SetSize(btnWide2, btnTall2);
 	}
 

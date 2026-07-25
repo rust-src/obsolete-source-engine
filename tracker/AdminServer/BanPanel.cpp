@@ -5,8 +5,6 @@
 // $NoKeywords: $
 //=============================================================================
 
-#include <stdio.h>
-
 #include "BanPanel.h"
 #include "PlayerContextMenu.h"
 #include "DialogAddBan.h"
@@ -25,6 +23,7 @@
 #include <vgui_controls/FileOpenDialog.h>
 
 #include "filesystem.h"
+#include "posix_file_stream.h"
 
 #include "DialogCvarChange.h"
 #include "tokenline.h"
@@ -37,9 +36,10 @@ using namespace vgui;
 CBanPanel::CBanPanel(vgui::Panel *parent, const char *name) : PropertyPage(parent, name)
 {
 	m_pBanListPanel = new ListPanel(this, "BanList");
-	m_pBanListPanel->AddColumnHeader(0, "type", "#Ban_List_Type", 150 );
-	m_pBanListPanel->AddColumnHeader(1, "id", "#Ban_List_ID", 200 );
-	m_pBanListPanel->AddColumnHeader(2, "time", "#Ban_List_Time", 200 );
+	// dimhotepus: Scale UI.
+	m_pBanListPanel->AddColumnHeader(0, "type", "#Ban_List_Type", QuickPropScale( 150 ) );
+	m_pBanListPanel->AddColumnHeader(1, "id", "#Ban_List_ID", QuickPropScale( 200 ) );
+	m_pBanListPanel->AddColumnHeader(2, "time", "#Ban_List_Time", QuickPropScale( 200 ) );
 	m_pBanListPanel->SetSortColumn(2);
 	m_pBanListPanel->SetEmptyListText("#Ban_List_Empty");
 
@@ -129,10 +129,11 @@ void CBanPanel::OnServerDataResponse(const char *value, const char *response)
 
 		// scan through response for all items
 		int item = 0;
-		double banTime = 0.0f;
+		float banTime = 0.0f;
 		char id[64] = { 0 };
 		// dimhotepus: Ensure id does not overflow.
-		while (3 == sscanf(response, "%i %63s : %lf min\n", &item, id, &banTime))
+		// dimhotepus: double banTime -> float.
+		while (3 == sscanf(response, "%i %63s : %f min\n", &item, id, &banTime))
 		{
 			id[std::size(id) - 1] = '\0';
 
@@ -228,7 +229,7 @@ void CBanPanel::AddBan()
 //-----------------------------------------------------------------------------
 void CBanPanel::RemoveBan()
 {
-	int itemID = m_pBanListPanel->GetSelectedItem(0);
+	intp itemID = m_pBanListPanel->GetSelectedItem(0);
 	if ( itemID == -1 )
 		return;
 
@@ -256,7 +257,7 @@ void CBanPanel::RemoveBan()
 //-----------------------------------------------------------------------------
 void CBanPanel::ChangeBan()
 {	
-	int itemID = m_pBanListPanel->GetSelectedItem(0);
+	intp itemID = m_pBanListPanel->GetSelectedItem(0);
 	if (itemID == -1)
 		return;
 
@@ -314,7 +315,7 @@ void CBanPanel::ChangeBanTimeByID(const char *id, const char *newtime)
 
 	// if the newtime string is not valid, then set it to 0 (permanent ban)
 	// dimhotepus: atof -> strtof
-	if (!newtime || strtof(newtime, nullptr) < 0.001)
+	if (!newtime || strtof(newtime, nullptr) < 0.001f)
 	{
 		newtime = "0";
 	}
@@ -352,7 +353,7 @@ void CBanPanel::OnCvarChangeValue( KeyValues *kv )
 //-----------------------------------------------------------------------------
 void CBanPanel::OnItemSelected()
 {
-	int itemID = m_pBanListPanel->GetSelectedItem(0);
+	intp itemID = m_pBanListPanel->GetSelectedItem(0);
 	if (itemID == -1)
 	{
 		m_pRemoveButton->SetEnabled(false);
@@ -387,28 +388,28 @@ void CBanPanel::OnFileSelected(const char *fullpath)
 	TokenLine tok;
 
 	// this can take a while, put up a waiting cursor
-	surface()->SetCursor(dc_hourglass);
+	const vgui::ScopedSurfaceWaitCursor scopedWaitCursor(surface());
 
-	// we don't use filesystem() here becuase we want to let the user pick
+	// we don't use filesystem() here because we want to let the user pick
 	// a file from anywhere on their filesystem... so we use stdio
-	FILE *f = fopen(fullpath,"rb");
-	while (f && !feof(f) && fgets(line, 255, f))
-	{	
-		// parse each line of the config file adding the ban
-		tok.SetLine(line);
-		if (tok.CountToken() == 3)
+	auto [f, rc] = se::posix::posix_file_stream_factory::open(fullpath, "rb");
+	if (!rc)
+	{
+		while (std::get<char *>(f.gets(line)))
 		{
-			// add the ban
-			const char *id = tok.GetToken(2);
-			ChangeBanTimeByID(id, "0");
+			// parse each line of the config file adding the ban
+			tok.SetLine(line);
+			if (tok.CountToken() == 3)
+			{
+				// add the ban
+				const char *id = tok.GetToken(2);
+				ChangeBanTimeByID(id, "0");
+			}
 		}
 	}
-
-	// change the cursor back to normal and shutdown file
-	surface()->SetCursor(dc_user);
-	if (f) 
+	else
 	{
-		fclose(f);
+		Warning("Unable to load bans from %s: %s.\n", fullpath, rc.message().c_str());
 	}
 }
 

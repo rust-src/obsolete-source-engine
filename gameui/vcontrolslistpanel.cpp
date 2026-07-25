@@ -31,11 +31,12 @@ using namespace vgui;
 class CInlineEditPanel : public vgui::Panel
 {
 public:
-	CInlineEditPanel() : vgui::Panel(NULL, "InlineEditPanel")
+	// dimhotepus: Add parent to support scaling.
+	CInlineEditPanel( vgui::Panel *parent ) : vgui::Panel(parent, "InlineEditPanel")
 	{
 	}
 
-	virtual void Paint()
+	void Paint() override
 	{
 		int x = 0, y = 0, wide, tall;
 		GetSize(wide, tall);
@@ -45,7 +46,7 @@ public:
 		vgui::surface()->DrawFilledRect( x, y, x + wide, y + tall );
 	}
 
-	virtual void OnKeyCodeTyped(KeyCode code)
+	void OnKeyCodeTyped(KeyCode code) override
 	{
 		// forward up
 		if (GetParent())
@@ -54,13 +55,13 @@ public:
 		}
 	}
 
-	virtual void ApplySchemeSettings(IScheme *pScheme)
+	void ApplySchemeSettings(IScheme *pScheme) override
 	{
 		Panel::ApplySchemeSettings(pScheme);
 		SetBorder(pScheme->GetBorder("DepressedButtonBorder"));
 	}
 
-	void OnMousePressed(vgui::MouseCode code)
+	void OnMousePressed(vgui::MouseCode code) override
 	{
 		// forward up mouse pressed messages to be handled by the key options
 		if (GetParent())
@@ -77,8 +78,12 @@ VControlsListPanel::VControlsListPanel( vgui::Panel *parent, const char *listNam
 {
 	m_bCaptureMode	= false;
 	m_nClickRow		= 0;
-	m_pInlineEditPanel = new CInlineEditPanel();
 	m_hFont = INVALID_FONT;
+	m_pInlineEditPanel = new CInlineEditPanel(parent);
+	// dimhotepus: To scale UI inline edit got parent
+	// dimhotepus: Due to parent it is rendered in its bounds on start, which is not needed.
+	m_pInlineEditPanel->SetVisible(false);
+	m_iMouseX = m_iMouseY = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -86,7 +91,6 @@ VControlsListPanel::VControlsListPanel( vgui::Panel *parent, const char *listNam
 //-----------------------------------------------------------------------------
 VControlsListPanel::~VControlsListPanel()
 {
-	m_pInlineEditPanel->MarkForDeletion();
 }
 
 //-----------------------------------------------------------------------------

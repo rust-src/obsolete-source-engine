@@ -265,9 +265,9 @@ float CHL2MPRules::FlWeaponRespawnTime( CBaseCombatWeapon *pWeapon )
 	}
 
 	return sv_hl2mp_weapon_respawn_time.GetFloat();
-#endif
-
+#else
 	return 0;		// weapon respawns almost instantly
+#endif
 }
 
 
@@ -275,9 +275,9 @@ bool CHL2MPRules::IsIntermission( void )
 {
 #ifndef CLIENT_DLL
 	return m_flIntermissionEndTime > gpGlobals->curtime;
-#endif
-
+#else
 	return false;
+#endif
 }
 
 void CHL2MPRules::PlayerKilled( CBasePlayer *pVictim, const CTakeDamageInfo &info )
@@ -354,7 +354,7 @@ void CHL2MPRules::Think( void )
 	{		
 		CheckAllPlayersReady();
 		CheckRestartGame();
-		m_tmNextPeriodicThink = gpGlobals->curtime + 1.0;
+		m_tmNextPeriodicThink = gpGlobals->curtime + 1.0f;
 	}
 
 	if ( m_flRestartGameTime > 0.0f && m_flRestartGameTime <= gpGlobals->curtime )
@@ -502,11 +502,11 @@ bool GetObjectsOriginalParameters( CBaseEntity *pObject, Vector &vOriginalOrigin
 
 void CHL2MPRules::ManageObjectRelocation( void )
 {
-	int iTotal = m_hRespawnableItemsAndWeapons.Count();
+	intp iTotal = m_hRespawnableItemsAndWeapons.Count();
 
 	if ( iTotal > 0 )
 	{
-		for ( int i = 0; i < iTotal; i++ )
+		for ( intp i = 0; i < iTotal; i++ )
 		{
 			CBaseEntity *pObject = m_hRespawnableItemsAndWeapons[i].Get();
 			
@@ -938,11 +938,11 @@ bool CHL2MPRules::ClientCommand( CBaseEntity *pEdict, const CCommand &args )
 
 // shared ammo definition
 // JAY: Trying to make a more physical bullet response
-#define BULLET_MASS_GRAINS_TO_LB(grains)	(0.002285*(grains)/16.0f)
+#define BULLET_MASS_GRAINS_TO_LB(grains)	(0.002285f*(grains)/16.0f)
 #define BULLET_MASS_GRAINS_TO_KG(grains)	lbs2kg(BULLET_MASS_GRAINS_TO_LB(grains))
 
 // exaggerate all of the forces, but use real numbers to keep them consistent
-#define BULLET_IMPULSE_EXAGGERATION			3.5
+#define BULLET_IMPULSE_EXAGGERATION			3.5f
 // convert a velocity in ft/sec and a mass in grains to an impulse in kg in/s
 #define BULLET_IMPULSE(grains, ftpersec)	((ftpersec)*12*BULLET_MASS_GRAINS_TO_KG(grains)*BULLET_IMPULSE_EXAGGERATION)
 
@@ -1178,7 +1178,8 @@ void CHL2MPRules::CleanUpMap()
 		}
 
 	public:
-		int m_iIterator; // Iterator into g_MapEntityRefs.
+		// dimhotepus: int -> unsigned short.
+		unsigned short m_iIterator; // Iterator into g_MapEntityRefs.
 	};
 	CHL2MPMapEntityFilter filter;
 	filter.m_iIterator = g_MapEntityRefs.Head();
@@ -1212,7 +1213,7 @@ void CHL2MPRules::CheckRestartGame( void )
 
 		// let the players know
 		char strRestartDelay[64];
-		Q_snprintf( strRestartDelay, sizeof( strRestartDelay ), "%d", iRestartDelay );
+		V_to_chars( strRestartDelay, iRestartDelay );
 		UTIL_ClientPrintAll( HUD_PRINTCENTER, "Game will restart in %s1 %s2", strRestartDelay, iRestartDelay == 1 ? "SECOND" : "SECONDS" );
 		UTIL_ClientPrintAll( HUD_PRINTCONSOLE, "Game will restart in %s1 %s2", strRestartDelay, iRestartDelay == 1 ? "SECOND" : "SECONDS" );
 

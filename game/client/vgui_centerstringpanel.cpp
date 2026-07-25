@@ -72,7 +72,7 @@ CCenterStringLabel::CCenterStringLabel( vgui::VPANEL parent ) :
 	SetParent( parent );
 	ComputeSize();
 	SetVisible( false );
-	SetCursor( 0 );
+	SetCursor( vgui::dc_user );
 	SetKeyBoardInputEnabled( false );
 	SetMouseInputEnabled( false );
 	SetContentAlignment( vgui::Label::a_center );
@@ -123,7 +123,8 @@ void CCenterStringLabel::ApplySchemeSettings(vgui::IScheme *pScheme)
 	BaseClass::ApplySchemeSettings(pScheme);
 
 	// Use a large font
-	m_hFont = pScheme->GetFont( "Trebuchet24" );
+	// dimhotepus: Scale font if needed.
+	m_hFont = pScheme->GetFont( "Trebuchet24", true );
 	Assert( m_hFont );
 	SetFont( m_hFont );
 

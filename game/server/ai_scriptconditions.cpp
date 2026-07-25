@@ -401,7 +401,13 @@ bool CAI_ScriptConditions::EvalPlayerInVehicle( const EvalArgs_t &args )
 		return false;
 
 	// Desired states must match
-	return ( !!args.pPlayer->IsInAVehicle() == m_fPlayerInVehicle );
+	// dimhotepus: Correctly eval player in vehicle. TF2 backport.
+	AssertMsg( ( !!args.pPlayer->IsInAVehicle() == m_fPlayerInVehicle ) == 
+			   ( args.pPlayer->IsInAVehicle() == ( m_fPlayerInVehicle == TRS_TRUE ) ),
+			   "Changed player in vehicle result from %s to %s.",
+			   !!args.pPlayer->IsInAVehicle() == m_fPlayerInVehicle ? "true" : "false",
+			    args.pPlayer->IsInAVehicle() == ( m_fPlayerInVehicle == TRS_TRUE ) ? "true" : "false" );
+	return args.pPlayer->IsInAVehicle() == ( m_fPlayerInVehicle == TRS_TRUE );
 }
 
 //-----------------------------------------------------------------------------
@@ -421,7 +427,14 @@ bool CAI_ScriptConditions::EvalActorInVehicle( const EvalArgs_t &args )
 		return false;
 
 	// Desired states must match
-	return ( !!pBCC->IsInAVehicle() == m_fActorInVehicle );
+	// dimhotepus: Correctly eval actor in vehicle. TF2 backport.
+	AssertMsg( ( !!pBCC->IsInAVehicle() == m_fActorInVehicle ) == 
+				( pBCC->IsInAVehicle() == ( m_fActorInVehicle == TRS_TRUE ) ),
+				"Changed actor '%s' in vehicle result from %s to %s.",
+				pBCC->GetDebugName(),
+				!!pBCC->IsInAVehicle() == m_fActorInVehicle ? "true" : "false",
+				 pBCC->IsInAVehicle() == ( m_fActorInVehicle == TRS_TRUE ) ? "true" : "false" );
+	return pBCC->IsInAVehicle() == ( m_fActorInVehicle == TRS_TRUE );
 }
 
 //-----------------------------------------------------------------------------
@@ -528,7 +541,6 @@ void CAI_ScriptConditions::EvaluationThink()
 		}
 
 		bool      result = true;
-		const int nEvaluators = sizeof( gm_Evaluators ) / sizeof( gm_Evaluators[0] );
 
 		EvalArgs_t args =
 		{
@@ -537,14 +549,15 @@ void CAI_ScriptConditions::EvaluationThink()
 			m_hTarget.Get()
 		};
 
-		for ( int i = 0; i < nEvaluators; ++i )
+		// dimhotepus: Compile-time size.
+		for ( intp j = 0; j < ssize(gm_Evaluators); ++j )
 		{
-			if ( !(this->*gm_Evaluators[i].pfnEvaluator)( args ) )
+			if ( !(this->*gm_Evaluators[j].pfnEvaluator)( args ) )
 			{
 				pConditionElement->GetTimer()->Reset();
 				result = false;
 
-				ScrCondDbgMsg( ( "%s failed on: %s\n", GetDebugName(), gm_Evaluators[ i ].pszName ) );
+				ScrCondDbgMsg( ( "%s failed on: %s\n", GetDebugName(), gm_Evaluators[ j ].pszName ) );
 
 				break;
 			}
@@ -577,7 +590,7 @@ void CAI_ScriptConditions::EvaluationThink()
 
 //-----------------------------------------------------------------------------
 
-int CAI_ScriptConditions::AddNewElement( CBaseEntity *pActor )
+intp CAI_ScriptConditions::AddNewElement( CBaseEntity *pActor )
 {
 	CAI_ScriptConditionsElement conditionelement;
 	conditionelement.SetActor( pActor );

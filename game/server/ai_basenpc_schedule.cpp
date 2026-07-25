@@ -2120,8 +2120,8 @@ void CAI_BaseNPC::StartTask( const Task_t *pTask )
 
 					if ( GetTacticalServices()->FindLateralCover( pEntity->EyePosition(), 0, &coverPos ) )
 					{
-						AI_NavGoal_t goal( coverPos, ACT_RUN );
-						GetNavigator()->SetGoal( goal, AIN_CLEAR_PREVIOUS_STATE );
+						AI_NavGoal_t goalRun( coverPos, ACT_RUN );
+						GetNavigator()->SetGoal( goalRun, AIN_CLEAR_PREVIOUS_STATE );
 						
  						//FIXME: What exactly is this doing internally?
 						m_flMoveWaitFinished = gpGlobals->curtime + pTask->flTaskData;
@@ -2387,7 +2387,7 @@ void CAI_BaseNPC::StartTask( const Task_t *pTask )
 					}
 					else
 					{
-						int iSequence = LookupSequence(STRING(GetHintNode()->HintActivityName()));;
+						int iSequence = LookupSequence(STRING(GetHintNode()->HintActivityName()));
 						if ( iSequence != ACT_INVALID )
 							GetNavigator()->SetArrivalSequence( iSequence );
 					}
@@ -3278,7 +3278,7 @@ void CAI_BaseNPC::RunTask( const Task_t *pTask )
 						DbgNavMsg( this, "Jump landed\n" );
 						SetNavType( NAV_GROUND ); // this assumes that NAV_JUMP only happens with npcs that use NAV_GROUND as base movement
 					}
-					else if (GetSmoothedVelocity().Length() > 0.01) // use an EPSILON damnit!!
+					else if (GetSmoothedVelocity().Length() > 0.01) // use an EPSILON
 					{
 						// wait until you land
 						break;

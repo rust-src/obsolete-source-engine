@@ -7,6 +7,8 @@
 
 #include "pch_serverbrowser.h"
 
+#include "ServerBrowser.h"
+
 // expose the server browser interfaces
 CServerBrowser g_ServerBrowserSingleton;
 EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CServerBrowser, IServerBrowser, SERVERBROWSER_INTERFACE_VERSION, g_ServerBrowserSingleton);
@@ -28,19 +30,13 @@ IEngineReplay *g_pEngineReplay = NULL;
 ConVar sb_firstopentime( "sb_firstopentime", "0", FCVAR_DEVELOPMENTONLY, "Indicates the time the server browser was first opened." );
 ConVar sb_numtimesopened( "sb_numtimesopened", "0", FCVAR_DEVELOPMENTONLY, "Indicates the number of times the server browser was opened this session." );
 
-// the original author of this code felt strdup was not acceptible.
-inline char *CloneString( const char *str )
-{
-	char *cloneStr = new char [ strlen(str)+1 ];
-	strcpy( cloneStr, str );
-	return cloneStr;
-}
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
 CServerBrowser::CServerBrowser()
 {
+	m_bWorkshopEnabled = false;
 }
 
 
@@ -55,11 +51,11 @@ CServerBrowser::~CServerBrowser()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CServerBrowser::CreateDialog()
+void CServerBrowser::CreateDialog(vgui::Panel *parent)
 {
 	if (!m_hInternetDlg.Get())
 	{
-		m_hInternetDlg = new CServerBrowserDialog(NULL); // SetParent() call below fills this in
+		m_hInternetDlg = new CServerBrowserDialog(parent);
 		m_hInternetDlg->Initialize();
 	}
 }
@@ -68,7 +64,7 @@ void CServerBrowser::CreateDialog()
 //-----------------------------------------------------------------------------
 // Purpose: links to vgui and engine interfaces
 //-----------------------------------------------------------------------------
-bool CServerBrowser::Initialize(CreateInterfaceFn *factorylist, int factoryCount)
+bool CServerBrowser::Initialize(CreateInterfaceFn *factorylist, intp factoryCount)
 {
 	ConnectTier1Libraries( factorylist, factoryCount );
 	ConVar_Register();
@@ -76,7 +72,7 @@ bool CServerBrowser::Initialize(CreateInterfaceFn *factorylist, int factoryCount
 	ConnectTier3Libraries( factorylist, factoryCount );
 	g_pRunGameEngine = NULL;
 
-	for ( int i = 0; i < factoryCount; ++i )
+	for ( intp i = 0; i < factoryCount; ++i )
 	{
 		if ( !g_pEngineReplay )
 		{
@@ -91,7 +87,7 @@ bool CServerBrowser::Initialize(CreateInterfaceFn *factorylist, int factoryCount
 	steamapicontext->Init();
 #endif
 
-	for (int i = 0; i < factoryCount; i++)
+	for (intp i = 0; i < factoryCount; i++)
 	{
 		if (!g_pRunGameEngine)
 		{
@@ -116,10 +112,19 @@ bool CServerBrowser::Initialize(CreateInterfaceFn *factorylist, int factoryCount
 //-----------------------------------------------------------------------------
 // Purpose: links to other modules interfaces (tracker)
 //-----------------------------------------------------------------------------
-bool CServerBrowser::PostInitialize(CreateInterfaceFn *modules, int factoryCount)
+bool CServerBrowser::PostInitialize(CreateInterfaceFn *modules, intp factoryCount)
+{
+	return PostInitialize( modules, factoryCount, nullptr );
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: links to other modules interfaces (tracker)
+//-----------------------------------------------------------------------------
+bool CServerBrowser::PostInitialize(CreateInterfaceFn *modules, intp factoryCount, vgui::Panel *parent)
 {
 	// find the interfaces we need
-	for (int i = 0; i < factoryCount; i++)
+	for (intp i = 0; i < factoryCount; i++)
 	{
 		if (!g_pRunGameEngine)
 		{
@@ -127,7 +132,7 @@ bool CServerBrowser::PostInitialize(CreateInterfaceFn *modules, int factoryCount
 		}
 	}
 
-	CreateDialog();
+	CreateDialog(parent);
 	m_hInternetDlg->SetVisible(false);
 
 	return g_pRunGameEngine;
@@ -408,8 +413,8 @@ void LoadGameTypes( void )
 	{
 		gametypes_t gametype;
 
-		gametype.pPrefix = CloneString( pData->GetString( "prefix", "" ) );
-		gametype.pGametypeName = CloneString( pData->GetString( "name", "" ) );
+		gametype.pPrefix = V_strdup( pData->GetString( "prefix", "" ) );
+		gametype.pGametypeName = V_strdup( pData->GetString( "name", "" ) );
 		g_GameTypes.AddToTail( gametype );
 	}
 }

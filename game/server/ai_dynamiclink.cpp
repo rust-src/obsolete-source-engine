@@ -72,8 +72,8 @@ void CAI_DynamicLinkController::GenerateLinksFromVolume()
 		const Vector &nodeOrigin = pNode->GetOrigin();
 		if ( origin.DistToSqr(nodeOrigin) < MinDistCareSq )
 		{
-			int nLinks = pNode->NumLinks();
-			for ( int j = 0; j < nLinks; j++ )
+			intp nLinks = pNode->NumLinks();
+			for ( intp j = 0; j < nLinks; j++ )
 			{
 				CAI_Link *pLink = pNode->GetLinkByIndex( j );
 				int iLinkDest = pLink->DestNodeID( i );
@@ -86,19 +86,19 @@ void CAI_DynamicLinkController::GenerateLinksFromVolume()
 						{
 							Assert( IsBoxIntersectingRay( vAbsMins, vAbsMaxs, originOther, nodeOrigin - originOther ) );
 
-							CAI_DynamicLink *pLink = (CAI_DynamicLink *)CreateEntityByName( "info_node_link" );
-							pLink->m_nSrcID = i;
-							pLink->m_nDestID = iLinkDest;
-							pLink->m_nSrcEditID = g_pAINetworkManager->GetEditOps()->GetWCIdFromNodeId( pLink->m_nSrcID );
-							pLink->m_nDestEditID = g_pAINetworkManager->GetEditOps()->GetWCIdFromNodeId( pLink->m_nDestID );
-							pLink->m_nLinkState = m_nLinkState;
-							pLink->m_strAllowUse = m_strAllowUse;
-							pLink->m_bInvertAllow = m_bInvertAllow;
-							pLink->m_bFixedUpIds = true;
-							pLink->m_bNotSaved = true;
+							CAI_DynamicLink *pLink2 = (CAI_DynamicLink *)CreateEntityByName( "info_node_link" );
+							pLink2->m_nSrcID = i;
+							pLink2->m_nDestID = iLinkDest;
+							pLink2->m_nSrcEditID = g_pAINetworkManager->GetEditOps()->GetWCIdFromNodeId( pLink2->m_nSrcID );
+							pLink2->m_nDestEditID = g_pAINetworkManager->GetEditOps()->GetWCIdFromNodeId( pLink2->m_nDestID );
+							pLink2->m_nLinkState = m_nLinkState;
+							pLink2->m_strAllowUse = m_strAllowUse;
+							pLink2->m_bInvertAllow = m_bInvertAllow;
+							pLink2->m_bFixedUpIds = true;
+							pLink2->m_bNotSaved = true;
 
-							pLink->Spawn();
-							m_ControlledLinks.AddToTail( pLink );
+							pLink2->Spawn();
+							m_ControlledLinks.AddToTail( pLink2 );
 						}
 					}
 				}
@@ -424,8 +424,8 @@ CAI_Link *CAI_DynamicLink::FindLink()
 	CAI_Node *	pSrcNode = g_pBigAINet->GetNode(m_nSrcID, false);
 	if ( pSrcNode )
 	{
-		int	numLinks = pSrcNode->NumLinks();
-		for (int i=0;i<numLinks;i++)
+		intp	numLinks = pSrcNode->NumLinks();
+		for (intp i=0;i<numLinks;i++)
 		{
 			CAI_Link* pLink = pSrcNode->GetLinkByIndex(i);
 
@@ -691,8 +691,8 @@ void CAI_RadialLinkController::ModifyNodeLinks( bool bMakeStale )
 		const Vector &nodeOrigin = pNode->GetOrigin();
 		if ( m_vecAtRestOrigin.DistToSqr(nodeOrigin) < MinDistCareSq )
 		{
-			int nLinks = pNode->NumLinks();
-			for ( int j = 0; j < nLinks; j++ )
+			intp nLinks = pNode->NumLinks();
+			for ( intp j = 0; j < nLinks; j++ )
 			{
 				CAI_Link *pLink = pNode->GetLinkByIndex( j );
 				int iLinkDest = pLink->DestNodeID( i );

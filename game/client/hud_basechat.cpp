@@ -17,7 +17,7 @@
 #include <vgui/ILocalize.h>
 #include "vguicenterprint.h"
 #include "vgui/KeyCode.h"
-#include <KeyValues.h>
+#include "tier1/KeyValues.h"
 #include "ienginevgui.h"
 #include "c_playerresource.h"
 #include "ihudlcd.h"
@@ -28,8 +28,6 @@
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
-
-#define CHAT_WIDTH_PERCENTAGE 0.6f
 
 #ifndef _XBOX
 ConVar hud_saytext_time( "hud_saytext_time", "12", 0 );
@@ -119,7 +117,7 @@ void StripEndNewlineFromString( wchar_t *str )
 	if ( s >= 0 )
 	{
 		if ( str[s] == L'\n' || str[s] == L'\r' )
-			str[s] = '\0';
+			str[s] = L'\0';
 	}
 }
 
@@ -231,7 +229,8 @@ void CBaseHudChatLine::ApplySchemeSettings(vgui::IScheme *pScheme)
 {
 	BaseClass::ApplySchemeSettings(pScheme);
 
-	m_hFont = pScheme->GetFont( "Default" );
+	// dimhotepus: Scale UI.
+	m_hFont = pScheme->GetFont( "Default", IsProportional() );
 
 #ifdef HL1_CLIENT_DLL
 	SetBgColor( Color( 0, 0, 0, 0 ) );
@@ -242,8 +241,8 @@ void CBaseHudChatLine::ApplySchemeSettings(vgui::IScheme *pScheme)
 	SetBgColor( Color( 0, 0, 0, 100 ) );
 #endif
 
-
-	m_hFontMarlett = pScheme->GetFont( "Marlett" );
+	// dimhotepus: Scale UI.
+	m_hFontMarlett = pScheme->GetFont( "Marlett", IsProportional() );
 
 	m_clrText = pScheme->GetColor( "FgColor", GetFgColor() );
 	SetFont( m_hFont );
@@ -398,7 +397,8 @@ void CBaseHudChatInputLine::ApplySchemeSettings(vgui::IScheme *pScheme)
 	BaseClass::ApplySchemeSettings(pScheme);
 	
 	// FIXME:  Outline
-	vgui::HFont hFont = pScheme->GetFont( "ChatFont" );
+	// dimhotepus: Scale UI.
+	vgui::HFont hFont = pScheme->GetFont( "ChatFont", IsProportional() );
 
 	m_pPrompt->SetFont( hFont );
 	m_pInput->SetFont( hFont );
@@ -408,7 +408,8 @@ void CBaseHudChatInputLine::ApplySchemeSettings(vgui::IScheme *pScheme)
 	SetPaintBackgroundEnabled( true );
 	m_pPrompt->SetPaintBackgroundEnabled( true );
 	m_pPrompt->SetContentAlignment( vgui::Label::a_west );
-	m_pPrompt->SetTextInset( 2, 0 );
+	// dimhotepus: Scale UI.
+	m_pPrompt->SetTextInset( QuickPropScale( 2 ), 0 );
 
 	m_pInput->SetMouseInputEnabled( true );
 
@@ -456,8 +457,8 @@ void CBaseHudChatInputLine::PerformLayout()
 	int w,h;
 	m_pPrompt->GetContentSize( w, h); 
 	m_pPrompt->SetBounds( 0, 0, w, tall );
-
-	m_pInput->SetBounds( w + 2, 0, wide - w - 2 , tall );
+	// dimhotepus: Scale UI.
+	m_pInput->SetBounds( w + QuickPropScale( 2 ), 0, wide - w - QuickPropScale( 2 ), tall );
 }
 
 vgui::Panel *CBaseHudChatInputLine::GetInputPanel( void )
@@ -594,8 +595,8 @@ CHudChatHistory::CHudChatHistory( vgui::Panel *pParent, const char *panelName ) 
 void CHudChatHistory::ApplySchemeSettings( vgui::IScheme *pScheme )
 {
 	BaseClass::ApplySchemeSettings( pScheme );
-
-	SetFont( pScheme->GetFont( "ChatFont" ) );
+	// dimhotepus: Scale UI.
+	SetFont( pScheme->GetFont( "ChatFont", IsProportional() ) );
 	SetAlpha( 255 );
 }
 
@@ -668,8 +669,6 @@ void CBaseHudChat::CreateChatLines( void )
 }
 
 
-#define BACKGROUND_BORDER_WIDTH 20
-
 CHudChatFilterPanel *CBaseHudChat::GetChatFilterPanel( void )
 {
 	if ( m_pFilterPanel == NULL )
@@ -725,14 +724,6 @@ void CBaseHudChat::Reset( void )
 #endif
 }
 
-#ifdef _XBOX
-bool CBaseHudChat::ShouldDraw()
-{
-	// never think, never draw
-	return false;
-}
-#endif
-
 void CBaseHudChat::Paint( void )
 {
 #ifndef _XBOX
@@ -750,9 +741,6 @@ CHudChatHistory *CBaseHudChat::GetChatHistory( void )
 
 void CBaseHudChat::Init( void )
 {
-	if ( IsXbox() )
-		return;
-
 	ListenForGameEvent( "hltv_chat" );
 }
 
@@ -1030,7 +1018,7 @@ void CBaseHudChat::OnTick( void )
 	if ( line )
 	{
 		vgui::HFont font = line->GetFont();
-		m_iFontHeight = vgui::surface()->GetFontTall( font ) + 2;
+		m_iFontHeight = vgui::surface()->GetFontTall( font ) + QuickPropScale( 2 );
 
 		// Put input area at bottom
 
@@ -1040,7 +1028,7 @@ void CBaseHudChat::OnTick( void )
 		m_pChatInput->GetBounds( iInputX, iInputY, iInputW, iInputH );
 		GetBounds( iChatX, iChatY, iChatW, iChatH );
 
-		m_pChatInput->SetBounds( iInputX, iChatH - (m_iFontHeight * 1.75), iInputW, m_iFontHeight );
+		m_pChatInput->SetBounds( iInputX, iChatH - (m_iFontHeight * 7 / 4), iInputW, m_iFontHeight );
 
 		//Resize the History Panel so it fits more lines depending on the screen resolution.
 		int iChatHistoryX, iChatHistoryY, iChatHistoryW, iChatHistoryH;
@@ -1361,7 +1349,7 @@ void CBaseHudChatLine::InsertAndColorizeText( wchar_t *buf, int clientIndex )
 	}
 	m_textRanges.RemoveAll();
 
-	m_text = CloneWString( buf );
+	m_text = V_wcsdup( buf );
 
 	CBaseHudChat *pChat = dynamic_cast<CBaseHudChat*>(GetParent() );
 
@@ -1653,6 +1641,7 @@ void CBaseHudChat::LevelInit( const char *newmap )
 	{
 	case 0:
 		m_iFilterFlags |= CHAT_FILTER_ACHIEVEMENT;
+        [[fallthrough]];
 		// fall through
 	case kChatFilterVersion:
 		break;

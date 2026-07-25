@@ -57,7 +57,8 @@
 #define BACKFACE_EPSILON	-0.01f
 
 #define BRUSHMODEL_DECAL_SORT_GROUP		MAX_MAT_SORT_GROUPS
-constexpr inline int MAX_VERTEX_FORMAT_CHANGES = 128;
+// dimhotepus: Some mods like "The Citizen Returns" use more than 128 vertexes.
+constexpr inline int MAX_VERTEX_FORMAT_CHANGES = 256;
 int g_MaxLeavesVisible = 512;
 
 //-----------------------------------------------------------------------------
@@ -816,9 +817,9 @@ void Shader_DrawChainsStatic( const CMSurfaceSortList &sortList, int nSortGroup,
 	}
 
 	const CUtlVector<surfacesortgroup_t *> &groupList = sortList.GetSortList(nSortGroup);
-	int count = groupList.Count();
+	intp count = groupList.Count();
 	
-	int i, listIndex = 0;
+	intp listIndex = 0;
 
 	CMatRenderContextPtr pRenderContext( materials );
 
@@ -859,7 +860,7 @@ void Shader_DrawChainsStatic( const CMSurfaceSortList &sortList, int nSortGroup,
 			{
 				if ( numIndex > nMaxIndices )
 				{
-					DevMsg("Too many faces with the same material in scene!\n");
+					DevMsg("Too many faces (max %d) with the same material in scene!\n", nMaxIndices);
 					break;
 				}
 
@@ -898,7 +899,7 @@ void Shader_DrawChainsStatic( const CMSurfaceSortList &sortList, int nSortGroup,
 				{
 					if ( bWarn )
 					{
-						Warning( "Too many vertex format changes in frame, whole world not rendered\n" );
+						Warning( "Too many (max %d) vertex format changes in frame, whole world not rendered\n", MAX_VERTEX_FORMAT_CHANGES - 1 );
 						bWarn = false;
 					}
 					continue;
@@ -935,13 +936,13 @@ void Shader_DrawChainsStatic( const CMSurfaceSortList &sortList, int nSortGroup,
 		meshBuilder.End( false, false );
 #endif
 
-		int meshTotal = meshList.Count();
+		intp meshTotal = meshList.Count();
 		VPROF_INCREMENT_COUNTER( "vertex format changes", meshTotal );
 
 		// HACKHACK: Crappy little bubble sort
 		// UNDONE: Make the traversal happen so that they are already sorted when you get here.
 		// NOTE: Profiled in a fairly complex map.  This is not even costing 0.01ms / frame!
-		for ( i = 0; i < meshTotal; i++ )
+		for ( intp i = 0; i < meshTotal; i++ )
 		{
 			meshMap[i] = i;
 		}
@@ -950,7 +951,7 @@ void Shader_DrawChainsStatic( const CMSurfaceSortList &sortList, int nSortGroup,
 		while ( swapped )
 		{
 			swapped = false;
-			for ( i = 1; i < meshTotal; i++ )
+			for ( intp i = 1; i < meshTotal; i++ )
 			{
 #ifdef NEWMESH
 				if ( meshList[meshMap[i]].pVertexBuffer < meshList[meshMap[i-1]].pVertexBuffer )
@@ -958,9 +959,8 @@ void Shader_DrawChainsStatic( const CMSurfaceSortList &sortList, int nSortGroup,
 				if ( meshList[meshMap[i]].pMesh < meshList[meshMap[i-1]].pMesh )
 #endif
 				{
-					int tmp = meshMap[i-1];
-					meshMap[i-1] = meshMap[i];
-					meshMap[i] = tmp;
+					// dimhotepus: Use std::swap instead of manual algorithm.
+					std::swap( meshMap[i-1], meshMap[i] );
 					swapped = true;
 				}
 			}
@@ -1081,7 +1081,7 @@ void Shader_DrawChainsStatic( const CMSurfaceSortList &sortList, int nSortGroup,
 		meshList.RemoveAll();
 		batchList.RemoveAll();
 	}
-	for ( i = 0; i < dynamicGroups.Count(); i++ )
+	for ( intp i = 0; i < dynamicGroups.Count(); i++ )
 	{
 		Shader_DrawDynamicChain( sortList, *dynamicGroups[i], bShadowDepth );
 	}

@@ -3,8 +3,8 @@
 // builds the analyze.vpc file will not be listed as a dependency.
 $Include "$SRCDIR\vpc_scripts\source_win32_analyze.vpc" [$ANALYZE]
 
-$Conditional	$AT_LEAST_VS2015	"true" [$VS2015]
-$Conditional	$AT_LEAST_VS2013	"true" [$VS2013 || $AT_LEAST_VS2015]
+// dimhotepus: Drop as never used and buggy.
+// $Conditional	$AT_LEAST_VS2013	"true" [$VS2013 || $AT_LEAST_VS2015]
 
 $Configuration
 {
@@ -13,8 +13,10 @@ $Configuration
 		// Request a specific compiler toolset.
 		$PlatformToolset "v100" [$VS2010]
 
-		// dimhotepus: Use newer toolset as XP is out of support.
-		$PlatformToolset "v143" [$VS2015]
+		// dimhotepus: Use newer toolsets as XP is out of support.
+		$PlatformToolset "v140" [$VS2015]
+		$PlatformToolset "v143" [$VS2022]
+		$PlatformToolset "v145" [$VS2026]
 	}
 
 	$General
@@ -70,6 +72,6 @@ $Configuration
 		// dimhotepus: Correctly define __cplusplus. TF2 backport.
 		// Zc:__cplusplus makes the compiler use the real value for the __cplusplus macro
 		// normally, MSVC sets it to C++97, for VC6 compatibility. This is stupid. and C++97 doesn't even exist!
-		$AdditionalOptions	"$BASE /Zc:__cplusplus" [$AT_LEAST_VS2017]
+		$AdditionalOptions	"$BASE /Zc:__cplusplus"
 	}
 }

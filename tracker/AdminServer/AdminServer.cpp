@@ -6,6 +6,7 @@
 //=============================================================================
 
 #include "AdminServer.h"
+
 #include "IRunGameEngine.h"
 #include "IGameServerData.h"
 #include "GamePanelInfo.h"
@@ -15,8 +16,9 @@
 #include <vgui/IPanel.h>
 #include <vgui/IVGui.h>
 #include <vgui/ILocalize.h>
-#include <tier1/KeyValues.h>
+
 #include "filesystem.h"
+#include "tier1/KeyValues.h"
 
 // expose the server browser interfaces
 CAdminServer g_AdminServerSingleton;
@@ -34,7 +36,8 @@ CAdminServer::CAdminServer()
 	// fill in the 0-based element of the manage servers list
 	OpenedManageDialog_t empty = { vgui::INVALID_PANEL, NULL };
 	m_OpenedManageDialog.AddToTail(empty);
-	m_hParent=0;
+	m_hParent = 0;
+	m_pParent = nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -47,7 +50,7 @@ CAdminServer::~CAdminServer()
 //-----------------------------------------------------------------------------
 // Purpose: links to vgui and engine interfaces
 //-----------------------------------------------------------------------------
-bool CAdminServer::Initialize(CreateInterfaceFn *factorylist, int factoryCount)
+bool CAdminServer::Initialize(CreateInterfaceFn *factorylist, intp factoryCount)
 {
 	ConnectTier1Libraries( factorylist, factoryCount );
 	ConVar_Register();
@@ -55,7 +58,7 @@ bool CAdminServer::Initialize(CreateInterfaceFn *factorylist, int factoryCount)
 	ConnectTier3Libraries( factorylist, factoryCount );
 
 	// find our interfaces
-	for (int i = 0; i < factoryCount; i++)
+	for (intp i = 0; i < factoryCount; i++)
 	{
 		// if we're running locally we can get this direct interface to the game engine
 		if (!g_pGameServerData)
@@ -83,8 +86,15 @@ bool CAdminServer::Initialize(CreateInterfaceFn *factorylist, int factoryCount)
 //-----------------------------------------------------------------------------
 // Purpose: links to other modules interfaces (tracker)
 //-----------------------------------------------------------------------------
-bool CAdminServer::PostInitialize(CreateInterfaceFn *modules, int factoryCount)
+bool CAdminServer::PostInitialize(CreateInterfaceFn *modules, intp factoryCount)
 {
+	return PostInitialize(modules, factoryCount, nullptr);
+}
+
+// dimhotepus: Initialize with parent to immediately scale UI.
+bool CAdminServer::PostInitialize(CreateInterfaceFn* modules, intp factoryCount, vgui::Panel* parent)
+{
+	m_pParent = parent;
 	return true;
 }
 
@@ -152,8 +162,12 @@ void CAdminServer::Reactivate()
 //-----------------------------------------------------------------------------
 ManageServerUIHandle_t CAdminServer::OpenManageServerDialog(const char *serverName, const char *gameDir)
 {
-	CGamePanelInfo *tmp = new CGamePanelInfo(NULL, serverName, gameDir);
-	tmp->SetParent(m_hParent);
+	// dimhotepus: Initialize with parent to immediately scale UI.
+	CGamePanelInfo *tmp = new CGamePanelInfo(m_pParent, serverName, gameDir);
+	if ( !m_pParent )
+	{
+		tmp->SetParent(m_hParent);
+	}
 
 	// add a new item into the list
 	intp i = m_OpenedManageDialog.AddToTail();

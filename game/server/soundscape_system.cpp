@@ -191,10 +191,6 @@ void CSoundscapeSystem::LevelInitPreEntity()
 
 void CSoundscapeSystem::LevelInitPostEntity()
 {
-	if ( IsX360() )
-	{
-		m_soundscapeSounds.Purge();
-	}
 	CUtlVector<bbox_t> clusterbounds;
 	int clusterCount = engine->GetClusterCount();
 	clusterbounds.SetCount( clusterCount );
@@ -206,12 +202,14 @@ void CSoundscapeSystem::LevelInitPostEntity()
 		m_soundscapesInCluster[i].firstSoundscape = 0;
 	}
 	unsigned char myPVS[16 * 1024];
-	CUtlVector<short> clusterIndexList;
-	CUtlVector<short> soundscapeIndexList;
+	// dimhotepus: short -> int.
+	CUtlVector<int> clusterIndexList;
+	// dimhotepus: short -> intp.
+	CUtlVector<intp> soundscapeIndexList;
 
 	// find the clusters visible from each soundscape
 	// add this soundscape to the list of soundscapes for that cluster, clip cluster bounds to radius
-	for ( int i = 0; i < m_soundscapeEntities.Count(); i++ )
+	for ( intp i = 0; i < m_soundscapeEntities.Count(); i++ )
 	{
 		Vector position = m_soundscapeEntities[i]->GetAbsOrigin();
 		float radius = m_soundscapeEntities[i]->m_flRadius;
@@ -238,7 +236,8 @@ void CSoundscapeSystem::LevelInitPostEntity()
 	m_soundscapeIndexList.SetCount(soundscapeIndexList.Count());
 
 	// now compute the starting index of each cluster
-	int firstSoundscape = 0;
+	// dimhotepus: int -> unsigned short.
+	unsigned short firstSoundscape = 0;
 	for ( int i = 0; i < clusterCount; i++ )
 	{
 		m_soundscapesInCluster[i].firstSoundscape = firstSoundscape;
@@ -248,7 +247,7 @@ void CSoundscapeSystem::LevelInitPostEntity()
 	// now add each soundscape index to the appropriate cluster's list
 	// The resulting list is precomputing all soundscapes that need to be checked for a player
 	// in each cluster.  This is used to accelerate the per-frame operations
-	for ( int i = 0; i < soundscapeIndexList.Count(); i++ )
+	for ( intp i = 0; i < soundscapeIndexList.Count(); i++ )
 	{
 		int cluster = clusterIndexList[i];
 		int outIndex = m_soundscapesInCluster[cluster].soundscapeCount + m_soundscapesInCluster[cluster].firstSoundscape;
@@ -286,7 +285,7 @@ void CSoundscapeSystem::RemoveSoundscapeEntity( CEnvSoundscape *pSoundscape )
 
 void CSoundscapeSystem::FrameUpdatePostEntityThink()
 {
-	int total = m_soundscapeEntities.Count();
+	intp total = m_soundscapeEntities.Count();
 	if ( total > 0 )
 	{
 		int traceCount = 0;
@@ -323,8 +322,7 @@ void CSoundscapeSystem::FrameUpdatePostEntityThink()
 				CEnvSoundscape *pCurrent = (CEnvSoundscape *)( audio.ent.Get() );
 				if ( pCurrent )
 				{
-					int nEntIndex = pCurrent->m_soundscapeEntityId - 1;
-					NOTE_UNUSED( nEntIndex );
+					[[maybe_unused]] intp nEntIndex = pCurrent->m_soundscapeEntityId - 1;
 					Assert( m_soundscapeEntities[nEntIndex] == pCurrent );
 				}
 				ss_update_t update;
@@ -361,92 +359,9 @@ void CSoundscapeSystem::FrameUpdatePostEntityThink()
 
 void CSoundscapeSystem::AddSoundscapeSounds( KeyValues *pSoundscape, int soundscapeIndex )
 {
-	if ( !IsX360() )
-	{
-		return;
-	}
 
-	intp i = m_soundscapeSounds.AddToTail();
-	Assert( i == soundscapeIndex );
-
-	KeyValues *pKey = pSoundscape->GetFirstSubKey();
-	while ( pKey )
-	{
-		if ( !Q_strcasecmp( pKey->GetName(), "playlooping" ) )
-		{
-			KeyValues *pAmbientKey = pKey->GetFirstSubKey();
-			while ( pAmbientKey )
-			{
-				if ( !Q_strcasecmp( pAmbientKey->GetName(), "wave" ) )
-				{
-					char const *pSoundName = pAmbientKey->GetString();
-					m_soundscapeSounds[i].AddToTail( pSoundName );
-				}
-				pAmbientKey = pAmbientKey->GetNextKey();
-			}
-		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "playrandom" ) )
-		{
-			KeyValues *pRandomKey = pKey->GetFirstSubKey();
-			while ( pRandomKey )
-			{
-				if ( !Q_strcasecmp( pRandomKey->GetName(), "rndwave" ) )
-				{
-					KeyValues *pRndWaveKey = pRandomKey->GetFirstSubKey();
-					while ( pRndWaveKey )
-					{
-						if ( !Q_strcasecmp( pRndWaveKey->GetName(), "wave" ) )
-						{
-							char const *pSoundName = pRndWaveKey->GetString();
-							m_soundscapeSounds[i].AddToTail( pSoundName );
-						}
-						pRndWaveKey = pRndWaveKey->GetNextKey();
-					}
-				}
-				pRandomKey = pRandomKey->GetNextKey();
-			}
-		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "playsoundscape" ) )
-		{
-			KeyValues *pPlayKey = pKey->GetFirstSubKey();
-			while ( pPlayKey )
-			{
-				if ( !Q_strcasecmp( pPlayKey->GetName(), "name" ) )
-				{
-					char const *pSoundName = pPlayKey->GetString();
-					m_soundscapeSounds[i].AddToTail( pSoundName );
-				}
-				pPlayKey = pPlayKey->GetNextKey();
-			}
-		}
-		pKey = pKey->GetNextKey();
-	}
 }
 
 void CSoundscapeSystem::PrecacheSounds( int soundscapeIndex )
 {
-	if ( !IsX360() )
-	{
-		return;
-	}
-
-	if ( !IsValidIndex( soundscapeIndex ) )
-	{
-		return;
-	}
-
-	int count = m_soundscapeSounds[soundscapeIndex].Count();
-	for ( int i=0; i<count; i++ )
-	{
-		const char *pSound = m_soundscapeSounds[soundscapeIndex][i];
-		if ( Q_stristr( pSound, ".wav" ) )
-		{
-			CBaseEntity::PrecacheSound( pSound );
-		}
-		else
-		{
-			// recurse into new soundscape
-			PrecacheSounds( GetSoundscapeIndex( pSound ) );
-		}
-	}
 }

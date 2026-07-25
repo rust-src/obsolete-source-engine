@@ -180,10 +180,10 @@ CMatSystemSurface::CMatSystemSurface() : m_pWhite(NULL), m_pEmbeddedPanel(NULL)
 {
 	m_nTranslateX = m_nTranslateY = 0;
 	m_flAlphaMultiplier = -1;
-	memset( m_pSurfaceExtents, 0, sizeof(m_pSurfaceExtents) );
-	memset( m_DrawColor, 0, sizeof(m_DrawColor) );
-	memset( m_DrawTextColor, 0, sizeof(m_DrawTextColor) );
-	memset( m_pDrawTextPos, 0, sizeof(m_pDrawTextPos) );
+	BitwiseClear( m_pSurfaceExtents );
+	BitwiseClear( m_DrawColor );
+	BitwiseClear( m_DrawTextColor );
+	BitwiseClear( m_pDrawTextPos );
 	m_pMesh = nullptr;
 
 	m_nFullScreenBufferMaterialId = -1;
@@ -200,23 +200,30 @@ CMatSystemSurface::CMatSystemSurface() : m_pWhite(NULL), m_pEmbeddedPanel(NULL)
 	m_b3DPaintRenderToTexture = false;
 	m_bDrawingIn3DWorld = false;
 	m_PlaySoundFunc = NULL;
-	m_bInThink = false;
+	// dimhotepus: Always false, drop.
+	// m_bInThink = false;
 	m_bAllowJavaScript = false;
 	m_bAppDrivesInput = false;
+
 	m_nLastInputPollCount = 0;
+	// dimhotepus: Always invalid, drop.
+	// m_CurrentThinkPanel = vgui::INVALID_PANEL;
 
 	m_hCurrentFont = NULL;
+	_currentCursor = vgui::dc_user;
 	m_pRestrictedPanel = NULL;
 
 	m_bNeedsKeyboard = true;
 	m_bNeedsMouse = true;
 
-	memset( m_WorkSpaceInsets, 0, sizeof( m_WorkSpaceInsets ) );
+	BitwiseClear( m_WorkSpaceInsets );
 	m_nBatchedCharVertCount = 0;
 
 	m_nFullscreenViewportX = m_nFullscreenViewportY = 0;
 	m_nFullscreenViewportWidth = m_nFullscreenViewportHeight = 0;
 	m_pFullscreenRenderTarget = NULL;
+
+	m_flZPos = 0.0f;
 }
 
 CMatSystemSurface::~CMatSystemSurface()
@@ -3885,15 +3892,16 @@ void CMatSystemSurface::MovePopupToBack(VPANEL panel)
 
 bool CMatSystemSurface::IsInThink( VPANEL panel)
 {
-	if ( m_bInThink )
-	{
-		if ( panel == m_CurrentThinkPanel ) // HasParent() returns true if you pass yourself in
-		{
-			return false;
-		}
-
-		return ipanel()->HasParent( panel, m_CurrentThinkPanel);
-	}
+	// dimhotepus: m_bInThink always false.
+	// if ( m_bInThink )
+	// {
+	// 	if ( panel == m_CurrentThinkPanel ) // HasParent() returns true if you pass yourself in
+	// 	{
+	// 		return false;
+	// 	}
+	// 
+	// 	return ipanel()->HasParent( panel, m_CurrentThinkPanel);
+	// }
 	return false;
 }
 

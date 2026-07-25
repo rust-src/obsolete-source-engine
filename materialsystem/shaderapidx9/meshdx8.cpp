@@ -17,7 +17,7 @@
 #include "tier0/systeminformation.h"
 
 // fixme - stick this in a header file.
-#if defined( _DEBUG ) && !defined( _X360 )
+#if defined( _DEBUG )
 // define this if you want to range check all indices when drawing
 #define CHECK_INDICES
 #endif
@@ -64,8 +64,8 @@ static bool g_bDrawSelection = true;	// only used in DRAW_SELECTION
 #endif
 static unsigned short g_nScratchIndexBuffer[6]; // large enough for a fast quad; used when device is not active
 #ifdef _DEBUG
-int CVertexBuffer::s_BufferCount = 0;
-int CIndexBuffer::s_BufferCount = 0;
+std::atomic_int CVertexBuffer::s_BufferCount = 0;
+std::atomic_int CIndexBuffer::s_BufferCount = 0;
 #endif
 
 //-----------------------------------------------------------------------------
@@ -2397,11 +2397,6 @@ inline D3DPRIMITIVETYPE ComputeMode( MaterialPrimitiveType_t type )
 {
 	switch(type)
 	{
-#ifdef _X360
-	case MATERIAL_INSTANCED_QUADS:
-		return D3DPT_QUADLIST;
-#endif
-
 	case MATERIAL_POINTS:
 		return D3DPT_POINTLIST;
 		
@@ -3165,11 +3160,7 @@ void CMeshDX8::SetVertexStreamState( int nVertOffsetInBytes )
 	}
 
 	// MESHFIXME: Make sure this jives between the mesh/ib/vb version.
-#ifdef _X360
-	if ( ( g_pLastVertex != m_pVertexBuffer ) || ( m_pVertexBuffer->IsDynamic() ) || ( g_nLastVertOffsetInBytes != nVertOffsetInBytes ) )
-#else
 	if ( ( g_pLastVertex != m_pVertexBuffer ) || ( g_nLastVertOffsetInBytes != nVertOffsetInBytes ) )
-#endif
 	{
 		Assert( m_pVertexBuffer );
 
@@ -3362,9 +3353,12 @@ void CMeshDX8::CheckIndices( CPrimList *pPrim, int numPrimitives )
 				continue;
 			}
 
+			// dimhotepus: Dump into console only once.
+#ifdef _DEBUG
+			AssertMsg(false, "%s invalid index: %hu [%u..%u]\n", __FUNCTION__, index, s_FirstVertex, upperShadowIndexBound - 1);
+#else
 			Warning("%s invalid index: %hu [%u..%u]\n", __FUNCTION__, index, s_FirstVertex, upperShadowIndexBound - 1);
-
-			Assert( false );
+#endif
 		}
 	}
 }
@@ -4953,11 +4947,13 @@ void CMeshMgr::CreateZeroVertexBuffer()
 		if ( SUCCEEDED( hr ) )
 		{
 			void *pData = NULL;
-			m_pZeroVertexBuffer->Lock( 0, nBufSize, &pData, D3DLOCK_NOSYSLOCK );
-			if ( pData )
+			hr = m_pZeroVertexBuffer->Lock( 0, nBufSize, &pData, D3DLOCK_NOSYSLOCK );
+			if ( SUCCEEDED( hr ) && pData )
 			{
 				V_memset( pData, 0, nBufSize );
-				m_pZeroVertexBuffer->Unlock();
+				hr = m_pZeroVertexBuffer->Unlock();
+
+				Assert(SUCCEEDED(hr));
 			}
 		}
 	}
@@ -5074,14 +5070,12 @@ void CMeshMgr::DestroyVertexBuffers()
 	RECORD_INT( 0 );
 	D3DSetStreamSource( 2, 0, 0, 0 );
 
-#ifndef _X360
 	RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
 	RECORD_INT( -1 );
 	RECORD_INT( 3 );
 	RECORD_INT( 0 );
 	RECORD_INT( 0 );
 	D3DSetStreamSource( 3, 0, 0, 0 );
-#endif
 
 	for (int i = m_DynamicVertexBuffers.Count(); --i >= 0; )
 	{

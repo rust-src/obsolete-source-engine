@@ -55,7 +55,8 @@ struct message_parms_t
 	int lineLength;
 	int length;
 	int r, g, b;
-	int text;
+	// dimhotepus: int -> wchar_t.
+	wchar_t text;
 	int fadeBlend;
 	float charTime;
 	float fadeTime;
@@ -567,7 +568,7 @@ void CHudMessage::MessageDrawScan( client_textmessage_t *pMessage, float time )
 			m_parms.lineLength++;
 			if ( m_parms.lineLength > ssize(line)-1 )
 			{
-				m_parms.lineLength = ssize(line)-1;
+				m_parms.lineLength = static_cast<int>(ssize(line))-1;
 			}
 			pText++;
 		}
@@ -1024,8 +1025,8 @@ void CHudMessage::PaintCharacters()
 	int xpos = 0, ypos = 0;
 	vgui::surface()->DrawSetTextFont( m_hFont );
 
-	int messageCount = m_Messages.Count();
-	for ( int i = 0 ; i < messageCount; ++i )
+	intp messageCount = m_Messages.Count();
+	for ( intp i = 0 ; i < messageCount; ++i )
 	{
 		message_t *msg = &m_Messages[ i ];
 

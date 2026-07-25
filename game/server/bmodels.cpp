@@ -539,11 +539,13 @@ void SendProxy_FuncRotatingAngle( const SendProp *pProp, const void *pStruct, co
 	Assert( entity );
 
 	vec_t const *qa = (vec_t *)pData;
+
+#ifdef _DEBUG
 	vec_t const *ea = entity->GetLocalAngles().Base();
-	NOTE_UNUSED(ea);
 	// Assert its actually an index into m_angRotation if not this won't work
 
 	Assert( (uintp)qa >= (uintp)ea && (uintp)qa < (uintp)ea + sizeof( QAngle ));
+#endif
 
 #ifdef TF_DLL
 	if ( entity->HasSpawnFlags(SF_BRUSH_ROTATE_CLIENTSIDE) )
@@ -975,7 +977,7 @@ void CFuncRotating::SpinUpMove( void )
 	// Calculate our new speed.
 	//
 	bool bSpinUpDone = false;
-	float flNewSpeed = fabs( m_flSpeed ) + 0.2 * m_flMaxSpeed * m_flFanFriction;
+	float flNewSpeed = fabs( m_flSpeed ) + 0.2f * m_flMaxSpeed * m_flFanFriction;
 	if ( fabs( flNewSpeed ) >=  fabs( m_flTargetSpeed ) )
 	{
 		// Reached our target speed.
@@ -1017,7 +1019,7 @@ bool CFuncRotating::SpinDown( float flTargetSpeed )
 	// Bleed off a little speed due to friction.
 	//
 	bool bSpinDownDone = false;
-	float flNewSpeed = fabs( m_flSpeed ) - 0.1 * m_flMaxSpeed * m_flFanFriction;
+	float flNewSpeed = fabs( m_flSpeed ) - 0.1f * m_flMaxSpeed * m_flFanFriction;
 	if ( flNewSpeed < 0 )
 	{
 		flNewSpeed = 0;

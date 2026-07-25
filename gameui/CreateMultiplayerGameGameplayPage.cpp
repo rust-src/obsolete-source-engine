@@ -49,12 +49,19 @@ public:
 //-----------------------------------------------------------------------------
 CCreateMultiplayerGameGameplayPage::CCreateMultiplayerGameGameplayPage(vgui::Panel *parent, const char *name) : PropertyPage(parent, name)
 {
-	SetSize( 10, 10 ); // Quiet "parent not sized yet" spew
+	// dimhotepus: Scale UI.
+	SetSize( QuickPropScale( 10 ), QuickPropScale( 10 ) ); // Quiet "parent not sized yet" spew
 	m_pOptionsList = new CPanelListPanel(this, "GameOptions");
 
-	m_pDescription = new CServerDescription();
-	m_pDescription->InitFromFile( DEFAULT_OPTIONS_FILE );
-	m_pDescription->InitFromFile( OPTIONS_FILE );
+	{
+		// dimhotepus: This can take a while, put up a waiting cursor.
+		const vgui::ScopedPanelWaitCursor scopedWaitCursor(this);
+
+		m_pDescription = new CServerDescription();
+		m_pDescription->InitFromFile( DEFAULT_OPTIONS_FILE );
+		m_pDescription->InitFromFile( OPTIONS_FILE );
+	}
+	
 	m_pList = NULL;
 
 	LoadControlSettings("Resource/CreateMultiplayerGameGameplayPage.res");
@@ -129,20 +136,21 @@ const char *CCreateMultiplayerGameGameplayPage::GetValue(const char *cvarName, c
 //-----------------------------------------------------------------------------
 void CCreateMultiplayerGameGameplayPage::OnApplyChanges()
 {
+	// dimhotepus: This can take a while, put up a waiting cursor.
+    const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
+
 	// Get the values from the controls
 	GatherCurrentValues();
 
 	// Create the game.cfg file
 	if ( m_pDescription )
 	{
-		FileHandle_t fp;
-
 		// Add settings to config.cfg
 		m_pDescription->WriteToConfig();
 
 		// save out in the settings file
 		g_pFullFileSystem->CreateDirHierarchy( OPTIONS_DIR, "GAME" );
-		fp = g_pFullFileSystem->Open( OPTIONS_FILE, "wb", "GAME" );
+		FileHandle_t fp = g_pFullFileSystem->Open( OPTIONS_FILE, "wb", "GAME" );
 		if ( fp )
 		{
 			m_pDescription->WriteToScriptFile( fp );
@@ -234,12 +242,14 @@ void CCreateMultiplayerGameGameplayPage::LoadGameOptionsList()
 		{
 			pCtrl->pPrompt = new vgui::Label( pCtrl, "DescLabel", "" );
 			pCtrl->pPrompt->SetContentAlignment( vgui::Label::a_west );
-			pCtrl->pPrompt->SetTextInset( 5, 0 );
+			// dimhotepus: Scale UI.
+			pCtrl->pPrompt->SetTextInset( QuickPropScale( 5 ), 0 );
 			pCtrl->pPrompt->SetText( pObj->prompt );
 		}
 
 		pCtrl->pScrObj = pObj;
-		pCtrl->SetSize( 100, 28 );
+		// dimhotepus: Scale UI.
+		pCtrl->SetSize( QuickPropScale( 100 ), QuickPropScale( 28 ) );
 		//pCtrl->SetBorder( scheme()->GetBorder(1, "DepressedButtonBorder") );
 		m_pOptionsList->AddItem( pCtrl );
 
@@ -367,7 +377,7 @@ void CCreateMultiplayerGameGameplayPage::GatherCurrentValues()
 		}
 
 		// Remove double quotes and % characters
-		UTIL_StripInvalidCharacters( szValue, sizeof( szValue ) );
+		V_StripInvalidCharacters( szValue );
 
 		Q_strncpy( strValue, szValue, sizeof( strValue ) );
 

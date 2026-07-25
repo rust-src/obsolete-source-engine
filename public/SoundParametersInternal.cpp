@@ -24,7 +24,7 @@ struct SoundChannels
 };
 
 // NOTE:  This will need to be updated if channel names are added/removed
-static SoundChannels g_pChannelNames[] =
+static constexpr SoundChannels g_pChannelNames[] =
 {
 	{ CHAN_AUTO, "CHAN_AUTO" },
 	{ CHAN_WEAPON, "CHAN_WEAPON" },
@@ -42,7 +42,7 @@ struct VolumeLevel
 	const char *name;
 };
 
-static VolumeLevel g_pVolumeLevels[] = 
+static constexpr VolumeLevel g_pVolumeLevels[] = 
 {
 	{ VOL_NORM, "VOL_NORM" },
 };
@@ -53,7 +53,7 @@ struct PitchLookup
 	const char *name;
 };
 
-static PitchLookup g_pPitchLookup[] =
+static constexpr PitchLookup g_pPitchLookup[] =
 {
 	{ PITCH_NORM,	"PITCH_NORM" },
 	{ PITCH_LOW,	"PITCH_LOW" },
@@ -70,7 +70,7 @@ struct SoundLevelLookup
 };
 
 // NOTE:  Needs to reflect the soundlevel_t enum defined in soundflags.h
-static SoundLevelLookup g_pSoundLevels[] =
+static constexpr SoundLevelLookup g_pSoundLevels[] =
 {
 	{ SNDLVL_NONE, "SNDLVL_NONE" },
 	{ SNDLVL_20dB, "SNDLVL_20dB" },
@@ -138,8 +138,8 @@ static const char *_VolumeToString( float volume )
 			return entry.name;
 	}
 
-	static char sz[ 32 ];
-	Q_snprintf( sz, sizeof( sz ), "%.3f", volume );
+	static char sz[ 16 ];
+	V_sprintf_safe( sz, "%.3f", volume );
 	return sz;
 }
 
@@ -151,8 +151,8 @@ static const char *_PitchToString( float pitch )
 			return entry.name;
 	}
 
-	static char sz[ 32 ];
-	Q_snprintf( sz, sizeof( sz ), "%.3f", pitch );
+	static char sz[ 16 ];
+	V_sprintf_safe( sz, "%.3f", pitch );
 	return sz;
 }
 
@@ -172,9 +172,9 @@ soundlevel_t TextToSoundLevel( const char *key )
 			return entry.level;
 	}
 
-	if ( !Q_strnicmp( key, SNDLVL_PREFIX, Q_strlen( SNDLVL_PREFIX ) ) )
+	if ( !Q_strnicmp( key, SNDLVL_PREFIX, ssize( SNDLVL_PREFIX ) - 1 ) )
 	{
-		char const *val = key + Q_strlen( SNDLVL_PREFIX );
+		char const *val = key + ssize( SNDLVL_PREFIX ) - 1;
 		int sndlvl = atoi( val );
 		if ( sndlvl > 0 && sndlvl <= 180 )
 		{
@@ -206,9 +206,14 @@ int TextToChannel( const char *name )
 		return atoi( name );
 	}
 
+	// dimhotepus: Some mods like "The Citizen Returns" use "CHAN_BODY " instead of "CHAN_BODY"
+	// Apply a hotfix it here comparing only trimmed names.
+	V_strdup_stack( name, trimmedName );
+	V_StrTrim( trimmedName );
+
 	for ( const auto &channelName : g_pChannelNames )
 	{
-		if ( !Q_strcasecmp( name, channelName.name ) )
+		if ( !Q_strcasecmp( trimmedName, channelName.name ) )
 		{
 			return channelName.channel;
 		}
@@ -229,8 +234,8 @@ const char *SoundLevelToString( soundlevel_t level )
 			return entry.name;
 	}
 
-	static char sz[ 32 ];
-	Q_snprintf( sz, sizeof( sz ), "%i", (int)level );
+	static char sz[ 16 ];
+	V_to_chars(sz, (int)level);
 	return sz;
 }
 
@@ -255,8 +260,8 @@ const char *VolumeToString( float volume )
 			return entry.name;
 	}
 
-	static char sz[ 32 ];
-	Q_snprintf( sz, sizeof( sz ), "%.3f", volume );
+	static char sz[ 16 ];
+	V_sprintf_safe( sz, "%.3f", volume );
 	return sz;
 }
 
@@ -268,8 +273,8 @@ const char *PitchToString( float pitch )
 			return entry.name;
 	}
 
-	static char sz[ 32 ];
-	Q_snprintf( sz, sizeof( sz ), "%.3f", pitch );
+	static char sz[ 16 ];
+	V_sprintf_safe( sz, "%.3f", pitch );
 	return sz;
 }
 

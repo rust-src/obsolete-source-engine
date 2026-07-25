@@ -231,7 +231,12 @@ char *V_strnlwr( INOUT_Z_CAP(count) char *s, size_t count )
 		if ( !*it )
 			return pRet; // reached end of string
 
-		*it = static_cast<unsigned char>(tolower( static_cast<unsigned char>(*it) ));
+		// dimhotepus: Use fast ASCII way to lowercase.
+		if ( (unsigned char)(*it - 'A') <= ('Z' - 'A') )
+			*it += 'a' - 'A';
+		else if ( (unsigned char)*it >= 0x80 ) // non-ascii, fall back to CRT
+			*it =static_cast<unsigned char>(tolower( static_cast<unsigned char>(*it) ));
+
 		++it;
 	}
 
@@ -1644,7 +1649,7 @@ void V_binarytohex( IN_BYTECAP(inputbytes) const byte *in, intp inputbytes, OUT_
 // now counting it as one even Posix since so many times our filepaths aren't actual
 // paths but rather text strings passed in from data files, treating \ as a pathseparator
 // covers the full range of cases
-bool PATHSEPARATOR( char c )
+[[nodiscard]] static constexpr inline bool PATHSEPARATOR( char c )
 {
 	return c == '\\' || c == '/';
 }
@@ -3060,7 +3065,7 @@ bool BGetLocalFormattedDateAndTime( time_t timeVal, char *pchDate, int cubDate, 
 	{
 		// Convert it to our local time
 		struct tm tmStruct;
-		struct tm tmToDisplay = *( Plat_localtime( ( const time_t* )&timeVal, &tmStruct ) );
+		struct tm tmToDisplay = *Plat_localtime( &timeVal, &tmStruct );
 #ifdef POSIX
 		if ( pchDate != NULL )
 		{

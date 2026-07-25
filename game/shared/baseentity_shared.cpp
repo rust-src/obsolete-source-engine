@@ -1876,7 +1876,7 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 			{
 				if ( tr.m_pEnt->IsPlayer() )
 				{
-					flActualDamage = iPlayerDamage;
+					flActualDamage = static_cast<float>(iPlayerDamage);
 				}
 #ifdef GAME_DLL
 				else if ( tr.m_pEnt->GetServerVehicle() )
@@ -2516,7 +2516,7 @@ void CBaseEntity::CollisionRulesChanged()
 			Assert(0);
 		}
 		IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-		int count = VPhysicsGetObjectList( pList, ssize(pList) );
+		int count = VPhysicsGetObjectList( pList, static_cast<int>(ssize(pList)) );
 		for ( int i = 0; i < count; i++ )
 		{
 			pList[i]->RecheckCollisionFilter();

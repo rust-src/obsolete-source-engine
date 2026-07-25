@@ -304,26 +304,22 @@ static bool IsSourceModLoaded()
 			return true;
 	}
 #else
-	FILE *fh = fopen( "/proc/self/maps", "r" );
-
-	if ( fh )
+	auto [fh, rc] = se::posix::posix_file_stream_factory::open( "/proc/self/maps", "r" );
+	if ( !rc )
 	{
 		char buf[ 1024 ];
 		static const char *s_pFileNames[] = { "metamod.2.tf2.so", "sourcemod.2.tf2.so", "sdkhooks.ext.2.ep2v.so", "sdkhooks.ext.2.tf2.so" };
 
-		while ( fgets( buf, sizeof( buf ), fh ) )
+		while ( !std::get<std::error_code>( fh.gets( buf ) ) )
 		{
 			for ( auto *n : s_pFileNames )
 			{
 				if ( strstr( buf, n ) )
 				{
-					fclose( fh );
 					return true;
 				}
 			}
 		}
-
-		fclose( fh );
 	}
 #endif
 
@@ -918,6 +914,11 @@ class CEngineAPI : public CTier3AppSystem< IEngineAPI >
 	typedef CTier3AppSystem< IEngineAPI > BaseClass;
 
 public:
+	CEngineAPI()
+	{
+		BitwiseClear(m_StartupInfo);
+	}
+
 	bool Connect( CreateInterfaceFn factory ) override;
 	void Disconnect() override;
 	void *QueryInterface( const char *pInterfaceName ) override;
@@ -980,9 +981,9 @@ private:
 	void ActivateEditModeShaders( bool bActive );
 
 private:
-	void *m_hEditorHWnd;
-	bool m_bRunningSimulation;
-	bool m_bSupportsVR;
+	void *m_hEditorHWnd{nullptr};
+	bool m_bRunningSimulation{false};
+	bool m_bSupportsVR{false};
 	StartupInfo_t m_StartupInfo;
 };
 

@@ -248,7 +248,7 @@ void CBaseButton::Press( CBaseEntity *pActivator, BUTTON_CODE eCode )
 
 			EmitSound_t ep;
 			ep.m_nChannel = CHAN_VOICE;
-			ep.m_pSoundName = (char*)STRING(m_sNoise);
+			ep.m_pSoundName = STRING(m_sNoise);
 			ep.m_flVolume = 1;
 			ep.m_SoundLevel = SNDLVL_NORM;
 
@@ -340,7 +340,7 @@ int CBaseButton::OnTakeDamage( const CTakeDamageInfo &info )
 
 			EmitSound_t ep;
 			ep.m_nChannel = CHAN_VOICE;
-			ep.m_pSoundName = (char*)STRING(m_sNoise);
+			ep.m_pSoundName = STRING(m_sNoise);
 			ep.m_flVolume = 1;
 			ep.m_SoundLevel = SNDLVL_NORM;
 
@@ -548,7 +548,7 @@ void CBaseButton::ButtonUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_
 
 				EmitSound_t ep;
 				ep.m_nChannel = CHAN_VOICE;
-				ep.m_pSoundName = (char*)STRING(m_sNoise);
+				ep.m_pSoundName = STRING(m_sNoise);
 				ep.m_flVolume = 1;
 				ep.m_SoundLevel = SNDLVL_NORM;
 
@@ -631,7 +631,7 @@ void CBaseButton::ButtonTouch( CBaseEntity *pOther )
 
 			EmitSound_t ep;
 			ep.m_nChannel = CHAN_VOICE;
-			ep.m_pSoundName = (char*)STRING(m_sNoise);
+			ep.m_pSoundName = STRING(m_sNoise);
 			ep.m_flVolume = 1;
 			ep.m_SoundLevel = SNDLVL_NORM;
 
@@ -662,7 +662,7 @@ void CBaseButton::ButtonActivate( void )
 
 		EmitSound_t ep;
 		ep.m_nChannel = CHAN_VOICE;
-		ep.m_pSoundName = (char*)STRING(m_sNoise);
+		ep.m_pSoundName = STRING(m_sNoise);
 		ep.m_flVolume = 1;
 		ep.m_SoundLevel = SNDLVL_NORM;
 
@@ -1108,7 +1108,7 @@ void CMomentaryRotButton::PlaySound( void )
 
 	EmitSound_t ep;
 	ep.m_nChannel = CHAN_VOICE;
-	ep.m_pSoundName = (char*)STRING(m_sNoise);
+	ep.m_pSoundName = STRING(m_sNoise);
 	ep.m_flVolume = 1;
 	ep.m_SoundLevel = SNDLVL_NORM;
 
@@ -1322,7 +1322,7 @@ void CMomentaryRotButton::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, US
 		if ( OnUseLocked( pActivator ) && HasSpawnFlags( SF_BUTTON_JIGGLE_ON_USE_LOCKED ) )
 		{
 			// Jiggle two degrees.
-			float flDist = 2.0 / m_flMoveDistance;
+			float flDist = 2.0f / m_flMoveDistance;
 
 			// Must be first!
 			g_EventQueue.AddEvent( this, "_DisableUpdateTarget", 0, this, this );

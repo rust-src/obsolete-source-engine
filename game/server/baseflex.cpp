@@ -230,14 +230,12 @@ void CBaseFlex::RemoveChoreoScene( CChoreoScene *scene, bool canceled )
 // Purpose: 
 //-----------------------------------------------------------------------------
 
-int CBaseFlex::GetScenePriority( CChoreoScene *scene )
+intp CBaseFlex::GetScenePriority( CChoreoScene *scene )
 {
-	int iPriority = 0;
-	int c = m_ActiveChoreoScenes.Count();
+	intp iPriority = 0;
 	// count number of channels in scenes older than current
-	for ( int i = 0; i < c; i++ )
+	for ( auto *pScene : m_ActiveChoreoScenes )
 	{
-		CChoreoScene *pScene = m_ActiveChoreoScenes[ i ];
 		if ( !pScene )
 		{
 			continue;
@@ -565,8 +563,7 @@ bool CBaseFlex::HandleStartGestureSceneEvent( CSceneEventInfo *info, CChoreoScen
 		char szEndLoop[CEventAbsoluteTag::MAX_EVENTTAG_LENGTH] = { "end" };
 
 		// check in the tag indexes
-		KeyValues *pkvFaceposer;
-		for ( pkvFaceposer = pkvAllFaceposer->GetFirstSubKey(); pkvFaceposer; pkvFaceposer = pkvFaceposer->GetNextKey() )
+		for ( KeyValues *pkvFaceposer = pkvAllFaceposer->GetFirstSubKey(); pkvFaceposer; pkvFaceposer = pkvFaceposer->GetNextKey() )
 		{
 			if (!stricmp( pkvFaceposer->GetName(), "startloop" ))
 			{
@@ -578,8 +575,7 @@ bool CBaseFlex::HandleStartGestureSceneEvent( CSceneEventInfo *info, CChoreoScen
 			}
 		}
 
-		CEventAbsoluteTag *ptag;
-		ptag = event->FindAbsoluteTag( CChoreoEvent::ORIGINAL, szStartLoop );
+		CEventAbsoluteTag *ptag = event->FindAbsoluteTag( CChoreoEvent::ORIGINAL, szStartLoop );
 		if (ptag)
 		{
 			ptag->SetLinear( true );
@@ -608,8 +604,7 @@ bool CBaseFlex::HandleStartGestureSceneEvent( CSceneEventInfo *info, CChoreoScen
 			mstudioanimdesc_t &animdesc = pstudiohdr->pAnimdesc( pstudiohdr->iRelativeAnim( info->m_nSequence, seqdesc.anim(0,0) ) );
 
 			// check in the tag indexes
-			KeyValues *pkvFaceposer;
-			for ( pkvFaceposer = pkvAllFaceposer->GetFirstSubKey(); pkvFaceposer; pkvFaceposer = pkvFaceposer->GetNextKey() )
+			for ( KeyValues *pkvFaceposer = pkvAllFaceposer->GetFirstSubKey(); pkvFaceposer; pkvFaceposer = pkvFaceposer->GetNextKey() )
 			{
 				if (!stricmp( pkvFaceposer->GetName(), "tags" ))
 				{
@@ -622,14 +617,14 @@ bool CBaseFlex::HandleStartGestureSceneEvent( CSceneEventInfo *info, CChoreoScen
 						{
 							float percentage = (float)pkvTags->GetInt() / maxFrame;
 
-							CEventAbsoluteTag *ptag = event->FindAbsoluteTag( CChoreoEvent::ORIGINAL, pkvTags->GetName() );
-							if (ptag)
+							CEventAbsoluteTag *ptag2 = event->FindAbsoluteTag( CChoreoEvent::ORIGINAL, pkvTags->GetName() );
+							if (ptag2)
 							{
-								if (fabs(ptag->GetPercentage() - percentage) > 0.05)
+								if (fabs(ptag2->GetPercentage() - percentage) > 0.05f)
 								{
-									DevWarning("%s repositioned tag: %s : %.3f -> %.3f (%s:%s:%s)\n", scene->GetFilename(), pkvTags->GetName(), ptag->GetPercentage(), percentage, scene->GetFilename(), actor->GetName(), event->GetParameters() );
+									DevWarning("%s repositioned tag: %s : %.3f -> %.3f (%s:%s:%s)\n", scene->GetFilename(), pkvTags->GetName(), ptag2->GetPercentage(), percentage, scene->GetFilename(), actor->GetName(), event->GetParameters() );
 									// reposition tag
-									ptag->SetPercentage( percentage );
+									ptag2->SetPercentage( percentage );
 								}
 							}
 						}

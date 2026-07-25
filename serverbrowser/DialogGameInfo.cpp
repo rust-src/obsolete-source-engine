@@ -7,6 +7,8 @@
 
 #include "pch_serverbrowser.h"
 
+#include "DialogGameInfo.h"
+
 using namespace vgui;
 
 static constexpr inline long RETRY_TIME = 10000;		// refresh server every 10 seconds
@@ -20,24 +22,6 @@ extern "C"
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Comparison function used in query redblack tree
-//-----------------------------------------------------------------------------
-bool QueryLessFunc( const struct challenge_s &item1, const struct challenge_s &item2 )
-{
-	// compare port then ip
-	if ( item1.addr.GetPort() < item2.addr.GetPort() )
-		return true;
-	else if ( item1.addr.GetPort() > item2.addr.GetPort() )
-		return false;
-
-	int ip1 = item1.addr.GetIPNetworkByteOrder();
-	int ip2 = item2.addr.GetIPNetworkByteOrder();
-
-	return ip1 < ip2;
-}
-
-
-//-----------------------------------------------------------------------------
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
 CDialogGameInfo::CDialogGameInfo( vgui::Panel *parent, int serverIP, int queryPort, unsigned short connectionPort, const char *pszConnectCode ) : 
@@ -48,8 +32,9 @@ CDialogGameInfo::CDialogGameInfo( vgui::Panel *parent, int serverIP, int queryPo
 #endif
 	m_sConnectCode( pszConnectCode )
 {
-	SetBounds(0, 0, 512, 512);
-	SetMinimumSize(416, 340);
+	// dimhotepus: Scale UI.
+	SetBounds(0, 0, QuickPropScale( 512 ), QuickPropScale( 512 ));
+	SetMinimumSize(QuickPropScale( 416 ), QuickPropScale( 340 ));
 	SetDeleteSelfOnClose(true);
 	m_bConnecting = false;
 	m_bServerFull = false;
@@ -73,9 +58,9 @@ CDialogGameInfo::CDialogGameInfo( vgui::Panel *parent, int serverIP, int queryPo
 	m_pAutoRetryAlert = new RadioButton(this, "AutoRetryAlert", "#ServerBrowser_AlertMeWhenSlotOpens");
 	m_pAutoRetryJoin = new RadioButton(this, "AutoRetryJoin", "#ServerBrowser_JoinWhenSlotOpens");
 	m_pPlayerList = new ListPanel(this, "PlayerList");
-	m_pPlayerList->AddColumnHeader(0, "PlayerName", "#ServerBrowser_PlayerName", 156);
-	m_pPlayerList->AddColumnHeader(1, "Score", "#ServerBrowser_Score", 64);
-	m_pPlayerList->AddColumnHeader(2, "Time", "#ServerBrowser_Time", 64);
+	m_pPlayerList->AddColumnHeader(0, "PlayerName", "#ServerBrowser_PlayerName", QuickPropScale( 156 ));
+	m_pPlayerList->AddColumnHeader(1, "Score", "#ServerBrowser_Score", QuickPropScale( 64 ));
+	m_pPlayerList->AddColumnHeader(2, "Time", "#ServerBrowser_Time", QuickPropScale( 64 ));
 
 	m_pPlayerList->SetSortFunc(2, &PlayerTimeColumnSortFunc);
 
@@ -182,7 +167,8 @@ void CDialogGameInfo::ChangeGame( int serverIP, int queryPort, unsigned short co
 	else
 	{
 		// moving from a single-player game -> multiplayer, reset dialog
-		SetMinimumSize(416, 340);
+		// dimhotepus: Scale UI.
+		SetMinimumSize(QuickPropScale( 416 ), QuickPropScale( 340 ));
 		SetSizeable( true );
 		LoadControlSettings( "Servers/DialogGameInfo.res" );
 	}
@@ -453,7 +439,9 @@ void CDialogGameInfo::OnButtonToggled(Panel *panel)
 void CDialogGameInfo::ShowAutoRetryOptions(bool state)
 {
 	// we need to extend the dialog
-	int growSize = 60;
+	
+	// dimhotepus: Scale UI.
+	int growSize = QuickPropScale( 60 );
 	if (!state)
 	{
 		growSize = -growSize;
@@ -464,7 +452,8 @@ void CDialogGameInfo::ShowAutoRetryOptions(bool state)
 	GetBounds( x, y, wide, tall );
 
 	// load a new layout file depending on the state
-	SetMinimumSize(416, 340);
+	// dimhotepus: Scale UI.
+	SetMinimumSize(QuickPropScale( 416 ), QuickPropScale( 340 ));
 	if ( state )
 		LoadControlSettings( "Servers/DialogGameInfo_AutoRetry.res" );
 	else

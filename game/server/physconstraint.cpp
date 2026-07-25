@@ -72,7 +72,7 @@ public:
 
 	constraint_anchor_t *Find( string_t name )
 	{
-		for ( int i = m_list.Count()-1; i >=0; i-- )
+		for ( intp i = m_list.Count()-1; i >=0; i-- )
 		{
 			if ( FStrEq( STRING(m_list[i].name), STRING(name) ) )
 			{
@@ -419,6 +419,8 @@ CPhysConstraint::CPhysConstraint( void )
 	m_pConstraint = NULL;
 	m_nameAttach1 = NULL_STRING;
 	m_nameAttach2 = NULL_STRING;
+	m_breakSound = NULL_STRING;
+	m_nameSystem = NULL_STRING;
 	m_forceLimit = 0;
 	m_torqueLimit = 0;
 	m_teleportTick = 0xFFFFFFFF;
@@ -576,7 +578,7 @@ void CPhysConstraint::GetConstraintObjects( hl_constraint_info_t &info )
 	// Missing one object, assume the world instead
 	if ( info.pObjects[0] == NULL && info.pObjects[1] )
 	{
-		if ( Q_strlen(STRING(m_nameAttach1)) )
+		if ( !Q_isempty(STRING(m_nameAttach1)) )
 		{
 			Warning("Bogus constraint %s (attaches ENTITY NOT FOUND:%s to %s)\n", GetDebugName(), STRING(m_nameAttach1), STRING(m_nameAttach2));
 #ifdef HL2_EPISODIC
@@ -589,7 +591,7 @@ void CPhysConstraint::GetConstraintObjects( hl_constraint_info_t &info )
 	}
 	else if ( info.pObjects[0] && !info.pObjects[1] )
 	{
-		if ( Q_strlen(STRING(m_nameAttach2)) )
+		if ( !Q_isempty(STRING(m_nameAttach2)) )
 		{
 			Warning("Bogus constraint %s (attaches %s to ENTITY NOT FOUND:%s)\n", GetDebugName(), STRING(m_nameAttach1), STRING(m_nameAttach2));
 #ifdef HL2_EPISODIC
@@ -677,7 +679,7 @@ bool CPhysConstraint::ActivateConstraint( void )
 	if ( !m_pConstraint )
 		return false;
 
-	m_pConstraint->SetGameData( (void *)this );
+	m_pConstraint->SetGameData( this );
 
 	if ( pGroup )
 	{

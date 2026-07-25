@@ -36,7 +36,8 @@ CPresetPickerFrame::CPresetPickerFrame( vgui::Panel *pParent, const char *pTitle
 	m_pContextKeyValues = NULL;
 
 	m_pPresetList = new vgui::ListPanel( this, "PresetList" );
-	m_pPresetList->AddColumnHeader( 0, "name", "Preset Name", 52, 0 );
+	// dimhotepus: Scale UI.
+	m_pPresetList->AddColumnHeader( 0, "name", "Preset Name", QuickPropScale( 52 ), 0 );
 	m_pPresetList->SetSelectIndividualCells( false );
 	m_pPresetList->SetMultiselectEnabled( bAllowMultiSelect );
 	m_pPresetList->SetEmptyListText( "No presets" );
@@ -144,7 +145,7 @@ void CPresetPickerFrame::OnCommand( const char *pCommand )
 			for ( int i = 0; i < nSelectedItemCount; ++i )
 			{
 				char pBuf[32];
-				Q_snprintf( pBuf, sizeof(pBuf), "%d", i );
+				V_to_chars( pBuf, i );
 
 				int nItemID = m_pPresetList->GetSelectedItem( i );
 				KeyValues *pKeyValues = m_pPresetList->GetItem( nItemID );

@@ -794,13 +794,15 @@ bool CAI_PassengerBehaviorCompanion::CanEnterVehicleImmediately( int *pResultSeq
 	// Get a list of all our animations
 	const PassengerSeatAnims_t *pEntryAnims = m_hVehicle->GetServerVehicle()->NPC_GetPassengerSeatAnims( GetOuter(), PASSENGER_SEAT_ENTRY );
 	if ( pEntryAnims == NULL )
-		return -1;
+		// dimhotepus: -1 -> true
+		return true;
 
 	// Get the ultimate position we'll end up at
 	Vector vecStartPos, vecEndPos;
 	QAngle vecStartAngles;
 	if ( m_hVehicle->GetServerVehicle()->NPC_GetPassengerSeatPosition( GetOuter(), &vecEndPos, NULL ) == false )
-		return -1;
+		// dimhotepus: -1 -> true
+		return true;
 
 	// Categorize the passenger in terms of being on the left or right side of the vehicle
 	Vector vecRight;
@@ -818,11 +820,12 @@ bool CAI_PassengerBehaviorCompanion::CanEnterVehicleImmediately( int *pResultSeq
 	float	flSeatDistSqr;
 	int		nNearestSequence = -1;
 	int		nSequence;
-	Vector	vecNearestPos;
-	QAngle	vecNearestAngles;
+	// dimhotepus: Initialize to invalid values to fix warning about uninitialized vars.
+	Vector	vecNearestPos = vec3_invalid;
+	QAngle	vecNearestAngles{FLT_MAX, FLT_MAX, FLT_MAX};
 
 	// Test each animation (sorted by priority) for the best match
-	for ( int i = 0; i < pEntryAnims->Count(); i++ )
+	for ( intp i = 0; i < pEntryAnims->Count(); i++ )
 	{
 		// Find the activity for this animation name
 		pTransition = &pEntryAnims->Element(i);

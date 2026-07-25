@@ -333,17 +333,11 @@ void CPortalGameMovement::AirMove( void )
 	//
 	else if ( sv_player_funnel_into_portals.GetBool() )
 	{
-		int iPortalCount = CProp_Portal_Shared::AllPortals.Count();
-		if( iPortalCount != 0 )
+		for( auto *pTempPortal : CProp_Portal_Shared::AllPortals )
 		{
-			CProp_Portal **pPortals = CProp_Portal_Shared::AllPortals.Base();
-			for( int i = 0; i != iPortalCount; ++i )
+			if( pTempPortal->IsActivedAndLinked() )
 			{
-				CProp_Portal *pTempPortal = pPortals[i];
-				if( pTempPortal->IsActivedAndLinked() )
-				{
-					FunnelIntoPortal( pTempPortal, wishdir );
-				}
+				FunnelIntoPortal( pTempPortal, wishdir );
 			}
 		}
 	}
@@ -386,7 +380,7 @@ void CPortalGameMovement::PlayerRoughLandingEffects( float fvol )
 		{
 			EmitSound_t ep( params );
 			ep.m_nPitch = 125.0f - player->m_Local.m_flFallVelocity * 0.03f;					// lower pitch the harder they land
-			ep.m_flVolume = MIN( player->m_Local.m_flFallVelocity * 0.00075f - 0.38, 1.0f );	// louder the harder they land
+			ep.m_flVolume = MIN( player->m_Local.m_flFallVelocity * 0.00075f - 0.38f, 1.0f );	// louder the harder they land
 
 			CBaseEntity::EmitSound( filter, player->entindex(), ep );
 		}

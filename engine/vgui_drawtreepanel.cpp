@@ -14,7 +14,7 @@
 #include <vgui_controls/Button.h>
 #include <vgui/IInput.h>
 #include "../vgui2/src/VPanel.h"
-#include "convar.h"
+#include "tier1/convar.h"
 #include "tier0/vprof.h"
 #include "vgui_baseui_interface.h"
 #include "vgui_helpers.h"
@@ -74,8 +74,8 @@ public:
 	virtual void ApplySchemeSettings( vgui::IScheme *pScheme )
 	{
 		BaseClass::ApplySchemeSettings( pScheme );
-
-		SetFont( pScheme->GetFont( "ConsoleText", false ) );
+		// dimhotepus: Scale UI.
+		SetFont( pScheme->GetFont( "ConsoleText", IsProportional() ) );
 		//SetBgColor( Color( 0, 0, 0, 175 ) );
 		SetPaintBackgroundEnabled( false );
 	}
@@ -289,7 +289,7 @@ public:
 		// you will sometimes end up on a different panel or on garbage.
 	}
 
-	virtual void OnThink() override
+	void OnThink() override
 	{
 		BaseClass::OnThink();
 
@@ -351,18 +351,18 @@ void VGui_RecursivePrintTree(
 	char name[1024];
 	const char *pInputName = ipanel->GetName( current );
 	if ( pInputName && pInputName[0] != 0 )
-		Q_snprintf( name, sizeof( name ), "%s", pInputName );
+		V_sprintf_safe( name, "%s", pInputName );
 	else
-		Q_snprintf( name, sizeof( name ), "%s", "(no name)" );
+		V_sprintf_safe( name, "%s", "(no name)" );
 
 	if ( ipanel->IsMouseInputEnabled( current ) )
 	{
-		Q_strncat( name, ", +m", sizeof( name ), COPY_ALL_CHARACTERS );
+		V_strcat_safe( name, ", +m" );
 	}
 
 	if ( ipanel->IsKeyBoardInputEnabled( current ) )
 	{
-		Q_strncat( name, ", +k", sizeof( name ), COPY_ALL_CHARACTERS );
+		V_strcat_safe( name, ", +k" );
 	}
 
 	if ( vgui_drawtree_bounds.GetBool() )
@@ -371,23 +371,23 @@ void VGui_RecursivePrintTree(
 		vgui::ipanel()->GetPos( current, x, y );
 		vgui::ipanel()->GetSize( current, w, h );
 		char b[ 128 ];
-		Q_snprintf( b, sizeof( b ), "[%-4i %-4i %-4i %-4i]", x, y, w, h );
+		V_sprintf_safe( b, "[%-4i %-4i %-4i %-4i]", x, y, w, h );
 
-		Q_strncat( name, ", ", sizeof( name ), COPY_ALL_CHARACTERS );
-		Q_strncat( name, b, sizeof( name ), COPY_ALL_CHARACTERS );
+		V_strcat_safe( name, ", " );
+		V_strcat_safe( name, b );
 	}
 
 	char str[1024];
 	if ( vgui_drawtree_panelptr.GetInt() )
-		Q_snprintf( str, sizeof( str ), "%s - [0x%llux]", name, current );
+		V_sprintf_safe( str, "%s - [0x%llux]", name, current );
 	else if (vgui_drawtree_panelalpha.GetInt() )
 	{
 		KeyValuesAD kv("alpha");
 		vgui::ipanel()->RequestInfo(current, kv);
-		Q_snprintf( str, sizeof( str ), "%s - [%d]", name, kv->GetInt("alpha") );
+		V_sprintf_safe( str, "%s - [%d]", name, kv->GetInt("alpha") );
 	}
 	else
-		Q_snprintf( str, sizeof( str ), "%s", name );
+		V_sprintf_safe( str, "%s", name );
 
 	pVal->SetString( "Text", str );
 	// dimhotepus: SetInt -> SetPtr
@@ -533,7 +533,8 @@ void VGui_FillKeyValues( KeyValues *pCurrentParent )
 		VGui_RecursivePrintTree( 
 			hBase, 
 			pCurrentParent,
-			99999 );
+			// dimhotepus: 99999 -> max.
+			std::numeric_limits<int>::max() );
 	}
 }
 
@@ -541,9 +542,6 @@ void VGui_FillKeyValues( KeyValues *pCurrentParent )
 void VGui_DrawHierarchy( void )
 {
 	VPROF( "VGui_DrawHierarchy" );
-
-	if ( IsX360() )
-		return;
 
 	if ( vgui_drawtree.GetInt() <= 0 )
 	{
@@ -565,12 +563,12 @@ void VGui_DrawHierarchy( void )
 
 
 void VGui_CreateDrawTreePanel( vgui::Panel *parent )
-{
-	int widths = 300;
-	
+{	
 	g_pDrawTreeFrame = vgui::SETUP_PANEL( new CDrawTreeFrame( parent, "DrawTreeFrame" ) );
 	g_pDrawTreeFrame->SetVisible( false );
-	g_pDrawTreeFrame->SetBounds( parent->GetWide() - widths, 0, widths, parent->GetTall() - 10 );
+	// dimhotepus: Scale UI.
+	int widths = QuickPropScalePanel( 300, g_pDrawTreeFrame );
+	g_pDrawTreeFrame->SetBounds( parent->GetWide() - widths, 0, widths, parent->GetTall() - QuickPropScalePanel( 10, g_pDrawTreeFrame ) );
 	
 	g_pDrawTreeFrame->MakePopup( false, false );
 	g_pDrawTreeFrame->SetKeyBoardInputEnabled( true );

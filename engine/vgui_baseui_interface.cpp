@@ -416,6 +416,8 @@ private:
 
 	// used to start the progress from an arbitrary position
 	float					m_ProgressBias;
+	// dimhotepus: Add module name.
+	static constexpr char	m_UiModuleName[]{"BaseUI"};
 };
 
 
@@ -574,7 +576,7 @@ void CEngineVGui::Init()
 		Sys_Error( "Could not get IGameConsole interface %s from %s.\n", GAMECONSOLE_INTERFACE_VERSION, szDllName );
 	}
 
-	vgui::VGui_InitMatSysInterfacesList( "BaseUI", &g_AppSystemFactory, 1 );
+	vgui::VGui_InitMatSysInterfacesList( m_UiModuleName, &g_AppSystemFactory, 1 );
 
 	// Get our langauge string
 	char lang[ 64 ];
@@ -596,6 +598,19 @@ void CEngineVGui::Init()
 	{
 		Sys_Error( "Error loading file %s.\n", pStr );
 		return;
+	}
+
+	// dimhotepus: Better SteamDeck support.
+	if ( IsSteamDeck() )
+	{
+		CCommand ccommand;
+		if ( CL_ShouldLoadBackgroundLevel( ccommand ) )
+		{
+			// Must be before the game ui base panel starts up
+			// This is a hint to avoid the menu pop due to the impending background map
+			// that the game ui is not aware of until 1 frame later.
+			staticGameUIFuncs->SetProgressOnStart();
+		}
 	}
 
 	COM_TimestampedLog( "vgui::ivgui()->Start()" );
@@ -766,8 +781,9 @@ void CEngineVGui::Init()
 	// setup console
 	if ( staticGameConsole )
 	{
-		staticGameConsole->Initialize();
-		staticGameConsole->SetParent(staticGameUIPanel->GetVPanel());
+		// dimhotepus: Correctly scale console UI.
+		staticGameConsole->Initialize( staticGameUIPanel->GetVPanel(), m_UiModuleName );
+		// staticGameConsole->SetParent(staticGameUIPanel->GetVPanel());
 	}
 
 	// show the game UI
@@ -1192,6 +1208,13 @@ void CEngineVGui::OnLevelLoadingStarted()
 		{
 			pSyncReportConVar->SetValue( 0 );
 		}
+	}
+
+	// dimhotepus: Better SteamDeck support.
+	if ( IsSteamDeck() )
+	{
+		// TCR requirement, always!!!
+		m_bShowProgressDialog = true;
 	}
 	
 	// we've starting loading a level/connecting to a server

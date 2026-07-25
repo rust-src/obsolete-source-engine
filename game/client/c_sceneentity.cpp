@@ -825,26 +825,25 @@ CChoreoStringPool g_ChoreoStringPool;
 CChoreoScene *C_SceneEntity::LoadScene( const char *filename )
 {
 	char loadfile[ 512 ];
-	Q_strncpy( loadfile, filename, sizeof( loadfile ) );
-	Q_SetExtension( loadfile, ".vcd", sizeof( loadfile ) );
-	Q_FixSlashes( loadfile );
+	V_strcpy_safe( loadfile, filename );
+	V_SetExtension( loadfile, ".vcd" );
+	V_FixSlashes( loadfile );
 
 	size_t bufsize = scenefilecache->GetSceneBufferSize( loadfile );
 	if ( bufsize <= 0 )
 		return NULL;
 
-	char *pBuffer = new char[ bufsize ];
-	if ( !scenefilecache->GetSceneData( filename, (byte *)pBuffer, bufsize ) )
+	std::unique_ptr<char[]> pBuffer = std::make_unique<char[]>(bufsize);
+	if ( !scenefilecache->GetSceneData( filename, (byte*)pBuffer.get(), bufsize ) )
 	{
-		delete[] pBuffer;
 		return NULL;
 	}
 
 	CChoreoScene *pScene;
-	if ( IsBufferBinaryVCD( pBuffer, bufsize ) )
+	if ( IsBufferBinaryVCD( pBuffer.get(), bufsize ) )
 	{
 		pScene = new CChoreoScene( this );
-		CUtlBuffer buf( pBuffer, bufsize, CUtlBuffer::READ_ONLY );
+		CUtlBuffer buf( pBuffer.get(), bufsize, CUtlBuffer::READ_ONLY );
 		if ( !pScene->RestoreFromBinaryBuffer( buf, loadfile, &g_ChoreoStringPool ) )
 		{
 			Warning( "Unable to restore binary scene '%s'\n", loadfile );
@@ -859,11 +858,10 @@ CChoreoScene *C_SceneEntity::LoadScene( const char *filename )
 	}
 	else
 	{
-		g_TokenProcessor.SetBuffer( pBuffer );
+		g_TokenProcessor.SetBuffer( pBuffer.get() );
 		pScene = ChoreoLoadScene( loadfile, this, &g_TokenProcessor, Scene_Printf );
 	}
 
-	delete[] pBuffer;
 	return pScene;
 }
 

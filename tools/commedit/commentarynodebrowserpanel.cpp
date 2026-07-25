@@ -4,21 +4,21 @@
 //
 //===========================================================================//
 
-#include "CommentaryNodeBrowserPanel.h"
+#include "commentarynodebrowserpanel.h"
 #include "tier1/KeyValues.h"
 #include "tier1/utlbuffer.h"
 #include "iregistry.h"
-#include "vgui/ivgui.h"
-#include "vgui_controls/listpanel.h"
-#include "vgui_controls/textentry.h"
-#include "vgui_controls/checkbutton.h"
-#include "vgui_controls/combobox.h"
-#include "vgui_controls/radiobutton.h"
-#include "vgui_controls/messagebox.h"
+#include "vgui/IVGui.h"
+#include "vgui_controls/ListPanel.h"
+#include "vgui_controls/TextEntry.h"
+#include "vgui_controls/CheckButton.h"
+#include "vgui_controls/ComboBox.h"
+#include "vgui_controls/RadioButton.h"
+#include "vgui_controls/MessageBox.h"
 #include "commeditdoc.h"
 #include "commedittool.h"
 #include "datamodel/dmelement.h"
-#include "vgui/keycode.h"
+#include "vgui/KeyCode.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include <tier0/memdbgon.h>
@@ -29,7 +29,7 @@ using namespace vgui;
 //-----------------------------------------------------------------------------
 // Sort by target name
 //-----------------------------------------------------------------------------
-static int __cdecl TargetNameSortFunc( vgui::ListPanel *pPanel, const ListPanelItem &item1, const ListPanelItem &item2 )
+static int __cdecl TargetNameSortFunc( [[maybe_unused]] vgui::ListPanel *pPanel, const ListPanelItem &item1, const ListPanelItem &item2 )
 {
 	const char *string1 = item1.kv->GetString("targetname");
 	const char *string2 = item2.kv->GetString("targetname");
@@ -45,7 +45,7 @@ static int __cdecl TargetNameSortFunc( vgui::ListPanel *pPanel, const ListPanelI
 //-----------------------------------------------------------------------------
 // Sort by class name
 //-----------------------------------------------------------------------------
-static int __cdecl ClassNameSortFunc( vgui::ListPanel *pPanel, const ListPanelItem &item1, const ListPanelItem &item2 )
+static int __cdecl ClassNameSortFunc( [[maybe_unused]] vgui::ListPanel *pPanel, const ListPanelItem &item1, const ListPanelItem &item2 )
 {
 	const char *string1 = item1.kv->GetString("classname");
 	const char *string2 = item2.kv->GetString("classname");
@@ -68,8 +68,9 @@ CCommentaryNodeBrowserPanel::CCommentaryNodeBrowserPanel( CCommEditDoc *pDoc, vg
 	SetPaintBackgroundEnabled( true );
 
 	m_pEntities = new vgui::ListPanel( this, "Entities" );
-	m_pEntities->AddColumnHeader( 0, "targetname", "Name", 52, ListPanel::COLUMN_RESIZEWITHWINDOW );
- 	m_pEntities->AddColumnHeader( 1, "classname", "Class Name", 52, ListPanel::COLUMN_RESIZEWITHWINDOW );
+	// dimhotepus: Scale UI.
+	m_pEntities->AddColumnHeader( 0, "targetname", "Name", QuickPropScale( 52 ), ListPanel::COLUMN_RESIZEWITHWINDOW );
+ 	m_pEntities->AddColumnHeader( 1, "classname", "Class Name", QuickPropScale( 52 ), ListPanel::COLUMN_RESIZEWITHWINDOW );
 	m_pEntities->SetColumnSortable( 0, true );
 	m_pEntities->SetColumnSortable( 1, true );
 	m_pEntities->SetEmptyListText( "No Entities" );
@@ -101,7 +102,7 @@ void CCommentaryNodeBrowserPanel::OnProperties( )
 		return;
 	}
 
-	int iSel = m_pEntities->GetSelectedItem( 0 );
+	intp iSel = m_pEntities->GetSelectedItem( 0 );
 	KeyValues *kv = m_pEntities->GetItem( iSel );
 	CDmeCommentaryNodeEntity *pEntity = CastElement< CDmeCommentaryNodeEntity >( (CDmElement *)kv->GetPtr( "entity" ) );
 	g_pCommEditTool->ShowEntityInEntityProperties( pEntity );
@@ -113,7 +114,7 @@ void CCommentaryNodeBrowserPanel::OnProperties( )
 //-----------------------------------------------------------------------------
 void CCommentaryNodeBrowserPanel::OnDeleteEntities(void)
 {
-	int iSel = m_pEntities->GetSelectedItem( 0 );
+	intp iSel = m_pEntities->GetSelectedItem( 0 );
 
 	{
 		// This is undoable
@@ -122,10 +123,10 @@ void CCommentaryNodeBrowserPanel::OnDeleteEntities(void)
 		//
 		// Build a list of objects to delete.
 		//
-		int nCount = m_pEntities->GetSelectedItemsCount();
-		for (int i = 0; i < nCount; i++)
+		intp nCount = m_pEntities->GetSelectedItemsCount();
+		for (intp i = 0; i < nCount; i++)
 		{
-			int nItemID = m_pEntities->GetSelectedItem(i);
+			intp nItemID = m_pEntities->GetSelectedItem(i);
 			KeyValues *kv = m_pEntities->GetItem( nItemID );
 			CDmElement *pEntity = (CDmElement *)kv->GetPtr( "entity" );
 			if ( pEntity )
@@ -175,7 +176,7 @@ void CCommentaryNodeBrowserPanel::OnItemSelected( void )
 void CCommentaryNodeBrowserPanel::SelectNode( CDmeCommentaryNodeEntity *pNode )
 {
 	m_pEntities->ClearSelectedItems();
-	for ( int nItemID = m_pEntities->FirstItem(); nItemID != m_pEntities->InvalidItemID(); nItemID = m_pEntities->NextItem( nItemID ) )
+	for ( auto nItemID = m_pEntities->FirstItem(); nItemID != m_pEntities->InvalidItemID(); nItemID = m_pEntities->NextItem( nItemID ) )
 	{
 		KeyValues *kv = m_pEntities->GetItem( nItemID );
 		CDmElement *pEntity = (CDmElement *)kv->GetPtr( "entity" );
@@ -216,7 +217,7 @@ void CCommentaryNodeBrowserPanel::OnCommand( const char *pCommand )
 	{
 		if ( m_pEntities->GetSelectedItemsCount() == 1 )
 		{
-			int iSel = m_pEntities->GetSelectedItem( 0 );
+			intp iSel = m_pEntities->GetSelectedItem( 0 );
 			KeyValues *kv = m_pEntities->GetItem( iSel );
 			CDmeCommentaryNodeEntity *pEntity = CastElement< CDmeCommentaryNodeEntity >( (CDmElement *)kv->GetPtr( "entity" ) );
 			g_pCommEditTool->CenterView( pEntity );
@@ -251,8 +252,8 @@ void CCommentaryNodeBrowserPanel::UpdateEntityList(void)
 	if ( !entityList.IsValid() )
 		return;
 
-	int nCount = entityList.Count();
-	for ( int i = 0; i < nCount; ++i )
+	intp nCount = entityList.Count();
+	for ( intp i = 0; i < nCount; ++i )
 	{
 		CDmElement *pEntity = entityList[i];
 		Assert( pEntity );

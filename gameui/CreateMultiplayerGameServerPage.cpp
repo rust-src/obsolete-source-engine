@@ -9,24 +9,24 @@
 
 using namespace vgui;
 
-#include <KeyValues.h>
 #include <vgui_controls/ComboBox.h>
 #include <vgui_controls/RadioButton.h>
 #include <vgui_controls/CheckButton.h>
 #include "filesystem.h"
 #include "tier1/convar.h"
+#include "tier1/KeyValues.h"
 #include "EngineInterface.h"
 #include "CvarToggleCheckButton.h"
 
 #include "ModInfo.h"
 
 // for SRC
-#include <vstdlib/random.h>
+#include "vstdlib/random.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include <tier0/memdbgon.h>
 
-#define RANDOM_MAP "#GameUI_RandomMap"
+constexpr inline char RANDOM_MAP[]{"#GameUI_RandomMap"};
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
@@ -107,13 +107,11 @@ void CCreateMultiplayerGameServerPage::EnableBots( KeyValues *data )
 	SetControlInt( "BotQuotaCombo", quota );
 	m_pEnableBotsCheck->SetSelected( (quota > 0) );
 
-	int difficulty = data->GetInt( "bot_difficulty", 0 );
-	difficulty = max( difficulty, 0 );
-	difficulty = min( 3, difficulty );
+	const int difficulty = clamp( data->GetInt( "bot_difficulty", 0 ), 0, 3 );
 
 	char buttonName[64];
-	Q_snprintf( buttonName, sizeof( buttonName ), "SkillLevel%d", difficulty );
-	vgui::RadioButton *button = dynamic_cast< vgui::RadioButton * >(FindChildByName( buttonName ));
+	V_sprintf_safe( buttonName, "SkillLevel%d", difficulty );
+	auto *button = dynamic_cast< vgui::RadioButton * >(FindChildByName( buttonName ));
 	if ( button )
 	{
 		button->SetSelected( true );
@@ -143,8 +141,8 @@ void CCreateMultiplayerGameServerPage::OnApplyChanges()
 		for ( int i=0; i<4; ++i )
 		{
 			char buttonName[64];
-			Q_snprintf( buttonName, sizeof( buttonName ), "SkillLevel%d", i );
-			vgui::RadioButton *button = dynamic_cast< vgui::RadioButton * >(FindChildByName( buttonName ));
+			V_sprintf_safe( buttonName, "SkillLevel%d", i );
+			auto *button = dynamic_cast< vgui::RadioButton * >(FindChildByName( buttonName ));
 			if ( button )
 			{
 				if ( button->IsSelected() )
@@ -168,7 +166,7 @@ void CCreateMultiplayerGameServerPage::LoadMaps( const char *pszPathID )
 	KeyValues *hiddenMaps = ModInfo().GetHiddenMaps();
 	
 	FileFindHandle_t findHandle = FILESYSTEM_INVALID_FIND_HANDLE;
-	char mapname[256];
+	char mapname[MAX_PATH];
 	bool firstTime = true;
 	const char *pszFilename = g_pFullFileSystem->FindFirstEx( "maps/*.bsp", pszPathID, &findHandle );
 	while ( pszFilename )
@@ -207,7 +205,7 @@ void CCreateMultiplayerGameServerPage::LoadMaps( const char *pszPathID )
 		char *ext = Q_strstr( mapname, ".bsp" );
 		if ( ext )
 		{
-			continue;
+			*ext = '\0';
 		}
 
 		//!! hack: strip out single player HL maps

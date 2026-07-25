@@ -9,7 +9,6 @@
 
 #include "type_traits.h"
 
-#include <DirectXMath.h>
 #include <atomic>
 #include <climits>
 
@@ -134,12 +133,18 @@ extern "C" unsigned long __declspec(dllimport) __stdcall GetCurrentThreadId();
 #define ThreadGetCurrentId GetCurrentThreadId
 #endif
 
-inline void ThreadPause()
+// dimhotepus: Force inline on MSVC to reduce function call cost.
+#ifdef COMPILER_MSVC
+__forceinline
+#else
+inline
+#endif
+void ThreadPause()
 {
-#if defined(_XM_SSE_INTRINSICS_)
+#if defined(PLATFORM_SSE_INTRINSICS)
 	// Intrinsic for __asm pause; from <intrin.h>
 	_mm_pause();
-#elif defined(_XM_ARM_NEON_INTRINSICS_)
+#elif defined(PLATFORM_ARM_NEON_INTRINSICS)
 	// Copyright (c) 2015-2024 SSE2NEON Contributors
 	// 
 	// Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -309,11 +314,11 @@ PLATFORM_INTERFACE bool ThreadInterlockedAssignPointerIf( void * volatile *, voi
 [[deprecated("Evil const_casts. Use non-const version.")]] inline bool ThreadInterlockedAssignPointerToConstIf( void const * volatile *p, void const *value, void const *comperand )			{ return ThreadInterlockedAssignPointerIf( const_cast < void * volatile * > ( p ), const_cast < void * > ( value ), const_cast < void * > ( comperand ) ); } //-V2018
 
 #if defined( PLATFORM_64BITS )
-#if defined (_WIN32) && defined( _XM_SSE_INTRINSICS_ )
+#if defined(_WIN32) && defined(PLATFORM_SSE_INTRINSICS)
 using int128 = __m128i;
 inline int128 int128_zero()	{ return _mm_setzero_si128(); }
 #else
-typedef __int128_t int128;
+using int128 = __int128_t;
 #define int128_zero() 0
 #endif
 
@@ -1778,24 +1783,22 @@ inline CThreadRWLock::CThreadRWLock()
 
 inline void CThreadRWLock::LockForRead()
 {
-	m_mutex.Lock();
+	AUTO_LOCK(m_mutex);
 	if ( m_nWriters)
 	{
 		WaitForRead();
 	}
 	m_nActiveReaders++;
-	m_mutex.Unlock();
 }
 
 inline void CThreadRWLock::UnlockRead()
 {
-	m_mutex.Lock();
+	AUTO_LOCK(m_mutex);
 	m_nActiveReaders--;
 	if ( m_nActiveReaders == 0 && m_nWriters != 0 )
 	{
 		m_CanWrite.Set();
 	}
-	m_mutex.Unlock();
 }
 
 

@@ -261,14 +261,14 @@ EBugReportUploadStatus Win32UploadBugReportBlocking
 	//-----------------------------------------------------------------------------
 // Purpose: encrypts an 8-byte sequence
 //-----------------------------------------------------------------------------
-inline void Encrypt8ByteSequence( IceKey& cipher, const unsigned char *plainText, unsigned char *cipherText)
+static inline void Encrypt8ByteSequence( IceKey& cipher, const unsigned char *plainText, unsigned char *cipherText)
 {
 	cipher.encrypt(plainText, cipherText);
 }
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void EncryptBuffer( IceKey& cipher, unsigned char *bufData, uint bufferSize)
+static void EncryptBuffer( IceKey& cipher, unsigned char *bufData, uint bufferSize)
 {
 	unsigned char *cipherText = bufData;
 	unsigned char *plainText = bufData;
@@ -349,7 +349,7 @@ bool UploadBugReport(
 
 }
 
-void UpdateProgress( const TBugReportParameters & params, char const *fmt, ... )
+static void UpdateProgress( const TBugReportParameters & params, char const *fmt, ... )
 {
 	if ( !params.m_pOptionalProgressFunc )
 	{
@@ -430,7 +430,7 @@ private:
 	CUtlVector< FSMState_t >		m_States;
 	uint							m_uCurrentState{ eCreateTCPSocket };
 	struct sockaddr_in				m_HarvesterSockAddr;
-	uintp							m_SocketTCP{ 0 };
+	socket_handle					m_SocketTCP{ 0 };
 	const TBugReportParameters	&m_rBugReportParameters; //lint !e1725
 	u32								m_ContextID;
 };
@@ -686,32 +686,33 @@ bool CWin32UploadBugReport::SendWholeFile( EBugReportUploadStatus& status, CUtlB
 {
 	UpdateProgress( m_rBugReportParameters, "Uploading bug report data." );
 	// Send to server
-	char *filebuf = nullptr;
-	size_t sizeactual = g_pFileSystem->Size( m_rBugReportParameters.m_sAttachmentFile );
-	if ( sizeactual > 0 )
+	unsigned sizeactual = g_pFileSystem->Size( m_rBugReportParameters.m_sAttachmentFile );
+	if ( !sizeactual )
 	{
-		filebuf = new char[ sizeactual + 1 ];
-		FileHandle_t fh = g_pFileSystem->Open(  m_rBugReportParameters.m_sAttachmentFile, "rb" );
-		if ( FILESYSTEM_INVALID_HANDLE != fh )
-		{		
-			g_pFileSystem->Read( filebuf, sizeactual, fh );
-
-			g_pFileSystem->Close( fh );
-		}
-		filebuf[ sizeactual ] = 0;
-	}
-	if ( !sizeactual || !filebuf )
-	{
-		UpdateProgress( m_rBugReportParameters, "bug .zip file size zero or unable to allocate memory for file." );
-
+		UpdateProgress( m_rBugReportParameters, "bug .zip file size zero or not exists." );
 		status = eBugReportUploadFailed;
-		delete[] filebuf;
 		return false;
 	}
 
+	std::unique_ptr<char[]> filebuf = std::make_unique<char[]>( sizeactual + 1 );
+	if ( !filebuf )
+	{
+		UpdateProgress( m_rBugReportParameters, "bug .zip file unable to allocate memory for file." );
+		status = eBugReportUploadFailed;
+		return false;
+	}
+
+	FileHandle_t fh = g_pFileSystem->Open(  m_rBugReportParameters.m_sAttachmentFile, "rb" );
+	if ( FILESYSTEM_INVALID_HANDLE != fh )
+	{		
+		g_pFileSystem->Read( filebuf.get(), sizeactual, fh );
+		g_pFileSystem->Close( fh );
+	}
+	filebuf[ sizeactual ] = '\0';
+
 	// Send to server
 	bool bret = true;
-	if ( send( m_SocketTCP, filebuf, (int)sizeactual, 0 ) == SOCKET_ERROR )
+	if ( send( m_SocketTCP, filebuf.get(), (int)sizeactual, 0 ) == SOCKET_ERROR )
 	{
 		bret = false;
 		UpdateProgress( m_rBugReportParameters, "Send failed." );
@@ -722,8 +723,6 @@ bool CWin32UploadBugReport::SendWholeFile( EBugReportUploadStatus& status, CUtlB
 	{
 		SetNextState( eReceiveFileUploadSuccess );
 	}
-
-	delete[] filebuf;
 
 	return bret;
 }

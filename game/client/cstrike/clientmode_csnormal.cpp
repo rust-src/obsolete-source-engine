@@ -157,7 +157,7 @@ void SetBuyData( const ConVar &buyVar, const char *filename )
 	char buystring[256];
 	V_sprintf_safe( buystring, "setinfo %s \"", buyVar.GetName() );
 
-	const char *pfile = engine->ParseFile( (const char *)buf.Base(), token, sizeof(token) );
+	const char *pfile = engine->ParseFile( (const char *)buf.Base(), token );
 
 	bool first = true;
 
@@ -174,7 +174,7 @@ void SetBuyData( const ConVar &buyVar, const char *filename )
 
 		Q_strncat(buystring, token, sizeof(buystring), COPY_ALL_CHARACTERS);
 
-		pfile = engine->ParseFile( pfile, token, sizeof(token) );
+		pfile = engine->ParseFile( pfile, token );
 	}
 
 	Q_strncat(buystring, "\"", sizeof(buystring), COPY_ALL_CHARACTERS);
@@ -893,8 +893,8 @@ void UpdateClassImageEntity(
 
 	// Now, blend the lower and upper (aim) anims together
 	pPlayerModel->SetNumAnimOverlays( 2 );
-	int numOverlays = pPlayerModel->GetNumAnimOverlays();
-	for ( i=0; i < numOverlays; ++i )
+	intp numOverlays = pPlayerModel->GetNumAnimOverlays();
+	for ( intp i=0; i < numOverlays; ++i )
 	{
 		C_AnimationLayer *layer = pPlayerModel->GetAnimOverlay( i );
 

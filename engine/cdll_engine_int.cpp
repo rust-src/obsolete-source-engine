@@ -346,7 +346,7 @@ public:
 
 	Vector	GetLightForPoint(const Vector &pos, bool bClamp) override;
 	Vector	GetLightForPointFast(const Vector &pos, bool bClamp) override;
-	const char *ParseFile( const char *data, char *token, int maxlen ) override;
+	const char *ParseFile( IN_Z const char *data, OUT_Z_CAP(maxlen) char *token, int maxlen ) override;
 	virtual bool CopyLocalFile( const char *source, const char *destination ) override;
 	void GetScreenSize( int& w, int &h ) override;
 	void ServerCmd( const char *szCmdString, bool bReliable ) override;
@@ -462,8 +462,8 @@ public:
 	//
 	//-----------------------------------------------------------------------------
 
-	int SentenceGroupPick( int groupIndex, char *name, int nameLen ) override;
-	int SentenceGroupPickSequential( int groupIndex, char *name, int nameLen, int sentenceIndex, int reset ) override;
+	int SentenceGroupPick( int groupIndex, OUT_Z_CAP(nameLen) char *name, int nameLen ) override;
+	int SentenceGroupPickSequential( int groupIndex, OUT_Z_CAP(nameLen) char *name, int nameLen, int sentenceIndex, int reset ) override;
 	int SentenceIndexFromName( const char *pSentenceName ) override;
 	const char *SentenceNameFromIndex( int sentenceIndex ) override;
 	int SentenceGroupIndexFromName( const char *pGroupName ) override;
@@ -650,7 +650,7 @@ Vector CEngineClient::GetLightForPointFast(const Vector &pos, bool bClamp)
 	return vRet;
 }
 
-const char *CEngineClient::ParseFile( const char *data, char *token, int maxlen )
+const char *CEngineClient::ParseFile( IN_Z const char *data, OUT_Z_CAP(maxlen) char *token, int maxlen )
 {
 	return ::COM_ParseFile( data, token, maxlen );
 }
@@ -1217,13 +1217,13 @@ void CEngineClient::SetAudioState( const AudioState_t &audioState )
 //
 //-----------------------------------------------------------------------------
 
-int CEngineClient::SentenceGroupPick( int groupIndex, char *name, int nameLen )
+int CEngineClient::SentenceGroupPick( int groupIndex, OUT_Z_CAP(nameLen) char *name, int nameLen )
 {
 	return VOX_GroupPick( groupIndex, name, nameLen );
 }
 
 
-int CEngineClient::SentenceGroupPickSequential( int groupIndex, char *name, int nameLen, int sentenceIndex, int reset )
+int CEngineClient::SentenceGroupPickSequential( int groupIndex, OUT_Z_CAP(nameLen) char *name, int nameLen, int sentenceIndex, int reset )
 {
 	return VOX_GroupPickSequential( groupIndex, name, nameLen, sentenceIndex, reset );
 }

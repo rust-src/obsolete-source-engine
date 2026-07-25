@@ -825,7 +825,7 @@ Vector CBasePlayer::Weapon_ShootPosition( )
 
 void CBasePlayer::SetAnimationExtension( const char *pExtension )
 {
-	Q_strncpy( m_szAnimExtension, pExtension, sizeof(m_szAnimExtension) );
+	V_strcpy_safe( m_szAnimExtension, pExtension );
 }
 
 
@@ -1971,7 +1971,7 @@ bool CBasePlayer::SetFOV( CBaseEntity *pRequester, int FOV, float zoomRate, int 
 	}
 	else
 	{
-		m_iFOVStart = GetFOV();
+		m_iFOVStart = static_cast<int>(GetFOV());
 	}
 
 	m_flFOVTime = gpGlobals->curtime;

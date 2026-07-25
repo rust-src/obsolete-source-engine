@@ -6,16 +6,17 @@
 //=============================================================================
 
 #include "VarListPropertyPage.h"
+
 #include "RemoteServer.h"
 #include "VarEditDialog.h"
 
-#include <tier1/KeyValues.h>
 #include <vgui/KeyCode.h>
 
 #include <vgui_controls/ListPanel.h>
 #include <vgui_controls/Button.h>
 
 #include "filesystem.h"
+#include "tier1/KeyValues.h"
 
 using namespace vgui;
 
@@ -24,9 +25,10 @@ using namespace vgui;
 //-----------------------------------------------------------------------------
 CVarListPropertyPage::CVarListPropertyPage(vgui::Panel *parent, const char *name) : vgui::PropertyPage(parent, name)
 {
+	// dimhotepus: Scale UI.
 	m_pRulesList = new ListPanel(this, "RulesList");
-	m_pRulesList->AddColumnHeader(0, "name", "Variable", 256); //-V2017
-	m_pRulesList->AddColumnHeader(1, "value", "Value", 256);
+	m_pRulesList->AddColumnHeader(0, "name", "Variable", QuickPropScale( 256 )); //-V2017
+	m_pRulesList->AddColumnHeader(1, "value", "Value", QuickPropScale( 256 ));
 
 	m_pEditButton = new Button(this, "EditButton", "Edit...");
 	m_pEditButton->SetCommand(new KeyValues("EditVariable"));

@@ -693,7 +693,7 @@ void CMultiPlayerAnimState::AddVCDSequenceToGestureSlot( int iGestureSlot, int i
 	m_aGestureSlots[iGestureSlot].m_pAnimLayer->m_flLayerAnimtime = 0.0f;
 	m_aGestureSlots[iGestureSlot].m_pAnimLayer->m_flLayerFadeOuttime = 0.0f;
 
-	pPlayer->m_flOverlayPrevEventCycle[iGestureSlot] = flCycle == 0.f ? -1.0 : flCycle;
+	pPlayer->m_flOverlayPrevEventCycle[iGestureSlot] = flCycle == 0.f ? -1.0f : flCycle;
 
 #else
 
@@ -1624,11 +1624,12 @@ void CMultiPlayerAnimState::EstimateYaw( void )
 		}
 
 		m_PoseParameterData.m_flEstimateYaw += flYawDelta;
-		AngleNormalize( m_PoseParameterData.m_flEstimateYaw );
+		// dimhotepus: Ensure estimate yaw is normalized.
+		m_PoseParameterData.m_flEstimateYaw = AngleNormalize( m_PoseParameterData.m_flEstimateYaw );
 	}
 	else
 	{
-		m_PoseParameterData.m_flEstimateYaw = ( atan2( vecEstVelocity.y, vecEstVelocity.x ) * 180.0f / M_PI );
+		m_PoseParameterData.m_flEstimateYaw = ( atan2( vecEstVelocity.y, vecEstVelocity.x ) * 180.0f / M_PI_F );
 		m_PoseParameterData.m_flEstimateYaw = clamp( m_PoseParameterData.m_flEstimateYaw, -180.0f, 180.0f );
 	}
 }
@@ -1889,7 +1890,7 @@ void CMultiPlayerAnimState::DebugShowAnimStateForPlayer( bool bIsServer )
 #endif
 
 	// Write out the layers and their data.
-	for ( int iAnim = 0; iAnim < GetBasePlayer()->GetNumAnimOverlays(); ++iAnim )
+	for ( intp iAnim = 0; iAnim < GetBasePlayer()->GetNumAnimOverlays(); ++iAnim )
 	{
 #ifdef CLIENT_DLL
 		C_AnimationLayer *pLayer = GetBasePlayer()->GetAnimOverlay( iAnim );
@@ -2003,7 +2004,7 @@ void CMultiPlayerAnimState::DebugShowAnimState( int iStartLine )
 	Anim_StatePrintf( iLine++, "main: %s, cycle: %.2f\n", GetSequenceName( GetBasePlayer()->GetModelPtr(), GetBasePlayer()->GetSequence() ), GetBasePlayer()->GetCycle() );
 
 #if defined( CLIENT_DLL )
-	for ( int i=0; i < GetBasePlayer()->GetNumAnimOverlays()-1; i++ )
+	for ( intp i=0; i < GetBasePlayer()->GetNumAnimOverlays()-1; i++ )
 	{
 		C_AnimationLayer *pLayer = GetBasePlayer()->GetAnimOverlay( i /*i+1?*/ );
 		Anim_StatePrintf( iLine++, "%s, weight: %.2f, cycle: %.2f, aim (%d)", 

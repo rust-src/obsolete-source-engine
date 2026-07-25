@@ -821,7 +821,7 @@ bool CSave::WriteField( const char *pname, void *pData, datamap_t *pRootMap, typ
 int CSave::WriteFields( const char *pname, const void *pBaseData, datamap_t *pRootMap, typedescription_t *pFields, int fieldCount )
 {
 	typedescription_t *pTest;
-	int iHeaderPos = m_pData->GetCurPos();
+	intp iHeaderPos = m_pData->GetCurPos();
 	int count = -1;
 	WriteInt( pname, &count, 1 );
 
@@ -853,7 +853,7 @@ int CSave::WriteFields( const char *pname, const void *pBaseData, datamap_t *pRo
 	}
 
 	intp iCurPos = m_pData->GetCurPos();
-	int iRewind = iCurPos - iHeaderPos;
+	intp iRewind = iCurPos - iHeaderPos;
 	m_pData->Rewind( iRewind );
 	WriteInt( pname, &count, 1 );
 	iCurPos = m_pData->GetCurPos();
@@ -933,13 +933,14 @@ void CSave::BufferField( const char *pname, int size, const char *pdata )
 
 void CSave::WriteHeader( const char *pname, int size )
 {
-	short shortSize = size;
-	short hashvalue = m_pData->FindCreateSymbol( pname );
 	if ( size > SHRT_MAX || size < 0 )
 	{
 		Warning( "CSave::WriteHeader() size parameter exceeds 'short'!\n" );
 		Assert(0);
 	}
+
+	short shortSize = size;
+	short hashvalue = m_pData->FindCreateSymbol( pname );
 
 	BufferData( (const char *)&shortSize, sizeof(short) );
 	BufferData( (const char *)&hashvalue, sizeof(short) );
@@ -2914,7 +2915,7 @@ int CEntitySaveRestoreBlockHandler::RestoreEntity( CBaseEntity *pEntity, IRestor
 #if !defined( CLIENT_DLL )		
 	if ( pEntity->m_iGlobalname != NULL_STRING ) 
 	{
-		int globalIndex = GlobalEntity_GetIndex( pEntity->m_iGlobalname );
+		intp globalIndex = GlobalEntity_GetIndex( pEntity->m_iGlobalname );
 		if ( globalIndex >= 0 )
 		{
 			// Already dead? delete
@@ -2955,7 +2956,7 @@ int CEntitySaveRestoreBlockHandler::RestoreGlobalEntity( CBaseEntity *pEntity, C
 
 	// -------------------
 
-	int globalIndex = GlobalEntity_GetIndex( globalName );
+	intp globalIndex = GlobalEntity_GetIndex( globalName );
 	
 	// Don't overlay any instance of the global that isn't the latest
 	// pSaveData->szCurrentMapName is the level this entity is coming from
@@ -3363,9 +3364,8 @@ int CreateEntityTransitionList( CSaveRestoreData *pSaveData, int levelMask )
 	// Now spawn entities
 	CUtlVector<int> checkList;
 
-	int i;
 	int movedCount = 0;
-	for ( i = 0; i < pSaveData->NumEntities(); i++ )
+	for ( int i = 0; i < pSaveData->NumEntities(); i++ )
 	{
 		pEntInfo = pSaveData->GetEntityInfo( i );
 		pent = pEntInfo->hEnt;
@@ -3416,7 +3416,7 @@ int CreateEntityTransitionList( CSaveRestoreData *pSaveData, int levelMask )
 		}
 	}
 
-	for ( i = checkList.Count()-1; i >= 0; --i )
+	for ( intp i = checkList.Count()-1; i >= 0; --i )
 	{
 		pEntInfo = pSaveData->GetEntityInfo( checkList[i] );
 		pent = pEntInfo->hEnt;

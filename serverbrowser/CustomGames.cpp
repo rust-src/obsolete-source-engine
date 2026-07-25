@@ -5,8 +5,11 @@
 //=============================================================================
 
 #include "pch_serverbrowser.h"
-#include <vgui_controls/HTML.h>
-#include <vgui_controls/MessageDialog.h>
+
+#include "CustomGames.h"
+
+#include "vgui_controls/HTML.h"
+#include "vgui_controls/MessageDialog.h"
 
 using namespace vgui;
 
@@ -68,7 +71,7 @@ void TagInfoLabel::OnMousePressed(MouseCode code)
 		if ( GetURL() )
 		{
 			// Pop up the dialog with the url in it
-			CCustomServerInfoURLQuery *qb = new CCustomServerInfoURLQuery( "#ServerBrowser_CustomServerURLWarning", "#ServerBrowser_CustomServerURLOpen", this );
+			auto *qb = new CCustomServerInfoURLQuery( "#ServerBrowser_CustomServerURLWarning", "#ServerBrowser_CustomServerURLOpen", this );
 			if (qb != NULL)
 			{
 				qb->SetOKCommand( new KeyValues("DoOpenCustomServerInfoURL") );
@@ -97,7 +100,8 @@ void TagInfoLabel::DoOpenCustomServerInfoURL( void )
 CCustomGames::CCustomGames(vgui::Panel *parent) : 
 	BaseClass(parent, "CustomGames", eInternetServer )
 {
-	m_pGameList->AddColumnHeader(10, "Tags", "#ServerBrowser_Tags", 200);
+	// dimhotepus: Scale UI.
+	m_pGameList->AddColumnHeader(10, "Tags", "#ServerBrowser_Tags", QuickPropScale( 200 ));
 	m_pGameList->SetSortFunc(10, TagsCompare);
 
 	if ( !IsSteamGameServerBrowsingEnabled() )
@@ -128,7 +132,7 @@ CCustomGames::CCustomGames(vgui::Panel *parent) :
 //-----------------------------------------------------------------------------
 CCustomGames::~CCustomGames()
 {
-}		
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -230,10 +234,10 @@ bool CCustomGames::CheckTagFilter( gameserveritem_t &server )
 bool CCustomGames::CheckWorkshopFilter( gameserveritem_t &server )
 {
 	eWorkshopMode workshopMode = WorkshopMode();
-	const char szWorkshopPrefix[] = "workshop/";
+	constexpr char szWorkshopPrefix[] = "workshop/";
 	if ( workshopMode == eWorkshop_WorkshopOnly )
 	{
-		return V_strncasecmp( server.m_szMap, szWorkshopPrefix, sizeof( szWorkshopPrefix ) - 1 ) == 0;
+		return V_strncasecmp( server.m_szMap, szWorkshopPrefix, ssize( szWorkshopPrefix ) - 1 ) == 0;
 	}
 	else if ( workshopMode == eWorkshop_SubscribedOnly )
 	{
@@ -306,7 +310,7 @@ struct tagentry_t
 	const char *pszTag;
 	int iCount;
 };
-int __cdecl SortTagsInUse( const tagentry_t *pTag1, const tagentry_t *pTag2 )
+static int __cdecl SortTagsInUse( const tagentry_t *pTag1, const tagentry_t *pTag2 )
 {
 	return (pTag1->iCount < pTag2->iCount);
 }
@@ -325,7 +329,7 @@ void CCustomGames::RecalculateCommonTags( void )
 	intp iCount = m_pGameList->GetItemCount();
 	for ( intp i = 0; i < iCount; i++ )
 	{
-		uintp serverID = m_pGameList->GetItemUserData( i );
+		unsigned serverID = static_cast<unsigned>( m_pGameList->GetItemUserData( i ) );
 		gameserveritem_t *pServer = GetServer( serverID ); 
 		if ( pServer && pServer->m_szGameTags[0] )
 		{
@@ -357,8 +361,8 @@ void CCustomGames::RecalculateCommonTags( void )
 
 	aTagsInUse.Sort( SortTagsInUse );
 
-	int iTagsToAdd = min( aTagsInUse.Count(), (intp)NUM_COMMON_TAGS );
-	for ( int i = 0; i < iTagsToAdd; i++ )
+	intp iTagsToAdd = min( aTagsInUse.Count(), (intp)NUM_COMMON_TAGS );
+	for ( intp i = 0; i < iTagsToAdd; i++ )
 	{
 		const char *pszTag = aTagsInUse[i].pszTag;
 		m_pTagListMenu->AddMenuItem( pszTag, new KeyValues("AddTag", "tag", pszTag), this, KeyValuesAD( new KeyValues( "data", "tag", pszTag ) ) );
@@ -390,7 +394,7 @@ void CCustomGames::OnAddTag(KeyValues *params)
 }
 
 
-int SortServerTags( char* const *p1, char* const *p2 )
+static int SortServerTags( char* const *p1, char* const *p2 )
 {
 	return ( Q_strcmp( *p1, *p2 ) > 0 );
 }
@@ -406,9 +410,9 @@ void CCustomGames::AddTagToFilterList( const char *pszTag )
 	CUtlVector<char*> TagList;
 	V_SplitString( txt, ",", TagList );
 
-	if ( txt[0] )
+	if ( !Q_isempty( txt ) )
 	{
-		for ( int i = 0; i < TagList.Count(); i++ )
+		for ( intp i = 0; i < TagList.Count(); i++ )
 		{
 			// Already in the tag list?
 			if ( !Q_stricmp( TagList[i], pszTag ) )
@@ -419,10 +423,7 @@ void CCustomGames::AddTagToFilterList( const char *pszTag )
 		}
 	}
 
-	char *pszNewTag = new char[64];
-	Q_strncpy( pszNewTag, pszTag, 64 );
-	TagList.AddToHead( pszNewTag );
-
+	TagList.AddToHead( V_strdup( pszTag ) );
 	TagList.Sort( SortServerTags );
 
 	// Append it

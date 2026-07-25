@@ -153,7 +153,8 @@ RichText::RichText(Panel *parent, const char *panelName) : BaseClass(parent, pan
 	_vertScrollBar = new ScrollBar(this, "ScrollBar", true);
 	_vertScrollBar->AddActionSignalTarget(this);
 	_recalcSavedRenderState = true;
-	_maxCharCount = (64 * 1024);
+	// dimhotepus: Up 65535 x2 to show more text.
+	_maxCharCount = (128 * 1024);
 	AddActionSignalTarget(this);
 	m_pInterior = new RichTextInterior( this, NULL );
 
@@ -173,21 +174,8 @@ RichText::RichText(Panel *parent, const char *panelName) : BaseClass(parent, pan
 	// initialize the line break array
 	InvalidateLineBreakStream();
 
-	if ( IsProportional() )
-	{
-		int width, height;
-		int sw,sh;
-		surface()->GetProportionalBase( width, height );
-		surface()->GetScreenSize(sw, sh);
-		
-		_drawOffsetX = static_cast<int>( static_cast<float>( DRAW_OFFSET_X )*( static_cast<float>( sw )/ static_cast<float>( width )));
-		_drawOffsetY = static_cast<int>( static_cast<float>( DRAW_OFFSET_Y )*( static_cast<float>( sw )/ static_cast<float>( width )));
-	}
-	else
-	{
-		_drawOffsetX = DRAW_OFFSET_X;
-		_drawOffsetY = DRAW_OFFSET_Y;
-	}
+	_drawOffsetX = QuickPropScale( DRAW_OFFSET_X );
+	_drawOffsetY = QuickPropScale( DRAW_OFFSET_Y );
 
 	// add a basic format string
 	TFormatStream stream;
@@ -251,9 +239,12 @@ void RichText::ApplySchemeSettings(IScheme *pScheme)
 	_selectionTextColor = GetSchemeColor("RichText.SelectedTextColor", GetFgColor(), pScheme);
 	_selectionColor = GetSchemeColor("RichText.SelectedBgColor", pScheme);
 
-	if ( Q_strlen( pScheme->GetResourceString( "RichText.InsetX" ) ) )
+	if ( !Q_isempty( pScheme->GetResourceString( "RichText.InsetX" ) ) )
 	{
-		SetDrawOffsets( atoi( pScheme->GetResourceString( "RichText.InsetX" ) ), atoi( pScheme->GetResourceString( "RichText.InsetY" ) ) );
+		SetDrawOffsets(
+			QuickPropScale( atoi( pScheme->GetResourceString( "RichText.InsetX" ) ) ),
+			QuickPropScale( atoi( pScheme->GetResourceString( "RichText.InsetY" ) ) )
+		);
 	}
 }
 
@@ -287,7 +278,7 @@ void RichText::OnKillFocus()
 	if (mouseRightClicked || mouseRightDown || mouseRightUp )
 	{
 		// get the start and ends of the selection area
-		int start, end;
+		intp start, end;
 		if (GetSelectedRange(start, end)) // we have selected text
 		{
 			// see if we clicked in the selection area
@@ -343,51 +334,18 @@ void RichText::OnSizeChanged( int wide, int tall )
 }
 
 
-const wchar_t *RichText::ResolveLocalizedTextAndVariables( char const *pchLookup, wchar_t *outbuf, size_t outbufsizeinbytes )
+const wchar_t *RichText::ResolveLocalizedTextAndVariables( char const *pchLookup, OUT_Z_BYTECAP(outbufsizeinbytes) wchar_t *outbuf, size_t outbufsizeinbytes )
 {
 	if ( pchLookup[ 0 ] == '#' )
 	{
 		// try lookup in localization tables
 		StringIndex_t index = g_pVGuiLocalize->FindIndex( pchLookup + 1 );
-		if ( index == INVALID_LOCALIZE_STRING_INDEX )
-		{
-/*			// if it's not found, maybe it's a special expanded variable - look for an expansion
-			char rgchT[MAX_PATH];
-
-			// get the variables
-			KeyValues *variables = GetDialogVariables_R();
-			if ( variables )
-			{
-				// see if any are any special vars to put in
-				for ( KeyValues *pkv = variables->GetFirstSubKey(); pkv != NULL; pkv = pkv->GetNextKey() )
-				{
-					if ( !Q_strncmp( pkv->GetName(), "$", 1 ) )
-					{
-						// make a new lookup, with this key appended
-						Q_snprintf( rgchT, sizeof( rgchT ), "%s%s=%s", pchLookup, pkv->GetName(), pkv->GetString() );
-						index = localize()->FindIndex( rgchT );
-						break;
-					}
-				}
-			}
-			*/
-		}
 
 		// see if we have a valid string
 		if ( index != INVALID_LOCALIZE_STRING_INDEX )
 		{
 			wchar_t *format = g_pVGuiLocalize->GetValueByIndex( index );
 			Assert( format );
-			if ( format )
-			{
-				/*// Try and substitute variables if any
-				KeyValues *variables = GetDialogVariables_R();
-				if ( variables )
-				{
-					localize()->ConstructString( outbuf, outbufsizeinbytes, index, variables );
-					return outbuf;
-				}*/
-			}
 			V_wcsncpy( outbuf, format, outbufsizeinbytes );
 			return outbuf;
 		}
@@ -414,7 +372,7 @@ void RichText::SetText(const char *text)
 
 	if (text[0] == '#')
 	{
-		ResolveLocalizedTextAndVariables( text, unicode, sizeof( unicode ) );
+		ResolveLocalizedTextAndVariables( text, unicode );
 		SetText( unicode );
 		return;
 	}
@@ -442,7 +400,7 @@ void RichText::SetText(const wchar_t *text)
 
 	// set the new text stream
 	m_TextStream.RemoveAll();
-	if ( text && *text )
+	if ( !Q_isempty( text ) )
 	{
 		intp textLen = V_wcslen(text) + 1;
 		m_TextStream.EnsureCapacity(textLen);
@@ -465,14 +423,14 @@ void RichText::SetText(const wchar_t *text)
 // Input:	cursorPos: cursor index
 // Output:	cx, cy, the corresponding coords in the local window
 //-----------------------------------------------------------------------------
-void RichText::CursorToPixelSpace(int cursorPos, int &cx, int &cy)
+void RichText::CursorToPixelSpace(intp cursorPos, int &cx, int &cy)
 {
 	int yStart = _drawOffsetY;
 	int x = _drawOffsetX, y = yStart;
 	_pixelsIndent = 0;
-	int lineBreakIndexIndex = 0;
+	intp lineBreakIndexIndex = 0;
 	
-	for (int i = GetStartDrawIndex(lineBreakIndexIndex); i < m_TextStream.Count(); i++)
+	for (intp i = GetStartDrawIndex(lineBreakIndexIndex); i < m_TextStream.Count(); i++)
 	{
 		wchar_t ch = m_TextStream[i];
 		
@@ -508,7 +466,7 @@ void RichText::CursorToPixelSpace(int cursorPos, int &cx, int &cy)
 //-----------------------------------------------------------------------------
 // Purpose: Converts local pixel coordinates to an index in the text buffer
 //-----------------------------------------------------------------------------
-int RichText::PixelToCursorSpace(int cx, int cy)
+intp RichText::PixelToCursorSpace(int cx, int cy)
 {
 	int fontTall = GetLineHeight();
 	
@@ -516,9 +474,9 @@ int RichText::PixelToCursorSpace(int cx, int cy)
 	int yStart = _drawOffsetY;
 	int x = _drawOffsetX, y = yStart;
 	_pixelsIndent = 0;
-	int lineBreakIndexIndex = 0;
+	intp lineBreakIndexIndex = 0;
 	
-	int startIndex = GetStartDrawIndex(lineBreakIndexIndex);
+	intp startIndex = GetStartDrawIndex(lineBreakIndexIndex);
 	if (_recalcSavedRenderState)
 	{
 		RecalculateDefaultState(startIndex);
@@ -529,7 +487,7 @@ int RichText::PixelToCursorSpace(int cx, int cy)
 	TRenderState renderState = m_CachedRenderState;
 	
 	bool onRightLine = false;
-	int i;
+	intp i;
 	for (i = startIndex; i < m_TextStream.Count(); i++)
 	{
 		wchar_t ch = m_TextStream[i];
@@ -606,7 +564,7 @@ int RichText::PixelToCursorSpace(int cx, int cy)
 //			font- font to use
 // Output:	returns the width of the character drawn
 //-----------------------------------------------------------------------------
-int RichText::DrawString(int iFirst, int iLast, TRenderState &renderState, HFont font)
+int RichText::DrawString(intp iFirst, intp iLast, TRenderState &renderState, HFont font)
 {
 //	VPROF( "RichText::DrawString" );
 
@@ -614,7 +572,7 @@ int RichText::DrawString(int iFirst, int iLast, TRenderState &renderState, HFont
 	int fontTall = surface()->GetFontTall(font);
 	// BUGBUG John: This won't exactly match the rendered size
 	int charWide = 0;
-	for ( int i = iFirst; i <= iLast; i++ )
+	for ( intp i = iFirst; i <= iLast; i++ )
 	{
 		wchar_t ch = m_TextStream[i];
 #if USE_GETKERNEDCHARWIDTH
@@ -635,7 +593,7 @@ int RichText::DrawString(int iFirst, int iLast, TRenderState &renderState, HFont
 	}
 
 	// draw selection, if any
-	int selection0 = -1, selection1 = -1;
+	intp selection0 = -1, selection1 = -1;
 	GetSelectedRange(selection0, selection1);
 		
 	if (iFirst >= selection0 && iFirst < selection1)
@@ -659,7 +617,7 @@ int RichText::DrawString(int iFirst, int iLast, TRenderState &renderState, HFont
 		surface()->DrawSetTextPos(renderState.x, renderState.y);
 		surface()->DrawPrintText(&m_TextStream[iFirst], iLast - iFirst + 1);
 	}
-			
+
 	return charWide;
 }
 
@@ -675,7 +633,7 @@ void RichText::FinishingURL(int x, int y)
 		int px, py;
 		clickPanel->GetPos(px, py);
 		int fontTall = GetLineHeight();
-		clickPanel->SetSize( MAX( x - px, 6 ), y - py + fontTall );
+		clickPanel->SetSize( MAX( x - px, QuickPropScale( 6 ) ), y - py + fontTall );
 		clickPanel->SetVisible(true);
 
 		// if we haven't actually advanced any, step back and ignore this one
@@ -719,9 +677,9 @@ void RichText::Paint()
 	HFont hFontCurrent = _font;
 		
 	// hide all the clickable panels until we know where they are to reside
-	for (int j = 0; j < _clickableTextPanels.Count(); j++)
+	for (auto *p : _clickableTextPanels)
 	{
-		_clickableTextPanels[j]->SetVisible(false);
+		p->SetVisible(false);
 	}
 
 	if ( !HasText() )
@@ -730,8 +688,8 @@ void RichText::Paint()
 	int wide, tall;
 	GetSize( wide, tall );
 
-	int lineBreakIndexIndex = 0;
-	int startIndex = GetStartDrawIndex(lineBreakIndexIndex);
+	intp lineBreakIndexIndex = 0;
+	intp startIndex = GetStartDrawIndex(lineBreakIndexIndex);
 	_currentTextClickable = false;
 	
 	_clickableTextIndex = GetClickableTextIndexStart(startIndex);
@@ -766,12 +724,12 @@ void RichText::Paint()
 	renderState.y = _drawOffsetY;
 	
 	// draw the text
-	int selection0 = -1, selection1 = -1;
+	intp selection0 = -1, selection1 = -1;
 	GetSelectedRange(selection0, selection1);
 
 	surface()->DrawSetTextFont( hFontCurrent );
 
-	for (int i = startIndex; i < m_TextStream.Count() && renderState.y < tall; )
+	for (intp i = startIndex; i < m_TextStream.Count() && renderState.y < tall; )
 	{
 		// 1.
 		// Update our current render state based on the formatting and color streams,
@@ -856,7 +814,7 @@ void RichText::Paint()
 			iLast = selection1 - 1;
 
 		// Handle non-drawing characters specially
-		for ( int iT = i; iT <= iLast; iT++ )
+		for ( intp iT = i; iT <= iLast; iT++ )
 		{
 			if ( iswcntrl(m_TextStream[iT]) )
 			{
@@ -894,10 +852,10 @@ void RichText::Paint()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int RichText::GetClickableTextIndexStart(int startIndex)
+intp RichText::GetClickableTextIndexStart(intp startIndex)
 {
 	// cycle to the right url panel	for what is visible	after the startIndex.
-	for (int i = 0; i < _clickableTextPanels.Count(); i++)
+	for (intp i = 0; i < _clickableTextPanels.Count(); i++)
 	{
 		if (_clickableTextPanels[i]->GetViewTextIndex() >= startIndex)
 		{
@@ -910,7 +868,7 @@ int RichText::GetClickableTextIndexStart(int startIndex)
 //-----------------------------------------------------------------------------
 // Purpose: Recalcultes the formatting state from the specified index
 //-----------------------------------------------------------------------------
-void RichText::RecalculateDefaultState(int startIndex)
+void RichText::RecalculateDefaultState(intp startIndex)
 {
 	if (!HasText() )
 		return;
@@ -931,7 +889,7 @@ void RichText::RecalculateDefaultState(int startIndex)
 // Purpose: updates a render state based on the formatting and color streams
 // Output:	true if we changed the render state
 //-----------------------------------------------------------------------------
-bool RichText::UpdateRenderState(int textStreamPos, TRenderState &renderState)
+bool RichText::UpdateRenderState(intp textStreamPos, TRenderState &renderState)
 {
 	// check the color stream
 	if (m_FormatStream.IsValidIndex(renderState.formatStreamIndex) && 
@@ -965,9 +923,9 @@ bool RichText::UpdateRenderState(int textStreamPos, TRenderState &renderState)
 //-----------------------------------------------------------------------------
 // Purpose: Returns the index in the format stream for the specified text stream index
 //-----------------------------------------------------------------------------
-int RichText::FindFormatStreamIndexForTextStreamPos(int textStreamIndex)
+intp RichText::FindFormatStreamIndexForTextStreamPos(intp textStreamIndex)
 {
-	int formatStreamIndex = 0;
+	intp formatStreamIndex = 0;
 	for (; m_FormatStream.IsValidIndex(formatStreamIndex); formatStreamIndex++)
 	{
 		if (m_FormatStream[formatStreamIndex].textStreamIndex > textStreamIndex)
@@ -986,7 +944,7 @@ int RichText::FindFormatStreamIndexForTextStreamPos(int textStreamIndex)
 //-----------------------------------------------------------------------------
 // Purpose: Generates a base renderstate given a index into the text stream
 //-----------------------------------------------------------------------------
-void RichText::GenerateRenderStateForTextStreamIndex(int textStreamIndex, TRenderState &renderState)
+void RichText::GenerateRenderStateForTextStreamIndex(intp textStreamIndex, TRenderState &renderState)
 {
 	// find where in the format stream we need to be given the specified place in the text stream
 	renderState.formatStreamIndex = FindFormatStreamIndexForTextStreamPos(textStreamIndex);
@@ -1088,7 +1046,7 @@ void RichText::ResetAllFades( bool bHold, bool bOnlyExpired, float flNewSustain 
 
 	if ( m_bResetFades == false )
 	{
-		for (int i = 1; i < m_FormatStream.Count(); i++)
+		for (intp i = 1; i < m_FormatStream.Count(); i++)
 		{
 			if ( bOnlyExpired == true )
 			{
@@ -1226,7 +1184,7 @@ void RichText::RecalculateLineBreaks()
 	if (!HasText())
 		return;
 	
-	int selection0 = -1, selection1 = -1;
+	constexpr intp selection0 = -1, selection1 = -1;
 
 	// subtract the scrollbar width
 	if (_vertScrollBar->IsVisible())
@@ -1236,13 +1194,13 @@ void RichText::RecalculateLineBreaks()
 	
 	int x = _drawOffsetX, y = _drawOffsetY;
 	
-	int wordStartIndex = 0;
-	int lineStartIndex = 0;
+	intp wordStartIndex = 0;
+	intp lineStartIndex = 0;
 	bool hasWord = false;
 	bool justStartedNewLine = true;
 	bool wordStartedOnNewLine = true;
 	
-	int startChar = 0;
+	intp startChar = 0;
 	if (_recalculateBreaksIndex <= 0)
 	{
 		m_LineBreaks.RemoveAll();
@@ -1250,7 +1208,7 @@ void RichText::RecalculateLineBreaks()
 	else
 	{
 		// remove the rest of the linebreaks list since its out of date.
-		for (int i = _recalculateBreaksIndex + 1; i < m_LineBreaks.Count(); ++i)
+		for (intp i = _recalculateBreaksIndex + 1; i < m_LineBreaks.Count(); ++i)
 		{
 			m_LineBreaks.Remove(i);
 			--i; // removing shrinks the list!
@@ -1269,7 +1227,7 @@ void RichText::RecalculateLineBreaks()
 	}
 	
 	// cycle to the right url panel	for what is visible	after the startIndex.
-	int clickableTextNum = GetClickableTextIndexStart(startChar);
+	intp clickableTextNum = GetClickableTextIndexStart(startChar);
 	clickableTextNum++;
 
 	// initialize the renderstate with the start
@@ -1283,14 +1241,14 @@ void RichText::RecalculateLineBreaks()
 	float flLineWidthSoFar = 0;
 
 	// loop through all the characters
-	for (int i = startChar; i < m_TextStream.Count(); ++i)
+	for (intp i = startChar; i < m_TextStream.Count(); ++i)
 	{
 		wchar_t ch = m_TextStream[i];
 		renderState.x = x;
 		if (UpdateRenderState(i, renderState))
 		{
 			x = renderState.x;
-			int preI = i;
+			intp preI = i;
 			
 			// check for clickable text
 			if (renderState.textClickable != _currentTextClickable)
@@ -1315,7 +1273,7 @@ void RichText::RecalculateLineBreaks()
 		bool bIsWSpace = iswspace( ch ) ? true : false;
 
 		bool bPreviousWordStartedOnNewLine = wordStartedOnNewLine;
-		int iPreviousWordStartIndex = wordStartIndex;
+		intp iPreviousWordStartIndex = wordStartIndex;
 		if ( !bIsWSpace && ch != L'\t' && ch != L'\n' && ch != L'\r' )
 		{
 			if (!hasWord)
@@ -1348,7 +1306,7 @@ void RichText::RecalculateLineBreaks()
 		flLineWidthSoFar += w;
 	
 		// See if we've exceeded the width we have available, with 
-		if ( floor(flLineWidthSoFar + 0.6) + x > wide )
+		if ( floor(flLineWidthSoFar + 0.6f) + x > wide )
 		{
 			bForceBreak = true;
 		}
@@ -1646,7 +1604,7 @@ void RichText::OnMouseReleased(MouseCode)
 	input()->SetMouseCapture(NULL);
 	
 	// make sure something has been selected
-	int cx0, cx1;
+	intp cx0, cx1;
 	if (GetSelectedRange(cx0, cx1))
 	{
 		if (cx1 - cx0 == 0)
@@ -1671,7 +1629,7 @@ void RichText::OnMouseDoublePressed(MouseCode code)
 		// move the cursor just as if you single clicked.
 		OnMousePressed(code);
 		// then find the start and end of the word we are in to highlight it.
-		int selectSpot[2];
+		intp selectSpot[2];
 		GotoWordLeft();
 		selectSpot[0] = _cursorPos;
 		GotoWordRight();
@@ -1837,7 +1795,8 @@ void RichText::OnMouseWheeled(int delta)
 //-----------------------------------------------------------------------------
 void RichText::MoveScrollBar(int delta)
 {
-	MoveScrollBarDirect( delta * 3 );
+	// dimhotepus: Scale UI.
+	MoveScrollBarDirect( delta * QuickPropScale( 3 ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -1858,7 +1817,7 @@ void RichText::MoveScrollBarDirect(int delta)
 //-----------------------------------------------------------------------------
 // Purpose: set the maximum number of chars in the text buffer
 //-----------------------------------------------------------------------------
-void RichText::SetMaximumCharCount(int maxChars)
+void RichText::SetMaximumCharCount(intp maxChars)
 {
 	_maxCharCount = maxChars;
 }
@@ -1866,10 +1825,10 @@ void RichText::SetMaximumCharCount(int maxChars)
 //-----------------------------------------------------------------------------
 // Purpose: Find out what line the cursor is on
 //-----------------------------------------------------------------------------
-int RichText::GetCursorLine()
+intp RichText::GetCursorLine()
 {
 	// always returns the last place
-	int pos = m_LineBreaks[m_LineBreaks.Count() - 1];
+	intp pos = m_LineBreaks[m_LineBreaks.Count() - 1];
 	Assert(pos == MAX_BUFFER_SIZE);
 	return pos;
 }
@@ -1970,13 +1929,13 @@ void RichText::TruncateTextStream()
 		return;
 
 	// choose a point to cull at
-	int cullPos = _maxCharCount / 2;
+	intp cullPos = _maxCharCount / 2;
 
 	// kill half the buffer
 	m_TextStream.RemoveMultiple(0, cullPos);
 
 	// work out where in the format stream we can start
-	int formatIndex = FindFormatStreamIndexForTextStreamPos(cullPos);
+	intp formatIndex = FindFormatStreamIndexForTextStreamPos(cullPos);
 	if (formatIndex > 0)
 	{
 		// take a copy, make it first
@@ -1987,10 +1946,10 @@ void RichText::TruncateTextStream()
 	}
 
 	// renormalize the remainder of the format stream
-	for (int i = 1; i < m_FormatStream.Count(); i++)
+	for (auto &f : m_FormatStream)
 	{
-		Assert(m_FormatStream[i].textStreamIndex > cullPos);
-		m_FormatStream[i].textStreamIndex -= cullPos;
+		Assert(f.textStreamIndex > cullPos);
+		f.textStreamIndex -= cullPos;
 	}
 
 	// mark everything to be recalculated
@@ -2017,6 +1976,7 @@ void RichText::InsertChar(wchar_t wch)
 	m_TextStream.AddToTail(wch);
 
 	// mark the linebreak steam as needing recalculating from that point
+
 	_recalculateBreaksIndex = m_LineBreaks.Count() - 2;
 	Repaint();
 }
@@ -2030,7 +1990,7 @@ void RichText::InsertString(const char *text)
 	if (text[0] == '#')
 	{
 		wchar_t unicode[ 1024 ];
-		ResolveLocalizedTextAndVariables( text, unicode, sizeof( unicode ) );
+		ResolveLocalizedTextAndVariables( text, unicode );
 		InsertString( unicode );
 		return;
 	}
@@ -2071,7 +2031,7 @@ void RichText::SelectNone()
 // Purpose: Load in the selection range so cx0 is the Start and cx1 is the end
 //			from smallest to highest (right to left)
 //-----------------------------------------------------------------------------
-bool RichText::GetSelectedRange(int &cx0, int &cx1)
+bool RichText::GetSelectedRange(intp &cx0, intp &cx1)
 {
 	// if there is nothing selected return false
 	if (_select[0] == -1)
@@ -2082,9 +2042,7 @@ bool RichText::GetSelectedRange(int &cx0, int &cx1)
 	cx1 = _select[1];
 	if (cx1 < cx0)
 	{
-		int temp = cx0;
-		cx0 = cx1;
-		cx1 = temp;
+		std::swap(cx0, cx1);
 	}
 	
 	return true;
@@ -2119,7 +2077,7 @@ void RichText::OpenEditMenu()
 	cursorY += y;
 	*/
 	
-	int x0, x1;
+	intp x0, x1;
 	if (GetSelectedRange(x0, x1)) // there is something selected
 	{
 		m_pEditMenu->SetItemEnabled("&Cut", true);
@@ -2190,11 +2148,11 @@ void RichText::CutSelected()
 //-----------------------------------------------------------------------------
 void RichText::CopySelected()
 {
-	int x0, x1;
+	intp x0, x1;
 	if (GetSelectedRange(x0, x1))
 	{
 		CUtlVector<wchar_t> buf;
-		for (int i = x0; i < x1; i++)
+		for (intp i = x0; i < x1; i++)
 		{
 			if ( m_TextStream.IsValidIndex(i) == false )
 				 continue;
@@ -2227,10 +2185,10 @@ void RichText::CopySelected()
 // Purpose: Returns the index in the text buffer of the
 //          character the drawing should Start at
 //-----------------------------------------------------------------------------
-int RichText::GetStartDrawIndex(int &lineBreakIndexIndex)
+intp RichText::GetStartDrawIndex(intp &lineBreakIndexIndex)
 {
-	int startIndex = 0;
-	int startLine = _vertScrollBar->GetValue();
+	intp startIndex = 0;
+	intp startLine = _vertScrollBar->GetValue();
 	
 	if ( startLine >= m_LineBreaks.Count() ) // incase the line breaks got reset and the scroll bar hasn't
 	{
@@ -2329,13 +2287,13 @@ void RichText::OnSetText(const wchar_t *text)
 void RichText::OnClickPanel(int index)
 {
 	wchar_t wBuf[512];
-	int outIndex = 0;
+	intp outIndex = 0;
 	
 	// parse out the clickable text, and send it to our listeners
 	_currentTextClickable = true;
 	TRenderState renderState;
 	GenerateRenderStateForTextStreamIndex(index, renderState);
-	for (int i = index; i < static_cast<int>(sizeof(wBuf) - 1) && i < m_TextStream.Count(); i++)
+	for (intp i = index; i < ssize(wBuf) - 1 && i < m_TextStream.Count(); i++)
 	{
 		// stop getting characters when text is no longer clickable
 		UpdateRenderState(i, renderState);
@@ -2348,10 +2306,10 @@ void RichText::OnClickPanel(int index)
 	
 	wBuf[outIndex] = 0;
 
-	int iFormatSteam = FindFormatStreamIndexForTextStreamPos( index );
-    if ( m_FormatStream[iFormatSteam].m_sClickableTextAction )
+	intp iFormatSteam = FindFormatStreamIndexForTextStreamPos( index );
+    if ( auto action = m_FormatStream[iFormatSteam].m_sClickableTextAction; action )
 	{
-		Q_UTF8ToUnicode( m_FormatStream[iFormatSteam].m_sClickableTextAction.String(), wBuf, sizeof( wBuf ) );
+		Q_UTF8ToUnicode( action.String(), wBuf, sizeof( wBuf ) );
 	}
 
 	PostActionSignal(new KeyValues("TextClicked", "text", wBuf));
@@ -2372,9 +2330,7 @@ void RichText::ApplySettings(KeyValues *inResourceData)
 	if (*text)
 	{
 		delete [] m_pszInitialText;
-		intp len = Q_strlen(text) + 1;
-		m_pszInitialText = new char[ len ];
-		Q_strncpy( m_pszInitialText, text, len );
+		m_pszInitialText = V_strdup( text );
 		SetText(text);
 	}
 	else
@@ -2382,6 +2338,9 @@ void RichText::ApplySettings(KeyValues *inResourceData)
 		const char *textfilename = inResourceData->GetString("textfile", NULL);
 		if ( textfilename )
 		{
+			// dimhotepus: This can take a while, put up a waiting cursor
+			const ScopedPanelWaitCursor scopedWaitCursor{this};
+
 			FileHandle_t f = g_pFullFileSystem->Open( textfilename, "rt" );
 			if (!f)
 			{
@@ -2393,7 +2352,8 @@ void RichText::ApplySettings(KeyValues *inResourceData)
 			delete [] m_pszInitialText;
 			m_pszInitialText = new char[ len + 1 ];
 			g_pFullFileSystem->Read( m_pszInitialText, len, f );
-			m_pszInitialText[len - 1] = 0;
+			// dimhotepus: Fix off by one error.
+			m_pszInitialText[len] = 0;
 			SetText( m_pszInitialText );
 
 			g_pFullFileSystem->Close( f );
@@ -2421,14 +2381,14 @@ void RichText::GetSettings(KeyValues *outResourceData)
 const char *RichText::GetDescription()
 {
 	static char buf[1024];
-	Q_snprintf(buf, sizeof(buf), "%s, string text, bool scrollbar", BaseClass::GetDescription());
+	V_sprintf_safe(buf, "%s, string text, bool scrollbar", BaseClass::GetDescription());
 	return buf;
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Get the number of lines in the window
 //-----------------------------------------------------------------------------
-int RichText::GetNumLines()
+intp RichText::GetNumLines()
 {
 	return m_LineBreaks.Count();
 }
@@ -2438,11 +2398,15 @@ int RichText::GetNumLines()
 //-----------------------------------------------------------------------------
 void RichText::SetToFullHeight()
 {
+	// We might not yet have calculated our line breaks yet, which would be bad
+	// since we're about to change our height based on how many lines we use.
+	// Let's make sure they're calculated.
+	RecalculateLineBreaks();
 	PerformLayout();
 	int wide, tall;
 	GetSize(wide, tall);
 	
-	tall = GetNumLines() * (GetLineHeight() + _drawOffsetY) + _drawOffsetY + 2;
+	tall = GetNumLines() * (GetLineHeight() + _drawOffsetY) + _drawOffsetY + QuickPropScale( 2 );
 	SetSize (wide, tall);
 	PerformLayout();
 }
@@ -2499,8 +2463,8 @@ void RichText::InsertPossibleURLString(const char* text, Color URLTextColor, Col
 	// parse out the string for URL's
 	intp len = Q_strlen(text), pos = 0;
 	bool clickable = false;
-	char *pchURLText = (char *)stackalloc( len + 1 );
-	char *pchURL = (char *)stackalloc( len + 1 );
+	char *pchURLText = stackallocT( char, len + 1 );
+	char *pchURL = stackallocT( char, len + 1 );
 
 	while (pos < len)
 	{
@@ -2525,7 +2489,7 @@ void RichText::InsertPossibleURLString(const char* text, Color URLTextColor, Col
 //-----------------------------------------------------------------------------
 // Purpose: looks for URLs in the string and returns information about the URL
 //-----------------------------------------------------------------------------
-int RichText::ParseTextStringForUrls( const char *text, int startPos, char *pchURLText, int cchURLText, char *pchURL, int cchURL, bool &clickable )
+intp RichText::ParseTextStringForUrls( const char *text, intp startPos, char *pchURLText, intp cchURLText, char *pchURL, intp cchURL, bool &clickable )
 {
 	// scan for text that looks like a URL
 	intp i = startPos;
@@ -2544,12 +2508,12 @@ int RichText::ParseTextStringForUrls( const char *text, int startPos, char *pchU
 			// get the url
 			i += ssize( "<a href=" ) - 1;
 			const char *pchURLEnd = Q_strstr( text + i, ">" );
-			Q_strncpy( pchURL, text + i, min( pchURLEnd - text - i + 1, static_cast<intp>(cchURL) ) ); 
+			Q_strncpy( pchURL, text + i, min( pchURLEnd - text - i + 1, cchURL ) ); 
 			i += ( pchURLEnd - text - i + 1 );
             
 			// get the url text
 			pchURLEnd = Q_strstr( text, "</a>" );
-			Q_strncpy( pchURLText, text + i, min( pchURLEnd - text - i + 1, static_cast<intp>(cchURLText) ) ); 
+			Q_strncpy( pchURLText, text + i, min( pchURLEnd - text - i + 1, cchURLText ) ); 
 			i += ( pchURLEnd - text - i );
 			i += ssize( "</a>" ) - 1;
 
@@ -2611,7 +2575,7 @@ int RichText::ParseTextStringForUrls( const char *text, int startPos, char *pchU
 			{
 				// we're at the Start of a URL, so parse that out
 				clickable = true;
-				int outIndex = 0;
+				intp outIndex = 0;
 				while (text[i] != 0 && !iswspace(text[i]))
 				{
 					pchURLText[outIndex++] = text[i++];
@@ -2634,8 +2598,8 @@ int RichText::ParseTextStringForUrls( const char *text, int startPos, char *pchU
 	// nothing found;
 	// parse out the text before the end
 	clickable = false;
-	int outIndex = 0;
-	int fromIndex = startPos;
+	intp outIndex = 0;
+	intp fromIndex = startPos;
 	while ( fromIndex < i && outIndex < cchURLText )
 	{
 		pchURLText[outIndex++] = text[fromIndex++];
@@ -2713,12 +2677,8 @@ bool RichText::IsAllTextAlphaZero() const
 
 bool RichText::HasText() const
 {
-	int c = m_TextStream.Count();
-	if ( c == 0 )
-	{
-		return false;
-	}
-	return true;
+	intp c = m_TextStream.Count();
+	return c != 0;
 }
 
 

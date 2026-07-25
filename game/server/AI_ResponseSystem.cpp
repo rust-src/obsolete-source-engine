@@ -610,7 +610,7 @@ public:
 			return false;
 		}
 
-		m_ScriptStack[ 0 ].currenttoken = engine->ParseFile( m_ScriptStack[ 0 ].currenttoken, token, sizeof( token ) );
+		m_ScriptStack[ 0 ].currenttoken = engine->ParseFile( m_ScriptStack[ 0 ].currenttoken, token );
 		m_ScriptStack[ 0 ].tokencount++;
 		return m_ScriptStack[ 0 ].currenttoken != NULL ? true : false;
 	}
@@ -1438,7 +1438,7 @@ intp CResponseSystem::SelectWeightedResponseFromResponseGroup( ResponseGroup *g,
 	{
 		for ( auto &f : fakedDepletes )
 		{
-			g->group[ f ].depletioncount = 0;;
+			g->group[ f ].depletioncount = 0;
 		}
 	}
 

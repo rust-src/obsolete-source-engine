@@ -168,7 +168,17 @@ public:
 	
 	// Sentences / sentence groups
 	virtual int			SentenceGroupPick( int groupIndex, char *name, int nameBufLen ) = 0;
-	virtual int			SentenceGroupPickSequential( int groupIndex, char *name, int nameBufLen, int sentenceIndex, int reset ) = 0;
+	template<int nameBufLen>
+	int					SentenceGroupPick( int groupIndex, OUT_Z_ARRAY char (&name)[nameBufLen] )
+	{
+		return SentenceGroupPick( groupIndex, name, nameBufLen );
+	}
+	virtual int			SentenceGroupPickSequential( int groupIndex, OUT_Z_CAP(nameBufLen) char *name, int nameBufLen, int sentenceIndex, int reset ) = 0;
+	template<int nameBufLen>
+	int					SentenceGroupPickSequential( int groupIndex, OUT_Z_ARRAY char (&name)[nameBufLen], int sentenceIndex, int reset )
+	{
+		return SentenceGroupPickSequential( groupIndex, name, nameBufLen, sentenceIndex, reset );
+	}
 	virtual int			SentenceIndexFromName( const char *pSentenceName ) = 0;
 	virtual const char *SentenceNameFromIndex( int sentenceIndex ) = 0;
 	virtual int			SentenceGroupIndexFromName( const char *pGroupName ) = 0;
@@ -220,7 +230,12 @@ public:
 	virtual void		CrosshairAngle( const edict_t *pClient, float pitch, float yaw ) = 0;
 
 	// Get the current game directory (hl2, tf2, hl1, cstrike, etc.)
-	virtual void        GetGameDir( char *szGetGameDir, int maxlength ) = 0;
+	virtual void        GetGameDir( OUT_Z_CAP(maxlength) char *szGetGameDir, int maxlength ) = 0;
+	template<int maxlength>
+	void				GetGameDir( OUT_Z_ARRAY char (&szGetGameDir)[maxlength] )
+	{
+		return GetGameDir( szGetGameDir, maxlength );
+	}
 
 	// Used by AI node graph code to determine if .bsp and .ain files are out of date
 	virtual int 		CompareFileTime( const char *filename1, const char *filename2, int *iCompare ) = 0;
@@ -236,7 +251,13 @@ public:
 	virtual const char	*GetClientConVarValue( intp clientIndex, const char *name ) = 0;
 	
 	// Parse a token from a file
-	virtual const char	*ParseFile( const char *data, char *token, int maxlen ) = 0;
+	virtual const char	*ParseFile( IN_Z const char *data, OUT_Z_CAP(maxlen) char *token, int maxlen ) = 0;
+	template<int maxlen>
+	const char	*ParseFile( IN_Z const char *data, OUT_Z_ARRAY char (&token)[maxlen] )
+	{
+		return ParseFile( data, token, maxlen );
+	}
+
 	// Copies a file
 	virtual bool		CopyFile( const char *source, const char *destination ) = 0;
 
@@ -686,7 +707,12 @@ public:
 
 	// Client is connecting to server ( return false to reject the connection )
 	//	You can specify a rejection message by writing it into reject
-	virtual bool			ClientConnect( edict_t *pEntity, const char *pszName, const char *pszAddress, char *reject, int maxrejectlen ) = 0;
+	virtual bool			ClientConnect( edict_t *pEntity, const char *pszName, const char *pszAddress, OUT_Z_CAP(maxrejectlen) char *reject, int maxrejectlen ) = 0;
+	template<int maxrejectlen>
+	bool					ClientConnect( edict_t *pEntity, const char *pszName, const char *pszAddress, OUT_Z_ARRAY char (&reject)[maxrejectlen] )
+	{
+		return ClientConnect( pEntity, pszName, pszAddress, reject, maxrejectlen );
+	}
 
 	// Client is going active
 	// If bLoadGame is true, don't spawn the player because its state is already setup.

@@ -409,10 +409,10 @@ ConVarRef suitcharger( "sk_suitcharger" );
 	{
 		BaseClass::FrameUpdatePostEntityThink();
 
-		float flNow = Plat_FloatTime();
+		double flNow = Plat_FloatTime();
 
 		// Update time when client was last connected
-		if ( m_flTimeLastMapChangeOrPlayerWasConnected <= 0.0f )
+		if ( m_flTimeLastMapChangeOrPlayerWasConnected <= 0.0 )
 		{
 			m_flTimeLastMapChangeOrPlayerWasConnected = flNow;
 		}
@@ -587,9 +587,13 @@ ConVarRef suitcharger( "sk_suitcharger" );
 
 	//=========================================================
 	//=========================================================
-	bool CMultiplayRules::ClientConnected( edict_t *pEntity, const char *pszName, const char *pszAddress, char *reject, int maxrejectlen )
+	bool CMultiplayRules::ClientConnected( edict_t *pEntity, const char *pszName, const char *pszAddress, OUT_Z_CAP(maxrejectlen) char *reject, int maxrejectlen )
 	{
 		GetVoiceGameMgr()->ClientConnected( pEntity );
+		if ( reject && maxrejectlen )
+		{
+			*reject = '\0';
+		}
 		return true;
 	}
 
@@ -1502,7 +1506,7 @@ ConVarRef suitcharger( "sk_suitcharger" );
 	void CMultiplayRules::ChangeLevelToMap( const char *pszMap )
 	{
 		g_fGameOver = true;
-		m_flTimeLastMapChangeOrPlayerWasConnected = 0.0f;
+		m_flTimeLastMapChangeOrPlayerWasConnected = 0.0;
 		Msg( "CHANGE LEVEL: %s\n", pszMap );
 		engine->ChangeLevel( pszMap, NULL );
 	}
@@ -1858,9 +1862,9 @@ ConVarRef suitcharger( "sk_suitcharger" );
 		if ( iMenu < 0 || iMenu >= m_VoiceCommandMenus.Count() )
 			return false;
 
-		int iNumItems = m_VoiceCommandMenus.Element( iMenu ).Count();
+		intp iNumItems = m_VoiceCommandMenus.Element( iMenu ).Count();
 
-		for ( int i=0; i<iNumItems; i++ )
+		for ( intp i=0; i<iNumItems; i++ )
 		{
 			VoiceCommandMenuItem_t *pItem = &m_VoiceCommandMenus.Element( iMenu ).Element( i );
 

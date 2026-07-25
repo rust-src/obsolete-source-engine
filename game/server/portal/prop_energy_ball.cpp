@@ -326,7 +326,7 @@ void CPropEnergyBall::Think()
 		}
 	}
 
-	SetNextThink( gpGlobals->curtime + 0.1 );
+	SetNextThink( gpGlobals->curtime + 0.1f );
 }
 
 
@@ -479,7 +479,6 @@ void CEnergyBallLauncher::SpawnBall()
 
 	pBall->SetRadius( m_flBallRadius );
 	Vector vecAbsOrigin = GetAbsOrigin();
-	Vector zaxis;
 
 	pBall->SetAbsOrigin( vecAbsOrigin );
 	pBall->SetSpawner( this );

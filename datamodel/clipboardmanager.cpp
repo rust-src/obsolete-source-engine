@@ -8,7 +8,8 @@
 #include "datamodel.h"
 #include "tier1/KeyValues.h"
 
-#ifndef _LINUX
+// dimhotepus: Use windows clipboard only in Windows.
+#ifdef _WIN32
 #define USE_WINDOWS_CLIPBOARD
 #endif
 
@@ -145,16 +146,13 @@ void CClipboardManager::GetClipboardData( CUtlVector< KeyValues * >& data )
 					if ( ptr )
 					{
 						// dimhotepus: Do not truncate copied text.
-						char *buf = new char[len + 1];
-						memcpy( buf, ptr, len );
+						std::unique_ptr<char[]> buf = std::make_unique<char[]>( len + 1 );
+						memcpy( buf.get(), ptr, len );
 						buf[ len ] = '\0';
 
 						::GlobalUnlock( hmem );
 
-						auto *newData = new KeyValues( "ClipBoard", "text", buf );
-						delete[] buf;
-
-						data.AddToTail( newData );
+						data.AddToTail( new KeyValues( "ClipBoard", "text", buf.get() ) );
 					}
 				}
 			}

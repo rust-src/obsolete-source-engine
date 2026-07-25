@@ -122,7 +122,7 @@ void CRConVProfExport::GetBudgetGroupInfos( CExportedBudgetGroupInfo *pInfos )
 
 void CRConVProfExport::GetBudgetGroupTimes( float times[IVProfExport::MAX_BUDGETGROUP_TIMES] )
 {
-	int nGroups = min( m_Times.Count(), (int)IVProfExport::MAX_BUDGETGROUP_TIMES );
+	intp nGroups = min( m_Times.Count(), (intp)IVProfExport::MAX_BUDGETGROUP_TIMES );
 	memset( times, 0, nGroups * sizeof(float) );
 	nGroups = min( GetNumBudgetGroups(), nGroups );
 	memcpy( times, m_Times.Base(), nGroups * sizeof(float) );
@@ -145,10 +145,9 @@ void CRConVProfExport::ResumeProfile()
 
 void CRConVProfExport::CleanupGroupData()
 {
-	int nCount = m_Info.Count();
-	for ( int i = 0; i < nCount; ++i )
+	for ( auto &i : m_Info )
 	{
-		delete m_Info[i].m_pName;
+		delete i.m_pName;
 	}
 
 	m_Info.RemoveAll();
@@ -355,9 +354,9 @@ void CRConClient::SendQueuedData()
 	SocketHandle_t hSocket = GetSocketHandle();
 	while ( m_SendBuffer.TellMaxPut() - m_SendBuffer.TellGet() > static_cast<intp>(sizeof(int)) )
 	{
-		size_t nSize = *(const int*)m_SendBuffer.PeekGet();
+		int nSize = *(const int*)m_SendBuffer.PeekGet();
 		Assert( nSize >= m_SendBuffer.TellMaxPut() - m_SendBuffer.TellGet() - sizeof( int ) );
-		int ret = send( hSocket, (const char *)m_SendBuffer.PeekGet(), nSize + sizeof( int ), 0 );
+		int ret = send( hSocket, (const char *)m_SendBuffer.PeekGet(), nSize + static_cast<intp>(sizeof( int )), 0 );
 		if ( ret != -1 )
 		{
 			m_SendBuffer.SeekGet( CUtlBuffer::SEEK_CURRENT, nSize + sizeof( int ) );
@@ -372,8 +371,8 @@ void CRConClient::SendQueuedData()
 		break;
 	}
 
-	int nSizeRemaining = m_SendBuffer.TellMaxPut() - m_SendBuffer.TellGet();
-	if ( nSizeRemaining <= static_cast<int>(sizeof(int)) )
+	intp nSizeRemaining = m_SendBuffer.TellMaxPut() - m_SendBuffer.TellGet();
+	if ( nSizeRemaining <= static_cast<intp>(sizeof(int)) )
 	{
 		m_SendBuffer.Purge();
 		return;
@@ -622,7 +621,7 @@ void CRConClient::BuildResponse( CUtlBuffer &response, ServerDataRequestType_t m
 	response.PutInt(msg);
 	response.PutString(pString1);
 	response.PutString(pString2);
-	int nSize = response.TellPut() - sizeof(int); 
+	int nSize = response.TellPut() - static_cast<intp>(sizeof(int));
 	response.SeekPut( CUtlBuffer::SEEK_HEAD, 0 );
 	response.PutInt( nSize ); // the size
 	response.SeekPut( CUtlBuffer::SEEK_CURRENT, nSize );
@@ -669,7 +668,7 @@ void CRConClient::Authenticate()
 	{
 		response.PutString( "" );
 	}
-	int size = response.TellPut() - sizeof(int); 
+	int size = response.TellPut() - static_cast<intp>(sizeof(int)); 
 	response.SeekPut( CUtlBuffer::SEEK_HEAD, 0 );
 	response.PutInt(size); // the size
 	response.SeekPut( CUtlBuffer::SEEK_CURRENT, size );

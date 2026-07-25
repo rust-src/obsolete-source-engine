@@ -1214,7 +1214,7 @@ void CBaseAnimating::HandleAnimEvent( animevent_t *pEvent )
 float CBaseAnimating::SetPoseParameter( CStudioHdr *pStudioHdr, const char *szName, float flValue )
 {
 	int poseParam = LookupPoseParameter( pStudioHdr, szName );
-	AssertMsg2(poseParam >= 0, "SetPoseParameter called with invalid argument %s by %s", szName, GetDebugName());
+	AssertMsg(poseParam >= 0, "SetPoseParameter call with bad arg %s by %s", szName, GetDebugName());
 	return SetPoseParameter( pStudioHdr, poseParam, flValue );
 }
 
@@ -2581,7 +2581,7 @@ void CBaseAnimating::LockStudioHdr()
 
 			if ( pStudioHdrContainer && pStudioHdrContainer->GetVirtualModel() )
 			{
-				MDLHandle_t hVirtualModel = (MDLHandle_t)(intp)(pStudioHdrContainer->GetRenderHdr()->virtualModel)&0xffff;
+				MDLHandle_t hVirtualModel = VoidPtrToMDLHandle(pStudioHdrContainer->GetRenderHdr()->VirtualModel());
 				mdlcache->LockStudioHdr( hVirtualModel );
 			}
 			m_pStudioHdr = pStudioHdrContainer; // must be last to ensure virtual model correctly set up
@@ -2599,7 +2599,7 @@ void CBaseAnimating::UnlockStudioHdr()
 			mdlcache->UnlockStudioHdr( modelinfo->GetCacheHandle( mdl ) );
 			if ( m_pStudioHdr->GetVirtualModel() )
 			{
-				MDLHandle_t hVirtualModel = (MDLHandle_t)(intp)(m_pStudioHdr->GetRenderHdr()->virtualModel)&0xffff;
+				MDLHandle_t hVirtualModel = VoidPtrToMDLHandle(m_pStudioHdr->GetRenderHdr()->VirtualModel());
 				mdlcache->UnlockStudioHdr( hVirtualModel );
 			}
 		}
@@ -3507,7 +3507,7 @@ bool CBaseAnimating::Dissolve( const char *pMaterialName, float flStartTime, boo
 //-----------------------------------------------------------------------------
 // Make a model look as though it's burning. 
 //-----------------------------------------------------------------------------
-void CBaseAnimating::Scorch( int rate, int floor )
+void CBaseAnimating::Scorch( byte rate, byte floor )
 {
 	color32 color = GetRenderColor();
 

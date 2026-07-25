@@ -5,17 +5,17 @@
 // $NoKeywords: $
 //=============================================================================
 
-#include <stdio.h>
 #include "DialogAddBan.h"
 
 #include <vgui/ISurface.h>
-#include <tier1/KeyValues.h>
 
 #include <vgui_controls/Button.h>
 #include <vgui_controls/Label.h>
 #include <vgui_controls/TextEntry.h>
 #include <vgui_controls/CheckButton.h>
 #include <vgui_controls/MessageBox.h>
+
+#include "tier1/KeyValues.h"
 
 using namespace vgui;
 
@@ -26,7 +26,8 @@ CDialogAddBan::CDialogAddBan(vgui::Panel *parent) : Frame(parent, "DialogAddBan"
 {
 	m_cType = nullptr;
 
-	SetSize(320, 200);
+	// dimhotepus: Scale UI.
+	SetSize(QuickPropScale( 320 ), QuickPropScale( 200 ));
 	SetTitle("#Game_Ban_Add_Title", false);
 
 	m_pIDTextEntry = new TextEntry(this, "IDTextEntry");

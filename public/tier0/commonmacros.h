@@ -9,13 +9,15 @@
 #include <cassert>  // assert
 #include <cstddef>  // memcmp, std::ptrdiff_t
 #include <cstring>  // strlen
-#include <utility>  // to_underlying
+#include <utility>  // std::to_underlying, std::unreachable
 
 // dimhotepus: Backport from TF2. Detect the architecture we are running on
 #if defined(__aarch64__) || defined(_M_ARM64)
 #define PLATFORM_ARM 1
 // dimhotepus: ARM64 detection.
 #define PLATFORM_ARM_64 1
+// dimhotepus: Define when 64 bits are used.
+#define PLATFORM_64BITS 1
 #elif defined(__arm__) || defined(_M_ARM)
 #define PLATFORM_ARM 1
 // dimhotepus: ARM detection.
@@ -80,14 +82,23 @@
 #endif
 #endif
 
+#if (defined(_M_IX86) || defined(_M_X64) || __i386__ || __x86_64__) && \
+    !defined(_M_HYBRID_X86_ARM64) && !defined(_M_ARM64EC)
+#define PLATFORM_SSE_INTRINSICS
+#elif defined(_M_ARM) || defined(_M_ARM64) || defined(_M_HYBRID_X86_ARM64) || \
+    defined(_M_ARM64EC) || __arm__ || __aarch64__
+#define PLATFORM_ARM_NEON_INTRINSICS
+#endif
+
 #ifdef _MSC_VER
-#define NO_VTABLE __declspec( novtable )
+#define NO_VTABLE __declspec(novtable)
 #else
 #define NO_VTABLE
 #endif
 
 // This can be used to declare an abstract (interface only) class.
-// Classes marked abstract should not be instantiated.  If they are, and access violation will occur.
+// Classes marked abstract should not be instantiated.  If they are, and access
+// violation will occur.
 //
 // Example of use:
 //
@@ -96,17 +107,20 @@
 //      ...
 // }
 //
-// MSDN __declspec(novtable) documentation: https://docs.microsoft.com/en-us/cpp/cpp/novtable
+// MSDN __declspec(novtable) documentation:
+// https://docs.microsoft.com/en-us/cpp/cpp/novtable
 //
-// This form of __declspec can be applied to any class declaration, but should only be applied to
-// pure interface classes, that is, classes that will never be instantiated on their own.  The
-// __declspec stops the compiler from generating code to initialize the vfptr in the constructor(s)
-// and destructor of the class.  In many cases, this removes the only references to the vtable that
-// are associated with the class and, thus, the linker will remove it.  Using this form of
-// __declspec can result in a significant reduction in code size.
+// This form of __declspec can be applied to any class declaration, but should
+// only be applied to pure interface classes, that is, classes that will never
+// be instantiated on their own.  The __declspec stops the compiler from
+// generating code to initialize the vfptr in the constructor(s) and destructor
+// of the class.  In many cases, this removes the only references to the vtable
+// that are associated with the class and, thus, the linker will remove it.
+// Using this form of __declspec can result in a significant reduction in code
+// size.
 //
-// If you attempt to instantiate a class marked with novtable and then access a class member, you
-// will receive an access violation(AV).
+// If you attempt to instantiate a class marked with novtable and then access a
+// class member, you will receive an access violation(AV).
 //
 // dimhotepus: Enable for PC to reduce code size.
 #define abstract_class class NO_VTABLE
@@ -258,7 +272,26 @@ template <typename T>
 to_underlying(T value) noexcept {
   return static_cast<std::underlying_type_t<T>>(value);
 }
+#endif  // !__cpp_lib_to_underlying
+
+#ifdef __cpp_lib_unreachable
+// C++23 to_underlying
+using std::unreachable;
+#else
+[[noreturn]]
+#ifdef COMPILER_MSVC
+__forceinline
+#else
+inline
 #endif
+    void unreachable() noexcept {
+#ifdef COMPILER_MSVC
+  __assume(false);
+#else
+  __builtin_unreachable();
+#endif
+}
+#endif  // !__cpp_lib_unreachable
 
 #ifndef REFERENCE
 #define REFERENCE(arg) ((void)arg)

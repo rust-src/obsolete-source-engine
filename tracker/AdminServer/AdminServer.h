@@ -28,8 +28,8 @@ public:
 	virtual ~CAdminServer();
 
 	// IVGui module implementation
-	bool Initialize(CreateInterfaceFn *factorylist, int numFactories) override;
-	bool PostInitialize(CreateInterfaceFn *modules, int factoryCount) override;
+	bool Initialize(CreateInterfaceFn *factorylist, intp numFactories) override;
+	bool PostInitialize(CreateInterfaceFn *modules, intp factoryCount) override;
 	vgui::VPANEL GetPanel() override;
 	bool Activate() override;
 	bool IsValid() override;
@@ -37,6 +37,9 @@ public:
 	void Deactivate() override;
 	void Reactivate() override;
 	void SetParent(vgui::VPANEL parent) override;
+
+	// dimhotepus: Initialize with parent to immediately scale UI.
+bool PostInitialize(CreateInterfaceFn* modules, intp factoryCount, vgui::Panel* parent) override;
 
 	// IAdminServer implementation
 	// opens a manage server dialog for a local server
@@ -60,6 +63,8 @@ private:
 	};
 	CUtlVector<OpenedManageDialog_t> m_OpenedManageDialog;
 	vgui::VPANEL m_hParent;
+	// dimhotepus: Initialize with parent to immediately scale UI.
+	vgui::Panel *m_pParent;
 };
 
 

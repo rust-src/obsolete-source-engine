@@ -1836,7 +1836,7 @@ void CVTFTexture::ConvertImageFormat( ImageFormat fmt, bool bNormalToDUDV )
 	// FIXME: Should this be re-written to not do an allocation?
 	intp iConvertedSize = ComputeTotalSize( fmt );
 
-	unsigned char *pConvertedImage = new unsigned char[ iConvertedSize ];
+	std::unique_ptr<byte[]> pConvertedImage = std::make_unique<byte[]>( iConvertedSize );
 
 	// This can happen for large, bogus textures.
 	if ( !pConvertedImage )
@@ -1855,7 +1855,7 @@ void CVTFTexture::ConvertImageFormat( ImageFormat fmt, bool bNormalToDUDV )
 			for (int iFace = 0; iFace < m_nFaceCount; ++iFace)
 			{
 				unsigned char *pSrcData = ImageData( iFrame, iFace, iMip );
-				unsigned char *pDstData = pConvertedImage + GetImageOffset( iFrame, iFace, iMip, fmt );
+				unsigned char *pDstData = pConvertedImage.get() + GetImageOffset( iFrame, iFace, iMip, fmt );
 
 				for ( int z = 0; z < nMipDepth; ++z, pSrcData += nSrcFaceStride, pDstData += nDstFaceStride )
 				{
@@ -1895,7 +1895,7 @@ void CVTFTexture::ConvertImageFormat( ImageFormat fmt, bool bNormalToDUDV )
 	if ( !AllocateImageData(iConvertedSize) )
 		return;
 
-	memcpy( m_pImageData, pConvertedImage, iConvertedSize );
+	memcpy( m_pImageData, pConvertedImage.get(), iConvertedSize );
 	m_Format = fmt;
 
 	if ( !ImageLoader::IsCompressed( fmt ) )
@@ -1923,8 +1923,6 @@ void CVTFTexture::ConvertImageFormat( ImageFormat fmt, bool bNormalToDUDV )
 			m_nFlags &= ~(TEXTUREFLAGS_ONEBITALPHA|TEXTUREFLAGS_EIGHTBITALPHA);
 		}
 	}
-
-	delete [] pConvertedImage;
 }
 
 
@@ -2319,7 +2317,8 @@ void CVTFTexture::GenerateSpheremap( LookDir_t lookDir )
 	// Allocate the bits for the spheremap
 	Assert( m_nDepth == 1 );
 	intp iMemRequired = ComputeFaceSize( 0, IMAGE_FORMAT_RGBA8888 );
-	unsigned char *pSphereMapBits = new unsigned char [ iMemRequired ];
+
+	std::unique_ptr<byte> pSphereMapBits = std::make_unique<byte>( iMemRequired );
 
 	// Generate a spheremap for each frame of the cubemap
 	for (int iFrame = 0; iFrame < m_nFrameCount; ++iFrame)
@@ -2334,17 +2333,14 @@ void CVTFTexture::GenerateSpheremap( LookDir_t lookDir )
 		// HDRFIXME: Make this work?
 		if( m_Format == IMAGE_FORMAT_RGBA8888 )
 		{
-			ComputeSpheremapFrame( pCubeMaps, pSphereMapBits, lookDir );
+			ComputeSpheremapFrame( pCubeMaps, pSphereMapBits.get(), lookDir );
 		}
 
 		// Compute the mip levels of the spheremap, converting from RGBA8888 to our format
 		unsigned char *pFinalSphereMapBits = ImageData( iFrame, CUBEMAP_FACE_SPHEREMAP, 0 );
-		ImageLoader::GenerateMipmapLevels( pSphereMapBits, pFinalSphereMapBits, 
+		ImageLoader::GenerateMipmapLevels( pSphereMapBits.get(), pFinalSphereMapBits, 
 			m_nWidth, m_nHeight, m_nDepth, m_Format, 2.2f, 2.2f, m_nMipCount );
 	}
-
-	// Free memory
-	delete [] pSphereMapBits;
 }
 
 void CVTFTexture::GenerateHemisphereMap( unsigned char *pSphereMapBitsRGBA, int , 
@@ -2469,8 +2465,9 @@ void CVTFTexture::GenerateMipmaps()
 //	{
 //		return;
 //	}
-
-	Assert( m_Format == IMAGE_FORMAT_RGBA8888 || m_Format == IMAGE_FORMAT_RGB323232F );
+// 
+	// dimhotepus: IMAGE_FORMAT_RGBA32323232F CS:GO backport
+	Assert( m_Format == IMAGE_FORMAT_RGBA8888 || m_Format == IMAGE_FORMAT_RGB323232F || m_Format == IMAGE_FORMAT_RGBA32323232F );
 
 	// FIXME: Should we be doing anything special for normalmaps other than a final normalization pass?
 	ImageLoader::ResampleInfo_t info;
@@ -2609,12 +2606,25 @@ void CVTFTexture::GenerateMipmaps()
 				info.m_pDest = pDstLevel;
 
 				ComputeMipLevelDimensions( nSrcMipLevel, &info.m_nSrcWidth, &info.m_nSrcHeight, &info.m_nSrcDepth );
-
-				[[maybe_unused]] const bool ok = m_Format == IMAGE_FORMAT_RGB323232F
-					? ImageLoader::ResampleRGB323232F( info )
-					: ImageLoader::ResampleRGBA8888( info );
-				AssertMsg(ok, "Unable to resample image of format 0x%x.", m_Format);
-				if (!ok) Warning("Unable to resample image of format 0x%x.", m_Format);
+				// dimhotepus: IMAGE_FORMAT_RGBA32323232F CS:GO backport
+				if( m_Format == IMAGE_FORMAT_RGBA32323232F )
+				{
+					const bool ok = ImageLoader::ResampleRGBA32323232F( info );
+					AssertMsg(ok, "Unable to resample image of format IMAGE_FORMAT_RGBA32323232F.");
+					if (!ok) Warning("Unable to resample image of format IMAGE_FORMAT_RGBA32323232F.");
+				}
+				else if( m_Format == IMAGE_FORMAT_RGB323232F )
+				{
+					const bool ok = ImageLoader::ResampleRGB323232F( info );
+					AssertMsg(ok, "Unable to resample image of format IMAGE_FORMAT_RGB323232F");
+					if (!ok) Warning("Unable to resample image of format IMAGE_FORMAT_RGB323232F.");
+				}
+				else
+				{
+					const bool ok = ImageLoader::ResampleRGBA8888( info );
+					AssertMsg(ok, "Unable to resample image of format IMAGE_FORMAT_RGBA8888.");
+					if (!ok) Warning("Unable to resample image of format IMAGE_FORMAT_RGBA8888.");
+				}
 				if ( Flags() & TEXTUREFLAGS_NORMAL )
 				{
 					ImageLoader::NormalizeNormalMapRGBA8888( pDstLevel, info.m_nDestWidth * info.m_nDestHeight * info.m_nDestDepth );

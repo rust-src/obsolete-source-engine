@@ -1276,10 +1276,10 @@ void CSceneEntity::DispatchPauseScene( CChoreoScene *scene, const char *paramete
 
 	// Check for auto resume/cancel
 	const char *buffer = parameters;
-	buffer = engine->ParseFile( buffer, token, sizeof( token ) );
+	buffer = engine->ParseFile( buffer, token );
 	if ( !stricmp( token, "automate" ) )
 	{
-		buffer = engine->ParseFile( buffer, token, sizeof( token ) );
+		buffer = engine->ParseFile( buffer, token );
 		if ( !stricmp( token, "Cancel" ) )
 		{
 			m_nAutomatedAction = SCENE_ACTION_CANCEL;
@@ -1291,7 +1291,7 @@ void CSceneEntity::DispatchPauseScene( CChoreoScene *scene, const char *paramete
 
 		if ( m_nAutomatedAction != SCENE_ACTION_UNKNOWN )
 		{
-			buffer = engine->ParseFile( buffer, token, sizeof( token ) );
+			buffer = engine->ParseFile( buffer, token );
 			// dimhotepus: atof -> strtof
 			m_flAutomationDelay = strtof( token, nullptr );
 
@@ -1555,7 +1555,7 @@ bool AttenuateCaption( const char *token, const Vector& listener, CUtlVector< Ve
 		return false;
 	}
 
-	int c = soundorigins.Count();
+	intp c = soundorigins.Count();
 
 	if ( c <= 0 )
 	{
@@ -1564,7 +1564,7 @@ bool AttenuateCaption( const char *token, const Vector& listener, CUtlVector< Ve
 
 	float maxdistSqr = scene_maxcaptionradius.GetFloat() * scene_maxcaptionradius.GetFloat();
 
-	for ( int i = 0; i  < c; ++i )
+	for ( intp i = 0; i  < c; ++i )
 	{
 		const Vector& org = soundorigins[ i ];
 
@@ -2190,7 +2190,7 @@ void CSceneEntity::InputInterjectResponse( inputdata_t &inputdata )
 		candidates.AddToTail( pBaseActor );
 	}
 
-	int c = candidates.Count();
+	intp c = candidates.Count();
 	if ( !c )
 		return;
 
@@ -2514,8 +2514,8 @@ void CSceneEntity::StartPlayback( void )
 	PrefetchSpeakEventSounds( prefetchSoundSymbolTable, soundnames );
 
 	// Tell any managers we're within that we've started
-	int c = m_hListManagers.Count();
-	for ( int i = 0; i < c; i++ )
+	intp c = m_hListManagers.Count();
+	for ( intp i = 0; i < c; i++ )
 	{
 		if ( m_hListManagers[i] )
 		{
@@ -2539,7 +2539,7 @@ bool CSceneEntity::SpeakEventSoundLessFunc( const SpeakEventSound_t& lhs, const 
 //-----------------------------------------------------------------------------
 void CSceneEntity::PrefetchSpeakEventSounds( CUtlSymbolTable& table, CUtlRBTree< SpeakEventSound_t >& soundnames )
 {
-	for ( int i = soundnames.FirstInorder(); i != soundnames.InvalidIndex() ; i = soundnames.NextInorder( i ) )
+	for ( auto i = soundnames.FirstInorder(); i != soundnames.InvalidIndex() ; i = soundnames.NextInorder( i ) )
 	{
 		SpeakEventSound_t& sound = soundnames[ i ];
 		// Look it up in the string table
@@ -3315,8 +3315,8 @@ CChoreoScene *CSceneEntity::LoadScene( const char *filename, IChoreoEventCallbac
 
 	char loadfile[MAX_PATH];
 	Q_strncpy( loadfile, filename, sizeof( loadfile ) );
-	Q_SetExtension( loadfile, ".vcd", sizeof( loadfile ) );
-	Q_FixSlashes( loadfile );
+	V_SetExtension( loadfile, ".vcd" );
+	V_FixSlashes( loadfile );
 
 	// binary compiled vcd
 	void *pBuffer;
@@ -4829,8 +4829,8 @@ void CSceneManager::Think()
 		return;
 
 	bool needCleanupPass = false;
-	int c = m_ActiveScenes.Count();
-	for ( int i = 0; i < c; i++ )
+	intp c = m_ActiveScenes.Count();
+	for ( intp i = 0; i < c; i++ )
 	{
 		CSceneEntity *scene = m_ActiveScenes[ i ].Get();
 		if ( !scene )
@@ -4852,7 +4852,7 @@ void CSceneManager::Think()
 	// Now delete any invalid ones
 	if ( needCleanupPass )
 	{
-		for ( int i = c - 1; i >= 0; i-- )
+		for ( intp i = c - 1; i >= 0; i-- )
 		{
 			CSceneEntity *scene = m_ActiveScenes[ i ].Get();
 			if ( scene )
@@ -4909,8 +4909,8 @@ void CSceneManager::RemoveSceneEntity( CSceneEntity *scene )
 //-----------------------------------------------------------------------------
 void CSceneManager::OnClientActive( CBasePlayer *player )
 {
-	int c = m_QueuedSceneSounds.Count();
-	for ( int i = 0; i < c; i++ )
+	intp c = m_QueuedSceneSounds.Count();
+	for ( intp i = 0; i < c; i++ )
 	{
 		CRestoreSceneSound *sound = &m_QueuedSceneSounds[ i ];
 
@@ -4945,8 +4945,8 @@ void CSceneManager::RemoveScenesInvolvingActor( CBaseFlex *pActor )
 		return;
 
 	// This loop can remove items from m_ActiveScenes array, so loop through backwards.
-	int c = m_ActiveScenes.Count();
-	for ( int i = c - 1 ; i >= 0; --i )
+	intp c = m_ActiveScenes.Count();
+	for ( intp i = c - 1 ; i >= 0; --i )
 	{
 		CSceneEntity *pScene = m_ActiveScenes[ i ].Get();
 		if ( !pScene )
@@ -4984,8 +4984,8 @@ void CSceneManager::RemoveScenesInvolvingActor( CBaseFlex *pActor )
 //-----------------------------------------------------------------------------
 void CSceneManager::RemoveActorFromScenes( CBaseFlex *pActor, bool bInstancedOnly, bool bNonIdleOnly, const char *pszThisSceneOnly )
 {
-	int c = m_ActiveScenes.Count();
-	for ( int i = 0; i < c; i++ )
+	intp c = m_ActiveScenes.Count();
+	for ( intp i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_ActiveScenes[ i ].Get();
 		if ( !pScene )
@@ -5023,8 +5023,8 @@ void CSceneManager::RemoveActorFromScenes( CBaseFlex *pActor, bool bInstancedOnl
 //-----------------------------------------------------------------------------
 void CSceneManager::PauseActorsScenes( CBaseFlex *pActor, bool bInstancedOnly  )
 {
-	int c = m_ActiveScenes.Count();
-	for ( int i = 0; i < c; i++ )
+	intp c = m_ActiveScenes.Count();
+	for ( intp i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_ActiveScenes[ i ].Get();
 		if ( !pScene )
@@ -5054,8 +5054,8 @@ void CSceneManager::PauseActorsScenes( CBaseFlex *pActor, bool bInstancedOnly  )
 //-----------------------------------------------------------------------------
 bool CSceneManager::IsInInterruptableScenes( CBaseFlex *pActor )
 {
-	int c = m_ActiveScenes.Count();
-	for ( int i = 0; i < c; i++ )
+	intp c = m_ActiveScenes.Count();
+	for ( intp i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_ActiveScenes[ i ].Get();
 		if ( !pScene )
@@ -5080,8 +5080,8 @@ bool CSceneManager::IsInInterruptableScenes( CBaseFlex *pActor )
 //-----------------------------------------------------------------------------
 void CSceneManager::ResumeActorsScenes( CBaseFlex *pActor, bool bInstancedOnly  )
 {
-	int c = m_ActiveScenes.Count();
-	for ( int i = 0; i < c; i++ )
+	intp c = m_ActiveScenes.Count();
+	for ( intp i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_ActiveScenes[ i ].Get();
 		if ( !pScene )
@@ -5111,8 +5111,8 @@ void CSceneManager::ResumeActorsScenes( CBaseFlex *pActor, bool bInstancedOnly  
 //-----------------------------------------------------------------------------
 void CSceneManager::QueueActorsScenesToResume( CBaseFlex *pActor, bool bInstancedOnly  )
 {
-	int c = m_ActiveScenes.Count();
-	for ( int i = 0; i < c; i++ )
+	intp c = m_ActiveScenes.Count();
+	for ( intp i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_ActiveScenes[ i ].Get();
 		if ( !pScene )
@@ -5139,8 +5139,8 @@ void CSceneManager::QueueActorsScenesToResume( CBaseFlex *pActor, bool bInstance
 //-----------------------------------------------------------------------------
 bool CSceneManager::IsRunningScriptedScene( CBaseFlex *pActor, bool bIgnoreInstancedScenes )
 {
-	int c = m_ActiveScenes.Count();
-	for ( int i = 0; i < c; i++ )
+	intp c = m_ActiveScenes.Count();
+	for ( intp i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_ActiveScenes[ i ].Get();
 		if ( !pScene ||
@@ -5161,8 +5161,8 @@ bool CSceneManager::IsRunningScriptedScene( CBaseFlex *pActor, bool bIgnoreInsta
 
 bool CSceneManager::IsRunningScriptedSceneAndNotPaused( CBaseFlex *pActor, bool bIgnoreInstancedScenes )
 {
-	int c = m_ActiveScenes.Count();
-	for ( int i = 0; i < c; i++ )
+	intp c = m_ActiveScenes.Count();
+	for ( intp i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_ActiveScenes[ i ].Get();
 		if ( !pScene ||
@@ -5189,8 +5189,8 @@ bool CSceneManager::IsRunningScriptedSceneAndNotPaused( CBaseFlex *pActor, bool 
 //-----------------------------------------------------------------------------
 bool CSceneManager::IsRunningScriptedSceneWithSpeech( CBaseFlex *pActor, bool bIgnoreInstancedScenes )
 {
-	int c = m_ActiveScenes.Count();
-	for ( int i = 0; i < c; i++ )
+	intp c = m_ActiveScenes.Count();
+	for ( intp i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_ActiveScenes[ i ].Get();
 		if ( !pScene ||
@@ -5213,8 +5213,8 @@ bool CSceneManager::IsRunningScriptedSceneWithSpeech( CBaseFlex *pActor, bool bI
 
 bool CSceneManager::IsRunningScriptedSceneWithSpeechAndNotPaused( CBaseFlex *pActor, bool bIgnoreInstancedScenes )
 {
-	int c = m_ActiveScenes.Count();
-	for ( int i = 0; i < c; i++ )
+	intp c = m_ActiveScenes.Count();
+	for ( intp i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_ActiveScenes[ i ].Get();
 		if ( !pScene ||
@@ -5441,8 +5441,8 @@ void CSceneListManager::SceneStarted( CBaseEntity *pSceneOrManager )
 	// Tell any managers we're within that we've started a scene
 	if ( bFoundStart )
 	{
-		int c = m_hListManagers.Count();
-		for ( int i = 0; i < c; i++ )
+		intp c = m_hListManagers.Count();
+		for ( intp i = 0; i < c; i++ )
 		{
 			if ( m_hListManagers[i] )
 			{

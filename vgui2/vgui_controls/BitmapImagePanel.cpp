@@ -28,7 +28,8 @@ CBitmapImagePanel::CBitmapImagePanel( Panel *parent, char const *panelName,
 {
 	m_pImage = NULL;
 
-	SetBounds( 0, 0, 100, 100 );
+	// dimhotepus: Scale UI.
+	SetBounds( 0, 0, QuickPropScale( 100 ), QuickPropScale( 100 ) );
 
 	m_pszImageName = NULL;
 	m_pszColorName = NULL;
@@ -39,7 +40,8 @@ CBitmapImagePanel::CBitmapImagePanel( Panel *parent, char const *panelName,
 
 	if ( filename && filename[ 0 ] )
 	{
-		m_pImage = scheme()->GetImage( filename, NULL );
+		// dimhotepus: Scale UI.
+		m_pImage = scheme()->GetImage( filename, false, IsProportional() );
 		m_pszImageName = V_strdup( filename );
 	}
 
@@ -184,7 +186,9 @@ void CBitmapImagePanel::setTexture( char const *filename, bool hardwareFiltered 
 	}
 	if ( filename && filename[ 0 ] )
 	{
-		m_pImage = scheme()->GetImage( filename, m_hardwareFiltered );
+		
+		// dimhotepus: Scale UI.
+		m_pImage = scheme()->GetImage( filename, m_hardwareFiltered, IsProportional() );
 		m_pszImageName = V_strdup( filename );
 	}
 	else

@@ -26,10 +26,8 @@
 using namespace vgui;
 
 
-static int ListFileNameSortFunc(ListPanel *pPanel, const ListPanelItem &item1, const ListPanelItem &item2 )
+static int ListFileNameSortFunc([[maybe_unused]] ListPanel *pPanel, const ListPanelItem &item1, const ListPanelItem &item2 )
 {
-	NOTE_UNUSED( pPanel );
-
 	bool dir1 = item1.kv->GetInt("directory") == 1;
 	bool dir2 = item2.kv->GetInt("directory") == 1;
 
@@ -144,7 +142,8 @@ PerforceFileList::PerforceFileList( Panel *pParent, const char *pPanelName ) :
 	{
 		const ColumnInfo_t& info = g_ColInfo[ i ];
 
-		AddColumnHeader( i, info.columnName, info.columnText, info.startingWidth, info.minWidth, info.maxWidth, info.flags );
+		// dimhotepus: Scale UI.
+		AddColumnHeader( i, info.columnName, info.columnText, QuickPropScale( info.startingWidth ), QuickPropScale( info.minWidth ), QuickPropScale( info.maxWidth ), info.flags );
 		SetSortFunc( i, info.pfnSort );
 		SetColumnTextAlignment( i, info.alignment );
 	}
@@ -169,9 +168,10 @@ void PerforceFileList::ApplySchemeSettings(IScheme *pScheme)
 	BaseClass::ApplySchemeSettings( pScheme );
 
 	ImageList *pImageList = new ImageList( false );
-	pImageList->AddImage( scheme()->GetImage( "resource/icon_file", false ) );
-	pImageList->AddImage( scheme()->GetImage( "resource/icon_folder", false ) );
-	pImageList->AddImage( scheme()->GetImage( "resource/icon_folder_selected", false ) );
+	// dimhotepus: Scale UI.
+	pImageList->AddImage( scheme()->GetImage( "resource/icon_file", false, IsProportional() ) );
+	pImageList->AddImage( scheme()->GetImage( "resource/icon_folder", false, IsProportional() ) );
+	pImageList->AddImage( scheme()->GetImage( "resource/icon_folder_selected", false, IsProportional() ) );
 
 	SetImageList( pImageList, true );
 }

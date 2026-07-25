@@ -117,29 +117,6 @@ public:
 };
 
 //-----------------------------------------------------------------------
-// CBrowserItem
-//
-// Menu item used to display session search results, etc.
-//-----------------------------------------------------------------------
-class CBrowserItem : public CCommandItem
-{
-	DECLARE_CLASS_SIMPLE_OVERRIDE( CBrowserItem, CCommandItem ); 
-
-public:
-	CBrowserItem( CDialogMenu *pParent, const char *pHost, const char *pPlayers, const char *pScenario, const char *pPing );
-	virtual ~CBrowserItem();
-
-	void	PerformLayout() override;
-	void	ApplySettings( KeyValues *pSettings ) override;
-	void	ApplySchemeSettings( vgui::IScheme *pScheme ) override;
-	
-private:
-	vgui::Label	*m_pPlayers;
-	vgui::Label *m_pScenario;
-	vgui::Label *m_pPing;
-};
-
-//-----------------------------------------------------------------------
 // COptionsItem
 //
 // Menu item used to present a list of options for the player to select
@@ -188,42 +165,6 @@ private:
 
 	vgui::Label		*m_pLeftArrow;
 	vgui::Label		*m_pRightArrow;
-};
-
-//-----------------------------------------------------------------------
-// CAchievementItem
-//
-// Menu item used to present an achievement - including image, title,
-// description, points and unlock date. Clicking the item opens another
-// dialog with additional information about the achievement.
-//-----------------------------------------------------------------------
-class CAchievementItem : public CMenuItem
-{
-	DECLARE_CLASS_SIMPLE_OVERRIDE( CAchievementItem, CMenuItem );
-
-public:
-	CAchievementItem( CDialogMenu *pParent, const wchar_t *pName, const wchar_t *pDesc, uint points, bool bUnlocked, IAchievement* pSourceAchievement );
-	virtual ~CAchievementItem();
-
-	void PerformLayout() override;
-	void ApplySchemeSettings( vgui::IScheme *pScheme ) override;
-
-private:
-	vgui::Label			*m_pPoints;
-	vgui::ImagePanel	*m_pLockedIcon;
-	vgui::ImagePanel	*m_pUnlockedIcon;
-	vgui::ImagePanel	*m_pImage;
-
-	vgui::ImagePanel	*m_pPercentageBarBackground;
-	vgui::ImagePanel	*m_pPercentageBar;
-	vgui::Label			*m_pPercentageText;
-
-	IAchievement		*m_pSourceAchievement;
-
-	Color				m_AchievedBGColor;
-	Color				m_UnachievedBGColor;
-
-	CPanelAnimationVar( Color, m_clrProgressBar, "ProgressBarColor", "140 140 140 255" );
 };
 
 //-----------------------------------------------------------------------
@@ -285,10 +226,8 @@ public:
 	// Menu items
 	CCommandItem		*AddCommandItem( const char *pTitleLabel, const char *pDescLabel, const char *pCommand );
 	CPlayerItem			*AddPlayerItem( const char *pTitleLabel, int64 nId, byte bVoice, bool bReady );
-	CBrowserItem		*AddBrowserItem( const char *pHost, const char *pPlayers, const char *pScenario, const char *pPing );
 	COptionsItem		*AddOptionsItem( const char *pLabel );
 	CSectionedItem		*AddSectionedItem( const char **ppEntries, int ct );
-	CAchievementItem	*AddAchievementItem( const wchar_t *pName, const wchar_t *pDesc, uint cred, bool bUnlocked, IAchievement* pSourceAchievement );
 	CMenuItem			*AddItemInternal( CMenuItem *pItem );
 
 	void				RemovePlayerItem( int idx );

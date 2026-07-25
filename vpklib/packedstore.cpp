@@ -879,7 +879,7 @@ bool CPackedStoreReadCache::ReadCacheLine( FileHandleTracker_t &fHandle, CachedV
 #ifdef IS_WINDOWS_PC
 	if ( cachedVPKRead.m_nFileFraction != fHandle.m_nCurOfs )
 		SetFilePointer ( fHandle.m_hFileHandle, cachedVPKRead.m_nFileFraction, NULL,  FILE_BEGIN); 
-	ReadFile( fHandle.m_hFileHandle, cachedVPKRead.m_pubBuffer, k_cubCacheBufferSize, (LPDWORD) &cachedVPKRead.m_cubBuffer, NULL );
+	::ReadFile( fHandle.m_hFileHandle, cachedVPKRead.m_pubBuffer, k_cubCacheBufferSize, (LPDWORD) &cachedVPKRead.m_cubBuffer, NULL );
 	SetFilePointer ( fHandle.m_hFileHandle, fHandle.m_nCurOfs, NULL,  FILE_BEGIN); 
 #else
 	m_pFileSystem->Seek( fHandle.m_hFileHandle, cachedVPKRead.m_nFileFraction, FILESYSTEM_SEEK_HEAD );
@@ -1098,9 +1098,10 @@ void CPackedStoreReadCache::RetryBadCacheLine( CachedVPKRead_t &cachedVPKRead )
 
 	cachedVPKRead.m_pubBuffer = (uint8 *)malloc( k_cubCacheBufferSize );
 	FileHandleTracker_t &fHandle = m_pPackedStore->GetFileHandle( cachedVPKRead.m_nPackFileNumber );
-	fHandle.m_Mutex.Lock();
-	ReadCacheLine( fHandle, cachedVPKRead );
-	fHandle.m_Mutex.Unlock();
+	{
+		AUTO_LOCK(fHandle.m_Mutex);
+		ReadCacheLine( fHandle, cachedVPKRead );
+	}
 	m_pFileTracker->BlockUntilMD5RequestComplete( cachedVPKRead.m_hMD5RequestHandle, &cachedVPKRead.m_md5Value );
 	cachedVPKRead.m_hMD5RequestHandle = 0;
 	CheckMd5Result( cachedVPKRead );
@@ -1184,14 +1185,16 @@ int CPackedStore::ReadData( CPackedStoreFileHandle &handle, void *pOutData, int 
 		{
 			FileHandleTracker_t &fHandle = GetFileHandle( handle.m_nFileNumber );
 			int nDesiredPos = handle.m_nFileOffset + handle.m_nCurrentFileOffset - handle.m_nMetaDataSize;
-			int nRead;
-			fHandle.m_Mutex.Lock();
+
+			AUTO_LOCK(fHandle.m_Mutex);
+
 			if ( handle.m_nFileNumber == VPKFILENUMBER_EMBEDDED_IN_DIR_FILE )
 			{
 				// for file data in the directory header, all offsets are relative to the size of the dir header.
 				nDesiredPos += m_nDirectoryDataSize + sizeof( VPKDirHeader_t );
 			}
 
+			int nRead;
 			if ( m_PackedStoreReadCache.BCanSatisfyFromReadCache( (uint8 *)pOutData, handle, fHandle, nDesiredPos, nNumBytes, nRead ) )
 			{
 				handle.m_nCurrentFileOffset += nRead;
@@ -1201,7 +1204,7 @@ int CPackedStore::ReadData( CPackedStoreFileHandle &handle, void *pOutData, int 
 #ifdef IS_WINDOWS_PC
 				if ( nDesiredPos != fHandle.m_nCurOfs )
 					SetFilePointer ( fHandle.m_hFileHandle, nDesiredPos, NULL,  FILE_BEGIN); 
-				ReadFile( fHandle.m_hFileHandle, pOutData, nNumBytes, (LPDWORD) &nRead, NULL );
+				::ReadFile( fHandle.m_hFileHandle, pOutData, nNumBytes, (LPDWORD) &nRead, NULL );
 #else
 				m_pFileSystem->Seek( fHandle.m_hFileHandle, nDesiredPos, FILESYSTEM_SEEK_HEAD );
 				nRead = m_pFileSystem->Read( pOutData, nNumBytes, fHandle.m_hFileHandle );
@@ -1211,7 +1214,6 @@ int CPackedStore::ReadData( CPackedStoreFileHandle &handle, void *pOutData, int 
 			}
 			Assert( nRead == nNumBytes );
 			nRet += nRead;
-			fHandle.m_Mutex.Unlock();
 		}
 	}
 	m_PackedStoreReadCache.RetryAllBadCacheLines();
@@ -1229,7 +1231,8 @@ bool CPackedStore::HashEntirePackFile( CPackedStoreFileHandle &handle, int64 &nF
 #endif
 
 	FileHandleTracker_t &fHandle = GetFileHandle( handle.m_nFileNumber );
-	fHandle.m_Mutex.Lock();
+	{
+	AUTO_LOCK(fHandle.m_Mutex);
 	
 #ifdef IS_WINDOWS_PC
 	unsigned int fileSizeHigh;
@@ -1262,9 +1265,9 @@ bool CPackedStore::HashEntirePackFile( CPackedStoreFileHandle &handle, int64 &nF
 		if ( chunkLen == 0 )
 			break;
 
-		int nRead;
+			unsigned int nRead;
 #ifdef IS_WINDOWS_PC
-		ReadFile( fHandle.m_hFileHandle, tempBuf, chunkLen, (LPDWORD) &nRead, NULL );
+			::ReadFile( fHandle.m_hFileHandle, tempBuf, chunkLen, (LPDWORD) &nRead, NULL );
 #else
 		nRead = m_pFileSystem->Read( tempBuf, chunkLen, fHandle.m_hFileHandle );
 #endif
@@ -1285,7 +1288,7 @@ bool CPackedStore::HashEntirePackFile( CPackedStoreFileHandle &handle, int64 &nF
 #else
 	m_pFileSystem->Seek( fHandle.m_hFileHandle, fHandle.m_nCurOfs, FILESYSTEM_SEEK_HEAD );
 #endif
-	fHandle.m_Mutex.Unlock();
+	}
 
 #ifdef COMPUTE_HASH_TIMES
 	timer.End();

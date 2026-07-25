@@ -24,7 +24,13 @@ CVPhysPtrUtlVectorSaveRestoreOps g_VPhysPtrUtlVectorSaveRestoreOps;
 //-----------------------------------------------------------------------------
 static void AddPtrAssociation( void *pOldValue, void *pNewValue )
 {
-	s_VPhysPtrMap.Insert( pOldValue, pNewValue );
+	// dimhotepus: Remap phys pointers only if old is not nullptr or both are nullptr.
+	// dimhotepus: Old was nullptr for old world -> new world (now we ignore such mapping as no sense).
+	// dimhotepus: Old was nullptr for any pointer which is nullptr like group constraint (was remapped to world mistakenly).
+	if ( pOldValue != nullptr || pNewValue == nullptr )
+	{
+		s_VPhysPtrMap.Insert( pOldValue, pNewValue );
+	}
 }
 
 
@@ -132,11 +138,11 @@ void CPhysicsEnvironment::PostRestore()
 
 void CVPhysPtrSaveRestoreOps::Save( const SaveRestoreFieldInfo_t &fieldInfo, ISave *pSave )
 {
-	char *pField = (char *)fieldInfo.pField;
+	const char *pField = (const char *)fieldInfo.pField;
 	int nObjects = fieldInfo.pTypeDesc->fieldSize;
 	for ( int i = 0; i < nObjects; i++ )
 	{
-		pSave->WriteData( (char*)pField, sizeof(void*) );
+		pSave->WriteData( pField, sizeof(void*) );
 		pField += sizeof(void*);
 	}
 }

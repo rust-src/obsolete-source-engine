@@ -24,7 +24,7 @@ static char token[ 1024 ];
 
 extern IVEngineClient *engine;
 
-void StripFloatTrailingZeros(char *str)
+static void StripFloatTrailingZeros(char *str)
 {
 	// scan for a '.'
 	char *period = strchr(str, '.');
@@ -54,7 +54,7 @@ void StripFloatTrailingZeros(char *str)
 }
 
 /////////////////////
-objtypedesc_t objtypes[] =
+static constexpr objtypedesc_t objtypes[] =
 {
 	{ O_BOOL  , "BOOL" }, 
 	{ O_NUMBER, "NUMBER" }, 
@@ -80,7 +80,8 @@ mpcontrol_t::mpcontrol_t( Panel *parent, char const *panelName )
 
 void mpcontrol_t::OnSizeChanged( int wide, int tall )
 {
-	int inset = 4;
+	// dimhotepus: Scale UI.
+	int inset = QuickPropScale( 4 );
 
 	if ( pPrompt )
 	{
@@ -88,9 +89,9 @@ void mpcontrol_t::OnSizeChanged( int wide, int tall )
 
 		if ( pControl )
 		{
-			pControl->SetBounds( w + 20, inset, w - 20, tall - 2 * inset );
+			pControl->SetBounds( w + QuickPropScale( 20 ), inset, w - QuickPropScale( 20 ), tall - 2 * inset );
 		}
-		pPrompt->SetBounds( 0, inset, w + 20, tall - 2 * inset  );
+		pPrompt->SetBounds( 0, inset, w + QuickPropScale( 20 ), tall - 2 * inset  );
 	}
 	else
 	{
@@ -104,8 +105,8 @@ void mpcontrol_t::OnSizeChanged( int wide, int tall )
 CScriptListItem::CScriptListItem()
 {
 	pNext = nullptr;
-	memset( szItemText, 0, 128 ); 
-	memset( szValue, 0, 256 );
+	BitwiseClear( szItemText );
+	BitwiseClear( szValue );
 }
 
 CScriptListItem::CScriptListItem( char const *strItem, char const *strValue )
@@ -145,9 +146,10 @@ void CScriptObject::RemoveAndDeleteAllItems( )
 
 void CScriptObject::SetCurValue( char const *strValue )
 { 
-	Q_strncpy( curValue, strValue, sizeof( curValue ) );
+	V_strcpy_safe( curValue, strValue );
 
-	fcurValue = (float)atof( curValue ); 
+	// dimhotepus: atof -> strtof.
+	fcurValue = strtof( curValue, nullptr ); 
 
 	if ( type == O_NUMBER || type == O_BOOL || type == O_SLIDER )
 	{
@@ -179,45 +181,13 @@ void CScriptObject::AddItem( CScriptListItem *pItem )
 	}
 }
 
-/*
-===================
-UTIL_StripInvalidCharacters
-
-Removes any possible formatting codes and double quote characters from the input string
-===================
-*/
-void UTIL_StripInvalidCharacters( char *pszInput, int maxlen )
+template<intp maxlen>
+static void FixupString( INOUT_Z_ARRAY char (&inString)[maxlen] )
 {
-	char szOutput[4096];
-	char *pIn, *pOut;
-	
-	pIn = pszInput;
-	pOut = szOutput;
-
-	*pOut = '\0';
-
-	while ( *pIn )
-	{
-		if ( ( *pIn != '"' ) &&
-			 ( *pIn != '%' ) )
-		{
-			*pOut++ = *pIn;
-		}
-		pIn++;
-	}
-
-	*pOut = '\0';
-
-	// Copy back over, in place
-	Q_strncpy( pszInput, szOutput, maxlen );
-}
-
-void FixupString( char *inString, int maxlen )
-{
-	char szBuffer[ 4096 ];
-	Q_strncpy( szBuffer, inString, sizeof( szBuffer ) );
-	UTIL_StripInvalidCharacters( szBuffer, sizeof( szBuffer ) );
-	Q_strncpy( inString, szBuffer, maxlen );
+	char szBuffer[ maxlen ];
+	V_strcpy_safe( szBuffer, inString );
+	V_StripInvalidCharacters( szBuffer );
+	V_strcpy_safe( inString, szBuffer );
 }
 
 /*
@@ -227,7 +197,7 @@ CleanFloat
 Removes any ".000" from the end of floats
 ===================
 */
-char * CleanFloat( float val )
+static char * CleanFloat( float val )
 {
 	static int curstring  = 0;
 	static char string[2][32];
@@ -247,13 +217,13 @@ char * CleanFloat( float val )
 
 	while ( *tmp == '0' && tmp > str )
 	{
-		*tmp = 0;
+		*tmp = '\0';
 		--tmp;
 	}
 
 	if ( *tmp == '.' )
 	{
-		*tmp = 0;
+		*tmp = '\0';
 	}
 
 	return str;
@@ -264,15 +234,15 @@ void CScriptObject::WriteToScriptFile( FileHandle_t fp )
 	if ( type == O_OBSOLETE )
 		return;
 
-	FixupString( cvarname, sizeof( cvarname ) );
+	FixupString( cvarname );
 	g_pFullFileSystem->FPrintf( fp, "\t\"%s\"\r\n", cvarname );
 
 	g_pFullFileSystem->FPrintf( fp, "\t{\r\n" );
 
 	CScriptListItem *pItem;
 
-	FixupString( prompt, sizeof( prompt ) );
-	FixupString( tooltip, sizeof( tooltip ) );
+	FixupString( prompt );
+	FixupString( tooltip );
 
 	switch ( type )
 	{
@@ -301,7 +271,7 @@ void CScriptObject::WriteToScriptFile( FileHandle_t fp )
 			g_pFullFileSystem->FPrintf( fp, "\t\t\"%s\"\r\n", tooltip );
 		}
 		g_pFullFileSystem->FPrintf( fp, "\t\t{ STRING }\r\n" );
-		FixupString( curValue, sizeof( curValue ) );
+		FixupString( curValue );
 		g_pFullFileSystem->FPrintf( fp, "\t\t{ \"%s\" }\r\n", curValue );
 		break;
 	case O_LIST:
@@ -315,8 +285,8 @@ void CScriptObject::WriteToScriptFile( FileHandle_t fp )
 		pItem = pListItems;
 		while ( pItem )
 		{
-			UTIL_StripInvalidCharacters( pItem->szItemText, sizeof( pItem->szItemText ) );
-			UTIL_StripInvalidCharacters( pItem->szValue, sizeof( pItem->szValue ) );
+			V_StripInvalidCharacters( pItem->szItemText );
+			V_StripInvalidCharacters( pItem->szValue );
 			g_pFullFileSystem->FPrintf( fp, "\t\t\t\"%s\" \"%s\"\r\n",
 				pItem->szItemText, pItem->szValue );
 
@@ -356,7 +326,7 @@ void CScriptObject::WriteToFile( FileHandle_t fp )
 	if ( type == O_OBSOLETE || type == O_CATEGORY )
 		return;
 
-	FixupString( cvarname, sizeof( cvarname ) );
+	FixupString( cvarname );
 	g_pFullFileSystem->FPrintf( fp, "\"%s\"\t\t", cvarname );
 
 	CScriptListItem *pItem;
@@ -377,7 +347,7 @@ void CScriptObject::WriteToFile( FileHandle_t fp )
 		g_pFullFileSystem->FPrintf( fp, "\"%f\"\r\n", fVal );
 		break;
 	case O_STRING:
-		FixupString( curValue, sizeof( curValue ) );
+		FixupString( curValue );
 		g_pFullFileSystem->FPrintf( fp, "\"%s\"\r\n", curValue );
 		break;
 	case O_LIST:
@@ -392,7 +362,7 @@ void CScriptObject::WriteToFile( FileHandle_t fp )
 
 		if ( pItem )
 		{
-			UTIL_StripInvalidCharacters( pItem->szValue, sizeof( pItem->szValue ) );
+			V_StripInvalidCharacters( pItem->szValue );
 			g_pFullFileSystem->FPrintf( fp, "\"%s\"\r\n", pItem->szValue );
 		}
 		else  //Couln't find index
@@ -411,7 +381,7 @@ void CScriptObject::WriteToConfig( )
 	char *pszKey;
 	char szValue[2048];
 
-	pszKey = ( char * )cvarname;
+	pszKey = cvarname;
 
 	CScriptListItem *pItem;
 	float fVal;
@@ -419,7 +389,7 @@ void CScriptObject::WriteToConfig( )
 	switch ( type )
 	{
 	case O_BOOL:
-		Q_snprintf( szValue, sizeof( szValue ), "%s", fcurValue != 0.0 ? "1" : "0" );
+		V_sprintf_safe( szValue, "%c", fcurValue != 0.0 ? '1' : '0' );
 		break;
 	case O_NUMBER:
 	case O_SLIDER:
@@ -431,8 +401,8 @@ void CScriptObject::WriteToConfig( )
 		V_to_chars( szValue, fVal );
 		break;
 	case O_STRING:
-		Q_snprintf( szValue, sizeof( szValue ), "\"%s\"", (char *)curValue );
-		UTIL_StripInvalidCharacters( szValue, sizeof( szValue ) );
+		V_sprintf_safe( szValue, "\"%s\"", curValue );
+		V_StripInvalidCharacters( szValue );
 		break;
 	case O_LIST:
 		pItem = pListItems;
@@ -446,25 +416,18 @@ void CScriptObject::WriteToConfig( )
 
 		if ( pItem )
 		{
-			Q_snprintf( szValue, sizeof( szValue ), "%s", pItem->szValue );
-			UTIL_StripInvalidCharacters( szValue, sizeof( szValue ) );
+			V_sprintf_safe( szValue, "%s", pItem->szValue );
+			V_StripInvalidCharacters( szValue );
 		}
 		else  //Couldn't find index
 		{
-			Q_strncpy( szValue, "0", sizeof( szValue ) );
+			V_strcpy_safe( szValue, "0" );
 		}
 		break;
 	}
 
 	char command[ 256 ];
-	if ( bSetInfo )
-	{
-		Q_snprintf( command, sizeof(command), "setinfo %s \"%s\"\n", pszKey, szValue );
-	}
-	else
-	{
-		Q_snprintf( command, sizeof(command), "%s \"%s\"\n", pszKey, szValue );
-	}
+	V_sprintf_safe( command, bSetInfo ? "setinfo %s \"%s\"\n" : "%s \"%s\"\n", pszKey, szValue );
 
 	engine->ClientCmd_Unrestricted( command );
 
@@ -487,17 +450,17 @@ bool CScriptObject::ReadFromBuffer( const char **pBuffer, bool isNewObject )
 {
 	// Get the first token.
 	// The cvar we are setting
-	*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+	*pBuffer = engine->ParseFile( *pBuffer, token );
 	if ( Q_isempty( token ) )
 		return false;
 
 	if ( isNewObject )
 	{
-		Q_strncpy( cvarname, token, sizeof( cvarname ) );
+		V_strcpy_safe( cvarname, token );
 	}
 
 	// Parse the {
-	*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+	*pBuffer = engine->ParseFile( *pBuffer, token );
 	if ( Q_isempty( token ) )
 		return false;
 
@@ -508,26 +471,26 @@ bool CScriptObject::ReadFromBuffer( const char **pBuffer, bool isNewObject )
 	}
 
 	// Parse the Prompt
-	*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+	*pBuffer = engine->ParseFile( *pBuffer, token );
 	if ( Q_isempty( token ) )
 		return false;
 
 	if ( isNewObject )
 	{
-		Q_strncpy( prompt, token, sizeof( prompt ) );
+		V_strcpy_safe( prompt, token );
 	}
 
-	*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+	*pBuffer = engine->ParseFile( *pBuffer, token );
 	if ( Q_isempty( token ) )
 		return false;
 
 	// If it's not a {, consider it the optional tooltip
 	if ( strcmp( token, "{" ) )
 	{
-		Q_strncpy( tooltip, token, sizeof( tooltip ) );
+		V_strcpy_safe( tooltip, token );
 
 		// Parse the next {
-		*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+		*pBuffer = engine->ParseFile( *pBuffer, token );
 		if ( Q_isempty( token ) )
 			return false;
 	}
@@ -539,7 +502,7 @@ bool CScriptObject::ReadFromBuffer( const char **pBuffer, bool isNewObject )
 	}
 
 	// Now parse the type:
-	*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+	*pBuffer = engine->ParseFile( *pBuffer, token );
 	if ( Q_isempty( token ) )
 		return false;
 
@@ -558,7 +521,7 @@ bool CScriptObject::ReadFromBuffer( const char **pBuffer, bool isNewObject )
 	if ( newType == O_CATEGORY )
 	{
 		// Parse the }
-		*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+		*pBuffer = engine->ParseFile( *pBuffer, token );
 		if ( Q_isempty( token ) )
 			return false;
 		if ( strcmp( token, "}" ) )
@@ -568,7 +531,7 @@ bool CScriptObject::ReadFromBuffer( const char **pBuffer, bool isNewObject )
 		}
 
 		// Parse the final }
-		*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+		*pBuffer = engine->ParseFile( *pBuffer, token );
 		if ( Q_isempty( token ) )
 			return false;
 		if ( strcmp( token, "}" ) )
@@ -584,7 +547,7 @@ bool CScriptObject::ReadFromBuffer( const char **pBuffer, bool isNewObject )
 	case O_OBSOLETE:
 	case O_BOOL:
 		// Parse the next {
-		*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+		*pBuffer = engine->ParseFile( *pBuffer, token );
 		if ( Q_isempty( token ) )
 			return false;
 
@@ -597,27 +560,29 @@ bool CScriptObject::ReadFromBuffer( const char **pBuffer, bool isNewObject )
 	case O_NUMBER:
 	case O_SLIDER:
 		// Parse the Min
-		*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+		*pBuffer = engine->ParseFile( *pBuffer, token );
 		if ( Q_isempty( token ) )
 			return false;
 	
 		if ( isNewObject )
 		{
-			fMin = (float)atof( token );
+			// dimhotepus: atof -> strtof.
+			fMin = strtof( token, nullptr );
 		}
 
 		// Parse the Min
-		*pBuffer = engine->ParseFile( *pBuffer, token , sizeof( token ));
+		*pBuffer = engine->ParseFile( *pBuffer, token );
 		if ( Q_isempty( token ) )
 			return false;
 	
 		if ( isNewObject )
 		{
-			fMax = (float)atof( token );
+			// dimhotepus: atof -> strtof.
+			fMax = strtof( token, nullptr );
 		}
 
 		// Parse the next {
-		*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+		*pBuffer = engine->ParseFile( *pBuffer, token );
 		if ( Q_isempty( token ) )
 			return false;
 
@@ -629,7 +594,7 @@ bool CScriptObject::ReadFromBuffer( const char **pBuffer, bool isNewObject )
 		break;
 	case O_STRING:
 		// Parse the next {
-		*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+		*pBuffer = engine->ParseFile( *pBuffer, token );
 		if ( Q_isempty( token ) )
 			return false;
 
@@ -644,7 +609,7 @@ bool CScriptObject::ReadFromBuffer( const char **pBuffer, bool isNewObject )
 		while ( true )
 		{
 			// Parse the next {
-			*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+			*pBuffer = engine->ParseFile( *pBuffer, token );
 			if ( Q_isempty( token ) )
 				return false;
 
@@ -658,14 +623,14 @@ bool CScriptObject::ReadFromBuffer( const char **pBuffer, bool isNewObject )
 			char strItem[ 128 ];
 			char strValue[128];
 
-			Q_strncpy( strItem, token, sizeof( strItem ) );
+			V_strcpy_safe( strItem, token );
 
 			// Parse the value
-				*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+				*pBuffer = engine->ParseFile( *pBuffer, token );
 			if ( Q_isempty( token ) )
 				return false;
 
-			Q_strncpy( strValue, token, sizeof( strValue ) );
+			V_strcpy_safe( strValue, token );
 
 			if ( isNewObject )
 			{
@@ -682,7 +647,7 @@ bool CScriptObject::ReadFromBuffer( const char **pBuffer, bool isNewObject )
 	// Now read in the default value
 
 	// Parse the {
-		*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+		*pBuffer = engine->ParseFile( *pBuffer, token );
 	if ( Q_isempty( token ) )
 		return false;
 
@@ -693,13 +658,14 @@ bool CScriptObject::ReadFromBuffer( const char **pBuffer, bool isNewObject )
 	}
 
 	// Parse the default
-		*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+		*pBuffer = engine->ParseFile( *pBuffer, token );
 	//if ( Q_isempty( token ) )
 	//	return false;
 
 	// Set the values
-	Q_strncpy( defValue, token, sizeof( defValue ) );
-	fdefValue = (float)atof( token );
+	V_strcpy_safe( defValue, token );
+	// dimhotepus: atof -> strtof.
+	fdefValue = strtof( token, nullptr );
 
 	if (type == O_NUMBER || type == O_SLIDER)
 	{
@@ -709,7 +675,7 @@ bool CScriptObject::ReadFromBuffer( const char **pBuffer, bool isNewObject )
 	SetCurValue( defValue );
 
 	// Parse the }
-		*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+		*pBuffer = engine->ParseFile( *pBuffer, token );
 	if ( Q_isempty( token ) )
 		return false;
 
@@ -720,7 +686,7 @@ bool CScriptObject::ReadFromBuffer( const char **pBuffer, bool isNewObject )
 	}
 
 	// Parse the final }
-		*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+		*pBuffer = engine->ParseFile( *pBuffer, token );
 	if ( Q_isempty( token ) )
 		return false;
 
@@ -728,7 +694,7 @@ bool CScriptObject::ReadFromBuffer( const char **pBuffer, bool isNewObject )
 	{
 		bSetInfo = true;
 		// Parse the final }
-		*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+		*pBuffer = engine->ParseFile( *pBuffer, token );
 		if ( Q_isempty( token ) )
 			return false;
 	}
@@ -746,6 +712,8 @@ bool CScriptObject::ReadFromBuffer( const char **pBuffer, bool isNewObject )
 CDescription::CDescription( )
 {
 	pObjList = nullptr;
+	m_pszHintText = nullptr;
+	m_pszDescriptionType = nullptr;
 }
 
 CDescription::~CDescription()
@@ -812,7 +780,7 @@ void CDescription::AddObject( CScriptObject *pObj )
 bool CDescription::ReadFromBuffer( const char **pBuffer, bool bAllowNewObject )
 {
 	// Get the first token.
-	*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+	*pBuffer = engine->ParseFile( *pBuffer, token );
 	if ( Q_isempty( token ) )
 		return false;
 
@@ -825,15 +793,15 @@ bool CDescription::ReadFromBuffer( const char **pBuffer, bool bAllowNewObject )
 
 	// Parse in the version #
 	// Get the first token.
-	*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+	*pBuffer = engine->ParseFile( *pBuffer, token );
 	if ( Q_isempty( token ) )
 	{
 		Msg( "Expecting version #" );
 		return false;
 	}
-
-	float fVer;
-	fVer = (float)atof( token );
+	
+	// dimhotepus: atof -> strtof.
+	float fVer = strtof( token, nullptr );
 
 	if ( fVer != SCRIPT_VERSION )
 	{
@@ -842,7 +810,7 @@ bool CDescription::ReadFromBuffer( const char **pBuffer, bool bAllowNewObject )
 	}
 
 	// Get the "DESCRIPTION"
-	*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+	*pBuffer = engine->ParseFile( *pBuffer, token );
 	if ( Q_isempty( token ) )
 		return false;
 
@@ -854,7 +822,7 @@ bool CDescription::ReadFromBuffer( const char **pBuffer, bool bAllowNewObject )
 	}
 
 	// Parse in the description type
-	*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+	*pBuffer = engine->ParseFile( *pBuffer, token );
 	if ( Q_isempty( token ) )
 	{
 		Msg( "Expecting '%s'", m_pszDescriptionType );
@@ -868,7 +836,7 @@ bool CDescription::ReadFromBuffer( const char **pBuffer, bool bAllowNewObject )
 	}
 
 	// Parse the {
-	*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+	*pBuffer = engine->ParseFile( *pBuffer, token );
 	if ( Q_isempty( token ) )
 		return false;
 
@@ -886,7 +854,7 @@ bool CDescription::ReadFromBuffer( const char **pBuffer, bool bAllowNewObject )
 		pStart = *pBuffer;
 
 		// Get the first token.
-		*pBuffer = engine->ParseFile( *pBuffer, token, sizeof( token ) );
+		*pBuffer = engine->ParseFile( *pBuffer, token );
 		if ( Q_isempty( token ) )
 			return false;
 
@@ -948,19 +916,19 @@ bool CDescription::InitFromFile( const char *pszFileName, bool bAllowNewObject /
 	if ( !file )
 		return false;
 
-	int len =g_pFullFileSystem->Size( file );
+	int len = g_pFullFileSystem->Size( file );
 
 	// read the file
-	byte *buffer = new unsigned char[ len ];
+	std::unique_ptr<byte[]> buffer = std::make_unique<byte[]>( len + 1 );
 	Assert( buffer );
-	g_pFullFileSystem->Read( buffer, len, file );
+	g_pFullFileSystem->Read( buffer.get(), len, file );
 	g_pFullFileSystem->Close( file );
+	// dimhotepus: Ensure text file is terminated.
+	buffer[len] = 0;
 
-	const char *pBuffer = (const char*)buffer;
+	const char *pBuffer = (const char*)buffer.get();
 	
 	ReadFromBuffer( &pBuffer, bAllowNewObject );
-
-	delete[] buffer;
 
 	return true;
 }
@@ -1045,15 +1013,17 @@ void CDescription::TransferCurrentValues( const char *pszConfigFile )
 		if ( value && value[ 0 ] )
 		//if ( CFG_GetValue( pszConfigFile, pObj->cvarname, szValue ) )
 		{
-			Q_strncpy( szValue, value, sizeof( szValue ) );
+			V_strcpy_safe( szValue, value );
 
 			// Fill in better default value
 			// 
-			Q_strncpy( pObj->curValue,  szValue, sizeof( pObj->curValue ) );
-			pObj->fcurValue = (float)atof( szValue );
+			V_strcpy_safe( pObj->curValue, szValue );
+			// dimhotepus: atof -> strtof.
+			pObj->fcurValue = strtof( szValue, nullptr );
 
-			Q_strncpy( pObj->defValue, szValue, sizeof( pObj->defValue ) );
-			pObj->fdefValue = (float)atof( szValue );
+			V_strcpy_safe( pObj->defValue, szValue );
+			// dimhotepus: atof -> strtof.
+			pObj->fdefValue = strtof( szValue, nullptr );
 		}
 
 		pObj = pObj->pNext;

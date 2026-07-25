@@ -97,9 +97,9 @@ public:
 	bool ParseActBusyFromKV( busyanim_t *pAnim, KeyValues *pSection );
 
 	// Purpose: Returns the index of the busyanim data for the specified activity or sequence
-	int FindBusyAnim( Activity iActivity, const char *pSequence );
+	intp FindBusyAnim( Activity iActivity, const char *pSequence );
 
-	busyanim_t *GetBusyAnim( int iIndex ) { return &m_ActBusyAnims[iIndex]; }
+	busyanim_t *GetBusyAnim( intp iIndex ) { return &m_ActBusyAnims[iIndex]; }
 
 protected:
 	CUtlVector<busyanim_t>	m_ActBusyAnims;
@@ -212,10 +212,10 @@ bool CActBusyAnimData::ParseActBusyFromKV( busyanim_t *pAnim, KeyValues *pSectio
 //-----------------------------------------------------------------------------
 // Purpose: Returns the busyanim data for the specified activity
 //-----------------------------------------------------------------------------
-int CActBusyAnimData::FindBusyAnim( Activity iActivity, const char *pSequence )
+intp CActBusyAnimData::FindBusyAnim( Activity iActivity, const char *pSequence )
 {
-	int iCount = m_ActBusyAnims.Count();
-	for ( int i = 0; i < iCount; i++ )
+	intp iCount = m_ActBusyAnims.Count();
+	for ( intp i = 0; i < iCount; i++ )
 	{
 		busyanim_t *pBusyAnim = &m_ActBusyAnims[i];
 		Assert( pBusyAnim );
@@ -722,7 +722,7 @@ void CAI_ActBusyBehavior::OnFriendDamaged( CBaseCombatCharacter *pSquadmate, CBa
 //			You must set COND_ACTBUSY_AWARE_OF_ENEMY_IN_SAFE_ZONE to let
 //			the NPC know.
 //-----------------------------------------------------------------------------
-int CAI_ActBusyBehavior::CountEnemiesInSafeZone()
+intp CAI_ActBusyBehavior::CountEnemiesInSafeZone()
 {
 	if( !IsCombatActBusy() )
 	{
@@ -732,10 +732,10 @@ int CAI_ActBusyBehavior::CountEnemiesInSafeZone()
 	// Grovel the AI list and count the enemies in the zone. By enemies, I mean
 	// anyone that I would fight if I saw. 
 	CAI_BaseNPC **	ppAIs 	= g_AI_Manager.AccessAIs();
-	int 			nAIs 	= g_AI_Manager.NumAIs();
-	int				count = 0;
+	intp 			nAIs 	= g_AI_Manager.NumAIs();
+	intp			count = 0;
 
-	for ( int i = 0; i < nAIs; i++ )
+	for ( intp i = 0; i < nAIs; i++ )
 	{
 		if( GetOuter()->IRelationType(ppAIs[i]) < D_LI )
 		{
@@ -1192,7 +1192,7 @@ int CAI_ActBusyBehavior::SelectScheduleWhileNotBusy( int iBase )
 			// Ensure we've got a sequence for the node
 			const char *pSequenceOrActivity = STRING(pNode->HintActivityName());
 			Activity iNodeActivity;
-			int iBusyAnim;
+			intp iBusyAnim;
 
 			// See if the node specifies that we should teleport to it
 			const char *cSpace = strchr( pSequenceOrActivity, ' ' );
@@ -1599,7 +1599,7 @@ bool CAI_ActBusyBehavior::IsInSafeZone( CBaseEntity *pEntity )
 //-----------------------------------------------------------------------------
 // Purpose: Return true if this NPC has the anims required to use the specified actbusy hint
 //-----------------------------------------------------------------------------
-bool CAI_ActBusyBehavior::HasAnimForActBusy( int iActBusy, busyanimparts_t AnimPart )
+bool CAI_ActBusyBehavior::HasAnimForActBusy( intp iActBusy, busyanimparts_t AnimPart )
 {
 	if ( iActBusy == -1 )
 		return false;
@@ -1610,7 +1610,7 @@ bool CAI_ActBusyBehavior::HasAnimForActBusy( int iActBusy, busyanimparts_t AnimP
 
 	// Try and play the sequence first
 	if ( pBusyAnim->iszSequences[AnimPart] != NULL_STRING )
-		return (GetOuter()->LookupSequence( (char*)STRING(pBusyAnim->iszSequences[AnimPart]) ) != ACTIVITY_NOT_AVAILABLE);
+		return (GetOuter()->LookupSequence( STRING(pBusyAnim->iszSequences[AnimPart]) ) != ACTIVITY_NOT_AVAILABLE);
 
 	// Try and play the activity second
 	if ( pBusyAnim->iActivities[AnimPart] != ACT_INVALID )
@@ -1668,7 +1668,7 @@ bool CAI_ActBusyBehavior::PlayAnimForActBusy( busyanimparts_t AnimPart )
 	// Try and play the sequence first
 	if ( pBusyAnim->iszSequences[AnimPart] != NULL_STRING )
 	{
-		GetOuter()->SetSequenceByName( (char*)STRING(pBusyAnim->iszSequences[AnimPart]) );
+		GetOuter()->SetSequenceByName( STRING(pBusyAnim->iszSequences[AnimPart]) );
 		GetOuter()->SetIdealActivity( ACT_DO_NOT_DISTURB );
 		return true;
 	}
@@ -2414,7 +2414,7 @@ void CAI_ActBusyGoal::InputDeactivate( inputdata_t &inputdata )
 
 	BaseClass::InputDeactivate( inputdata );
 
-	for( int i = 0 ; i < NumActors() ; i++ )
+	for( intp i = 0 ; i < NumActors() ; i++ )
 	{
 		CAI_BaseNPC *pActor = GetActor( i );
 
@@ -2442,7 +2442,7 @@ void CAI_ActBusyGoal::InputSetBusySearchRange( inputdata_t &inputdata )
 {
 	m_flBusySearchRange = inputdata.value.Float();
 
-	for( int i = 0 ; i < NumActors() ; i++ )
+	for( intp i = 0 ; i < NumActors() ; i++ )
 	{
 		CAI_BaseNPC *pActor = GetActor( i );
 

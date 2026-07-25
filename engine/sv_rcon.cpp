@@ -211,8 +211,8 @@ void CRConServer::RunFrame()
 
 	// handle incoming data
 	// NOTE: Have to iterate in reverse since we may be killing sockets
-	int nCount = m_Socket.GetAcceptedSocketCount();
-	for ( int i = nCount - 1; i >= 0; --i )
+	intp nCount = m_Socket.GetAcceptedSocketCount();
+	for ( intp i = nCount - 1; i >= 0; --i )
 	{
 		// process any outgoing data for this socket
 		ConnectedRConSocket_t *pData = GetSocketData( i );
@@ -233,7 +233,7 @@ void CRConServer::RunFrame()
 			}
 		}
 		
-		int sendLen = g_ServerRemoteAccess.GetDataResponseSize( pData->listenerID );
+		intp sendLen = g_ServerRemoteAccess.GetDataResponseSize( pData->listenerID );
 		if ( sendLen > 0 )
 		{
 			char sendBuf[4096];
@@ -245,7 +245,7 @@ void CRConServer::RunFrame()
 			}
 			memcpy( pBuf, &sendLen, sizeof(sendLen) ); // copy the size of the packet in
 			g_ServerRemoteAccess.ReadDataResponse( pData->listenerID, pBuf + sizeof(int), sendLen );
-			SendRCONResponse( i, pBuf, sendLen + sizeof(int) );
+			SendRCONResponse( i, pBuf, sendLen + static_cast<intp>(sizeof(int)) );
 			if ( bAllocate )
 			{
 				delete [] pBuf;
@@ -335,7 +335,7 @@ void CRConServer::RunFrame()
 			}
 
 			// Check and see if socket was closed as a result of processing - this can happen if the user has entered too many passwords
-			int nNewCount = m_Socket.GetAcceptedSocketCount();
+			intp nNewCount = m_Socket.GetAcceptedSocketCount();
 			if ( 0 == nNewCount || i > nNewCount || pData != GetSocketData( i )  ) 
 			{
 				response.Purge();
@@ -378,8 +378,8 @@ void CRConServer::RunFrame()
 void CRConServer::FinishRedirect( const char *msg, const netadr_t &adr )
 {	
 	// NOTE: Has to iterate in reverse; SendRCONResponse can close sockets
-	int nCount = m_Socket.GetAcceptedSocketCount();
-	for ( int i = nCount - 1; i >= 0; --i )
+	intp nCount = m_Socket.GetAcceptedSocketCount();
+	for ( intp i = nCount - 1; i >= 0; --i )
 	{
 		const netadr_t& socketAdr = m_Socket.GetAcceptedSocketAddress( i );
 		if ( !adr.CompareAdr( socketAdr ) )
@@ -394,7 +394,7 @@ void CRConServer::FinishRedirect( const char *msg, const netadr_t &adr )
 		response.PutInt(SERVERDATA_RESPONSE_VALUE);
 		response.PutString(msg);
 		response.PutString("");
-		int size = response.TellPut() - sizeof(int); 
+		int size = response.TellPut() - static_cast<intp>(sizeof(int)); 
 		response.SeekPut( CUtlBuffer::SEEK_HEAD, 0 );
 		response.PutInt(size); // the size
 		response.SeekPut( CUtlBuffer::SEEK_CURRENT, size );
@@ -412,8 +412,8 @@ void CRConServer::FinishRedirect( const char *msg, const netadr_t &adr )
 //-----------------------------------------------------------------------------
 void CRConServer::SetRequestID( ra_listener_id listener, int iRequestID )
 {
-	int nCount = m_Socket.GetAcceptedSocketCount();
-	for ( int i = 0; i < nCount; i++ )
+	intp nCount = m_Socket.GetAcceptedSocketCount();
+	for ( intp i = 0; i < nCount; i++ )
 	{
 		ConnectedRConSocket_t *pSocketData = GetSocketData( i );
 		if ( pSocketData->listenerID == listener)
@@ -520,14 +520,13 @@ bool CRConServer::HandleFailedRconAuth( const netadr_t & adr )
 		}
 	}
 
-	int i;
 	FailedRCon_t *failedRcon = NULL;
-	int nCount = m_failedRcons.Count();
-	for ( i=0; i < nCount; ++i )
+	intp nCount = m_failedRcons.Count();
+	for ( auto &rcon : m_failedRcons )
 	{
-		if ( adr.CompareAdr( m_failedRcons[i].adr, true ) )
+		if (adr.CompareAdr(rcon.adr, true))
 		{
-			failedRcon = &m_failedRcons[i];
+			failedRcon = &rcon;
 			break;
 		}
 	}
@@ -538,8 +537,8 @@ bool CRConServer::HandleFailedRconAuth( const netadr_t & adr )
 		if ( nCount >= 32 )
 		{
 			// look for the one with the oldest failure
-			int indexToRemove = -1;
-			for ( i=0; i < nCount; ++i )
+			intp indexToRemove = -1;
+			for ( intp i=0; i < nCount; ++i )
 			{
 				if ( indexToRemove < 0 || m_failedRcons[i] < m_failedRcons[indexToRemove] )
 				{
@@ -591,9 +590,9 @@ bool CRConServer::HandleFailedRconAuth( const netadr_t & adr )
 
 	// check if the user should be banned based on recent failed attempts
 	int recentFailures = 0;
-	for ( i=failedRcon->badPasswordTimes.Count()-1; i>=0; --i )
+	for ( int j=failedRcon->badPasswordTimes.Count()-1; j>=0; --j )
 	{
-		if ( failedRcon->badPasswordTimes[i] + sv_rcon_minfailuretime.GetFloat() >= sv.GetTime() )
+		if ( failedRcon->badPasswordTimes[j] + sv_rcon_minfailuretime.GetFloat() >= sv.GetTime() )
 		{
 			++recentFailures;
 		}
@@ -611,8 +610,8 @@ bool CRConServer::HandleFailedRconAuth( const netadr_t & adr )
 
 bool CRConServer::BCloseAcceptedSocket( ra_listener_id listener )
 {
-	int nCount = m_Socket.GetAcceptedSocketCount();
-	for ( int i = 0; i < nCount; i++ )
+	intp nCount = m_Socket.GetAcceptedSocketCount();
+	for ( intp i = 0; i < nCount; i++ )
 	{
 		ConnectedRConSocket_t *pSocketData = GetSocketData( i );
 		if ( pSocketData->listenerID == listener )

@@ -58,7 +58,8 @@ void VScrollBarReversedButtons::ApplySchemeSettings( IScheme *pScheme )
 //-----------------------------------------------------------------------------
 CPanelListPanel::CPanelListPanel( vgui::Panel *parent, char const *panelName, bool inverseButtons ) : Panel( parent, panelName )
 {
-	SetBounds( 0, 0, 100, 100 );
+	// dimhotepus: Scale UI.
+	SetBounds( 0, 0, QuickPropScale( 100 ), QuickPropScale( 100 ) );
 	_sliderYOffset = 0;
 
 	if (inverseButtons)
@@ -69,12 +70,14 @@ CPanelListPanel::CPanelListPanel( vgui::Panel *parent, char const *panelName, bo
 	{
 		_vbar = new ScrollBar(this, "CPanelListPanelVScroll", true );
 	}
-	_vbar->SetBounds( 0, 0, 20, 20 );
+	// dimhotepus: Scale UI.
+	_vbar->SetBounds( 0, 0, QuickPropScale( 20 ), QuickPropScale( 20 ) );
 	_vbar->SetVisible(false);
 	_vbar->AddActionSignalTarget( this );
 
 	_embedded = new Panel( this, "PanelListEmbedded" );
-	_embedded->SetBounds( 0, 0, 20, 20 );
+	// dimhotepus: Scale UI.
+	_embedded->SetBounds( 0, 0, QuickPropScale( 20 ), QuickPropScale( 20 ) );
 	_embedded->SetPaintBackgroundEnabled( false );
 	_embedded->SetPaintBorderEnabled( false );
 }
@@ -93,16 +96,13 @@ CPanelListPanel::~CPanelListPanel()
 //-----------------------------------------------------------------------------
 int	CPanelListPanel::computeVPixelsNeeded( void )
 {
-	int pixels =0;
-	DATAITEM *item;
-	Panel *panel;
-	for ( int i = 0; i < _dataItems.GetCount(); i++ )
+	int pixels = 0;
+	for ( auto *item : _dataItems )
 	{
-		item = _dataItems[ i ];
 		if ( !item )
 			continue;
 
-		panel = item->panel;
+		Panel *panel = item->panel;
 		if ( !panel )
 			continue;
 
@@ -111,7 +111,8 @@ int	CPanelListPanel::computeVPixelsNeeded( void )
 
 		pixels += h;
 	}
-	pixels+=5; // add a buffer after the last item
+	// dimhotepus: Scale UI.
+	pixels += QuickPropScale( 5 ); // add a buffer after the last item
 
 	return pixels;
 
@@ -145,10 +146,8 @@ int CPanelListPanel::AddItem( Panel *panel )
 {
 	InvalidateLayout();
 
-	DATAITEM *newitem = new DATAITEM;
-	newitem->panel = panel;
 	panel->SetParent( _embedded );
-	return _dataItems.PutElement( newitem );
+	return _dataItems.PutElement( new DATAITEM{panel} );
 }
 
 //-----------------------------------------------------------------------------
@@ -205,13 +204,13 @@ void CPanelListPanel::RemoveItem(int itemIndex)
 //-----------------------------------------------------------------------------
 void CPanelListPanel::DeleteAllItems()
 {
-	for (int i = 0; i < _dataItems.GetCount(); i++)
+	for (auto *item : _dataItems)
 	{
-		if ( _dataItems[i] )
+		if ( item )
 		{
-			delete _dataItems[i]->panel;
+			delete item->panel;
+			delete item;
 		}
-		delete _dataItems[i];
 	}
 	_dataItems.RemoveAll();
 
@@ -224,7 +223,8 @@ void CPanelListPanel::DeleteAllItems()
 void CPanelListPanel::OnMouseWheeled(int delta)
 {
 	int val = _vbar->GetValue();
-	val -= (delta * 3 * 5);
+	// dimhotepus: Scale UI.
+	val -= (delta * QuickPropScale( 3 * 5 ));
 	_vbar->SetValue(val);
 }
 
@@ -241,29 +241,34 @@ void CPanelListPanel::PerformLayout()
 	//!! need to make it recalculate scroll positions
 	_vbar->SetVisible(true);
 	_vbar->SetEnabled(false);
-	_vbar->SetRange( 0, vpixels - tall + 24);
-	_vbar->SetRangeWindow( 24 /*vpixels / 10*/ );
-	_vbar->SetButtonPressedScrollValue( 24 );
-	_vbar->SetPos(wide - 20, _sliderYOffset);
-	_vbar->SetSize(18, tall - 2 - _sliderYOffset);
+	// dimhotepus: Scale UI.
+	_vbar->SetRange( 0, vpixels - tall + QuickPropScale( 24 ));
+	_vbar->SetRangeWindow( QuickPropScale( 24 ) /*vpixels / 10*/ );
+	_vbar->SetButtonPressedScrollValue( QuickPropScale( 24 ) );
+	// dimhotepus: Scale UI.
+	_vbar->SetPos(wide - QuickPropScale( 20 ), _sliderYOffset);
+	// dimhotepus: Scale UI.
+	_vbar->SetSize(QuickPropScale( 18 ), tall - QuickPropScale( 2 ) - _sliderYOffset);
 	_vbar->InvalidateLayout();
 
 	int top = _vbar->GetValue();
 
 	_embedded->SetPos( 0, -top );
-	_embedded->SetSize( wide-20, vpixels );
+	// dimhotepus: Scale UI.
+	_embedded->SetSize( wide- QuickPropScale( 20 ), vpixels );
 
 	// Now lay out the controls on the embedded panel
 	int y = 0;
 	int h = 0;
-	for ( int i = 0; i < _dataItems.GetCount(); i++, y += h )
+	for ( intp i = 0; i < _dataItems.GetCount(); i++, y += h )
 	{
 		DATAITEM *item = _dataItems[ i ];
 		if ( !item || !item->panel )
 			continue;
 
 		h = item->panel->GetTall();
-		item->panel->SetBounds( 8, y, wide-36, h );
+		// dimhotepus: Scale UI.
+		item->panel->SetBounds( QuickPropScale( 8 ), y, wide-QuickPropScale( 36 ), h );
 	}
 }
 

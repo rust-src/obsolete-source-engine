@@ -98,6 +98,16 @@ CHUDQuickInfo::CHUDQuickInfo( const char *pElementName ) :
 	SetParent( pParent );
 
 	SetHiddenBits( HIDEHUD_CROSSHAIR );
+
+	m_icon_c = nullptr;
+
+	m_icon_rbn = nullptr;
+	m_icon_lbn = nullptr;
+
+	m_icon_rb = nullptr;
+	m_icon_lb = nullptr;
+	m_icon_rbe = nullptr;
+	m_icon_lbe = nullptr;
 }
 
 void CHUDQuickInfo::ApplySchemeSettings( IScheme *scheme )
@@ -106,6 +116,9 @@ void CHUDQuickInfo::ApplySchemeSettings( IScheme *scheme )
 
 	SetPaintBackgroundEnabled( false );
 	SetForceStereoRenderToFrameBuffer( true );
+
+	// dimhotepus: TF2 backport.
+	SetSize( ScreenWidth(), ScreenHeight() );
 }
 
 

@@ -92,11 +92,11 @@ void TracePortals( const CProp_Portal *pIgnorePortal, const Vector &vForward, co
 
 	trace_t trTemp;
 
-	int iPortalCount = CProp_Portal_Shared::AllPortals.Count();
+	intp iPortalCount = CProp_Portal_Shared::AllPortals.Count();
 	if( iPortalCount != 0 )
 	{
 		CProp_Portal **pPortals = CProp_Portal_Shared::AllPortals.Base();
-		for( int i = 0; i != iPortalCount; ++i )
+		for( intp i = 0; i != iPortalCount; ++i )
 		{
 			CProp_Portal *pTempPortal = pPortals[i];
 			if( pTempPortal != pIgnorePortal && pTempPortal->m_bActivated )
@@ -922,16 +922,17 @@ bool FitPortalOnSurface( const CProp_Portal *pIgnorePortal, Vector &vOrigin, con
 		break;
 	}
 
-	return true;
+	// dimhotepus: Mark as unreachable.
+	unreachable();
 }
 
 void FitPortalAroundOtherPortals( const CProp_Portal *pIgnorePortal, Vector &vOrigin, const Vector &vForward, const Vector &vRight, const Vector &vUp )
 {
-	int iPortalCount = CProp_Portal_Shared::AllPortals.Count();
+	intp iPortalCount = CProp_Portal_Shared::AllPortals.Count();
 	if( iPortalCount != 0 )
 	{
 		CProp_Portal **pPortals = CProp_Portal_Shared::AllPortals.Base();
-		for( int i = 0; i != iPortalCount; ++i )
+		for( intp i = 0; i != iPortalCount; ++i )
 		{
 			CProp_Portal *pTempPortal = pPortals[i];
 			if( pTempPortal != pIgnorePortal && pTempPortal->m_bActivated )
@@ -1019,11 +1020,11 @@ bool IsPortalOverlappingOtherPortals( const CProp_Portal *pIgnorePortal, const V
 	Vector vPortalOBBMin = CProp_Portal_Shared::vLocalMins + Vector( 1.0f, 1.0f, 1.0f );
 	Vector vPortalOBBMax = CProp_Portal_Shared::vLocalMaxs - Vector( 1.0f, 1.0f, 1.0f );
 
-	int iPortalCount = CProp_Portal_Shared::AllPortals.Count();
+	intp iPortalCount = CProp_Portal_Shared::AllPortals.Count();
 	if( iPortalCount != 0 )
 	{
 		CProp_Portal **pPortals = CProp_Portal_Shared::AllPortals.Base();
-		for( int i = 0; i != iPortalCount; ++i )
+		for( intp i = 0; i != iPortalCount; ++i )
 		{
 			CProp_Portal *pTempPortal = pPortals[i];
 			if( pTempPortal != pIgnorePortal && pTempPortal->m_bActivated )

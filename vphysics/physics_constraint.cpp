@@ -277,10 +277,10 @@ CPhysicsConstraintGroup::CPhysicsConstraintGroup( IVP_Environment *pEnvironment,
 	cs_bp.m_minErrorTicks = group.minErrorTicks;
 	cs_bp.m_errorTolerance = ConvertDistanceToIVP(group.errorTolerance);
 	m_pLCS = new hk_Local_Constraint_System( static_cast<hk_Environment *>(pEnvironment), &cs_bp );
-	m_pLCS->set_client_data( (void *)this );
+	m_pLCS->set_client_data( this );
 }
 
-enum vphysics_save_constrainttypes_t
+enum vphysics_save_constrainttypes_t : short
 {
 	CONSTRAINT_UNKNOWN = 0,
 	CONSTRAINT_RAGDOLL,
@@ -557,7 +557,8 @@ private:
 	hk_Local_Constraint_System *m_HkLCS;
 	void					*m_pGameData;
 	// these are used to crack the abstract pointers on save/load
-	short					m_constraintType;
+	// dimhotepus: short -> vphysics_save_constrainttypes_t.
+	vphysics_save_constrainttypes_t		m_constraintType;
 	short					m_isBreakable;
 };
 
@@ -730,7 +731,7 @@ void CPhysicsConstraint::InitRagdoll( IVP_Environment *pEnvironment, CPhysicsCon
 	{
 		m_HkLCS->activate();
 	}
-	m_HkConstraint->set_client_data( (void *)this );
+	m_HkConstraint->set_client_data( this );
 }
 
 // hinge constraint
@@ -786,7 +787,7 @@ void CPhysicsConstraint::InitHinge( IVP_Environment *pEnvironment, CPhysicsConst
 	{
 		m_HkLCS->activate();
 	}
-	m_HkConstraint->set_client_data( (void *)this );
+	m_HkConstraint->set_client_data( this );
 }
 
 
@@ -826,7 +827,7 @@ void CPhysicsConstraint::InitFixed( IVP_Environment *pEnvironment, CPhysicsConst
 	{
 		m_HkLCS->activate();
 	}
-	m_HkConstraint->set_client_data( (void *)this );
+	m_HkConstraint->set_client_data( this );
 }
 
 void CPhysicsConstraint::InitBallsocket( IVP_Environment *pEnvironment, CPhysicsConstraintGroup *constraint_group, const constraint_ballsocketparams_t &ballsocket )
@@ -869,7 +870,7 @@ void CPhysicsConstraint::InitBallsocket( IVP_Environment *pEnvironment, CPhysics
 	{
 		m_HkLCS->activate();
 	}
-	m_HkConstraint->set_client_data( (void *)this );
+	m_HkConstraint->set_client_data( this );
 }
 
 void CPhysicsConstraint::InitSliding( IVP_Environment *pEnvironment, CPhysicsConstraintGroup *constraint_group, const constraint_slidingparams_t &sliding )
@@ -932,7 +933,7 @@ void CPhysicsConstraint::InitSliding( IVP_Environment *pEnvironment, CPhysicsCon
 	{
 		m_HkLCS->activate();
 	}
-	m_HkConstraint->set_client_data( (void *)this );
+	m_HkConstraint->set_client_data( this );
 }
 
 void CPhysicsConstraint::InitPulley( IVP_Environment *pEnvironment, CPhysicsConstraintGroup *constraint_group, const constraint_pulleyparams_t &pulley )
@@ -983,7 +984,7 @@ void CPhysicsConstraint::InitPulley( IVP_Environment *pEnvironment, CPhysicsCons
 	{
 		m_HkLCS->activate();
 	}
-	m_HkConstraint->set_client_data( (void *)this );
+	m_HkConstraint->set_client_data( this );
 }
 
 
@@ -1030,7 +1031,7 @@ void CPhysicsConstraint::InitLength( IVP_Environment *pEnvironment, CPhysicsCons
 	{
 		m_HkLCS->activate();
 	}
-	m_HkConstraint->set_client_data( (void *)this );
+	m_HkConstraint->set_client_data( this );
 }
 
 // Serialization: Write out a description for this constraint
@@ -1047,7 +1048,7 @@ void CPhysicsConstraint::WriteToTemplate( vphysics_save_cphysicsconstraint_t &he
 	header.pObjReference = m_pObjReference;
 	header.pObjAttached = m_pObjAttached;
 
-	switch( header.constraintType )
+	switch( m_constraintType )
 	{
 	case CONSTRAINT_UNKNOWN:
 		Assert(0);
@@ -1214,7 +1215,8 @@ bool CPhysicsConstraint::GetConstraintParams( constraint_breakableparams_t *pPar
 
 CPhysicsConstraintGroup *CPhysicsConstraint::GetConstraintGroup() const
 {
-	if ( !m_HkConstraint )
+	// dimhotepus: m_HkLCS means no physics constraint group. See CPhysicsConstraint::Init*.
+	if ( !m_HkConstraint || m_HkLCS )
 		return NULL;
 
 	hk_Local_Constraint_System *plcs = m_HkConstraint->get_constraint_system();
@@ -1668,8 +1670,8 @@ bool SavePhysicsConstraint( const physsaveparams_t &params, CPhysicsConstraint *
 {
 	vphysics_save_cphysicsconstraint_t header;
 	vphysics_save_constraint_t constraintTemplate;
-	memset( &header, 0, sizeof(header) );
-	memset( &constraintTemplate, 0, sizeof(constraintTemplate) );
+	BitwiseClear( header );
+	BitwiseClear( constraintTemplate );
 
 	pConstraint->WriteToTemplate( header, constraintTemplate );
 	
@@ -1712,7 +1714,7 @@ bool SavePhysicsConstraint( const physsaveparams_t &params, CPhysicsConstraint *
 bool RestorePhysicsConstraint( const physrestoreparams_t &params, CPhysicsConstraint **ppConstraint )
 {
 	vphysics_save_cphysicsconstraint_t header;
-	memset( &header, 0, sizeof(header) );
+	BitwiseClear( header );
 	
 	params.pRestore->ReadAll( &header );
 	if ( IsValidConstraint( header ) )

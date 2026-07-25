@@ -45,9 +45,10 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-extern short		g_sModelIndexSmoke;			// (in combatweapon.cpp) holds the index for the smoke cloud
-extern short		g_sModelIndexBloodDrop;		// (in combatweapon.cpp) holds the sprite index for the initial blood
-extern short		g_sModelIndexBloodSpray;	// (in combatweapon.cpp) holds the sprite index for splattered blood
+// dimhotepus: short -> int.
+extern int		g_sModelIndexSmoke;			// (in combatweapon.cpp) holds the index for the smoke cloud
+extern int		g_sModelIndexBloodDrop;		// (in combatweapon.cpp) holds the sprite index for the initial blood
+extern int		g_sModelIndexBloodSpray;	// (in combatweapon.cpp) holds the sprite index for splattered blood
 
 #ifdef	DEBUG
 void DBG_AssertFunction( bool fExpr, const char *szExpr, const char *szFile, int szLine, const char *szMessage )
@@ -1562,7 +1563,8 @@ float UTIL_FindWaterSurface( const Vector &position, float minz, float maxz )
 }
 
 
-extern short	g_sModelIndexBubbles;// holds the index for the bubbles model
+// dimhotepus: short -> int.
+extern int	g_sModelIndexBubbles;// holds the index for the bubbles model
 
 void UTIL_Bubbles( const Vector& mins, const Vector& maxs, int count )
 {
@@ -1889,7 +1891,7 @@ int DispatchSpawn( CBaseEntity *pEntity )
 		if ( pEntity->m_iGlobalname != NULL_STRING ) 
 		{
 			// Handle global stuff here
-			int globalIndex = GlobalEntity_GetIndex( pEntity->m_iGlobalname );
+			intp globalIndex = GlobalEntity_GetIndex( pEntity->m_iGlobalname );
 			if ( globalIndex >= 0 )
 			{
 				// Already dead? delete

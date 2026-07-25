@@ -263,7 +263,7 @@ class CUploadGameStats : public IUploadGameStats
 {
 public:
 
-	#define GAMESTATSUPLOADER_CONNECT_RETRY_TIME	1.0F
+	#define GAMESTATSUPLOADER_CONNECT_RETRY_TIME	1.0
 
 	CUploadGameStats() : m_flNextConnectAttempt(0), m_bConnected(false) {}
 
@@ -301,7 +301,7 @@ public:
 		if ( !pSteamUtils )
 			return;
 
-		float curTime = Sys_FloatTime();
+		double curTime = Sys_FloatTime();
 
 		if ( curTime < m_flNextConnectAttempt )
 			return;
@@ -350,13 +350,11 @@ public:
 #ifdef SWDS
 		return true;
 #else
-		IRegistry *temp = InstanceRegistry( "Steam" );
+		auto temp = InstanceRegistry( "Steam" );
 		Assert( temp );
 		// Check registry
 		int iDisable = temp->ReadInt( "DisableGameStats", 0 );
 		
-		ReleaseInstancedRegistry( temp );
-
 		if ( iDisable != 0 )
 		{
 			return false;
@@ -374,7 +372,7 @@ public:
 		Q_memset( buf, 0, bufsize );
 
 #ifndef SWDS
-		IRegistry *temp = InstanceRegistry( "Steam" );
+		auto temp = InstanceRegistry( "Steam" );
 		Assert( temp );
 		// Check registry
 		char const *uuid = temp->ReadString( "PseudoUUID", "" );
@@ -438,9 +436,7 @@ public:
 		{
 			Q_strncpy( buf, uuid, bufsize );
 		}
-
-	    ReleaseInstancedRegistry( temp );
-#endif		
+#endif
 
 		if ( ( buf[0] == 0 ) && sv.IsDedicated() )
 		{
@@ -503,7 +499,8 @@ public:
 	}
 private:
 	netadr_t	m_Adr;
-	float		m_flNextConnectAttempt;
+	// dimhotepus: float -> double.
+	double		m_flNextConnectAttempt;
 	bool		m_bConnected;
 };
 
@@ -592,7 +589,8 @@ private:
 	CUtlVector< FSMState_t >		m_States;
 	uint							m_uCurrentState;
 	struct sockaddr_in				m_HarvesterSockAddr;
-	uint							m_SocketTCP;
+	// dimhotepus: x86-64 support. uint -> socket_handle.
+	socket_handle					m_SocketTCP;
 	const TGameStatsParameters	&m_rCrashParameters; //lint !e1725
 	u32								m_ContextID;
 };
@@ -638,8 +636,6 @@ CWin32UploadGameStats::~CWin32UploadGameStats()
 //-----------------------------------------------------------------------------
 bool CWin32UploadGameStats::DoBlockingReceive( uint bytesExpected, CUtlBuffer& buf )
 {
-	uint totalReceived = 0;
-
 	buf.Purge();
 	for ( ;; )
 	{
@@ -649,8 +645,8 @@ bool CWin32UploadGameStats::DoBlockingReceive( uint bytesExpected, CUtlBuffer& b
 		if ( bytesReceived <= 0 )
 			return false;
 
-		buf.Put( ( const void * )temp, (u32)bytesReceived );
-		totalReceived = buf.TellPut();
+		buf.Put( temp, bytesReceived );
+		uintp totalReceived = buf.TellPut();
 		if ( totalReceived >= bytesExpected )
 			break;
 
@@ -693,7 +689,7 @@ bool CWin32UploadGameStats::CreateTCPSocket( EGameStatsUploadStatus& status, CUt
 	UpdateProgress( m_rCrashParameters, "Creating game stats upload socket." );
 
 	m_SocketTCP = socket( AF_INET, SOCK_STREAM, IPPROTO_TCP );
-	if ( m_SocketTCP == (uint)SOCKET_ERROR )
+	if ( m_SocketTCP == SOCKET_ERROR )
 	{
 		UpdateProgress( m_rCrashParameters, "Socket creation failed." );
 

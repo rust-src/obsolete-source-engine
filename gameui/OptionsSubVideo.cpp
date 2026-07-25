@@ -28,6 +28,7 @@
 #include "ModInfo.h"
 #include "vgui_controls/Tooltip.h"
 #include "sourcevr/isourcevirtualreality.h"
+#include "posix_file_stream.h"
 
 #if defined( USE_SDL )
 #include "include/SDL3/SDL.h"
@@ -262,7 +263,8 @@ public:
 	COptionsSubVideoAdvancedDlg( vgui::Panel *parent ) : BaseClass( parent , "OptionsSubVideoAdvancedDlg" )
 	{
 		SetTitle("#GameUI_VideoAdvanced_Title", true);
-		SetSize( 260, 400 );
+		// dimhotepus: Scale UI.
+		SetSize( QuickPropScale( 260 ), QuickPropScale( 400 ) );
 
 		m_pDXLevel = new ComboBox(this, "dxlabel", 6, false );
 
@@ -483,6 +485,12 @@ public:
 		m_pFOVSlider = static_cast<CCvarSlider *>(FindChildByName( "FOVSlider" ));
 		m_pFOVValueLabel = static_cast<vgui::Label *>(FindChildByName( "FOVValueLabel" ));
 
+		// dimhotepus: HL2:DM uses FOVLabel label for FOV, so fallback to one.
+		if ( !m_pFOVValueLabel )
+		{
+			m_pFOVValueLabel = static_cast<vgui::Label *>(FindChildByName( "FOVLabel" ));
+		}
+
 		UpdateFOVLabel();
 		
 		MarkDefaultSettingsAsRecommended();
@@ -601,10 +609,11 @@ public:
 	{
 		// Pull in data from dxsupport.cfg database (includes fine-grained per-vendor/per-device config data)
 		KeyValuesAD pKeyValues( "config" );
-		materials->GetRecommendedConfigurationInfo( 0, pKeyValues );	
+		materials->GetRecommendedConfigurationInfo( 0, pKeyValues );
 
 		// Read individual values from keyvalues which came from dxsupport.cfg database
-		int nSkipLevels = pKeyValues->GetInt( "ConVar.mat_picmip", 0 );
+		// dimhotepus: Clamp to safe range [-1..2] to assign to [0..3] in textures quality combobox.
+		int nSkipLevels = clamp( pKeyValues->GetInt( "ConVar.mat_picmip", 0 ), -1, 2 );
 		int nAnisotropicLevel = pKeyValues->GetInt( "ConVar.mat_forceaniso", 1 );
 		int nForceTrilinear = pKeyValues->GetInt( "ConVar.mat_trilinear", 0 );
 		int nAASamples = pKeyValues->GetInt( "ConVar.mat_antialias", 0 );
@@ -1258,6 +1267,13 @@ COptionsSubVideo::COptionsSubVideo(vgui::Panel *parent) : PropertyPage(parent, N
 
 	LoadControlSettings("Resource\\OptionsSubVideo.res");
 
+	{
+		// dimhotepus: HL2:DM missed HUD aspect ratio combobox. Hide it.
+		int x, y;
+		m_pHUDAspectRatio->GetPos(x, y);
+		m_pHUDAspectRatio->SetVisible( x != 0 && y != 0 );
+	}
+
 	// Moved down here so we can set the Drop down's
 	// menu state after the default (disabled) value is loaded
 	PrepareResolutionList();
@@ -1546,14 +1562,13 @@ COptionsSubVideo::~COptionsSubVideo()
 }
 
 
-FILE *FOpenGameHDFile( const char *pchMode )
+[[nodiscard]] static se::posix::io_result<se::posix::posix_file_stream> FOpenGameHDFile( const char *pchMode )
 {
 	const char *pGameDir = engine->GetGameDirectory();
 	char szModSteamInfPath[ 1024 ];
 	V_ComposeFileName( pGameDir, "game_hd.txt", szModSteamInfPath );
 
-	FILE *fp = fopen( szModSteamInfPath, pchMode );
-	return fp;
+	return se::posix::posix_file_stream_factory::open( szModSteamInfPath, pchMode );
 }
 
 
@@ -1562,14 +1577,9 @@ FILE *FOpenGameHDFile( const char *pchMode )
 //-----------------------------------------------------------------------------
 bool COptionsSubVideo::BUseHDContent()
 {
-	FILE *fp = FOpenGameHDFile( "rb" );
-	if ( fp )
-	{
-		fclose(fp);
-		return true;
-	}
-	return false;
-
+	std::error_code rc;
+	std::tie(std::ignore, rc) = FOpenGameHDFile( "rb" );
+	return !rc;
 }
 
 
@@ -1580,11 +1590,10 @@ void COptionsSubVideo::SetUseHDContent( bool bUse )
 {
 	if ( bUse )
 	{
-		FILE *fp = FOpenGameHDFile( "wb+" );
-		if ( fp )
+		auto [fp, rc] = FOpenGameHDFile( "wb+" );
+		if ( !rc )
 		{
-			fprintf( fp, "If this file exists on disk HD content will be loaded.\n" );
-			fclose( fp );
+			std::tie(std::ignore, rc) = fp.print("If this file exists on disk HD content will be loaded.\n" );
 		}
 	}
 	else

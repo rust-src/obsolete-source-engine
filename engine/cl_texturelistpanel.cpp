@@ -5,53 +5,54 @@
 //=============================================================================//
 
 #include "client_pch.h"
-#include "ivideomode.h"
+
+#include "cl_texturelistpanel.h"
+
+#include "bitvec.h"
+#include "con_nprint.h"
+#include "client.h"
 #include "client_class.h"
+#include "gl_matsysiface.h"
 #include "icliententitylist.h"
+#include "igame.h"
+#include "ivideomode.h"
+#include "ivtex.h"
 #include "vgui_basepanel.h"
-#include <vgui_controls/Controls.h>
+#include "vgui_helpers.h"
+// dimhotepus: Exclude perforce
+// #include "p4lib/ip4.h"
+
 #include <vgui/ISurface.h>
 #include <vgui/IScheme.h>
 #include <vgui/IVGui.h>
+#include <vgui/ISystem.h>
+#include "vgui/ILocalize.h"
+
+#include <vgui_controls/Controls.h>
 #include <vgui_controls/Frame.h>
 #include <vgui_controls/TreeView.h>
 #include <vgui_controls/ListPanel.h>
 #include <vgui_controls/ListViewPanel.h>
 #include <vgui_controls/TreeViewListControl.h>
-#include <vgui/ISystem.h>
-#include "tier0/vprof.h"
-#include "KeyValues.h"
-#include "vgui_helpers.h"
-#include "utlsymbol.h"
-#include "tier1/UtlStringMap.h"
-#include "bitvec.h"
-#include "utldict.h"
-#include "vgui/ILocalize.h"
-#include "con_nprint.h"
-#include "gl_matsysiface.h"
 
-#include "VGuiMatSurface/IMatSystemSurface.h"
+#include "tier0/vprof.h"
+#include "tier1/KeyValues.h"
+#include "tier1/smartptr.h"
+#include "tier1/utlsymbol.h"
+#include "tier1/UtlStringMap.h"
+#include "tier1/utldict.h"
+#include "tier2/tier2.h"
+#include "tier2/fileutils.h"
+#include "tier2/p4helpers.h"
+
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/idebugtextureinfo.h"
 #include "materialsystem/itexture.h"
+
+#include "VGuiMatSurface/IMatSystemSurface.h"
 #include "vtf/vtf.h"
-#include "tier2/tier2.h"
-#include "smartptr.h"
-
-#include "igame.h"
-
-#include "client.h"
-
-#include "tier2/p4helpers.h"
-// dimhotepus: Exclude perforce
-// #include "p4lib/ip4.h"
-#include "ivtex.h"
-#include "tier2/fileutils.h"
-
-// For character manipulations isupper/tolower
-#include <ctype.h>
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -68,23 +69,18 @@
 
 #define COPYTOCLIPBOARD_CMDNAME "CopyToClipboard"
 
-#if defined( _X360 )
-CON_COMMAND( mat_get_textures, "VXConsole command" )
-{
-	g_pMaterialSystemDebugTextureInfo->EnableDebugTextureList( true );
-	g_pMaterialSystemDebugTextureInfo->EnableGetAllTextures( args.ArgC() >= 2 && ( Q_stricmp( args[1], "all" ) == 0 ) );
-}
-#endif
+// dimhotepus: Restrict to 0...1 range as bool.
+static ConVar mat_texture_list( "mat_texture_list", "0", FCVAR_CHEAT, "For debugging, show a list of used textures per frame", true, 0, true, 1 );
 
-static ConVar mat_texture_list( "mat_texture_list", "0", FCVAR_CHEAT, "For debugging, show a list of used textures per frame" );
-
-static enum TxListPanelRequest
+enum class TxListPanelRequest
 {
 	TXR_NONE,
 	TXR_SHOW,
 	TXR_RUNNING,
 	TXR_HIDE
-} s_eTxListPanelRequest = TXR_NONE;
+};
+
+static TxListPanelRequest s_eTxListPanelRequest = TxListPanelRequest::TXR_NONE;
 
 IVTex* VTex_Load( CSysModule** pModule );
 void VTex_Unload( CSysModule *pModule );
@@ -98,11 +94,14 @@ void mat_texture_list_off_f();
 ConCommand mat_texture_list_on( "+mat_texture_list", mat_texture_list_on_f );
 ConCommand mat_texture_list_off( "-mat_texture_list", mat_texture_list_off_f );
 
-ConVar mat_texture_list_all( "mat_texture_list_all", "0", FCVAR_NEVER_AS_STRING|FCVAR_CHEAT, "If this is nonzero, then the texture list panel will show all currently-loaded textures." );
+// dimhotepus: Restrict to 0...1 range as bool.
+ConVar mat_texture_list_all( "mat_texture_list_all", "0", FCVAR_NEVER_AS_STRING|FCVAR_CHEAT, "If this is nonzero, then the texture list panel will show all currently-loaded textures.", true, 0, true, 1 );
 
-ConVar mat_texture_list_view( "mat_texture_list_view", "1", FCVAR_NEVER_AS_STRING|FCVAR_CHEAT, "If this is nonzero, then the texture list panel will render thumbnails of currently-loaded textures." );
+// dimhotepus: Restrict to 0...1 range as bool.
+ConVar mat_texture_list_view( "mat_texture_list_view", "1", FCVAR_NEVER_AS_STRING|FCVAR_CHEAT, "If this is nonzero, then the texture list panel will render thumbnails of currently-loaded textures.", true, 0, true, 1 );
 
-ConVar mat_show_texture_memory_usage( "mat_show_texture_memory_usage", "0", FCVAR_NEVER_AS_STRING|FCVAR_CHEAT, "Display the texture memory usage on the HUD." );
+// dimhotepus: Restrict to 0...1 range as bool.
+ConVar mat_show_texture_memory_usage( "mat_show_texture_memory_usage", "0", FCVAR_NEVER_AS_STRING|FCVAR_CHEAT, "Display the texture memory usage on the HUD.", true, 0, true, 1 );
 
 
 static int g_warn_texkbytes = 1499;
@@ -111,9 +110,9 @@ static bool g_warn_enable = true;
 static bool g_cursorset = false;
 
 class CTextureListPanel;
-static CTextureListPanel *g_pTextureListPanel = NULL;
+static CTextureListPanel *g_pTextureListPanel = nullptr;
 static bool g_bRecursiveRequestToShowTextureList = false;
-static int g_nSaveQueueState = INT_MIN;
+static int g_nSaveQueueState = std::numeric_limits<int>::min();
 
 
 //
@@ -122,7 +121,6 @@ static int g_nSaveQueueState = INT_MIN;
 
 namespace vgui
 {
-
 
 class TileViewPanelEx : public Panel
 {
@@ -137,12 +135,12 @@ public:
 	virtual HFont GetFont();
 
 public:
-	enum HitTest_t
+	enum class HitTest_t
 	{
 		HT_NOTHING = 0,
 		HT_TILE
 	};
-	virtual int HitTest( int x, int y, int &iTile );
+	virtual HitTest_t HitTest( int x, int y, int &iTile );
 	virtual bool GetTileOrg( int iTile, int &x, int &y );
 
 protected: // Overrides for contents
@@ -182,7 +180,7 @@ private:
 
 TileViewPanelEx::TileViewPanelEx( Panel *parent, const char *panelName ) :
 	Panel( parent, panelName ),
-	m_hbar( NULL ),
+	m_hbar( nullptr ),
 	m_hFont( INVALID_FONT )
 {
 	m_hbar = new ScrollBar( this, "VerticalScrollBar", true );
@@ -206,28 +204,28 @@ HFont TileViewPanelEx::GetFont()
 	return m_hFont;
 }
 
-int TileViewPanelEx::HitTest( int x, int y, int &iTile )
+TileViewPanelEx::HitTest_t TileViewPanelEx::HitTest( int x, int y, int &iTile )
 {
 	iTile = -1;
 
 	if ( !ComputeLayoutInfo() )
-		return HT_NOTHING;
+		return HitTest_t::HT_NOTHING;
 
 	int hitCol = ( x / m_li_wideItem );
 	int hitRow = ( y / m_li_tallItem );
 
 	if ( hitCol >= m_li_colVisible )
-		return HT_NOTHING;
+		return HitTest_t::HT_NOTHING;
 	if ( hitRow > m_li_rowVisible )
-		return HT_NOTHING;
+		return HitTest_t::HT_NOTHING;
 
 	int hitTile = m_li_startTile + hitCol + hitRow * m_li_colVisible;
 	if ( hitTile >= m_li_endTile )
-		return HT_NOTHING;
+		return HitTest_t::HT_NOTHING;
 
 	// Hit tile
 	iTile = hitTile;
-	return HT_TILE;
+	return HitTest_t::HT_TILE;
 }
 
 bool TileViewPanelEx::GetTileOrg( int iTile, int &x, int &y )
@@ -269,13 +267,15 @@ void TileViewPanelEx::PerformLayout()
 	GetSize( wide, tall );
 	wide -= m_hbar->GetWide();
 
-	m_hbar->SetPos( wide - 2, 0 );
+	// dimhotepus: Scale UI.
+	m_hbar->SetPos( wide - QuickPropScale( 2 ), 0 );
 	m_hbar->SetTall( tall );
 	
 	if ( !numTiles )
 		return;
 
-	int wideItem = 1, tallItem = 1;
+	int wideItem, tallItem;
+	wideItem = tallItem = QuickPropScale( 1 );
 	GetTileSize( wideItem, tallItem );
 	if ( !wideItem || !tallItem )
 		return;
@@ -311,7 +311,7 @@ bool TileViewPanelEx::ComputeLayoutInfo()
 	GetSize( m_li_wide, m_li_tall );
 	m_li_wide -= m_hbar->GetWide();
 
-	m_li_wideItem = 1, m_li_tallItem = 1;
+	m_li_wideItem = QuickPropScale( 1 ), m_li_tallItem = QuickPropScale( 1 );
 	GetTileSize( m_li_wideItem, m_li_tallItem );
 	if ( !m_li_wideItem || !m_li_tallItem )
 		return false;
@@ -430,19 +430,19 @@ void CAutoMatSysDebugMode::ScheduleCleanupTextureVar( IMaterialVar *pVar )
 static IMaterial * UseDebugMaterial( char const *szMaterial, ITexture *pMatTexture, CAutoMatSysDebugMode *pRestoreVars )
 {
 	if ( !szMaterial || !pMatTexture )
-		return NULL;
+		return nullptr;
 
 	bool foundVar;
 
 	IMaterial *pMaterial = materials->FindMaterial( szMaterial, TEXTURE_GROUP_OTHER, false );
 	// IMaterial *pMaterial = materials->FindMaterial( "debug/debugempty", TEXTURE_GROUP_OTHER, false );
 	if ( !pMaterial )
-		return NULL;
+		return nullptr;
 
 	IMaterialVar *BaseTextureVar = pMaterial->FindVar( "$basetexture", &foundVar, false );
 	// IMaterialVar *BaseTextureVar = pMaterial->FindVar( "$basetexture", &foundVar, false );
 	if ( !foundVar || !BaseTextureVar )
-		return NULL;
+		return nullptr;
 
 	IMaterialVar *FrameVar = pMaterial->FindVar( "$frame", &foundVar, false );
 	if ( foundVar && FrameVar )
@@ -570,7 +570,7 @@ namespace
 
 }; // end `anonymous` namespace
 
-bool CanAdjustTextureSize( char const *szTextureName, bool bMoveSizeUp )
+static bool CanAdjustTextureSize( char const *szTextureName, bool bMoveSizeUp )
 {
 	ITexture *pMatTexture = materials->FindTexture( szTextureName, "", false );
 	if ( !pMatTexture )
@@ -588,7 +588,7 @@ bool CanAdjustTextureSize( char const *szTextureName, bool bMoveSizeUp )
 	}
 }
 
-bool AdjustTextureSize( char const *szTextureName, bool bMoveSizeUp )
+static bool AdjustTextureSize( char const *szTextureName, bool bMoveSizeUp )
 {
 	ITexture *pMatTexture = materials->FindTexture( szTextureName, "", false );
 
@@ -617,7 +617,6 @@ CON_COMMAND_F( mat_texture_list_txlod, "Adjust LOD of the last viewed texture +1
 				return;
 			default:
 				break;
-				
 		}
 	}
 	Warning( "Usage: 'mat_texture_list_txlod +1' to inc lod | 'mat_texture_list_txlod -1' to dec lod\n" );
@@ -658,11 +657,11 @@ struct ViewParamsReq
 }
 s_viewParamsReq;
 
-void RequestSelectNone( void )
+static void RequestSelectNone( void )
 {
 	s_viewParamsReq.lstMaterials.RemoveAll();
 }
-void RequestSelected( int nCount, UtlSymId_t const *pNameIds )
+static void RequestSelected( int nCount, UtlSymId_t const *pNameIds )
 {
 	s_viewParamsReq.lstMaterials.AddMultipleToTail( nCount, pNameIds );
 }
@@ -686,14 +685,7 @@ struct ViewParamsLast
 	struct VarMap : public CUtlMap< UtlSymId_t, TxInfo >
 	{
 		VarMap() : CUtlMap< UtlSymId_t, TxInfo >( DefLessFunc( UtlSymId_t ) ) {}
-		VarMap( VarMap const &x ) { const_cast< VarMap & >( x ).Swap( *this ); m_matInfo = x.m_matInfo; } // Fast-swap data //-V2018
-
-		struct MatInfo
-		{
-// 			MatInfo() : ignorez( false ) {}
-// 			bool ignorez;
-			MatInfo() {}
-		} m_matInfo;
+		VarMap( VarMap const &x ) { const_cast< VarMap & >( x ).Swap( *this ); } // Fast-swap data //-V2018
 	};
 
 	CUtlMap< UtlSymId_t, VarMap > lstMaterials;
@@ -705,7 +697,7 @@ s_viewParamsLast;
 //	Executed every frame to toggle the selected/unselected
 //	textures for a list of materials.
 //
-void DisplaySelectedTextures()
+static void DisplaySelectedTextures()
 {
 	// Nothing selected
 	if ( !s_viewParamsLast.lstMaterials.Count() &&
@@ -734,7 +726,7 @@ void DisplaySelectedTextures()
 	// Find the empty texture
 	ITexture *txEmpty = materials->FindTexture( "debugempty", "", false );
 
-	typedef unsigned short MapIdx;
+	using MapIdx = unsigned short;
 
 	// Now walk over all the materials in the req list and push them to the params
 	for ( intp k = 0, kEnd = s_viewParamsReq.lstMaterials.Count(); k < kEnd; ++ k )
@@ -756,13 +748,6 @@ void DisplaySelectedTextures()
 				IMaterialVar **arrVars = pMat->GetShaderParams();
 				for ( int idxParam = 0; idxParam < numParams; ++ idxParam )
 				{
-// 					if ( !stricmp( arrVars[ idxParam ]->GetName(), "$ignorez" ) )
-// 					{
-// 						vars.m_matInfo.ignorez = arrVars[ idxParam ]->GetIntValue() ? true : false;
-// 						arrVars[ idxParam ]->SetIntValue( 1 );
-// 						continue;
-// 					}
-
 					if ( !arrVars[ idxParam ]->IsTexture() )
 						continue;
 
@@ -797,12 +782,6 @@ void DisplaySelectedTextures()
 			IMaterialVar **arrVars = pMat->GetShaderParams();
 			for ( int idxParam = 0; idxParam < numParams; ++ idxParam )
 			{
-// 				if ( bRemovedSelection && !stricmp( arrVars[ idxParam ]->GetName(), "$ignorez" ) )
-// 				{
-// 					arrVars[ idxParam ]->SetIntValue( vars.m_matInfo.ignorez ? 1 : 0 );
-// 					continue;
-// 				}
-
 				char const *szVarName = arrVars[ idxParam ]->GetName();
 				CUtlSymbol symVarName( szVarName );
 				MapIdx idxVarsTxInfo = vars.Find( symVarName );
@@ -877,9 +856,9 @@ void CVmtTextEntry::OpenVmtSelected()
 	buf.SetCount( x1 - x0 + 1 );
 	GetTextRange( buf.Base(), x0, x1 - x0 );
 	
-	for ( char *pchName = buf.Base(), *pchNext = NULL; pchName; pchName = pchNext )
+	for ( char *pchName = buf.Base(), *pchNext = nullptr; pchName; pchName = pchNext )
 	{
-		if ( ( pchNext = strchr( pchName, '\n' ) ) != NULL )
+		if ( ( pchNext = strchr( pchName, '\n' ) ) != nullptr )
 			*( pchNext ++ ) = 0;
 
 		char chResolveName[ 256 ] = {0}, chResolveNameArg[ 256 ] = {0};
@@ -894,7 +873,7 @@ void CVmtTextEntry::OpenVmtSelected()
 #ifdef IS_WINDOWS_PC
 static bool IsSpaceOrQuote( char val )
 {
-	return (isspace(val) || val == '\"');
+	return (V_isspace(val) || val == '\"');
 }
 
 static bool SetBufferValue( INOUT_Z_CAP(nTxtFileBufferSize) char *chTxtFileBuffer,
@@ -906,12 +885,14 @@ static bool SetBufferValue( INOUT_Z_CAP(nTxtFileBufferSize) char *chTxtFileBuffe
 
 	size_t nTxtFileBufferLen = strlen( chTxtFileBuffer );
 	size_t lenTmp = strlen( szNewValue );
+	// dimhotepus: Cache invariant out of loop.
+	size_t lenLookup = strlen( szLookupKey );
 
 	for ( char *pch = chTxtFileBuffer;
-		( NULL != ( pch = strstr( pch, szLookupKey ) ) );
+		( nullptr != ( pch = strstr( pch, szLookupKey ) ) );
 		++ pch )
 	{
-		char *val = pch + strlen( szLookupKey );
+		char *val = pch + lenLookup;
 		if ( !IsSpaceOrQuote( *val ) )
 			continue;
 		else
@@ -954,7 +935,7 @@ static bool SetBufferValue( INOUT_Z_CAP(nTxtFileBufferSize) char *chTxtFileBuffe
 }
 
 // Replaces the first occurrence of "szFindData" with "szNewData"
-// Returns the remaining buffer past the replaced data or NULL if
+// Returns the remaining buffer past the replaced data or nullptr if
 // no replacement occurred.
 template<intp bufSize>
 static char * BufferReplace( char (&buf)[bufSize], char const *szFindData, char const *szNewData )
@@ -966,7 +947,7 @@ static char * BufferReplace( char (&buf)[bufSize], char const *szFindData, char 
 		memmove( pBegin, szNewData, lNew );
 		return pBegin + lNew;
 	}
-	return NULL;
+	return nullptr;
 }
 
 class CP4Requirement
@@ -982,7 +963,7 @@ protected:
 
 CP4Requirement::CP4Requirement() :
 	m_bLoadedModule( false ),
-	m_pP4Module( NULL )
+	m_pP4Module( nullptr )
 {
 #ifdef STAGING_ONLY
 	if ( p4 )
@@ -997,7 +978,7 @@ CP4Requirement::CP4Requirement() :
 		CreateInterfaceFn factory = Sys_GetFactory( m_pP4Module );
 		if ( factory )
 		{
-			p4 = ( IP4 * )factory( P4_INTERFACE_VERSION, NULL );
+			p4 = ( IP4 * )factory( P4_INTERFACE_VERSION, nullptr );
 
 			if ( p4 )
 			{
@@ -1028,8 +1009,8 @@ CP4Requirement::~CP4Requirement()
 		}
 
 		Sys_UnloadModule( m_pP4Module );
-		m_pP4Module = NULL;
-		p4 = NULL;
+		m_pP4Module = nullptr;
+		p4 = nullptr;
 	}
 #endif
 }
@@ -1063,8 +1044,8 @@ public:
 	void Close() override;
 
 public:
-	void SetDispInfo( KeyValues *kv, int iHint );
-	void GetDispInfo( KeyValues *&kv, int &iHint );
+	void SetDispInfo( KeyValues *kv, intp iHint );
+	void GetDispInfo( KeyValues *&kv, intp &iHint );
 
 public:
 	void Paint() override;
@@ -1094,13 +1075,13 @@ protected:
 	KeyValues			*m_pInfo;
 	CUtlBuffer			m_bufInfoText;
 	CUtlVector< UtlSymId_t > m_lstMaterials;
-	int					m_iInfoHint;
+	intp				m_iInfoHint;
 };
 
 CRenderTextureEditor::CRenderTextureEditor( vgui::Panel *parent, char const *szName ) :
 	BaseClass( parent, szName ),
 	m_hFont( vgui::INVALID_FONT ),
-	m_pInfo( NULL ),
+	m_pInfo( nullptr ),
 	m_bufInfoText( (intp)0, 0, CUtlBuffer::TEXT_BUFFER ),
 	m_iInfoHint( 0 )
 {
@@ -1143,23 +1124,23 @@ CRenderTextureEditor::CRenderTextureEditor( vgui::Panel *parent, char const *szN
 
 CRenderTextureEditor::~CRenderTextureEditor()
 {
-	SetDispInfo( NULL, 0 );
+	SetDispInfo( nullptr, 0 );
 }
 
-void CRenderTextureEditor::GetDispInfo( KeyValues *&kv, int &iHint )
+void CRenderTextureEditor::GetDispInfo( KeyValues *&kv, intp &iHint )
 {
 	iHint = m_iInfoHint;
 	kv = m_pInfo;
 }
 
-void CRenderTextureEditor::SetDispInfo( KeyValues *kv, int iHint )
+void CRenderTextureEditor::SetDispInfo( KeyValues *kv, intp iHint )
 {
 	m_iInfoHint = iHint;
 
 	if ( m_pInfo )
 		m_pInfo->deleteThis();
 
-	m_pInfo = kv ? kv->MakeCopy() : NULL;
+	m_pInfo = kv ? kv->MakeCopy() : nullptr;
 
 
 	CUtlStringMap< bool > arrMaterials, arrMaterialsFullNames;
@@ -1284,7 +1265,7 @@ void CRenderTextureEditor::Close()
 {
 	BaseClass::Close();
 
-	SetDispInfo( NULL, 0 );
+	SetDispInfo( nullptr, 0 );
 }
 
 void CRenderTextureEditor::Activate()
@@ -1296,27 +1277,27 @@ void CRenderTextureEditor::PerformLayout()
 {
 	BaseClass::PerformLayout();
 
-	int iRenderedHeight = 4 * TILE_BORDER + TILE_TEXT + TILE_SIZE;
+	int iRenderedHeight = 4 * QuickPropScale( TILE_BORDER ) + QuickPropScale( TILE_TEXT + TILE_SIZE );
 
-	SetSize( 4 * TILE_BORDER + TILE_SIZE,
-		iRenderedHeight + 90 + TILE_BORDER );
+	SetSize( 4 * QuickPropScale( TILE_BORDER ) + QuickPropScale( TILE_SIZE ),
+		iRenderedHeight + QuickPropScale( 90 + TILE_BORDER ) );
 	
-	m_pMaterials->SetPos( TILE_BORDER, iRenderedHeight + 2 );
-	m_pMaterials->SetSize( 2 * TILE_BORDER + TILE_SIZE, 90 );
+	m_pMaterials->SetPos( QuickPropScale( TILE_BORDER ), iRenderedHeight + QuickPropScale( 2 ) );
+	m_pMaterials->SetSize( 2 * QuickPropScale( TILE_BORDER ) + QuickPropScale( TILE_SIZE ), QuickPropScale( 90 ) );
 
-	m_pExplore->SetPos( 2 * TILE_BORDER + TILE_SIZE - 50, 2 * TILE_BORDER );
-	m_pExplore->SetWide( 50 );
+	m_pExplore->SetPos( 2 * QuickPropScale( TILE_BORDER ) + QuickPropScale( TILE_SIZE - 50 ), 2 * QuickPropScale( TILE_BORDER ) );
+	m_pExplore->SetWide( QuickPropScale( 50 ) );
 
-	m_pReload->SetPos( 2 * TILE_BORDER + TILE_SIZE - 50 - 65, 2 * TILE_BORDER );
-	m_pReload->SetWide( 60 );
+	m_pReload->SetPos( 2 * QuickPropScale( TILE_BORDER ) + QuickPropScale( TILE_SIZE - 50 - 65 ), 2 * QuickPropScale( TILE_BORDER ) );
+	m_pReload->SetWide( QuickPropScale( 60 ) );
 	m_pReload->SetVisible( m_lstMaterials.Count() > 0 );
 
-	m_pRebuild->SetPos( 2 * TILE_BORDER + TILE_SIZE - 50 - 65 - 95, 2 * TILE_BORDER );
-	m_pRebuild->SetWide( 90 );
+	m_pRebuild->SetPos( 2 * QuickPropScale( TILE_BORDER ) + QuickPropScale( TILE_SIZE - 50 - 65 - 95 ), 2 * QuickPropScale( TILE_BORDER ) );
+	m_pRebuild->SetWide( QuickPropScale( 90 ) );
 	m_pRebuild->SetVisible( m_lstMaterials.Count() > 0 );
 
-	m_pToggleNoMip->SetPos( 2 * TILE_BORDER + TILE_SIZE - 50 - 95, (2 * TILE_BORDER) + m_pReload->GetTall() + 1 );
-	m_pToggleNoMip->SetWide( 90 );
+	m_pToggleNoMip->SetPos( 2 * QuickPropScale( TILE_BORDER ) + QuickPropScale( TILE_SIZE - 50 - 95 ), 2 * QuickPropScale( TILE_BORDER ) + m_pReload->GetTall() + QuickPropScale( 1 ) );
+	m_pToggleNoMip->SetWide( QuickPropScale( 90 ) );
 	m_pToggleNoMip->SetVisible( m_lstMaterials.Count() > 0 );
 
 	m_pExplore->SetVisible( false );
@@ -1326,7 +1307,7 @@ void CRenderTextureEditor::PerformLayout()
 	if ( m_pInfo )
 	{
 		char chResolveName[ 256 ] = {0}, chResolveNameArg[ 256 ] = {0};
-		Q_snprintf( chResolveNameArg, sizeof( chResolveNameArg ) - 1, "materials/%s.vtf", m_pInfo->GetString( KEYNAME_NAME ) );
+		V_sprintf_safe( chResolveNameArg, "materials/%s.vtf", m_pInfo->GetString( KEYNAME_NAME ) );
 		char const *szResolvedName = g_pFileSystem->RelativePathToFullPath_safe( chResolveNameArg, "game", chResolveName );
 		if ( szResolvedName )
 		{
@@ -1343,36 +1324,36 @@ void CRenderTextureEditor::PerformLayout()
 
 			int posX, posY;
 			m_pExplore->GetPos( posX, posY );
-			m_pSizeControls[0]->SetPos( posX, posY + m_pExplore->GetTall() + 1 );
+			m_pSizeControls[0]->SetPos( posX, posY + m_pExplore->GetTall() + QuickPropScale( 1 ) );
 			m_pSizeControls[0]->SetWide( m_pExplore->GetWide() / 2 );
-			m_pSizeControls[1]->SetPos( posX + m_pSizeControls[0]->GetWide() + 1, posY + m_pExplore->GetTall() + 1 );
-			m_pSizeControls[1]->SetWide( m_pExplore->GetWide() - ( m_pSizeControls[0]->GetWide() + 1 ) );
+			m_pSizeControls[1]->SetPos( posX + m_pSizeControls[0]->GetWide() + QuickPropScale( 1 ), posY + m_pExplore->GetTall() + QuickPropScale( 1 ) );
+			m_pSizeControls[1]->SetWide( m_pExplore->GetWide() - ( m_pSizeControls[0]->GetWide() + QuickPropScale( 1 ) ) );
 		}
 	}
 
 	{
 		int posX, posY;
 		m_pExplore->GetPos( posX, posY );
-		posY += m_pExplore->GetTall() * 2 + 2;
+		posY += m_pExplore->GetTall() * 2 + QuickPropScale( 2 );
 		posX += m_pExplore->GetWide();
 
-		posX -= 80;
+		posX -= QuickPropScale( 80 );
 		m_pSaveImg->SetPos( posX, posY );
-		m_pSaveImg->SetWide( 80 );
+		m_pSaveImg->SetWide( QuickPropScale( 80 ) );
 
 #ifndef POSIX
-		posX -= 80 + 5;
+		posX -= QuickPropScale( 80 + 5 );
 		m_pCopyImg->SetPos( posX, posY );
-		m_pCopyImg->SetWide( 80 );
+		m_pCopyImg->SetWide( QuickPropScale( 80 ) );
 #endif
 
-		posX -= 80 + 5;
+		posX -= QuickPropScale( 80 + 5 );
 		m_pCopyTxt->SetPos( posX, posY );
-		m_pCopyTxt->SetWide( 80 );
+		m_pCopyTxt->SetWide( QuickPropScale( 80 ) );
 
-		posX -= 95 + 5;
+		posX -= QuickPropScale( 95 + 5 );
 		m_pFlashBtn->SetPos( posX, posY );
-		m_pFlashBtn->SetWide( 95 );
+		m_pFlashBtn->SetWide( QuickPropScale( 95 ) );
 	}
 }
 
@@ -1519,7 +1500,7 @@ void CRenderTextureEditor::OnCommand( const char *command )
 		char const *szTextureFile = m_pInfo->GetString( KEYNAME_NAME );
 		char const *szTextureGroup = m_pInfo->GetString( KEYNAME_TEXTURE_GROUP );
 
-		ITexture *pMatTexture = NULL;
+		ITexture *pMatTexture = nullptr;
 		if ( *szTextureFile )
 			pMatTexture = materials->FindTexture( szTextureFile, szTextureGroup, false );
 		if ( !pMatTexture )
@@ -1664,7 +1645,13 @@ void CRenderTextureEditor::OnCommand( const char *command )
 		argv[iArg++] = (char*)"-outdir";
 		argv[iArg++] = szVTFFilename;
 		argv[iArg++] = szContentFilename;
-		pIVTex->VTex( CubemapsFSFactory, pGameDir, iArg, argv );
+
+		{
+			// dimhotepus: This can take a while, put up a waiting cursor.
+			const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
+
+			pIVTex->VTex( CubemapsFSFactory, pGameDir, iArg, argv );
+		}
 
 		VTex_Unload( pModule );
 
@@ -1702,10 +1689,10 @@ void CRenderTextureEditor::Paint()
 		return;
 
 	char const *szTextureFile = kv->GetString( KEYNAME_NAME );
-	Q_strncpy( s_chLastViewedTextureBuffer, szTextureFile, sizeof( s_chLastViewedTextureBuffer ) );
+	V_strcpy_safe( s_chLastViewedTextureBuffer, szTextureFile );
 	char const *szTextureGroup = kv->GetString( KEYNAME_TEXTURE_GROUP );
 
-	ITexture *pMatTexture = NULL;
+	ITexture *pMatTexture = nullptr;
 	if ( *szTextureFile )
 		pMatTexture = materials->FindTexture( szTextureFile, szTextureGroup, false );
 	if ( !pMatTexture )
@@ -1717,7 +1704,8 @@ void CRenderTextureEditor::Paint()
 	int iTxSize = kv->GetInt( KEYNAME_SIZE );
 	char const *szTxFormat = kv->GetString( KEYNAME_FORMAT );
 
-	int x = TILE_BORDER, y = TILE_BORDER;
+	int x, y;
+	x = y = QuickPropScale( TILE_BORDER );
 
 	// Dimensions to draw
 	int iDrawWidth = iTxWidth;
@@ -1725,63 +1713,64 @@ void CRenderTextureEditor::Paint()
 
 	if ( pMatTexture && pMatTexture->IsCubeMap() )
 	{
-		iDrawWidth = 1024;
-		iDrawHeight = 1024;
+		// dimhotepus: Clamp to screen.
+		iDrawWidth = MIN(videomode->GetModeStereoWidth(), static_cast<int>(XRES( 1024 )));
+		iDrawHeight = MIN(videomode->GetModeStereoHeight(), static_cast<int>(YRES( 1024 )));
 	}
 
 	if ( iDrawHeight >= iDrawWidth )
 	{
-		if ( iDrawHeight > TILE_TEXTURE_SIZE )
+		if ( iDrawHeight > QuickPropScale( TILE_TEXTURE_SIZE ) )
 		{
-			iDrawWidth = iDrawWidth * ( float( TILE_TEXTURE_SIZE ) / iDrawHeight );
-			iDrawHeight = TILE_TEXTURE_SIZE;
+			iDrawWidth = iDrawWidth * ( (float)QuickPropScale( TILE_TEXTURE_SIZE ) / iDrawHeight );
+			iDrawHeight = QuickPropScale( TILE_TEXTURE_SIZE );
 		}
 
-		if ( iDrawHeight < 64 )
+		if ( iDrawHeight < QuickPropScale( 64 ) )
 		{
-			iDrawWidth = iDrawWidth * ( float( 64 ) / iDrawHeight );
-			iDrawHeight = 64;
+			iDrawWidth = iDrawWidth * ( (float)QuickPropScale( 64 ) / iDrawHeight );
+			iDrawHeight = QuickPropScale( 64 );
 		}
 	}
 	else
 	{
-		if ( iDrawWidth > TILE_TEXTURE_SIZE )
+		if ( iDrawWidth > QuickPropScale( TILE_TEXTURE_SIZE ) )
 		{
-			iDrawHeight = iDrawHeight * ( float( TILE_TEXTURE_SIZE ) / iDrawWidth );
-			iDrawWidth = TILE_TEXTURE_SIZE;
+			iDrawHeight = iDrawHeight * ( (float)QuickPropScale( TILE_TEXTURE_SIZE ) / iDrawWidth );
+			iDrawWidth = QuickPropScale( TILE_TEXTURE_SIZE );
 		}
 
-		if ( iDrawWidth < 64 )
+		if ( iDrawWidth < QuickPropScale( 64 ) )
 		{
-			iDrawHeight = iDrawHeight * ( float( 64 ) / iDrawWidth );
-			iDrawWidth = 64;
+			iDrawHeight = iDrawHeight * ( (float)QuickPropScale( 64 ) / iDrawWidth );
+			iDrawWidth = QuickPropScale( 64 );
 		}
 	}
 
-	iDrawHeight = iDrawHeight / ( float( TILE_TEXTURE_SIZE ) / float( TILE_SIZE ) );
-	iDrawWidth = iDrawWidth / ( float( TILE_TEXTURE_SIZE ) / float( TILE_SIZE ) );
+	iDrawHeight = iDrawHeight / ( (float)QuickPropScale( TILE_TEXTURE_SIZE ) / QuickPropScale( TILE_SIZE ) );
+	iDrawWidth = iDrawWidth / ( (float)QuickPropScale( TILE_TEXTURE_SIZE ) / QuickPropScale( TILE_SIZE ) );
 
-	iDrawHeight = max( iDrawHeight, 4 );
-	iDrawWidth = max( iDrawWidth, 4 );
+	iDrawHeight = max( iDrawHeight, QuickPropScale( 4 ) );
+	iDrawWidth = max( iDrawWidth, QuickPropScale( 4 ) );
 
 	//
 	// Draw frame
 	//
 	{
-		int tileWidth = 2 * TILE_BORDER + TILE_SIZE;
-		int tileHeight = 3 * TILE_BORDER + TILE_SIZE + TILE_TEXT;
+		int tileWidth = 2 * QuickPropScale( TILE_BORDER ) + QuickPropScale( TILE_SIZE );
+		int tileHeight = 3 * QuickPropScale( TILE_BORDER ) + QuickPropScale( TILE_SIZE + TILE_TEXT );
 
 		g_pMatSystemSurface->DrawSetColor( 255, 255, 255, 255 );
-		g_pMatSystemSurface->DrawOutlinedRect( x + 1, y + 1,
-			x + tileWidth - 2 , y + tileHeight - 2 );
+		g_pMatSystemSurface->DrawOutlinedRect( x + QuickPropScale( 1 ), y + QuickPropScale( 1 ),
+			x + tileWidth - QuickPropScale( 2 ) , y + tileHeight - QuickPropScale( 2 ) );
 	}
 
 	//
 	// Draw all
 	//
 
-	x += TILE_BORDER;
-	y += TILE_BORDER;
+	x += QuickPropScale( TILE_BORDER );
+	y += QuickPropScale( TILE_BORDER );
 
 	char chResolveName[ 256 ] = {0}, chResolveNameArg[ 256 ] = {0};
 	V_sprintf_safe( chResolveNameArg, "materials/%s.vtf", szTextureFile );
@@ -1796,7 +1785,7 @@ void CRenderTextureEditor::Paint()
 	else
 		chSizeBuf[0] = '-';
 
-	g_pMatSystemSurface->DrawColoredTextRect( GetFont(), x, y, TILE_SIZE, TILE_TEXT / 2,
+	g_pMatSystemSurface->DrawColoredTextRect( GetFont(), x, y, QuickPropScale( TILE_SIZE ), QuickPropScale( TILE_TEXT / 2 ),
 		255, 255, 255, 255,
 		"%s%s\n"
 		"%s KiB    %dx%d    %s",
@@ -1826,19 +1815,17 @@ void CRenderTextureEditor::Paint()
 		// Line 1
 		//
 		if ( iTxSize > g_warn_texkbytes )
-			sprintf( chLine1 + strlen( chLine1 ), "  Size(%s KiB)", chSizeBuf );
-		if ( ( iTxWidth > g_warn_texdimensions ) ||
-			( iTxHeight > g_warn_texdimensions ) )
-			sprintf( chLine1 + strlen( chLine1 ), "  Dimensions(%dx%d)", iTxWidth, iTxHeight );
-		if ( stricmp( szTxFormat, "DXT1" ) &&
-			stricmp( szTxFormat, "DXT5" ) )
-			sprintf( chLine1 + strlen( chLine1 ), "  Format(%s)", szTxFormat );
+			V_sprintfcat_safe( chLine1, "  Size(%s KiB)", chSizeBuf );
+		if ( ( iTxWidth > g_warn_texdimensions ) ||	( iTxHeight > g_warn_texdimensions ) )
+			V_sprintfcat_safe( chLine1, "  Dimensions(%dx%d)", iTxWidth, iTxHeight );
+		if ( stricmp( szTxFormat, "DXT1" ) || stricmp( szTxFormat, "DXT5" ) )
+			V_sprintfcat_safe( chLine1, "  Format(%s)", szTxFormat );
 		if ( pMatTexture->GetFlags() & TEXTUREFLAGS_NOLOD )
-			sprintf( chLine1 + strlen( chLine1 ), "  NoLod" );
+			V_sprintfcat_safe( chLine1, "  NoLod" );
 		if ( pMatTexture->GetFlags() & TEXTUREFLAGS_NOMIP )
-			sprintf( chLine1 + strlen( chLine1 ), "  NoMip" );
+			V_sprintfcat_safe( chLine1, "  NoMip" );
 		if ( pMatTexture->GetFlags() & TEXTUREFLAGS_ONEBITALPHA )
-			sprintf( chLine1 + strlen( chLine1 ), "  OneBitAlpha" );
+			V_sprintfcat_safe( chLine1, "  OneBitAlpha" );
 
 		//
 		// Line 2
@@ -1856,7 +1843,7 @@ void CRenderTextureEditor::Paint()
 				mem = ( mem + 511 ) / 1024;
 				FmtCommaNumber( chbuf, mem );
 				
-				sprintf ( chLine2 + strlen( chLine2 ), "  %s KiB @ lower mip", chbuf );
+				V_sprintfcat_safe( chLine2, "  %s KiB @ lower mip", chbuf );
 			}
 
 			if ( wmap > wact || hmap > hact || dmap > dact )
@@ -1866,35 +1853,46 @@ void CRenderTextureEditor::Paint()
 				mem = ( mem + 511 ) / 1024;
 				FmtCommaNumber( chbuf, mem );
 
-				sprintf ( chLine2 + strlen( chLine2 ), "      %s KiB @ higher mip", chbuf );
+				V_sprintfcat_safe( chLine2, "      %s KiB @ higher mip", chbuf );
 			}
 		}
 
-		if ( chLine1[0] )
+		if ( !Q_isempty( chLine1 ) )
 		{
 			g_pMatSystemSurface->DrawSetColor( 200, 0, 0, 255 );
-			g_pMatSystemSurface->DrawFilledRect( x - TILE_BORDER/2, y + TILE_TEXT/2, x + TILE_BORDER/2 + (TILE_SIZE/2), y + TILE_TEXT/2 + TILE_TEXT/4 );
-			g_pMatSystemSurface->DrawColoredTextRect( GetFont(), x, y + TILE_TEXT/2, TILE_SIZE, TILE_TEXT / 4,
+			g_pMatSystemSurface->DrawFilledRect( x - QuickPropScale( TILE_BORDER/2 ),
+				y + QuickPropScale( TILE_TEXT/2 ),
+				x + QuickPropScale( TILE_BORDER/2 + TILE_SIZE/2 ),
+				y + QuickPropScale( TILE_TEXT/2 + TILE_TEXT/4 ) );
+			g_pMatSystemSurface->DrawColoredTextRect( GetFont(),
+				x,
+				QuickPropScale( y + TILE_TEXT/2 ),
+				QuickPropScale( TILE_SIZE ),
+				QuickPropScale( TILE_TEXT/4 ),
 				255, 255, 255, 255,
 				"%s", chLine1 );
 		}
-		if ( chLine2[0] )
+		if ( !Q_isempty( chLine2 ) )
 		{
 			// g_pMatSystemSurface->DrawSetColor( 200, 0, 0, 255 );
 			// g_pMatSystemSurface->DrawFilledRect( x - TILE_BORDER/2, y + TILE_TEXT/2 + TILE_TEXT/4, x + TILE_BORDER/2 + TILE_SIZE, y + TILE_TEXT );
-			g_pMatSystemSurface->DrawColoredTextRect( GetFont(), x, y + TILE_TEXT/2 + TILE_TEXT/4, TILE_SIZE, TILE_TEXT / 4,
+			g_pMatSystemSurface->DrawColoredTextRect( GetFont(),
+				x,
+				y + QuickPropScale( TILE_TEXT/2 + TILE_TEXT/4 ),
+				QuickPropScale( TILE_SIZE ),
+				QuickPropScale( TILE_TEXT/4 ),
 				255, 255, 255, 255,
 				"%s", chLine2 );
 		}
 	}
 
-	y += TILE_TEXT + TILE_BORDER;
+	y += QuickPropScale( TILE_TEXT + TILE_BORDER );
 
 	// Images placement
 	bool bHasAlpha = !!stricmp( szTxFormat, "DXT1" );
 
-	int extTxWidth = TILE_SIZE;
-	int extTxHeight = TILE_SIZE;
+	int extTxWidth = QuickPropScale( TILE_SIZE );
+	int extTxHeight = QuickPropScale( TILE_SIZE );
 
 	int orgTxX = 0, orgTxXA = 0;
 	int orgTxY = 0, orgTxYA = 0;
@@ -1904,19 +1902,19 @@ void CRenderTextureEditor::Paint()
 		if ( iTxWidth >= iTxHeight * 2 )
 		{
 			extTxHeight /= 2;
-			orgTxYA = extTxHeight + TILE_BORDER/2;
-			extTxHeight -= 1;
+			orgTxYA = extTxHeight + QuickPropScale( TILE_BORDER/2 );
+			extTxHeight -= QuickPropScale( 1 );
 		}
 		else if ( iTxHeight >= iTxWidth * 2 )
 		{
 			extTxWidth /= 2;
-			orgTxXA = extTxWidth + TILE_BORDER/2;
-			extTxWidth -= 3;
+			orgTxXA = extTxWidth + QuickPropScale( TILE_BORDER/2 );
+			extTxWidth -= QuickPropScale( 3 );
 		}
 		else
 		{
 			extTxHeight /= 2;
-			orgTxYA = extTxHeight + TILE_BORDER/2;
+			orgTxYA = extTxHeight + QuickPropScale( TILE_BORDER/2 );
 			orgTxX = extTxWidth / 4;
 			extTxWidth /= 2;
 
@@ -1925,8 +1923,8 @@ void CRenderTextureEditor::Paint()
 				iDrawWidth /= 2;
 				iDrawHeight /= 2;
 			}
-			extTxWidth -= 1;
-			extTxHeight -= 1;
+			extTxWidth -= QuickPropScale( 1 );
+			extTxHeight -= QuickPropScale( 1 );
 		}
 	}
 
@@ -1934,8 +1932,10 @@ void CRenderTextureEditor::Paint()
 	if ( IMaterial *pMaterial = UseDebugMaterial( "debug/debugtexturecolor", pMatTexture, &auto_matsysdebugmode ) )
 	{
 		g_pMatSystemSurface->DrawSetColor( 255, 255, 255, 255 );
-		g_pMatSystemSurface->DrawOutlinedRect( x + orgTxX + ( extTxWidth - iDrawWidth ) / 2 - IMG_FRAME_OFF, y + orgTxY + ( extTxHeight - iDrawHeight ) / 2 - IMG_FRAME_OFF,
-			x + orgTxX + ( extTxWidth + iDrawWidth ) / 2 + IMG_FRAME_OFF, y + orgTxY + ( extTxHeight + iDrawHeight ) / 2 + IMG_FRAME_OFF );
+		g_pMatSystemSurface->DrawOutlinedRect( x + orgTxX + ( extTxWidth - iDrawWidth ) / 2 - QuickPropScale( IMG_FRAME_OFF ),
+			y + orgTxY + ( extTxHeight - iDrawHeight ) / 2 - QuickPropScale( IMG_FRAME_OFF ),
+			x + orgTxX + ( extTxWidth + iDrawWidth ) / 2 + QuickPropScale( IMG_FRAME_OFF ),
+			y + orgTxY + ( extTxHeight + iDrawHeight ) / 2 + QuickPropScale( IMG_FRAME_OFF ) );
 		RenderTexturedRect( this, pMaterial,
 			x + orgTxX + ( extTxWidth - iDrawWidth ) / 2, y + orgTxY + ( extTxHeight - iDrawHeight ) / 2,
 			x + orgTxX + ( extTxWidth + iDrawWidth ) / 2, y + orgTxY + ( extTxHeight + iDrawHeight ) / 2 );
@@ -1946,8 +1946,10 @@ void CRenderTextureEditor::Paint()
 			orgTxY += orgTxYA;
 			if ( IMaterial *pMaterialDebug = UseDebugMaterial( "debug/debugtexturealpha", pMatTexture, &auto_matsysdebugmode ) )
 			{
-				g_pMatSystemSurface->DrawOutlinedRect( x + orgTxX + ( extTxWidth - iDrawWidth ) / 2 - IMG_FRAME_OFF, y + orgTxY + ( extTxHeight - iDrawHeight ) / 2 - IMG_FRAME_OFF,
-					x + orgTxX + ( extTxWidth + iDrawWidth ) / 2 + IMG_FRAME_OFF, y + orgTxY + ( extTxHeight + iDrawHeight ) / 2 + IMG_FRAME_OFF );
+				g_pMatSystemSurface->DrawOutlinedRect( x + orgTxX + ( extTxWidth - iDrawWidth ) / 2 - QuickPropScale( IMG_FRAME_OFF ),
+					y + orgTxY + ( extTxHeight - iDrawHeight ) / 2 - QuickPropScale( IMG_FRAME_OFF ),
+					x + orgTxX + ( extTxWidth + iDrawWidth ) / 2 + QuickPropScale( IMG_FRAME_OFF ),
+					y + orgTxY + ( extTxHeight + iDrawHeight ) / 2 + QuickPropScale( IMG_FRAME_OFF ) );
 				RenderTexturedRect( this, pMaterialDebug,
 					x + orgTxX + ( extTxWidth - iDrawWidth ) / 2, y + orgTxY + ( extTxHeight - iDrawHeight ) / 2,
 					x + orgTxX + ( extTxWidth + iDrawWidth ) / 2, y + orgTxY + ( extTxHeight + iDrawHeight ) / 2 );
@@ -2015,11 +2017,11 @@ protected:
 
 CRenderTexturesListViewPanel::CRenderTexturesListViewPanel( vgui::Panel *parent, char const *szName ) :
 	vgui::TileViewPanelEx( parent, szName ),
-	m_pListPanel( NULL ),
+	m_pListPanel( nullptr ),
 	m_bPaintAlpha( false )
 {
 	m_pRenderTxEditor = new CRenderTextureEditor( this, "TxEdt" );
-	m_pRenderTxEditor->SetPos( 10, 10 );
+	m_pRenderTxEditor->SetPos( QuickPropScale( 10 ), QuickPropScale( 10 ) );
 	m_pRenderTxEditor->PerformLayout();
 	m_pRenderTxEditor->SetMoveable( true );
 	m_pRenderTxEditor->SetSizeable( false );
@@ -2054,8 +2056,8 @@ void CRenderTexturesListViewPanel::OnMousePressed( vgui::MouseCode code )
 
 	// Hit test the click
 	int iTile, tileX, tileY;
-	int htResult = HitTest( x, y, iTile );
-	if ( HT_NOTHING == htResult )
+	HitTest_t htResult = HitTest( x, y, iTile );
+	if ( HitTest_t::HT_NOTHING == htResult )
 		return;
 	if ( !GetTileOrg( iTile, tileX, tileY ) )
 		return;
@@ -2071,13 +2073,13 @@ void CRenderTexturesListViewPanel::OnMousePressed( vgui::MouseCode code )
 	// Display the tx editor
 	m_pRenderTxEditor->SetDispInfo( kv, itemId );
 	
-	if ( tileX + m_pRenderTxEditor->GetWide() > m_li_wide - 2 )
-		tileX -= tileX + m_pRenderTxEditor->GetWide() - ( m_li_wide - 2 );
-	if ( tileY + m_pRenderTxEditor->GetTall() > m_li_tall - 2 )
-		tileY -= tileY + m_pRenderTxEditor->GetTall() - ( m_li_tall - 2 );
+	if ( tileX + m_pRenderTxEditor->GetWide() > m_li_wide - QuickPropScale( 2 ) )
+		tileX -= tileX + m_pRenderTxEditor->GetWide() - ( m_li_wide - QuickPropScale( 2 ) );
+	if ( tileY + m_pRenderTxEditor->GetTall() > m_li_tall - QuickPropScale( 2 ) )
+		tileY -= tileY + m_pRenderTxEditor->GetTall() - ( m_li_tall - QuickPropScale( 2 ) );
 
 	int iTopLeftX = 0, iTopLeftY = 0;
-	for ( vgui::Panel *pPanel = this; ( pPanel = pPanel->GetParent() ) != NULL; )
+	for ( vgui::Panel *pPanel = this; ( pPanel = pPanel->GetParent() ) != nullptr; )
 	{
 		iTopLeftX = iTopLeftY = 0;
 		pPanel->LocalToScreen( iTopLeftX, iTopLeftY );
@@ -2098,15 +2100,15 @@ intp CRenderTexturesListViewPanel::GetNumTiles()
 
 void CRenderTexturesListViewPanel::GetTileSize( int &wide, int &tall )
 {
-	wide = 2 * TILE_BORDER + TILE_SIZE;
-	tall = 2 * TILE_BORDER + TILE_SIZE + TILE_TEXT;
+	wide = QuickPropScale( 2 * TILE_BORDER + TILE_SIZE );
+	tall = QuickPropScale( 2 * TILE_BORDER + TILE_SIZE + TILE_TEXT );
 };
 
 KeyValues * CRenderTexturesListViewPanel::GetTileData( int iTile )
 {
 	auto iData = m_pListPanel->GetItemIDFromRow( iTile );
 	if ( iData < 0 )
-		return NULL;
+		return nullptr;
 
 	return m_pListPanel->GetItem( iData );
 }
@@ -2121,7 +2123,7 @@ void CRenderTexturesListViewPanel::RenderTile( int iTile, int x, int y )
 
 	char const *szTextureFile = kv->GetString( KEYNAME_NAME );
 	char const *szTextureGroup = kv->GetString( KEYNAME_TEXTURE_GROUP );
-	ITexture *pMatTexture = NULL;
+	ITexture *pMatTexture = nullptr;
 	if ( *szTextureFile )
 		pMatTexture = materials->FindTexture( szTextureFile, szTextureGroup, false );
 	if ( !pMatTexture )
@@ -2172,44 +2174,45 @@ fmtlenreduce:
 
 	if ( pMatTexture && pMatTexture->IsCubeMap() )
 	{
-		iDrawWidth = 1024;
-		iDrawHeight = 1024;
+		// dimhotepus: Clamp to screen.
+		iDrawWidth = MIN(videomode->GetModeStereoWidth(), static_cast<int>(XRES( 1024 )));
+		iDrawHeight = MIN(videomode->GetModeStereoHeight(), static_cast<int>(YRES( 1024 )));
 	}
 
 	if ( iDrawHeight >= iDrawWidth )
 	{
-		if ( iDrawHeight > TILE_TEXTURE_SIZE )
+		if ( iDrawHeight > QuickPropScale( TILE_TEXTURE_SIZE ) )
 		{
-			iDrawWidth = iDrawWidth * ( float( TILE_TEXTURE_SIZE ) / iDrawHeight );
-			iDrawHeight = TILE_TEXTURE_SIZE;
+			iDrawWidth = iDrawWidth * ( (float)QuickPropScale( TILE_TEXTURE_SIZE ) / iDrawHeight );
+			iDrawHeight = QuickPropScale( TILE_TEXTURE_SIZE );
 		}
 
-		if ( iDrawHeight < 64 )
+		if ( iDrawHeight < QuickPropScale( 64 ) )
 		{
-			iDrawWidth = iDrawWidth * ( float( 64 ) / iDrawHeight );
-			iDrawHeight = 64;
+			iDrawWidth = iDrawWidth * ( (float)QuickPropScale( 64 ) / iDrawHeight );
+			iDrawHeight = QuickPropScale( 64 );
 		}
 	}
 	else
 	{
-		if ( iDrawWidth > TILE_TEXTURE_SIZE )
+		if ( iDrawWidth > QuickPropScale( TILE_TEXTURE_SIZE ) )
 		{
-			iDrawHeight = iDrawHeight * ( float( TILE_TEXTURE_SIZE ) / iDrawWidth );
-			iDrawWidth = TILE_TEXTURE_SIZE;
+			iDrawHeight = iDrawHeight * ( (float)QuickPropScale( TILE_TEXTURE_SIZE ) / iDrawWidth );
+			iDrawWidth = QuickPropScale( TILE_TEXTURE_SIZE );
 		}
 
-		if ( iDrawWidth < 64 )
+		if ( iDrawWidth < QuickPropScale( 64 ) )
 		{
-			iDrawHeight = iDrawHeight * ( float( 64 ) / iDrawWidth );
-			iDrawWidth = 64;
+			iDrawHeight = iDrawHeight * ( (float)QuickPropScale( 64 ) / iDrawWidth );
+			iDrawWidth = QuickPropScale( 64 );
 		}
 	}
 
-	iDrawHeight = iDrawHeight / ( float( TILE_TEXTURE_SIZE ) / float( TILE_SIZE ) );
-	iDrawWidth = iDrawWidth / ( float( TILE_TEXTURE_SIZE ) / float( TILE_SIZE ) );
+	iDrawHeight = iDrawHeight / ( (float)QuickPropScale( TILE_TEXTURE_SIZE ) / QuickPropScale( TILE_SIZE ) );
+	iDrawWidth = iDrawWidth / ( (float)QuickPropScale( TILE_TEXTURE_SIZE ) / QuickPropScale( TILE_SIZE ) );
 
-	iDrawHeight = max( iDrawHeight, 4 );
-	iDrawWidth = max( iDrawWidth, 4 );
+	iDrawHeight = max( iDrawHeight, QuickPropScale( 4 ) );
+	iDrawWidth = max( iDrawWidth, QuickPropScale( 4 ) );
 
 	//
 	// Draw frame
@@ -2218,16 +2221,16 @@ fmtlenreduce:
 		int tileWidth, tileHeight;
 		GetTileSize( tileWidth, tileHeight );
 		g_pMatSystemSurface->DrawSetColor( 255, 255, 255, 255 );
-		g_pMatSystemSurface->DrawOutlinedRect( x + 1, y + 1,
-			x + tileWidth - 2 , y + tileHeight - 2 );
+		g_pMatSystemSurface->DrawOutlinedRect( x + QuickPropScale( 1 ), y + QuickPropScale( 1 ),
+			x + tileWidth - QuickPropScale( 2 ) , y + tileHeight - QuickPropScale( 2 ) );
 	}
 
 	//
 	// Draw all
 	//
 
-	x += TILE_BORDER;
-	y += TILE_BORDER/2;
+	x += QuickPropScale( TILE_BORDER );
+	y += QuickPropScale( TILE_BORDER/2 );
 
 	intp iLenFile = V_strlen( szTextureFile );
 	char const *szPrintFilePrefix = ( iLenFile > 22 ) ? "..." : "";
@@ -2248,7 +2251,10 @@ fmtlenreduce:
 	static Color clrLblError( 200, 0, 0, 255 );
 	bool bWarnTile = ( !kv->GetInt( "SpecialTx" ) ) && ( g_warn_enable && ShallWarnTx( kv, pMatTexture ) );
 	g_pMatSystemSurface->DrawSetColor( bWarnTile ? clrLblWarn : clrLblNormal );
-	g_pMatSystemSurface->DrawFilledRect( x - TILE_BORDER/2, y, x + TILE_BORDER/2 + TILE_SIZE, y + TILE_TEXT );
+	g_pMatSystemSurface->DrawFilledRect( x - QuickPropScale( TILE_BORDER/2 ),
+		y,
+		x + QuickPropScale( TILE_BORDER/2 + TILE_SIZE ),
+		y + QuickPropScale( TILE_TEXT ) );
 
 	char chInfoText[256] = { 0 };
 	V_sprintf_safe( chInfoText, "%s KiB  %dx%d  %.*s%s  %s",
@@ -2279,18 +2285,31 @@ fmtlenreduce:
 	{
 		g_pMatSystemSurface->DrawSetColor( clrLblError );
 		if ( iTxSize > g_warn_texkbytes )
-			g_pMatSystemSurface->DrawFilledRect( x - 2, y + iTextHeight + 1, x + iTextMargins[0] - 5, y + TILE_TEXT );
+			g_pMatSystemSurface->DrawFilledRect( x - QuickPropScale( 2 ),
+				y + iTextHeight + QuickPropScale( 1 ),
+				x + iTextMargins[0] - QuickPropScale( 5 ),
+				y + QuickPropScale( TILE_TEXT ) );
 		if ( iTxWidth > g_warn_texdimensions || iTxHeight > g_warn_texdimensions )
-			g_pMatSystemSurface->DrawFilledRect( x + iTextMargins[0] - 2, y + iTextHeight + 1, x + iTextMargins[1] - 1, y + TILE_TEXT );
+			g_pMatSystemSurface->DrawFilledRect( x + iTextMargins[0] - QuickPropScale( 2 ),
+				y + iTextHeight + QuickPropScale( 1 ),
+				x + iTextMargins[1] - QuickPropScale( 1 ),
+				y + QuickPropScale( TILE_TEXT ) );
 		if ( strcmp( szTxFormat, "DXT1" ) && strcmp( szTxFormat, "DXT5" ) )
-			g_pMatSystemSurface->DrawFilledRect( x + iTextMargins[1] + 2, y + iTextHeight + 1, x + iTextMargins[2] - 1, y + TILE_TEXT );
+			g_pMatSystemSurface->DrawFilledRect( x + iTextMargins[1] + QuickPropScale( 2 ),
+				y + iTextHeight + QuickPropScale( 1 ),
+				x + iTextMargins[2] - QuickPropScale( 1 ),
+				y + QuickPropScale( TILE_TEXT ) );
 		if ( pMatTexture->GetFlags() & (
 			TEXTUREFLAGS_NOLOD | TEXTUREFLAGS_NOMIP | TEXTUREFLAGS_ONEBITALPHA
 			) )
-			g_pMatSystemSurface->DrawFilledRect( x + iTextMargins[2] + 3, y + iTextHeight + 1, x + iTextMargins[3] + 2, y + TILE_TEXT );
+			g_pMatSystemSurface->DrawFilledRect( x + iTextMargins[2] + QuickPropScale( 3 ),
+				y + iTextHeight + QuickPropScale( 1 ),
+				x + iTextMargins[3] + QuickPropScale( 2 ),
+				y + QuickPropScale( TILE_TEXT ) );
 	}
 
-	g_pMatSystemSurface->DrawColoredTextRect( GetFont(), x, y, TILE_SIZE, TILE_TEXT,
+	g_pMatSystemSurface->DrawColoredTextRect( GetFont(),
+		x, y, QuickPropScale( TILE_SIZE ), QuickPropScale( TILE_TEXT ),
 		255, 255, 255, 255,
 		"%s%s\n"
 		"%s",
@@ -2298,13 +2317,13 @@ fmtlenreduce:
 		chInfoText
 		);
 
-	y += TILE_TEXT + TILE_BORDER/2;
+	y += QuickPropScale( TILE_TEXT + TILE_BORDER/2 );
 
 	// Images placement
 	bool bHasAlpha = m_bPaintAlpha && stricmp( szTxFormat, "DXT1" );
 
-	int extTxWidth = TILE_SIZE;
-	int extTxHeight = TILE_SIZE;
+	int extTxWidth = QuickPropScale( TILE_SIZE );
+	int extTxHeight = QuickPropScale( TILE_SIZE );
 
 	int orgTxX = 0, orgTxXA = 0;
 	int orgTxY = 0, orgTxYA = 0;
@@ -2314,21 +2333,21 @@ fmtlenreduce:
 		if ( iTxWidth >= iTxHeight * 2 )
 		{
 			extTxHeight /= 2;
-			orgTxYA = extTxHeight + TILE_BORDER/2;
+			orgTxYA = extTxHeight + QuickPropScale( TILE_BORDER/2 );
 		}
 		else if ( iTxHeight >= iTxWidth * 2 )
 		{
 			extTxWidth /= 2;
-			orgTxXA = extTxWidth + TILE_BORDER/2;
-			x -= TILE_BORDER/4 + 1;
+			orgTxXA = extTxWidth + QuickPropScale( TILE_BORDER/2 );
+			x -= QuickPropScale( TILE_BORDER/4 + 1 );
 		}
 		else
 		{
 			extTxHeight /= 2;
-			orgTxYA = extTxHeight + TILE_BORDER/2;
+			orgTxYA = extTxHeight + QuickPropScale( TILE_BORDER/2 );
 			orgTxX = extTxWidth / 4;
 			extTxWidth /= 2;
-			x -= TILE_BORDER/4 + 1;
+			x -= QuickPropScale( TILE_BORDER/4 + 1 );
 
 			if ( iDrawWidth > extTxWidth )
 			{
@@ -2342,12 +2361,14 @@ fmtlenreduce:
 	if ( IMaterial *pMaterial = UseDebugMaterial( "debug/debugtexturecolor", pMatTexture, &auto_matsysdebugmode ) )
 	{
 		g_pMatSystemSurface->DrawSetColor( 255, 255, 255, 255 );
-		g_pMatSystemSurface->DrawOutlinedRect( x + orgTxX + ( extTxWidth - iDrawWidth ) / 2 - IMG_FRAME_OFF, y + orgTxY + ( extTxHeight - iDrawHeight ) / 2 - IMG_FRAME_OFF,
-			x + orgTxX + ( extTxWidth + iDrawWidth ) / 2 + IMG_FRAME_OFF, y + orgTxY + ( extTxHeight + iDrawHeight ) / 2 + IMG_FRAME_OFF );
+		g_pMatSystemSurface->DrawOutlinedRect( x + orgTxX + ( extTxWidth - iDrawWidth ) / 2 - QuickPropScale( IMG_FRAME_OFF ),
+			y + orgTxY + ( extTxHeight - iDrawHeight ) / 2 - QuickPropScale( IMG_FRAME_OFF ),
+			x + orgTxX + ( extTxWidth + iDrawWidth ) / 2 + QuickPropScale( IMG_FRAME_OFF ),
+			y + orgTxY + ( extTxHeight + iDrawHeight ) / 2 + QuickPropScale( IMG_FRAME_OFF ) );
 		RenderTexturedRect( this, pMaterial,
 			x + orgTxX + ( extTxWidth - iDrawWidth ) / 2, y + orgTxY + ( extTxHeight - iDrawHeight ) / 2,
 			x + orgTxX + ( extTxWidth + iDrawWidth ) / 2, y + orgTxY + ( extTxHeight + iDrawHeight ) / 2,
-			2, 1 );
+			QuickPropScale( 2 ), QuickPropScale( 1 ) );
 
 		if ( bHasAlpha )
 		{
@@ -2355,12 +2376,14 @@ fmtlenreduce:
 			orgTxY += orgTxYA;
 			if ( IMaterial *pMaterialDebug = UseDebugMaterial( "debug/debugtexturealpha", pMatTexture, &auto_matsysdebugmode ) )
 			{
-				g_pMatSystemSurface->DrawOutlinedRect( x + orgTxX + ( extTxWidth - iDrawWidth ) / 2 - IMG_FRAME_OFF, y + orgTxY + ( extTxHeight - iDrawHeight ) / 2 - IMG_FRAME_OFF,
-					x + orgTxX + ( extTxWidth + iDrawWidth ) / 2 + IMG_FRAME_OFF, y + orgTxY + ( extTxHeight + iDrawHeight ) / 2 + IMG_FRAME_OFF );
+				g_pMatSystemSurface->DrawOutlinedRect( x + orgTxX + ( extTxWidth - iDrawWidth ) / 2 - QuickPropScale( IMG_FRAME_OFF ),
+					y + orgTxY + ( extTxHeight - iDrawHeight ) / 2 - QuickPropScale( IMG_FRAME_OFF ),
+					x + orgTxX + ( extTxWidth + iDrawWidth ) / 2 + QuickPropScale( IMG_FRAME_OFF ),
+					y + orgTxY + ( extTxHeight + iDrawHeight ) / 2 + QuickPropScale( IMG_FRAME_OFF ) );
 				RenderTexturedRect( this, pMaterialDebug,
 					x + orgTxX + ( extTxWidth - iDrawWidth ) / 2, y + orgTxY + ( extTxHeight - iDrawHeight ) / 2,
 					x + orgTxX + ( extTxWidth + iDrawWidth ) / 2, y + orgTxY + ( extTxHeight + iDrawHeight ) / 2,
-					2, 1 );
+					QuickPropScale( 2 ), QuickPropScale( 1 ) );
 			}
 		}
 	}
@@ -2415,7 +2438,7 @@ private:
 	void OnCommand( const char *command ) override;
 	MESSAGE_FUNC( OnTextChanged, "TextChanged" );
 
-	int AddListItem( KeyValues *kv );
+	intp AddListItem( KeyValues *kv );
 
 	bool UpdateDisplayedItem( KeyValues *pDispData, KeyValues *kv );
 
@@ -2476,12 +2499,12 @@ static int __cdecl KilobytesSortFunc( vgui::ListPanel *pPanel, const vgui::ListP
 class CSmartTextureKeyValues
 {
 private:
-	CSmartTextureKeyValues( CSmartTextureKeyValues const &x );
-	CSmartTextureKeyValues& operator = ( CSmartTextureKeyValues const &x );
+	CSmartTextureKeyValues( CSmartTextureKeyValues const &x ) = delete;
+	CSmartTextureKeyValues& operator = ( CSmartTextureKeyValues const &x ) = delete;
 
 public:
-	CSmartTextureKeyValues() : m_p( NULL ) { if ( KeyValues *p = g_pMaterialSystemDebugTextureInfo->GetDebugTextureList() ) m_p = p->MakeCopy(); }
-	~CSmartTextureKeyValues() { if ( m_p ) m_p->deleteThis(); m_p = NULL; }
+	CSmartTextureKeyValues() : m_p( nullptr ) { if ( KeyValues *p = g_pMaterialSystemDebugTextureInfo->GetDebugTextureList() ) m_p = p->MakeCopy(); }
+	~CSmartTextureKeyValues() { if ( m_p ) m_p->deleteThis(); m_p = nullptr; }
 
 	KeyValues * Get() const { return m_p; };
 
@@ -2500,10 +2523,11 @@ CTextureListPanel::CTextureListPanel( vgui::Panel *parent ) :
 {
 	// Need parent here, before loading up textures, so getSurfaceBase 
 	//  will work on this panel ( it's null otherwise )
-	SetSize( videomode->GetModeStereoWidth() - 20, videomode->GetModeStereoHeight() - 20 );
-	SetPos( 10, 10 );
+	// dimhotepus: Scale UI.
+	SetSize( videomode->GetModeStereoWidth() - QuickPropScale( 20 ), videomode->GetModeStereoHeight() - QuickPropScale( 20 ) );
+	SetPos( QuickPropScale( 10 ), QuickPropScale( 10 ) );
 	SetVisible( true );
-	SetCursor( 0 );
+	SetCursor( vgui::dc_user );
 
 	SetTitle( "Texture list", false );
 	SetMenuButtonVisible( false );
@@ -2609,17 +2633,18 @@ CTextureListPanel::CTextureListPanel( vgui::Panel *parent ) :
 	m_pListPanel->SetVisible( !mat_texture_list_view.GetBool() );
 	
 	int col = -1;
-	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_NAME, "Texture Name", 200, 100, 700, vgui::ListPanel::COLUMN_RESIZEWITHWINDOW );
-	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_PATH, "Path", 50, 50, 300, 0 );
-	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_SIZE, "Kilobytes", 50, 50, 50, 0 );
-		m_pListPanel->SetSortFunc( col, KilobytesSortFunc );
-		m_pListPanel->SetSortColumnEx( col, 0, true );	// advanced sorting setup
-	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_TEXTURE_GROUP, "Group", 100, 100, 300, 0 );
-	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_FORMAT, "Format", 250, 50, 300, 0 );
-	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_WIDTH, "Width", 50, 50, 50, 0 );
-	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_HEIGHT, "Height", 50, 50, 50, 0 );
-	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_BINDS_FRAME, "# Binds", 50, 50, 50, 0 );
-	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_BINDS_MAX, "BindsMax", 50, 50, 50, 0 );
+	// dimhotepus: Scale UI.
+	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_NAME, "Texture Name", QuickPropScale( 200 ), QuickPropScale( 100 ), QuickPropScale( 700 ), vgui::ListPanel::COLUMN_RESIZEWITHWINDOW );
+	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_PATH, "Path", QuickPropScale( 50 ), QuickPropScale( 50 ), QuickPropScale( 300 ), 0 );
+	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_SIZE, "Kilobytes", QuickPropScale( 50 ), QuickPropScale( 50 ), QuickPropScale( 50 ), 0 );
+	m_pListPanel->SetSortFunc( col, KilobytesSortFunc );
+	m_pListPanel->SetSortColumnEx( col, 0, true );	// advanced sorting setup
+	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_TEXTURE_GROUP, "Group", QuickPropScale( 100 ), QuickPropScale( 100 ), QuickPropScale( 300 ), 0 );
+	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_FORMAT, "Format", QuickPropScale( 250 ), QuickPropScale( 50 ), QuickPropScale( 300 ), 0 );
+	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_WIDTH, "Width", QuickPropScale( 50 ), QuickPropScale( 50 ), QuickPropScale( 50 ), 0 );
+	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_HEIGHT, "Height", QuickPropScale( 50 ), QuickPropScale( 50 ), QuickPropScale( 50 ), 0 );
+	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_BINDS_FRAME, "# Binds", QuickPropScale( 50 ), QuickPropScale( 50 ), QuickPropScale( 50 ), 0 );
+	m_pListPanel->AddColumnHeader( ++ col, KEYNAME_BINDS_MAX, "BindsMax", QuickPropScale( 50 ), QuickPropScale( 50 ), QuickPropScale( 50 ), 0 );
 
 	SetBgColor( Color( 0, 0, 0, 100 ) );
 
@@ -2642,7 +2667,7 @@ CTextureListPanel::CTextureListPanel( vgui::Panel *parent ) :
 //-----------------------------------------------------------------------------
 CTextureListPanel::~CTextureListPanel( void )
 {
-	g_pTextureListPanel = NULL;
+	g_pTextureListPanel = nullptr;
 }
 
 void CTextureListPanel::ApplySchemeSettings( vgui::IScheme *pScheme )
@@ -2663,8 +2688,8 @@ bool CTextureListPanel::ShouldDraw( void )
 {
 	if ( mat_texture_list.GetInt() )
 		return true;
-	if ( s_eTxListPanelRequest == TXR_SHOW ||
-		 s_eTxListPanelRequest == TXR_RUNNING )
+	if ( s_eTxListPanelRequest == TxListPanelRequest::TXR_SHOW ||
+		 s_eTxListPanelRequest == TxListPanelRequest::TXR_RUNNING )
 		return true;
 	
 	return false;
@@ -2675,8 +2700,8 @@ void CTextureListPanel::PerformLayout()
 	BaseClass::PerformLayout();
 
 	// Put the collapse button in the corner
-	m_pCollapse->SetPos( 2, 10 );
-	m_pCollapse->SetSize( 10, 10 );
+	m_pCollapse->SetPos( QuickPropScale( 2 ), QuickPropScale( 10 ) );
+	m_pCollapse->SetSize( QuickPropScale( 10 ), QuickPropScale( 10 ) );
 	m_pCollapse->SetVisible( true );
 
 	bool bCollapsed = m_pCollapse->IsSelected();
@@ -2712,28 +2737,28 @@ void CTextureListPanel::PerformLayout()
 	{
 		button->SetPos( x, yOffset );
 		button->SetWide( w/2 );
-		yOffset += button->GetTall();
+		yOffset += button->GetTall() + QuickPropScale( 2 );
 		button->SetVisible( !bCollapsed );
 
 		if ( button == m_pViewTextures )
 		{
-			m_pViewTextures->SetWide( 170 );
-			int accumw = 170;
+			m_pViewTextures->SetWide( QuickPropScale( 170 ) );
+			int accumw = QuickPropScale( 170 );
 			
-			m_pAlpha->SetPos( x + accumw + 5, yOffset - m_pViewTextures->GetTall() );
-			m_pAlpha->SetWide( (accumw += 85, 85) );
+			m_pAlpha->SetPos( x + accumw + QuickPropScale( 5 ), yOffset - m_pViewTextures->GetTall() );
+			m_pAlpha->SetWide( (accumw += QuickPropScale( 85 ), QuickPropScale( 85 )) );
 
-			m_pThumbWarnings->SetPos( x + accumw + 5, yOffset - m_pViewTextures->GetTall() );
-			m_pThumbWarnings->SetWide( (accumw += 85, 85) );
+			m_pThumbWarnings->SetPos( x + accumw + QuickPropScale( 5 ), yOffset - m_pViewTextures->GetTall() );
+			m_pThumbWarnings->SetWide( (accumw += QuickPropScale( 85 ), QuickPropScale( 85 )) );
 		}
 
 		if ( button == m_pFilteringChk )
 		{
-			m_pFilteringChk->SetWide( 60 );
-			int accumw = 60;
+			m_pFilteringChk->SetWide( QuickPropScale( 60 ) );
+			int accumw = QuickPropScale( 60 );
 
-			m_pFilteringText->SetPos( x + accumw + 5, yOffset - m_pFilteringChk->GetTall() );
-			m_pFilteringText->SetWide( ( accumw += 170, 170 ) );
+			m_pFilteringText->SetPos( x + accumw + QuickPropScale( 5 ), yOffset - m_pFilteringChk->GetTall() );
+			m_pFilteringText->SetWide( ( accumw += QuickPropScale( 170 ), QuickPropScale( 170 ) ) );
 			m_pFilteringText->SetTall( m_pFilteringChk->GetTall() );
 			m_pFilteringText->SetVisible( !bCollapsed );
 		}
@@ -2741,7 +2766,7 @@ void CTextureListPanel::PerformLayout()
 
 	if ( bCollapsed )
 	{
-		int xOffset = 85, iWidth;
+		int xOffset = QuickPropScale( 85 ), iWidth;
 
 		struct LayoutHorz_t
 		{
@@ -2750,28 +2775,28 @@ void CTextureListPanel::PerformLayout()
 		}
 		layout[] =
 		{
-			{ m_pTotalUsageLabel, 290 },
-			{ m_pViewTextures, 170 },
-			{ m_pAlpha, 60 },
-			{ m_pAllTextures, 135 },
-			{ m_pHideMipped, 100 },
-			{ m_pFilteringChk, 60 },
-			{ m_pFilteringText, 130 },
-			{ m_pReloadAllMaterialsButton, 130 },
-			{ m_pCommitChangesButton, 130 },
-			{ m_pDiscardChangesButton, 130 },
+			{ m_pTotalUsageLabel, QuickPropScale( 290 ) },
+			{ m_pViewTextures, QuickPropScale( 170 ) },
+			{ m_pAlpha, QuickPropScale( 60 ) },
+			{ m_pAllTextures, QuickPropScale( 135 ) },
+			{ m_pHideMipped, QuickPropScale( 100 ) },
+			{ m_pFilteringChk, QuickPropScale( 60 ) },
+			{ m_pFilteringText, QuickPropScale( 130 ) },
+			{ m_pReloadAllMaterialsButton, QuickPropScale( 130 ) },
+			{ m_pCommitChangesButton, QuickPropScale( 130 ) },
+			{ m_pDiscardChangesButton, QuickPropScale( 130 ) },
 		};
 
 		for ( auto &&l : layout )
 		{
-			l.pPanel->SetPos( xOffset, 2 );
+			l.pPanel->SetPos( xOffset, QuickPropScale( 2 ) );
 			iWidth = l.iWidth;
-			iWidth = min( w - xOffset - 30, iWidth );
+			iWidth = min( w - xOffset - QuickPropScale( 30 ), iWidth );
 			l.pPanel->SetWide( iWidth );
-			l.pPanel->SetVisible( iWidth > 50 );
+			l.pPanel->SetVisible( iWidth > QuickPropScale( 50 ) );
 			
-			if ( iWidth > 50 )
-				xOffset += iWidth + 5;
+			if ( iWidth > QuickPropScale( 50 ) )
+				xOffset += iWidth + QuickPropScale( 5 );
 		}
 
 		yOffset = y;
@@ -2820,16 +2845,7 @@ bool StripDirName( char *pFilename )
 	}
 }
 
-static inline void ToLowerInplace( char *chBuffer )
-{
-	for ( char *pch = chBuffer; *pch; ++ pch )
-	{
-		if ( V_isupper( *pch ) )
-			*pch = static_cast<char>(tolower( *pch ));
-	}
-}
-
-void KeepSpecialKeys( KeyValues *textureList, bool bServiceKeys )
+static void KeepSpecialKeys( KeyValues *textureList, bool bServiceKeys )
 {
 	KeyValues *pNext;
 
@@ -2863,15 +2879,15 @@ void KeepSpecialKeys( KeyValues *textureList, bool bServiceKeys )
 	}
 }
 
-void KeepKeysMatchingFilter( KeyValues *textureList, char const *szFilter )
+static void KeepKeysMatchingFilter( KeyValues *textureList, char const *szFilter )
 {
 	if ( !szFilter || !*szFilter )
 		return;
 
 	char chFilter[MAX_PATH] = {0}, chName[MAX_PATH] = {0};
 	
-	Q_strncpy( chFilter, szFilter, sizeof( chFilter ) - 1 );
-	ToLowerInplace( chFilter );
+	V_strcpy_safe( chFilter, szFilter );
+	V_strlwr_safe( chFilter );
 
 	KeyValues *pNext;
 	for ( KeyValues *pCur=textureList->GetFirstSubKey(); pCur; pCur=pNext )
@@ -2880,8 +2896,8 @@ void KeepKeysMatchingFilter( KeyValues *textureList, char const *szFilter )
 
 		char const *szName = pCur->GetString( KEYNAME_NAME );
 
-		Q_strncpy( chName, szName, sizeof( chName ) - 1 );
-		ToLowerInplace( chName );
+		V_strcpy_safe( chName, szName );
+		V_strlwr_safe( chName );
 		
 		if ( !strstr( chName, chFilter ) )
 		{
@@ -2890,7 +2906,7 @@ void KeepKeysMatchingFilter( KeyValues *textureList, char const *szFilter )
 	}
 }
 
-void KeepKeysMarkedNoMip( KeyValues *textureList )
+static void KeepKeysMarkedNoMip( KeyValues *textureList )
 {
 	KeyValues *pNext;
 	for ( KeyValues *pCur=textureList->GetFirstSubKey(); pCur; pCur=pNext )
@@ -2920,7 +2936,7 @@ void CTextureListPanel::UpdateTotalUsageLabel()
 	if ( bool bCollapsed = m_pCollapse->IsSelected() )
 	{
 		char const *szTitle = "";
-		Q_snprintf( data, sizeof( data ), "%s[F %s KiB] / [T %s KiB] / [S %s KiB]", szTitle, kb1, kb2, kb3 );
+		V_sprintf_safe( data, "%s[F %s KiB] / [T %s KiB] / [S %s KiB]", szTitle, kb1, kb2, kb3 );
 	}
 	else
 	{
@@ -2928,7 +2944,7 @@ void CTextureListPanel::UpdateTotalUsageLabel()
 		char kbMip1[ 20 ], kbMip2[ 20 ];
 		FmtCommaNumber( kbMip1, (g_pMaterialSystemDebugTextureInfo->GetTextureMemoryUsed( IDebugTextureInfo::MEMORY_ESTIMATE_PICMIP_1 ) + 511) / 1024 );
 		FmtCommaNumber( kbMip2, (g_pMaterialSystemDebugTextureInfo->GetTextureMemoryUsed( IDebugTextureInfo::MEMORY_ESTIMATE_PICMIP_2 ) + 511) / 1024 );
-		Q_snprintf( data, sizeof( data ), "%s:  frame %s KiB  /  total %s KiB ( picmip1 = %s KiB, picmip2 = %s KiB )  /  shown %s KiB", szTitle, kb1, kb2, kbMip1, kbMip2, kb3 );
+		V_sprintf_safe( data, "%s:  frame %s KiB  /  total %s KiB ( picmip1 = %s KiB, picmip2 = %s KiB )  /  shown %s KiB", szTitle, kb1, kb2, kbMip1, kbMip2, kb3 );
 	}
 
 	wchar_t unicodeString[1024];
@@ -3043,9 +3059,9 @@ bool CTextureListPanel::UpdateDisplayedItem( KeyValues *pDispData, KeyValues *kv
 	return bUpdate;
 }
 
-int CTextureListPanel::AddListItem( KeyValues *kv )
+intp CTextureListPanel::AddListItem( KeyValues *kv )
 {
-	int iItem = m_pListPanel->GetItem( kv->GetString( KEYNAME_NAME ) );
+	intp iItem = m_pListPanel->GetItem( kv->GetString( KEYNAME_NAME ) );
 	if ( iItem == -1 )
 	{
 		// Set this so the GetItem() call above can use the key's name (as opposed to the value of its
@@ -3128,15 +3144,15 @@ void CTextureListPanel::Paint()
 		return;
 
 	CRenderTextureEditor *pRte = m_pViewPanel->GetRenderTxEditor();
-	if ( ( s_eTxListPanelRequest == TXR_RUNNING ) &&
+	if ( ( s_eTxListPanelRequest == TxListPanelRequest::TXR_RUNNING ) &&
 		 pRte->IsVisible() )
 	{
-		KeyValues *kv = NULL;
-		int iHint = 0;
+		KeyValues *kv = nullptr;
+		intp iHint = 0;
 		pRte->GetDispInfo( kv, iHint );
 		if ( kv && iHint )
 		{
-			KeyValues *plv = ( m_pListPanel->IsValidItemID( iHint ) ? m_pListPanel->GetItem( iHint ) : NULL );
+			KeyValues *plv = ( m_pListPanel->IsValidItemID( iHint ) ? m_pListPanel->GetItem( iHint ) : nullptr );
 			if ( plv && !strcmp( plv->GetString( KEYNAME_NAME ), kv->GetString( KEYNAME_NAME ) ) )
 			{
 				KeyValues *pValData = plv->GetFirstValue(), *pValRendered = kv->GetFirstValue();
@@ -3149,37 +3165,37 @@ void CTextureListPanel::Paint()
 					pRte->SetDispInfo( plv, iHint );
 			}
 			else
-				kv = NULL;
+				kv = nullptr;
 		}
 		
 		if ( 0 ) // if ( !kv )
 		{
 			pRte->Close();
-			pRte->SetDispInfo( NULL, 0 );
+			pRte->SetDispInfo( nullptr, 0 );
 		}
 	}
 
 	// If we are fetching all textures, then stop loading material system:
 	if ( mat_texture_list_all.GetBool() )
 	{
-		if ( s_eTxListPanelRequest == TXR_RUNNING )
+		if ( s_eTxListPanelRequest == TxListPanelRequest::TXR_RUNNING )
 		{
 			mat_texture_list.SetValue( 0 );
-			s_eTxListPanelRequest = TXR_SHOW; // Keep displaying our panel
+			s_eTxListPanelRequest = TxListPanelRequest::TXR_SHOW; // Keep displaying our panel
 		}
 		else
 		{
-			s_eTxListPanelRequest = TXR_RUNNING;
+			s_eTxListPanelRequest = TxListPanelRequest::TXR_RUNNING;
 		}
 	}
 	else
 	{
-		if ( s_eTxListPanelRequest == TXR_SHOW )
+		if ( s_eTxListPanelRequest == TxListPanelRequest::TXR_SHOW )
 		{
 			// Either first show or turned off "all textures"
 			m_pListPanel->RemoveAll();
 			m_pViewPanel->InvalidateLayout();
-			s_eTxListPanelRequest = TXR_RUNNING;
+			s_eTxListPanelRequest = TxListPanelRequest::TXR_RUNNING;
 			return;
 		}
 	}
@@ -3233,7 +3249,7 @@ void CTextureListPanel::Paint()
 			}
 		}
 
-		int iItem = AddListItem( pCur );
+		intp iItem = AddListItem( pCur );
 
 		if ( iItem < itemsTouched.GetNumBits() )
 			itemsTouched.Set( iItem );
@@ -3279,7 +3295,7 @@ void CTextureListPanel::Paint()
 
 void VGui_UpdateTextureListPanel()
 {
-	if ( mat_show_texture_memory_usage.GetInt() )
+	if ( mat_show_texture_memory_usage.GetBool() )
 	{
 		con_nprint_t info;
 		info.index = 4;
@@ -3297,9 +3313,6 @@ void VGui_UpdateTextureListPanel()
 	}
 
 	MatViewOverride::DisplaySelectedTextures();
-
-	if ( IsX360() )
-		return;
 
 	g_pMaterialSystemDebugTextureInfo->EnableGetAllTextures( mat_texture_list_all.GetBool() );
 
@@ -3321,11 +3334,14 @@ void CL_CreateTextureListPanel( vgui::Panel *parent )
 
 CON_COMMAND( mat_texture_save_fonts, "Save all font textures" )
 {
+	// dimhotepus: This can take a while, put up a waiting cursor.
+	const vgui::ScopedSurfaceWaitCursor scopedWaitCursor{vgui::surface()};
+
 	for( int i = 0; i < 8192; i++ )
 	{
 		char szTextureName[ MAX_PATH ];
 
-		Q_snprintf( szTextureName, ARRAYSIZE( szTextureName ), "__font_page_%d.tga", i );
+		V_sprintf_safe( szTextureName, "__font_page_%d.tga", i );
 
 		if( !materials->IsTextureLoaded( szTextureName ) )
 			break;
@@ -3354,7 +3370,7 @@ void mat_texture_list_on_f()
 	}
 
 	mat_texture_list.SetValue( 1 );
-	s_eTxListPanelRequest = TXR_SHOW;
+	s_eTxListPanelRequest = TxListPanelRequest::TXR_SHOW;
 
 	g_pTextureListPanel->OnTurnedOn();
 
@@ -3372,7 +3388,7 @@ void mat_texture_list_on_f()
 void mat_texture_list_off_f()
 {
 	mat_texture_list.SetValue( 0 );
-	s_eTxListPanelRequest = TXR_HIDE;
+	s_eTxListPanelRequest = TxListPanelRequest::TXR_HIDE;
 
 	if( g_cursorset )
 	{

@@ -121,9 +121,10 @@ bool RagdollManager_SaveImportant( CAI_BaseNPC *pNPC );
 
 #define FINDNAMEDENTITY_MAX_ENTITIES	32		// max number of entities to be considered for random entity selection in FindNamedEntity
 
-extern bool			g_fDrawLines;
-extern short		g_sModelIndexLaser;		// holds the index for the laser beam
-extern short		g_sModelIndexLaserDot;	// holds the index for the laser beam dot
+extern bool g_fDrawLines;
+// dimhotepus: short -> int.
+extern int		g_sModelIndexLaser;		// holds the index for the laser beam
+extern int		g_sModelIndexLaserDot;	// holds the index for the laser beam dot
 
 // Debugging tools
 ConVar	ai_no_select_box( "ai_no_select_box", "0" );
@@ -241,7 +242,7 @@ CAI_BaseNPC **CAI_Manager::AccessAIs()
 
 //-------------------------------------
 
-int CAI_Manager::NumAIs()
+intp CAI_Manager::NumAIs() const
 {
 	return m_AIs.Count();
 }
@@ -257,7 +258,7 @@ void CAI_Manager::AddAI( CAI_BaseNPC *pAI )
 
 void CAI_Manager::RemoveAI( CAI_BaseNPC *pAI )
 {
-	int i = m_AIs.Find( pAI );
+	intp i = m_AIs.Find( pAI );
 
 	if ( i != -1 )
 		m_AIs.FastRemove( i );
@@ -308,10 +309,10 @@ bool CPostFrameNavigationHook::Init( void )
 // Main query job
 CJob *g_pQueuedNavigationQueryJob = NULL;
 
-static void ProcessNavigationQueries( CFunctor **pData, unsigned int nCount )
+static void ProcessNavigationQueries( CFunctor **pData, intp nCount )
 {
 	// Run all queued navigation on a separate thread
-	for ( unsigned i = 0; i < nCount; i++ )
+	for ( intp i = 0; i < nCount; i++ )
 	{
 		(*pData[i])();
 	}
@@ -538,7 +539,8 @@ void CAI_BaseNPC::CleanupOnDeath( CBaseEntity *pCulprit, bool bFireDeathOutput )
 		RemoveActorFromScriptedScenes( this, false /*all scenes*/ );
 	}
 	else
-		DevMsg( "Unexpected double-death-cleanup\n" );
+		// dimhotepus: Dump for which entity double cleanup is done.
+		DevMsg( "Unexpected double-death-cleanup for %s.\n", GetEntityName() );
 }
 
 void CAI_BaseNPC::SelectDeathPose( const CTakeDamageInfo &info )
@@ -977,7 +979,7 @@ void CAI_BaseNPC::NotifyFriendsOfDamage( CBaseEntity *pAttackerEntity )
 	if ( pAttacker )
 	{
 		const Vector &origin = GetAbsOrigin();
-		for ( int i = 0; i < g_AI_Manager.NumAIs(); i++ )
+		for ( intp i = 0; i < g_AI_Manager.NumAIs(); i++ )
 		{
 			constexpr float NEAR_Z		= 10*12;
 			constexpr float NEAR_XY_SQ	= Square( 50.0f*12 );
@@ -3552,8 +3554,6 @@ void CAI_BaseNPC::RebalanceThinks()
 		static CUtlVector<AIRebalanceInfo_t> rebalanceCandidates( 16, 64 );
 		gm_iNextThinkRebalanceTick = gpGlobals->tickcount + TIME_TO_TICKS( random->RandomFloat( 3, 5) );
 
-		int i;
-
 		CBasePlayer *pPlayer = AI_GetSinglePlayer();
 		Vector vPlayerForward{0, 0, 0};
 		Vector vPlayerEyePosition{0, 0, 0};
@@ -3567,7 +3567,7 @@ void CAI_BaseNPC::RebalanceThinks()
 		int iMinTickRebalance = gpGlobals->tickcount - 1; // -1 needed for alternate ticks
 		int iMaxTickRebalance = gpGlobals->tickcount + iTicksPer10Hz;
 
-		for ( i = 0; i < g_AI_Manager.NumAIs(); i++ )
+		for ( intp i = 0; i < g_AI_Manager.NumAIs(); i++ )
 		{
 			CAI_BaseNPC *pCandidate = g_AI_Manager.AccessAIs()[i];
 			if ( pCandidate->CanThinkRebalance() &&
@@ -3614,11 +3614,11 @@ void CAI_BaseNPC::RebalanceThinks()
 
 			if ( bDebugThinkTicks )
 			{
-				DevMsg( "Rebalance %d!\n", rebalanceCandidates.Count() + 1 );
+				DevMsg( "Rebalance %zd!\n", rebalanceCandidates.Count() + 1 );
 				DevMsg( "   Distributing %d\n", iCurTickDistributing );
 			}
 
-			for ( i = 0; i < rebalanceCandidates.Count(); i++ )
+			for ( intp i = 0; i < rebalanceCandidates.Count(); i++ )
 			{
 				if ( iRemainingThinksToDistribute == 0 || rebalanceCandidates[i].iNextThinkTick > iCurTickDistributing )
 				{
@@ -3658,7 +3658,7 @@ void CAI_BaseNPC::RebalanceThinks()
 		if ( bDebugThinkTicks )
 		{
 			DevMsg( "New distribution is:\n");
-			for ( i = 0; i < g_AI_Manager.NumAIs(); i++ )
+			for ( intp i = 0; i < g_AI_Manager.NumAIs(); i++ )
 			{
 				DevMsg( "   %d\n", g_AI_Manager.AccessAIs()[i]->GetNextThinkTick() );
 			}
@@ -3972,11 +3972,11 @@ void CAI_BaseNPC::NPCThink( void )
 		{
 			timer.End();
 
-			float thinkTime = g_AIRunTimer.GetDuration().GetMillisecondsF();
+			float thinkTime = static_cast<float>(g_AIRunTimer.GetDuration().GetMillisecondsF());
 
 			if ( thinkTime > thinkLimit )
 			{
-				int color = (int)RemapVal( thinkTime, thinkLimit, thinkLimit * 3, 96.0, 255.0 );
+				int color = (int)RemapVal( thinkTime, thinkLimit, thinkLimit * 3, 96.0f, 255.0f );
 				if ( color > 255 )
 					color = 255;
 				else if ( color < 96 )
@@ -5488,7 +5488,7 @@ bool CAI_BaseNPC::UpdateEnemyMemory( CBaseEntity *pEnemy, const Vector &position
 		{
 			FoundEnemySound();
 		}
-		float reactionDelay = ( !pInformer || pInformer == this ) ? GetReactionDelay( pEnemy ) : 0.0;
+		float reactionDelay = ( !pInformer || pInformer == this ) ? GetReactionDelay( pEnemy ) : 0.0f;
 		bool result = GetEnemies()->UpdateMemory(GetNavigator()->GetNetwork(), pEnemy, position, reactionDelay, firstHand);
 
 		if ( !firstHand && pEnemy && result && GetState() == NPC_STATE_IDLE ) // if it's a new potential enemy
@@ -8765,7 +8765,7 @@ void CAI_BaseNPC::DrawDebugGeometryOverlays(void)
 		CAI_BaseNPC **ppAIs = g_AI_Manager.AccessAIs();
 
 		// Rate all NPCs
-		for ( int i = 0; i < g_AI_Manager.NumAIs(); i++ )
+		for ( intp i = 0; i < g_AI_Manager.NumAIs(); i++ )
 		{
 			if ( ppAIs[i] == NULL || ppAIs[i] == this )
 				continue;
@@ -11244,7 +11244,7 @@ bool CAI_BaseNPC::KeyValue( const char *szKeyName, const char *szValue )
 		// Defer unhandled Keys to behaviors
 		CAI_BehaviorBase **ppBehaviors = AccessBehaviors();
 		
-		for ( int i = 0; i < NumBehaviors(); i++ )
+		for ( intp i = 0; i < NumBehaviors(); i++ )
 		{
 			if( ppBehaviors[ i ]->KeyValue( szKeyName, szValue ) )
 			{
@@ -12707,7 +12707,7 @@ void CAI_BaseNPC::CascadePlayerPush( const Vector &push, const Vector &pushOrigi
 
 	Vector2D		pushTestPoint = vec2_invalid;
 
-	for ( int i = 0; i < g_AI_Manager.NumAIs(); i++ )
+	for ( intp i = 0; i < g_AI_Manager.NumAIs(); i++ )
 	{
 		CAI_BaseNPC *pOther = g_AI_Manager.AccessAIs()[i];
 		if ( pOther != this && pOther->IRelationType(this) == D_LI && !pOther->HasCondition( COND_PLAYER_PUSHING ) )

@@ -136,9 +136,10 @@ public:
 	  m_pPlayer( player )
 	{
 		m_pList = new ListPanel( this, "FileList" );
-		m_pList->AddColumnHeader( 0, "File", "File", 200, ListPanel::COLUMN_RESIZEWITHWINDOW );
-		m_pList->AddColumnHeader( 1, "Artist", "Artist", 150, ListPanel::COLUMN_RESIZEWITHWINDOW );
-		m_pList->AddColumnHeader( 2, "Album", "Album", 150, ListPanel::COLUMN_RESIZEWITHWINDOW );
+		// dimhotepus: Scale UI.
+		m_pList->AddColumnHeader( 0, "File", "File", QuickPropScale( 200 ), ListPanel::COLUMN_RESIZEWITHWINDOW );
+		m_pList->AddColumnHeader( 1, "Artist", "Artist", QuickPropScale( 150 ), ListPanel::COLUMN_RESIZEWITHWINDOW );
+		m_pList->AddColumnHeader( 2, "Album", "Album", QuickPropScale( 150 ), ListPanel::COLUMN_RESIZEWITHWINDOW );
 	}
 
 	void Reset()
@@ -194,15 +195,15 @@ public:
 	{
 		list.RemoveAll();
 
-		int selCount = m_pList->GetSelectedItemsCount();
+		intp selCount = m_pList->GetSelectedItemsCount();
 		if ( selCount <= 0 )
 		{
 			return;
 		}
 
-		for ( int i = 0; i < selCount; ++i )
+		for ( intp i = 0; i < selCount; ++i )
 		{
-			int itemId = m_pList->GetSelectedItem( 0 );
+			intp itemId = m_pList->GetSelectedItem( i );
 			KeyValues *kv = m_pList->GetItem( itemId );
 			if ( !kv )
 			{
@@ -257,10 +258,10 @@ void CMP3FileListPage::OnCommand( char const *cmd )
 	if ( !Q_stricmp( cmd, "addsong" ) )
 	{
 		// Get selected item
-		int c = m_pList->GetSelectedItemsCount();
+		intp c = m_pList->GetSelectedItemsCount();
 		if ( c > 0 )
 		{
-			int itemId = m_pList->GetSelectedItem( 0 );
+			intp itemId = m_pList->GetSelectedItem( 0 );
 			KeyValues *kv = m_pList->GetItem( itemId );
 			if ( kv )
 			{
@@ -285,9 +286,10 @@ public:
 	  m_pPlayer( player )
 	{
 		m_pList = new ListPanel( this, "PlayList" );
-		m_pList->AddColumnHeader( 0, "File", "File", 400, ListPanel::COLUMN_RESIZEWITHWINDOW );
-		m_pList->AddColumnHeader( 1, "Artist", "Artist", 150, ListPanel::COLUMN_RESIZEWITHWINDOW );
-		m_pList->AddColumnHeader( 2, "Album", "Album", 150, ListPanel::COLUMN_RESIZEWITHWINDOW );
+		// dimhotepus: Scale UI.
+		m_pList->AddColumnHeader( 0, "File", "File", QuickPropScale( 400 ), ListPanel::COLUMN_RESIZEWITHWINDOW );
+		m_pList->AddColumnHeader( 1, "Artist", "Artist", QuickPropScale( 150 ), ListPanel::COLUMN_RESIZEWITHWINDOW );
+		m_pList->AddColumnHeader( 2, "Album", "Album", QuickPropScale( 150 ), ListPanel::COLUMN_RESIZEWITHWINDOW );
 	}
 
 	void Reset()
@@ -342,10 +344,10 @@ public:
 	void RemoveSong( intp songIndex )
 	{
 		// Get selected item
-		int c = m_pList->GetSelectedItemsCount();
+		intp c = m_pList->GetSelectedItemsCount();
 		if ( c > 0 )
 		{
-			int itemId = m_pList->GetSelectedItem( 0 );
+			intp itemId = m_pList->GetSelectedItem( 0 );
 			KeyValues *kv = m_pList->GetItem( itemId );
 			if ( kv && ( (intp)kv->GetUint64( "SongIndex", std::numeric_limits<uint64>::max() ) == songIndex ) )
 			{
@@ -358,14 +360,14 @@ public:
 	{
 		list.RemoveAll();
 
-		int selCount = m_pList->GetSelectedItemsCount();
+		intp selCount = m_pList->GetSelectedItemsCount();
 		if ( selCount <= 0 )
 		{
 			return;
 		}
-		for ( int i = 0; i < selCount; ++i )
+		for ( intp i = 0; i < selCount; ++i )
 		{
-			int itemId = m_pList->GetSelectedItem( 0 );
+			intp itemId = m_pList->GetSelectedItem( 0 );
 			KeyValues *kv = m_pList->GetItem( itemId );
 			if ( !kv )
 			{
@@ -392,9 +394,9 @@ public:
 		m_pPlayer->SelectedSongs( CMP3Player::SONG_FROM_PLAYLIST, songList );
 	}
 
-	void OnItemPlaying( int listIndex )
+	void OnItemPlaying( intp listIndex )
 	{
-		int itemId = m_pList->GetItemIDFromRow( listIndex );
+		intp itemId = m_pList->GetItemIDFromRow( listIndex );
 		m_pList->ClearSelectedItems();
 		m_pList->SetSingleSelectedItem( itemId );
 	}
@@ -433,10 +435,10 @@ void CMP3PlayListPage::OnCommand( char const *cmd )
 	if ( !Q_stricmp( cmd, "removesong" ) )
 	{
 		// Get selected item
-		int c = m_pList->GetSelectedItemsCount();
+		intp c = m_pList->GetSelectedItemsCount();
 		if ( c > 0 )
 		{
-			int itemId = m_pList->GetSelectedItem( 0 );
+			intp itemId = m_pList->GetSelectedItem( 0 );
 			KeyValues *kv = m_pList->GetItem( itemId );
 			if ( kv )
 			{
@@ -513,7 +515,7 @@ public:
 		}
 	}
 
-	void OnPlayListItemPlaying( int listIndex )
+	void OnPlayListItemPlaying( intp listIndex )
 	{
 		if ( m_pPlayList )
 		{
@@ -1999,6 +2001,9 @@ void CMP3Player::SaveDbDirectory( int level, CUtlBuffer& buf, SoundDirectory_t *
 
 void CMP3Player::SaveDb( char const *filename )
 {
+	// dimhotepus: This can take a while, put up a waiting cursor.
+    const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
+
 	CUtlBuffer buf( (intp)0, 0, CUtlBuffer::TEXT_BUFFER );
 
 	buf.Printf( "// mp3 database, automatically generated\n" );
@@ -2145,6 +2150,9 @@ void CMP3Player::LoadPlayList( char const *filename )
 
 void CMP3Player::SavePlayList( char const *filename )
 {
+	// dimhotepus: This can take a while, put up a waiting cursor.
+    const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
+
 	FileHandle_t fh = g_pFullFileSystem->Open( filename, "wb" );
 	if ( FILESYSTEM_INVALID_HANDLE != fh )
 	{
@@ -2320,6 +2328,9 @@ void CMP3Player::SaveSettings()
 	}
 
 	m_bSettingsDirty = false;
+
+	// dimhotepus: This can take a while, put up a waiting cursor.
+	const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
 
 	FileHandle_t fh = g_pFullFileSystem->Open( MP3_SETTINGS_FILE, "wb" );
 	if ( FILESYSTEM_INVALID_HANDLE != fh )

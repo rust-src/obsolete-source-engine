@@ -6,11 +6,8 @@
 
 #ifndef DMEMDLRENDERABLE_H
 #define DMEMDLRENDERABLE_H
-#ifdef _WIN32
-#pragma once
-#endif
 
-#include "toolutils/dmerenderable.h"
+#include "toolutils/DmeRenderable.h"
 #include "movieobjects/dmemdl.h"
 #include "movieobjects/dmetransform.h"
 #include "datacache/imdlcache.h"
@@ -82,10 +79,10 @@ template < class T >
 int	CDmeMdlRenderable<T>::DrawModel( int flags )
 {
 	matrix3x4_t mat;
-	AngleMatrix( GetRenderAngles(), GetRenderOrigin(), mat );
+	AngleMatrix( this->GetRenderAngles(), this->GetRenderOrigin(), mat );
 	m_hTransform->SetTransform( mat );
 	m_hMDL->m_flTime = Plat_FloatTime();
-	SetUpLighting( GetRenderOrigin() );
+	SetUpLighting( this->GetRenderOrigin() );
 	bool bIsDrawingInEngine = m_hMDL->IsDrawingInEngine();
 	m_hMDL->DrawInEngine( true );
 	m_hMDL->Draw( mat );

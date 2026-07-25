@@ -215,7 +215,12 @@ public:
 
 	// Given an input text buffer data pointer, parses a single token into the variable token and returns the new
 	//  reading position
-	virtual const char			*ParseFile( const char *data, char *token, int maxlen ) = 0;
+	virtual const char			*ParseFile( IN_Z const char *data, OUT_Z_CAP(maxlen) char *token, int maxlen ) = 0;
+	template<int maxlen>
+	const char					*ParseFile( IN_Z const char *data, OUT_Z_ARRAY char (&token)[maxlen] )
+	{
+		return ParseFile( data, token, maxlen );
+	}
 	virtual bool				CopyLocalFile( const char *source, const char *destination ) = 0;
 
 	// Gets the dimensions of the game window
@@ -379,8 +384,18 @@ public:
 	virtual void		SetAudioState( const AudioState_t& state ) = 0;
 
 	// Sentences / sentence groups
-	virtual int			SentenceGroupPick( int groupIndex, char *name, int nameBufLen ) = 0;
-	virtual int			SentenceGroupPickSequential( int groupIndex, char *name, int nameBufLen, int sentenceIndex, int reset ) = 0;
+	virtual int			SentenceGroupPick( int groupIndex, OUT_Z_CAP(nameBufLen) char *name, int nameBufLen ) = 0;
+	template<int nameBufLen>
+	int					SentenceGroupPick( int groupIndex, OUT_Z_ARRAY char (&name)[nameBufLen] )
+	{
+		return SentenceGroupPick( groupIndex, name, nameBufLen );
+	}
+	virtual int			SentenceGroupPickSequential( int groupIndex, OUT_Z_CAP(nameLen) char *name, int nameBufLen, int sentenceIndex, int reset ) = 0;
+	template<int nameBufLen>
+	int					SentenceGroupPickSequential( int groupIndex, OUT_Z_ARRAY char (&name)[nameBufLen], int sentenceIndex, int reset )
+	{
+		return SentenceGroupPickSequential( groupIndex, name, nameBufLen, sentenceIndex, reset );
+	}
 	virtual int			SentenceIndexFromName( const char *pSentenceName ) = 0;
 	virtual const char *SentenceNameFromIndex( int sentenceIndex ) = 0;
 	virtual int			SentenceGroupIndexFromName( const char *pGroupName ) = 0;

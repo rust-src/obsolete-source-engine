@@ -143,8 +143,7 @@ void CDmElement::Purge()
 	{
 #if defined( _DEBUG )
 		// So you can see what attribute is being destroyed
-		const char *pName = m_pAttributes->GetName();
-		NOTE_UNUSED( pName );
+		[[maybe_unused]] const char *pName = m_pAttributes->GetName();
 #endif
 		CDmAttribute *pNext = m_pAttributes->NextAttribute();
 		CDmAttribute::DestroyAttribute( m_pAttributes );
@@ -1384,11 +1383,11 @@ void MakeElementNameUnique( CDmElement *pElement, const char *prefix, const CUtl
 	}
 	else
 	{
-		char *name = new char[ newlen + 1 ];
+		// dimhotepus: Heap -> stack for performance.
+		char *name = stackallocT( char, newlen + 1 );
 		// dimhotepus: Fix name buffer size.
 		Q_snprintf( name, newlen + 1, "%s%zd", prefix, i );
 		pElement->SetName( name );
-		delete[] name;
 	}
 }
 

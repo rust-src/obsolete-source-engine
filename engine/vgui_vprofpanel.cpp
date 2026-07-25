@@ -138,7 +138,8 @@ public:
 	void ApplySchemeSettings( IScheme *pScheme ) override
 	{
 		BaseClass::ApplySchemeSettings( pScheme );
-		SetFont( pScheme->GetFont( PROF_FONT ) );
+		// dimhotepus: Scale UI.
+		SetFont( pScheme->GetFont( PROF_FONT, IsProportional() ) );
 	}
 
 	void SetBgColor( Color color ) override
@@ -187,8 +188,8 @@ CProfileHierarchyPanel::ColumnPanels_t::ColumnPanels_t() :
 CProfileHierarchyPanel::ColumnPanels_t::ColumnPanels_t( const ColumnPanels_t& src )
 {
 	treeViewItem = src.treeViewItem;
-	int c = src.m_Columns.Count();
-	for ( int i = 0; i < c; ++i )
+	intp c = src.m_Columns.Count();
+	for ( intp i = 0; i < c; ++i )
 	{
 		PanelEntry_t pe;
 		pe.dataname = src.m_Columns[ i ].dataname;
@@ -210,8 +211,8 @@ void CProfileHierarchyPanel::ColumnPanels_t::Refresh( KeyValues *kv )
 {
 	VPROF( "CProfileHierarchyPanel::ColumnPanels_t" );
 
-	int c = m_Columns.Count();
-	for ( int i = 0; i < c; ++i )
+	intp c = m_Columns.Count();
+	for ( intp i = 0; i < c; ++i )
 	{
 		vgui::Label *label = m_Columns[ i ].label;
 		if ( !label )
@@ -256,10 +257,10 @@ CProfileHierarchyPanel::~CProfileHierarchyPanel()
 
 void CProfileHierarchyPanel::ApplySchemeSettings( vgui::IScheme *pScheme )
 {
-	//SetProportional( true );
 	BaseClass::ApplySchemeSettings( pScheme );
-	m_itemFont = pScheme->GetFont( PROF_FONT );
-	SetTitleBarInfo( m_itemFont, 20 );
+	// dimhotepus: Scale UI.
+	m_itemFont = pScheme->GetFont( PROF_FONT, IsProportional() );
+	SetTitleBarInfo( m_itemFont, QuickPropScale( 20 ) );
 	SetBgColor( Color(0, 0, 0, 176) );
 	(( CProfileTree *)GetTree())->SetBgColor( Color( 0, 0, 0, 176 ) );
 }
@@ -277,8 +278,8 @@ void CProfileHierarchyPanel::SetItemColors( int id, const Color& fg, const Color
 		return;
 	}
 	ColumnPanels_t& info = m_Panels[ idx ];
-	int c = info.m_Columns.Count();
-	for ( int i = 0; i < c; ++i )
+	intp c = info.m_Columns.Count();
+	for ( intp i = 0; i < c; ++i )
 	{
 		Label *label = info.m_Columns[ i ].label;
 		if ( !label )
@@ -299,7 +300,7 @@ void CProfileHierarchyPanel::SetItemColumnColors( int id, int col, const Color& 
 		return;
 	}
 	ColumnPanels_t& info = m_Panels[ idx ];
-	int c = info.m_Columns.Count();
+	intp c = info.m_Columns.Count();
 	if ( col < 0 || col >= c )
 		return;
 
@@ -406,7 +407,8 @@ void CProfileHierarchyPanel::PerformLayout()
 					continue;
 				}
 				
-				bool vis = ( top + offset - 20 ) >= 0 && ( bottom + offset ) < tall;
+				// dimhotepus: Scale UI.
+				bool vis = ( top + offset - QuickPropScale( 20 ) ) >= 0 && ( bottom + offset ) < tall;
 
 				p->SetParent( vis ? this : NULL );
 				p->SetVisible( vis );
@@ -426,8 +428,8 @@ void CProfileHierarchyPanel::HideAll()
 	for ( int i = m_Panels.FirstInorder(); i != m_Panels.InvalidIndex(); i = m_Panels.NextInorder( i ) )
 	{
 		ColumnPanels_t& info = m_Panels[ i ];
-		int c = info.m_Columns.Count();
-		for ( int j = 0 ; j < c; ++j )
+		intp c = info.m_Columns.Count();
+		for ( intp j = 0 ; j < c; ++j )
 		{
 			Label *panel = info.m_Columns[ j ].label;
 			if ( !panel )
@@ -446,8 +448,8 @@ void CProfileHierarchyPanel::RemoveAll()
 	for ( int i = m_Panels.FirstInorder(); i != m_Panels.InvalidIndex(); i = m_Panels.NextInorder( i ) )
 	{
 		ColumnPanels_t& info = m_Panels[ i ];
-		int c = info.m_Columns.Count();
-		for ( int j = 0 ; j < c; ++j )
+		intp c = info.m_Columns.Count();
+		for ( intp j = 0 ; j < c; ++j )
 		{
 			delete info.m_Columns[ j ].label;
 		}
@@ -508,11 +510,13 @@ CVProfPanel::CVProfPanel( vgui::Panel *pParent, const char *pElementName )
 	m_pHierarchy->SetTreeView( profileTree );
 	m_pHierarchy->SetNumColumns( 3 );
 
-	int treewide = wide - 780;
+	// dimhotepus: Scale UI.
+	int treewide = wide - QuickPropScale(780);
 	m_pHierarchy->SetColumnInfo( 0, "Tree", treewide );
 
-	m_pHierarchy->SetColumnInfo( 1, "Group", 120 );
-	m_pHierarchy->SetColumnInfo( 2, "Data", 180 );
+	// dimhotepus: Scale UI.
+	m_pHierarchy->SetColumnInfo( 1, "Group", QuickPropScale( 120 ) );
+	m_pHierarchy->SetColumnInfo( 2, "Data", QuickPropScale( 180 ) );
 
 	// Treeview of the hierarchical calls
 	m_pHierarchy->SetBounds(X_BORDER, VPROF_TITLE_SIZE_Y, wide - X_BORDER*2, tall - Y_BORDER*2 - VPROF_TITLE_SIZE_Y);
@@ -590,16 +594,19 @@ void CVProfPanel::PerformLayout()
 	int w, h;
 	GetSize( w, h );
 
-	int topoffset = 95;
-	int inset = 10;
+	// dimhotepus: Scale UI.
+	int topoffset = QuickPropScale( 95 );
+	int inset = QuickPropScale( 10 );
 
 	m_pHierarchy->SetBounds( inset, topoffset, w - 2 * inset, h - inset - topoffset );
 
-	int treewide = w - 900 - 20;
-	treewide = max( treewide, 240 );
+	// dimhotepus: Scale UI.
+	int treewide = w - QuickPropScale( 900 ) - QuickPropScale( 20 );
+	treewide = max( treewide, QuickPropScale( 240 ) );
 	m_pHierarchy->SetColumnInfo( 0, "Tree", treewide );
 
-	m_pHierarchy->SetColumnInfo( 1, "Group", 125 );
+	// dimhotepus: Scale UI.
+	m_pHierarchy->SetColumnInfo( 1, "Group", QuickPropScale( 125 ) );
 	char header[ 512 ];
 	Q_snprintf( header, sizeof( header ), DATA_FMT_STR,
 		"Frame Calls + Time + NoChild",
@@ -607,7 +614,8 @@ void CVProfPanel::PerformLayout()
 		"Sum Calls   + Time + NoChild + Peak",
 		"L2Miss" );
 
-	m_pHierarchy->SetColumnInfo( 2, header, 775, CTreeViewListControl::CI_HEADER_LEFTALIGN );
+	// dimhotepus: Scale UI.
+	m_pHierarchy->SetColumnInfo( 2, header, QuickPropScale( 775 ), CTreeViewListControl::CI_HEADER_LEFTALIGN );
 }
 
 //-----------------------------------------------------------------------------
@@ -633,7 +641,7 @@ void CVProfPanel::Close()
 	UserCmd_HideVProf();
 	BaseClass::Close();
 }
-			  
+
 
 //-----------------------------------------------------------------------------
 // Is it visible?
@@ -791,8 +799,7 @@ void CVProfPanel::OnCheckButtonChecked(Panel *panel)
 void CVProfPanel::ExpandAll( void )
 {
 	int count = m_pHierarchy->GetTree()->GetHighestItemID();
-	int i;
-	for( i = 0; i < count; i++ )
+	for( int i = 0; i < count; i++ )
 	{
 		if( m_pHierarchy->GetTree()->IsItemIDValid( i ) )
 		{
@@ -804,8 +811,7 @@ void CVProfPanel::ExpandAll( void )
 void CVProfPanel::CollapseAll( void )
 {
 	int count = m_pHierarchy->GetTree()->GetHighestItemID();
-	int i;
-	for( i = 1; i < count; i++ )
+	for( int i = 1; i < count; i++ )
 	{
 		if( m_pHierarchy->GetTree()->IsItemIDValid( i ) )
 		{
@@ -858,7 +864,8 @@ public:
 	void ApplySchemeSettings( IScheme *pScheme ) override
 	{
 		BaseClass::ApplySchemeSettings( pScheme );
-		SetFont( pScheme->GetFont( PROF_FONT ) );
+		// dimhotepus: Scale UI.
+		SetFont( pScheme->GetFont( PROF_FONT, IsProportional() ) );
 		SetBgColor( Color( 0, 0, 0, 255 ) );
 	}
 };

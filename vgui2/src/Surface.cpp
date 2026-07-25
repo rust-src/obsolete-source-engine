@@ -871,10 +871,8 @@ VPANEL CWin32Surface::GetEmbeddedPanel()
  void CWin32Surface::DrawTexturedSubRect( int, int, int, int, float, float, float, float )
  {
  }
- void CWin32Surface::DrawTexturedPolygon(int n, Vertex_t *pVertices, bool bClipVertices /*= true*/)
+ void CWin32Surface::DrawTexturedPolygon(int n, Vertex_t *pVertices, [[maybe_unused]] bool bClipVertices /*= true*/)
  {
-	NOTE_UNUSED( bClipVertices );
-
 	POINT *pt;
 	HDC hdc = PLAT(_currentContextPanel)->hdc;
 	
@@ -1840,6 +1838,8 @@ bool CWin32Surface::LoadBMP(Texture *texture, const char *filename)
 		}
 
 		char *pDIB = (LPSTR)::GlobalLock(hDIB);
+		// dimhotepus: Check global lock succeeds.
+		if ( pDIB )
 		{
 			g_pFullFileSystem->Read(pDIB, dwBitsSize, file );
 
@@ -1879,9 +1879,9 @@ bool CWin32Surface::LoadBMP(Texture *texture, const char *filename)
 			}
 
 			success = true;
+			::GlobalUnlock( hDIB);
 		}
 
-		::GlobalUnlock( hDIB);
 		::GlobalFree((HGLOBAL) hDIB);
 	}
 
@@ -2455,6 +2455,9 @@ void CWin32Surface::CreatePopup(VPANEL panel, bool minimised, bool showTaskbarIc
 	}
 
 	plat->hwnd = CreateWindowEx(style_ex, "Surface", "", style, x, y, wide, tall, hwndParent, NULL, GetModuleHandle(NULL), NULL);
+
+	// dimhotepus: Apply Dark mode if any and Mica styles to window title bar.
+	Plat_ApplySystemTitleBarTheme( plat->hwnd, SystemBackdropType::TransientWindow );
 
 	plat->clipRgn = CreateRectRgn(0,0,64,64);
 	plat->hdc = CreateCompatibleDC(NULL);
@@ -3712,7 +3715,7 @@ static LRESULT CALLBACK staticProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lpara
 	if (msg == staticShutdownMsg)
 	{
 		// we're being notified that we have to Shutdown
-		g_pIVgui->ShutdownMessage(lparam);
+		g_pIVgui->ShutdownMessage(staticShutdownMsg);
 		return ::DefWindowProc(hwnd,msg,wparam,lparam);
 	}
 	

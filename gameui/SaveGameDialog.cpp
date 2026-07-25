@@ -36,7 +36,8 @@ constexpr time_t NEW_SAVE_GAME_TIMESTAMP = -1;
 CSaveGameDialog::CSaveGameDialog(vgui::Panel *parent) : BaseClass(parent, "SaveGameDialog")
 {
 	SetDeleteSelfOnClose(true);
-	SetBounds(0, 0, 512, 384);
+	// dimhotepus: Scale UI.
+	SetBounds(0, 0, QuickPropScale( 512 ), QuickPropScale( 384 ));
 	SetSizeable( true );
 
 	SetTitle("#GameUI_SaveGame", true);
@@ -84,6 +85,9 @@ void CSaveGameDialog::OnCommand( const char *command )
 	}
 	else if ( !stricmp( command, "SaveOverwriteConfirmed" ) )
 	{
+		// dimhotepus: This can take a while, put up a waiting cursor.
+		const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
+
 		intp saveIndex = GetSelectedItemSaveIndex();
 		if ( m_SaveGames.IsValidIndex(saveIndex) )
 		{

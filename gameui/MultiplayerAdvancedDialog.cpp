@@ -44,7 +44,8 @@ using namespace vgui;
 //-----------------------------------------------------------------------------
 CMultiplayerAdvancedDialog::CMultiplayerAdvancedDialog(vgui::Panel *parent) : BaseClass(NULL, "MultiplayerAdvancedDialog")
 {
-	SetBounds(0, 0, 372, 160);
+	// dimhotepus: Scale UI.
+	SetBounds(0, 0, QuickPropScale( 372 ), QuickPropScale( 160 ));
 	SetSizeable( false );
 
 	SetTitle("#GameUI_MultiplayerAdvanced", true);
@@ -59,10 +60,14 @@ CMultiplayerAdvancedDialog::CMultiplayerAdvancedDialog(vgui::Panel *parent) : Ba
 
 	m_pList = NULL;
 
-	m_pDescription = new CInfoDescription();
-	m_pDescription->InitFromFile( DEFAULT_OPTIONS_FILE );
-	m_pDescription->InitFromFile( OPTIONS_FILE );
-	m_pDescription->TransferCurrentValues( NULL );
+	{
+		// dimhotepus: This can take a while, put up a waiting cursor.
+		const vgui::ScopedPanelWaitCursor scopedWaitCursor(this);
+		m_pDescription = new CInfoDescription();
+		m_pDescription->InitFromFile( DEFAULT_OPTIONS_FILE );
+		m_pDescription->InitFromFile( OPTIONS_FILE );
+		m_pDescription->TransferCurrentValues( NULL );
+	}
 
 	LoadControlSettings("Resource\\MultiplayerAdvancedDialog.res");
 	CreateControls();
@@ -220,7 +225,7 @@ void CMultiplayerAdvancedDialog::GatherCurrentValues()
 		}
 
 		// Remove double quotes and % characters
-		UTIL_StripInvalidCharacters( szValue, sizeof(szValue) );
+		V_StripInvalidCharacters( szValue );
 
 		V_strcpy_safe( strValue, szValue );
 
@@ -333,7 +338,8 @@ void CMultiplayerAdvancedDialog::CreateControls()
 		{
 			pCtrl->pPrompt = new vgui::Label( pCtrl, "DescLabel", "" );
 			pCtrl->pPrompt->SetContentAlignment( vgui::Label::a_west );
-			pCtrl->pPrompt->SetTextInset( 5, 0 );
+			// dimhotepus: Scale UI.
+			pCtrl->pPrompt->SetTextInset( QuickPropScale( 5 ), 0 );
 			pCtrl->pPrompt->SetText( pObj->prompt );
 		}
 
@@ -345,10 +351,12 @@ void CMultiplayerAdvancedDialog::CreateControls()
 		case O_STRING:
 		case O_NUMBER:
 		case O_LIST:
-			pCtrl->SetSize( 100, 28 );
+			// dimhotepus: Scale UI.
+			pCtrl->SetSize( QuickPropScale( 100 ), QuickPropScale( 28 ) );
 			break;
 		case O_SLIDER:
-			pCtrl->SetSize( 100, 40 );
+			// dimhotepus: Scale UI.
+			pCtrl->SetSize( QuickPropScale( 100 ), QuickPropScale( 40 ) );
 			break;
 		default:
 			break;
@@ -414,6 +422,9 @@ void CMultiplayerAdvancedDialog::SaveValues()
 	// Create the game.cfg file
 	if ( m_pDescription )
 	{
+		// dimhotepus: This can take a while, put up a waiting cursor.
+    	const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
+
 		FileHandle_t fp;
 
 		// Add settings to config.cfg

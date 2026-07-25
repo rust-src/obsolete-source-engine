@@ -147,16 +147,13 @@ class NET_Tick : public CNetMessage
 	{ 
 	};
 
-	NET_Tick( int tick, float hostFrametime, float hostFrametime_stddeviation ) : m_pMessageHandler{nullptr}
+	NET_Tick( int tick, [[maybe_unused]] float hostFrametime, [[maybe_unused]] float hostFrametime_stddeviation ) : m_pMessageHandler{nullptr}
 	{ 
 		m_bReliable = false; 
 		m_nTick = tick; 
 #if PROTOCOL_VERSION > 10
 		m_flHostFrameTime			= hostFrametime;
 		m_flHostFrameTimeStdDeviation	= hostFrametime_stddeviation;
-#else
-		NOTE_UNUSED( hostFrametime );
-		NOTE_UNUSED( hostFrametime_stddeviation );
 #endif
 	};
 	
@@ -197,6 +194,19 @@ class CLC_ClientInfo : public CNetMessage
 	DECLARE_CLC_MESSAGE( ClientInfo );
 
 public:
+	CLC_ClientInfo()
+		: m_pMessageHandler{nullptr}
+	{
+		m_nSendTableCRC = 0;
+		m_nServerCount = -1;
+		m_bIsHLTV = false;
+#if defined( REPLAY_ENABLED )
+		m_bIsReplay = false;
+#endif
+		m_nFriendsID = 0;
+		m_FriendsName[0] = '\0';
+	}
+
 	CRC32_t			m_nSendTableCRC;
 	int				m_nServerCount;
 	bool			m_bIsHLTV;

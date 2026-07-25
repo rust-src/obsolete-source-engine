@@ -782,11 +782,17 @@ void CVideoMode_Common::SetupStartupGraphic()
     }
 
     // loading.vtf
-	buf.Clear();	// added this Clear() because we saw cases where LoadVTF was not emptying the buf fully in the above section
-    m_pLoadingTexture = LoadVTF( buf, "materials/console/startup_loading.vtf" );
+    buf.Clear();	// added this Clear() because we saw cases where LoadVTF was not emptying the buf fully in the above section
+    // dimhotepus: Better SteamDeck support. HL2:DM before Anniversary Update
+    // has no gamepadui.
+    const bool isHl2Dm = Q_stricmp(COM_GetModDirectory(), "hl2mp") == 0;
+    const char *loadingVtf = !IsSteamDeck() || isHl2Dm
+        ? "materials/console/startup_loading.vtf"
+        : "materials/gamepadui/game_logo.vtf";
+    m_pLoadingTexture = LoadVTF( buf, loadingVtf );
     if ( !m_pLoadingTexture )
     {
-        Error( "Can't find background image materials/console/startup_loading.vtf\n" );
+        Error( "Can't find background image %s\n", loadingVtf );
         return;
     }
 }
@@ -841,8 +847,15 @@ void CVideoMode_Common::DrawStartupGraphic()
     pVMTKeyValues->SetInt( "$nocull", 1 );
     IMaterial *pMaterial = g_pMaterialSystem->CreateMaterial( "__background", pVMTKeyValues );
 
+    // dimhotepus: Better SteamDeck support. HL2:DM before Anniversary Update
+    // has no gamepadui.
+    const bool isHl2Dm = Q_stricmp(COM_GetModDirectory(), "hl2mp") == 0;
+    const char *loadingVtf = !IsSteamDeck() || isHl2Dm
+        ? "console/startup_loading.vtf"
+        : "gamepadui/game_logo.vtf";
+
     pVMTKeyValues = new KeyValues( "UnlitGeneric" );
-    pVMTKeyValues->SetString( "$basetexture", "Console/startup_loading.vtf" );
+    pVMTKeyValues->SetString( "$basetexture", loadingVtf );
     pVMTKeyValues->SetInt( "$translucent", 1 );
     pVMTKeyValues->SetInt( "$ignorez", 1 );
     pVMTKeyValues->SetInt( "$nofog", 1 );
@@ -1438,7 +1451,9 @@ void GetCubemapOffset( CubeMapFaceIndex_t faceIndex, int &x, int &y, int &faceDi
         x = 2;
         y = 2;
         break;
-    NO_DEFAULT
+    default:
+        Assert(0);
+        unreachable();
     }
     x *= faceDim;
     y *= faceDim;
@@ -1855,7 +1870,7 @@ void CVideoMode_Common::TakeSnapshotJPEG( const char *pFilename, int quality )
     Q_strncpy( orig, Q_pretifymem( GetModeStereoWidth() * 3 * GetModeStereoHeight(), 2, true ), sizeof( orig ) );
     Q_strncpy( final, Q_pretifymem( finalSize, 2, true ), sizeof( final ) );
 
-    Msg( "Wrote '%s':  %s (%dx%d) compresssed (quality %i) to %s\n",
+    Msg( "Wrote '%s':  %s (%dx%d) compressed (quality %i) to %s\n",
         pFilename, orig, GetModeStereoWidth(), GetModeStereoHeight(), quality, final );
 
 	if ( finalSize > 0 )

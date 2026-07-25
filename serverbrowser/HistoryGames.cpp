@@ -6,6 +6,8 @@
 
 #include "pch_serverbrowser.h"
 
+#include "HistoryGames.h"
+
 using namespace vgui;
 
 //-----------------------------------------------------------------------------
@@ -15,7 +17,8 @@ CHistoryGames::CHistoryGames(vgui::Panel *parent) :
 	CBaseGamesPage(parent, "HistoryGames", eHistoryServer )
 {
 	m_bRefreshOnListReload = false;
-	m_pGameList->AddColumnHeader(10, "LastPlayed", "#ServerBrowser_LastPlayed", 100);
+	// dimhotepus: Scale UI.
+	m_pGameList->AddColumnHeader(10, "LastPlayed", "#ServerBrowser_LastPlayed", QuickPropScale( 100 ));
 	m_pGameList->SetSortFunc(10, LastPlayedCompare);
 	m_pGameList->SetSortColumn(10);
 
@@ -119,7 +122,7 @@ void CHistoryGames::OnRemoveFromHistory()
 		return;
 
 	// iterate the selection
-	for ( int i = m_pGameList->GetSelectedItemsCount() - 1; i >= 0; i-- )
+	for ( intp i = m_pGameList->GetSelectedItemsCount() - 1; i >= 0; i-- )
 	{
 		int itemID = m_pGameList->GetSelectedItem( i );
 		intp serverID = m_pGameList->GetItemData(itemID)->userData;

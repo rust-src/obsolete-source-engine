@@ -8,7 +8,7 @@
 #include "blacklisted_server_manager.h"
 
 #include "tier1/convar.h"
-#include "KeyValues.h"
+#include "tier1/KeyValues.h"
 #include "filesystem.h"
 #include "steam/steamclientpublic.h"
 #include "steam/matchmakingtypes.h"
@@ -48,8 +48,8 @@ int CBlacklistedServerManager::LoadServersFromFile( const char *pszFilename, boo
 	for ( KeyValues *pData = pKV->GetFirstSubKey(); pData != nullptr; pData = pData->GetNextKey() )
 	{
 		const char *pszName = pData->GetString( "name" );
-
-		uint32 ulDate = pData->GetInt( "date" );
+		// dimhotepus: uint32 -> time_t
+		time_t ulDate = pData->GetUint64( "date" );
 		if ( bResetTimes )
 		{
 			time_t today;
@@ -93,7 +93,8 @@ void CBlacklistedServerManager::SaveToFile( const char *pszFilename )
 	{
 		auto *pSubKey = new KeyValues( "server" );
 		pSubKey->SetString( "name", bl.m_szServerName );
-		pSubKey->SetInt( "date", bl.m_ulTimeBlacklistedAt );
+		// dimhotepus: uint32 -> time_t
+		pSubKey->SetUint64( "date", bl.m_ulTimeBlacklistedAt );
 		pSubKey->SetString( "addr", bl.m_NetAdr.ToString() );
 		pKV->AddSubKey( pSubKey );
 	}
@@ -130,7 +131,7 @@ blacklisted_server_t *CBlacklistedServerManager::AddServer( gameserveritem_t &se
 //-----------------------------------------------------------------------------
 // Purpose: Add the given server to the blacklist. Return added server.
 //-----------------------------------------------------------------------------
-blacklisted_server_t *CBlacklistedServerManager::AddServer( const char *serverName, uint32 serverIP, int serverPort )
+blacklisted_server_t *CBlacklistedServerManager::AddServer( const char *serverName, uint32 serverIP, uint16 serverPort )
 {
 	netadr_t netAdr( serverIP, serverPort );
 
@@ -154,7 +155,8 @@ blacklisted_server_t *CBlacklistedServerManager::AddServer( const char *serverNa
 //-----------------------------------------------------------------------------
 // Purpose: Add the given server to the blacklist. Return added server.
 //-----------------------------------------------------------------------------
-blacklisted_server_t *CBlacklistedServerManager::AddServer( const char *serverName, const char *netAddressString, uint32 timestamp )
+// dimhotepus: uint32 -> time_t
+blacklisted_server_t *CBlacklistedServerManager::AddServer( const char *serverName, const char *netAddressString, time_t timestamp )
 {
 	netadr_t netAdr;
 	// dimhotepus: If not net address, return.
@@ -179,7 +181,7 @@ blacklisted_server_t *CBlacklistedServerManager::AddServer( const char *serverNa
 //-----------------------------------------------------------------------------
 // Purpose: Remove server with matching 'server id' from list
 //-----------------------------------------------------------------------------
-void CBlacklistedServerManager::RemoveServer( intp iServerID )
+void CBlacklistedServerManager::RemoveServer( unsigned iServerID )
 {
 	for ( intp i = 0; i < m_Blacklist.Count(); i++ )
 	{
@@ -195,7 +197,7 @@ void CBlacklistedServerManager::RemoveServer( intp iServerID )
 //-----------------------------------------------------------------------------
 // Purpose: Given a serverID, return its blacklist entry
 //-----------------------------------------------------------------------------
-blacklisted_server_t *CBlacklistedServerManager::GetServer( intp iServerID )
+blacklisted_server_t *CBlacklistedServerManager::GetServer( unsigned iServerID )
 {
 	for ( auto &bl : m_Blacklist )
 	{
@@ -219,7 +221,7 @@ bool CBlacklistedServerManager::IsServerBlacklisted( const gameserveritem_t &ser
 //-----------------------------------------------------------------------------
 // Purpose: Returns true if given server is blacklisted
 //-----------------------------------------------------------------------------
-bool CBlacklistedServerManager::IsServerBlacklisted( uint32 serverIP, int serverPort, const char *serverName ) const
+bool CBlacklistedServerManager::IsServerBlacklisted( uint32 serverIP, uint16 serverPort, const char *serverName ) const
 {
 	netadr_t netAdr( serverIP, serverPort );
 
@@ -266,7 +268,7 @@ bool CBlacklistedServerManager::CanServerBeBlacklisted( gameserveritem_t &server
 //-----------------------------------------------------------------------------
 // Purpose: Returns true if the given server is allowed to be blacklisted at all
 //-----------------------------------------------------------------------------
-bool CBlacklistedServerManager::CanServerBeBlacklisted( uint32 serverIP, int serverPort, const char *serverName ) const
+bool CBlacklistedServerManager::CanServerBeBlacklisted( uint32 serverIP, uint16 serverPort, const char *serverName ) const
 {
 	netadr_t netAdr( serverIP, serverPort );
 

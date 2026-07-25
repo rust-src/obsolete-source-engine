@@ -644,7 +644,7 @@ void VTexConfigInfo_t::ParseOptionKey( const char *pKeyName,  const char *pKeyVa
 				}
 				else
 				{
-					printf( "Warning: invalid mipblend setting '%s'.\n", pKeyValue );
+					VTexWarning( "Warning: invalid mipblend setting '%s'.\n", pKeyValue );
 				}
 			}
 		}
@@ -2098,7 +2098,7 @@ static bool LoadConfigFile( const char *pFileBaseName, VTexConfigInfo_t &info, b
 		else
 		{
 			memcpy( pFileName + lenBaseName, ".tga", 4 );
-			printf("no config file for %s\n",pFileName);
+			VTexWarning("no config file for %s\n",pFileName);
 			bOK = true;
 		}
 	}
@@ -2525,15 +2525,21 @@ static bool Process_File( char (&pInputBaseName)[maxlen] )
 
 		DestroyVTFTexture( pVtf );
 
-		if ( FILE *fw = fopen( chFileNameConvert, "wb" ) )
+		auto [fw, rc] = se::posix::posix_file_stream_factory::open(chFileNameConvert, "wb");
+		if ( !rc )
 		{
-			fwrite( bufFile.Base(), 1, bufFile.TellPut(), fw );
-			fclose( fw );
+			const intp write = bufFile.TellPut();
+			size_t written;
+
+			std::tie(written, rc) = fw.write( bufFile.Base(), 1, write );
+			if ( rc || static_cast<size_t>( write ) != written )
+				VTexError( "Failed to write %zd bytes to '%s'. Written %zu bytes: %s!\n",
+					write, chFileNameConvert, written, rc.message().c_str() );
+			else
+				printf( "... succeeded.\n" );
 		}
 		else
-			VTexError( "Failed to open '%s' for writing!\n", chFileNameConvert );
-
-		printf( "... succeeded.\n" );
+			VTexError( "Failed to open '%s' for writing: %s!\n", chFileNameConvert, rc.message().c_str() );
 
 		return TRUE;
 	}
@@ -2704,11 +2710,12 @@ public:
 	bool MySuggestFn( CFSSteamSetupInfo const *pFsSteamSetupInfo, char *pchPathBuffer, int nBufferLength, bool *pbBubbleDirectories );
 
 public:
-	CSuggestGameDirHelper() : m_pszInputFiles( NULL ), m_numInputFiles( 0 ) {}
+	CSuggestGameDirHelper() : m_pszInputFiles( nullptr ), m_numInputFiles( 0 ) {}
 
 public:
 	char const * const *m_pszInputFiles;
-	size_t m_numInputFiles;
+	// dimhotepus: size_t -> int.
+	int m_numInputFiles;
 } g_suggestGameDirHelper;
 
 bool CSuggestGameDirHelper::SuggestFn( CFSSteamSetupInfo const *pFsSteamSetupInfo, char *pchPathBuffer, int nBufferLength, bool *pbBubbleDirectories )
@@ -2724,7 +2731,7 @@ bool CSuggestGameDirHelper::MySuggestFn( CFSSteamSetupInfo const *pFsSteamSetupI
 	if ( pbBubbleDirectories )
 		*pbBubbleDirectories = true;
 
-	for ( size_t k = 0; k < m_numInputFiles; ++ k )
+	for ( int k = 0; k < m_numInputFiles; ++ k )
 	{
 		V_MakeAbsolutePath( pchPathBuffer, nBufferLength, m_pszInputFiles[ k ] );
 		return true;

@@ -15,7 +15,7 @@
 #include "vphysics/object_hash.h"
 #include "vphysics/friction.h"
 #include "coordsize.h"
-#include <KeyValues.h>
+#include "tier1/KeyValues.h"
 #include "decals.h"
 #include "IEffects.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
@@ -124,7 +124,7 @@ IPhysicsObject *PhysModelCreateBox( CBaseEntity *pEntity, const Vector &mins, co
 			}
 		}
 	}
-	Q_strncpy( solid.surfaceprop, pSurfaceProps, sizeof( solid.surfaceprop ) );
+	V_strcpy_safe( solid.surfaceprop, pSurfaceProps );
 
 	CPhysCollide *pCollide = PhysCreateBbox( mins, maxs );
 	if ( !pCollide )
@@ -164,7 +164,7 @@ IPhysicsObject *PhysModelCreateOBB( CBaseEntity *pEntity, const Vector &mins, co
 			}
 		}
 	}
-	Q_strncpy( solid.surfaceprop, pSurfaceProps, sizeof( solid.surfaceprop ) );
+	V_strcpy_safe( solid.surfaceprop, pSurfaceProps );
 
 	CPhysCollide *pCollide = PhysCreateBbox( mins, maxs );
 	if ( !pCollide )
@@ -224,7 +224,7 @@ bool PhysModelParseSolidByIndex( solid_t &solid, CBaseEntity *pEntity, int model
 	// collisions are off by default
 	solid.params.enableCollisions = true;
 
-	solid.params.pGameData = static_cast<void *>(pEntity);
+	solid.params.pGameData = pEntity;
 	solid.params.pName = STRING(pEntity->GetModelName());
 	return parsed;
 }
@@ -287,7 +287,7 @@ bool PhysModelParseSolidByIndex( solid_t &solid, CBaseEntity *pEntity, vcollide_
 	// collisions are off by default
 	solid.params.enableCollisions = true;
 
-	solid.params.pGameData = static_cast<void *>(pEntity);
+	solid.params.pGameData = pEntity;
 	solid.params.pName = STRING(pEntity->GetModelName());
 	return parsed;
 }
@@ -381,7 +381,7 @@ IPhysicsObject *PhysModelCreateUnmoveable( CBaseEntity *pEntity, int modelIndex,
 	{
 		surfaceProp = physprops->GetSurfaceIndex( solid.surfaceprop );
 	}
-	solid.params.pGameData = static_cast<void *>(pEntity);
+	solid.params.pGameData = pEntity;
 	solid.params.pName = STRING(pEntity->GetModelName());
 	IPhysicsObject *pObject = physenv->CreatePolyObjectStatic( pCollide->solids[0], surfaceProp, origin, angles, &solid.params );
 
@@ -427,8 +427,8 @@ IPhysicsObject *PhysModelCreateCustom( CBaseEntity *pEntity, const CPhysCollide 
 		PhysGetDefaultAABBSolid( tmpSolid );
 		pSolid = &tmpSolid;
 	}
-	int surfaceProp = physprops->GetSurfaceIndex( pSolid->surfaceprop );
-	pSolid->params.pGameData = static_cast<void *>(pEntity);
+	intp surfaceProp = physprops->GetSurfaceIndex( pSolid->surfaceprop );
+	pSolid->params.pGameData = pEntity;
 	pSolid->params.pName = pName;
 	IPhysicsObject *pObject = NULL;
 	if ( isStatic )
@@ -465,7 +465,7 @@ IPhysicsObject *PhysSphereCreate( CBaseEntity *pEntity, float radius, const Vect
 		surfaceProp = physprops->GetSurfaceIndex( solid.surfaceprop );
 	}
 
-	solid.params.pGameData = static_cast<void *>(pEntity);
+	solid.params.pGameData = pEntity;
 	IPhysicsObject *pObject = physenv->CreateSphereObject( radius, surfaceProp, origin, vec3_angle, &solid.params, false );
 
 	return pObject;
@@ -479,7 +479,7 @@ void PhysGetDefaultAABBSolid( solid_t &solid )
 	solid.params = g_PhysDefaultObjectParams;
 	solid.params.mass = 85.0f;
 	solid.params.inertia = 1e24f;
-	Q_strncpy( solid.surfaceprop, "default", sizeof( solid.surfaceprop ) );
+	V_strcpy_safe( solid.surfaceprop, "default" );
 }
 
 //-----------------------------------------------------------------------------
@@ -569,10 +569,10 @@ void PhysCreateVirtualTerrain( CBaseEntity *pWorld, const objectparams_t &defaul
 			solid_t solid;
 			solid.params = defaultParams;
 			solid.params.enableCollisions = true;
-			solid.params.pGameData = static_cast<void *>(pWorld);
-			Q_snprintf(nameBuf, sizeof(nameBuf), "vdisp_%04d", i );
+			solid.params.pGameData = pWorld;
+			V_sprintf_safe(nameBuf, "vdisp_%04d", i );
 			solid.params.pName = nameBuf;
-			int surfaceData = physprops->GetSurfaceIndex( "default" );
+			intp surfaceData = physprops->GetSurfaceIndex( "default" );
 			// create this as part of the world
 			IPhysicsObject *pObject = physenv->CreatePolyObjectStatic( pCollide, surfaceData, vec3_origin, vec3_angle, &solid.params );
 			pObject->SetCallbackFlags( pObject->GetCallbackFlags() | CALLBACK_NEVER_DELETED );
@@ -585,13 +585,17 @@ IPhysicsObject *PhysCreateWorld_Shared( CBaseEntity *pWorld, vcollide_t *pWorldC
 	solid_t solid;
 	fluid_t fluid;
 
-	if ( !physenv )
+	// dimhotepus: Early exit on no world collide or solid count < 1.
+	if ( !physenv || !pWorldCollide || pWorldCollide->solidCount < 1 )
+	{
+		AssertMsg( false, "Missed essential env to create world." );
 		return NULL;
+	}
 
 	intp surfaceData = physprops->GetSurfaceIndex( "default" );
 
 	objectparams_t params = defaultParams;
-	params.pGameData = static_cast<void *>(pWorld);
+	params.pGameData = pWorld;
 	params.pName = "world";
 
 	IPhysicsObject *pWorldPhysics = physenv->CreatePolyObjectStatic( 
@@ -614,7 +618,7 @@ IPhysicsObject *PhysCreateWorld_Shared( CBaseEntity *pWorld, vcollide_t *pWorldC
 			solid.params = defaultParams;
 			pParse->ParseSolid( &solid, &g_SolidSetup );
 			solid.params.enableCollisions = true;
-			solid.params.pGameData = static_cast<void *>(pWorld);
+			solid.params.pGameData = pWorld;
 			solid.params.pName = "world";
 			surfaceData = physprops->GetSurfaceIndex( "default" );
 
@@ -622,7 +626,8 @@ IPhysicsObject *PhysCreateWorld_Shared( CBaseEntity *pWorld, vcollide_t *pWorldC
 			if ( solid.index == 0 )
 				continue;
 
-			if ( !pWorldCollide->solids[solid.index] )
+			// dimhotepus: Ensure solid index is in range.
+			if ( !pWorldCollide->solids[solid.index] || solid.index >= pWorldCollide->solidCount )
 			{
 				// this implies that the collision model is a mopp and the physics DLL doesn't support that.
 				bCreateVirtualTerrain = true;
@@ -650,13 +655,14 @@ IPhysicsObject *PhysCreateWorld_Shared( CBaseEntity *pWorld, vcollide_t *pWorldC
 			pParse->ParseFluid( &fluid, NULL );
 
 			// create a fluid for floating
-			if ( fluid.index > 0 )
+			// dimhotepus: Ensure fluid index is in range. TF2 backport.
+			if ( fluid.index > 0 && fluid.index < pWorldCollide->solidCount )
 			{
 				solid.params = defaultParams;	// copy world's params
 				solid.params.enableCollisions = true;
 				solid.params.pName = "fluid";
-				solid.params.pGameData = static_cast<void *>(pWorld);
-				fluid.params.pGameData = static_cast<void *>(pWorld);
+				solid.params.pGameData = pWorld;
+				fluid.params.pGameData = pWorld;
 				surfaceData = physprops->GetSurfaceIndex( fluid.surfaceprop );
 				// create this as part of the world
 				IPhysicsObject *pWater = physenv->CreatePolyObjectStatic( pWorldCollide->solids[fluid.index], 
@@ -703,9 +709,9 @@ class CPhysicsGameTrace : public IPhysicsGameTrace
 {
 public:
 
-	void VehicleTraceRay( const Ray_t &ray, void *pVehicle, trace_t *pTrace );
-	void VehicleTraceRayWithWater( const Ray_t &ray, void *pVehicle, trace_t *pTrace );
-	bool VehiclePointInWater( const Vector &vecPoint );
+	void VehicleTraceRay( const Ray_t &ray, void *pVehicle, trace_t *pTrace ) override;
+	void VehicleTraceRayWithWater( const Ray_t &ray, void *pVehicle, trace_t *pTrace ) override;
+	bool VehiclePointInWater( const Vector &vecPoint ) override;
 };
 
 CPhysicsGameTrace g_PhysGameTrace;
@@ -836,26 +842,6 @@ void PhysComputeSlideDirection( IPhysicsObject *pPhysics, const Vector &inputVel
 			if ( pOutputAngularVelocity )
 			{
 				angVel = normal * DotProduct( angVel, normal );
-#if 0
-				pSnapshot->GetContactPoint( point );
-				Vector point, dummy;
-				AngularImpulse angularClip, clip2;
-
-				pPhysics->CalculateVelocityOffset( normal, point, dummy, angularClip );
-				VectorNormalize( angularClip );
-				float proj = DotProduct( angVel, angularClip );
-				if ( proj > 0 )
-				{
-					angVel -= angularClip * proj;
-				}
-				CrossProduct( angularClip, normal, clip2 );
-				proj = DotProduct( angVel, clip2 );
-				if ( proj > 0 )
-				{
-					angVel -= clip2 * proj;
-				}
-				//NDebugOverlay::Line( point, point - normal * 20, 255, 0, 0, true, 0.1 );
-#endif
 			}
 
 			// Determine how far along plane to slide based on incoming direction.

@@ -873,9 +873,9 @@ bool CGameClient::CheckConnect( void )
 {
 	// Allow the game dll to reject this client.
 	char szRejectReason[128];
-	Q_strncpy( szRejectReason, "Connection rejected by game\n", sizeof( szRejectReason ) );
+	V_strcpy_safe( szRejectReason, "Connection rejected by game.\n" );
 
-	if ( !g_pServerPluginHandler->ClientConnect( edict, m_Name, m_NetChannel->GetAddress(), szRejectReason, sizeof( szRejectReason ) ) )
+	if ( !g_pServerPluginHandler->ClientConnect( edict, m_Name, m_NetChannel->GetAddress(), szRejectReason ) )
 	{
 		// Reject the connection and drop the client.
 		Disconnect( szRejectReason, m_Name );
@@ -934,7 +934,7 @@ bool CGameClient::SendSignonData( void )
 
 	if ( sv.m_FullSendTables.IsOverflowed() )
 	{
-		Host_Error( "Send Table signon buffer overflowed %i bytes!!!\n", sv.m_FullSendTables.GetNumBytesWritten() );
+		Host_Error( "Send Table signon buffer overflowed %zd bytes!!!\n", sv.m_FullSendTables.GetNumBytesWritten() );
 		return false;
 	}
 

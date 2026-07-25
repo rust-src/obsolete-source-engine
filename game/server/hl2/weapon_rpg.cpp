@@ -844,7 +844,7 @@ CBaseEntity *CInfoAPCMissileHint::FindAimTarget( CBaseEntity *pMissile, const ch
 		flOOSpeed = 1.0f / flOOSpeed;
 	}
 
-	for ( int i = s_APCMissileHints.Count(); --i >= 0; )
+	for ( intp i = s_APCMissileHints.Count(); --i >= 0; )
 	{
 		CInfoAPCMissileHint *pHint = s_APCMissileHints[i];
 		if ( !pHint->NameMatches( pTargetName ) )
@@ -1636,8 +1636,8 @@ void CWeaponRPG::PrimaryAttack( void )
 	CSoundEnt::InsertSound( SOUND_COMBAT, GetAbsOrigin(), 1000, 0.2, GetOwner(), SOUNDENT_CHANNEL_WEAPON );
 
 	// Check to see if we should trigger any RPG firing triggers
-	int iCount = g_hWeaponFireTriggers.Count();
-	for ( int i = 0; i < iCount; i++ )
+	intp iCount = g_hWeaponFireTriggers.Count();
+	for ( intp i = 0; i < iCount; i++ )
 	{
 		if ( g_hWeaponFireTriggers[i]->IsTouching( pOwner ) )
 		{
@@ -1651,7 +1651,7 @@ void CWeaponRPG::PrimaryAttack( void )
 	if( hl2_episodic.GetBool() )
 	{
 		CAI_BaseNPC **ppAIs = g_AI_Manager.AccessAIs();
-		int nAIs = g_AI_Manager.NumAIs();
+		intp nAIs = g_AI_Manager.NumAIs();
 
 		string_t iszStriderClassname = AllocPooledString( "npc_strider" );
 

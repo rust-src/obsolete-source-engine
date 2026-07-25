@@ -5256,9 +5256,11 @@ void CShaderAPIDx8::UpdatePixelFogColorConstant( void )
 			}
 		}
 		break;
-
-		NO_DEFAULT;
-	};	
+		
+		default:
+			Assert(0);
+			unreachable();
+	};
 
 	fogColor[3] = 1.0f / m_DynamicState.m_DestAlphaDepthRange;
 
@@ -5311,7 +5313,9 @@ void CShaderAPIDx8::ApplyFogMode( ShaderFogMode_t fogMode, bool bSRGBWritesEnabl
 		case SHADER_FOGMODE_FOGCOLOR:
 			GetSceneFogColor( &r, &g, &b );		// Scene fog color
 			break;
-		NO_DEFAULT
+		default:
+			Assert(0);
+			unreachable();
 	}
 
 	bShouldGammaCorrect &= !bDisableFogGammaCorrection;
@@ -6676,11 +6680,11 @@ void CShaderAPIDx8::SetupTextureGroup( ShaderAPITextureHandle_t hTexture, const 
 
 		AssertMsg( maxCounterValue - static_cast<uintp>(pTexture->GetMemUsage()) >=
 			*pTexture->m_pTextureGroupCounterGlobal,
-			"TexGroup_global_%s counter overflow. %s (total) + %s (texture) > %s (max).",
+			"TexGroup_global_%s counter overflow. %s (total) + %s (texture) > %s bytes (max).",
 			pTexture->m_TextureGroupName.String(),
-			V_pretifymem( *pTexture->m_pTextureGroupCounterGlobal, 2, true ),
-			V_pretifymem( pTexture->GetMemUsage(), 2, true ),
-			V_pretifymem( maxCounterValue, 2, true ) );
+			V_pretifymem( static_cast<double>( *pTexture->m_pTextureGroupCounterGlobal ), 2, true ),
+			V_pretifymem( static_cast<double>( pTexture->GetMemUsage() ), 2, true ),
+			V_pretifynum( maxCounterValue ) );
 		*pTexture->m_pTextureGroupCounterGlobal += pTexture->GetMemUsage();
 	}
 }

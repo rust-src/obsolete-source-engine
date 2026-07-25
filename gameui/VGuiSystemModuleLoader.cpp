@@ -4,18 +4,18 @@
 //
 //=============================================================================//
 
-#include <stdio.h>
-
 #include "VGuiSystemModuleLoader.h"
 #include "Sys_Utils.h"
 #include "IVguiModule.h"
+// dimhotepus: Scale UI.
+#include "BasePanel.h"
 #include "ServerBrowser/IServerBrowser.h"
 
 #include <vgui/IPanel.h>
 #include <vgui/ISystem.h>
 #include <vgui/IVGui.h>
 #include <vgui/ILocalize.h>
-#include <KeyValues.h>
+#include "tier1/KeyValues.h"
 
 #include <vgui_controls/Controls.h>
 #include <vgui_controls/Panel.h>
@@ -37,7 +37,7 @@ extern CPlatformMainPanel *g_pMainPanel;
 
 bool bSteamCommunityFriendsVersion = false;
 
-#include <tier0/dbg.h>
+#include "tier0/dbg.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include <tier0/memdbgon.h>
@@ -87,7 +87,7 @@ bool CVGuiSystemModuleLoader::InitializeAllModules(CreateInterfaceFn *factorylis
 	}
 
 	// create a table of all the loaded modules
-	CreateInterfaceFn *moduleFactories = (CreateInterfaceFn *)_alloca(sizeof(CreateInterfaceFn) * m_Modules.Count());
+	CreateInterfaceFn *moduleFactories = stackallocT( CreateInterfaceFn, m_Modules.Count());
 	for ( intp i = 0; i < m_Modules.Count(); i++ )
 	{
 		moduleFactories[i] = Sys_GetFactory(m_Modules[i].module);
@@ -96,17 +96,18 @@ bool CVGuiSystemModuleLoader::InitializeAllModules(CreateInterfaceFn *factorylis
 	// give the modules a chance to link themselves together
 	for ( auto &m : m_Modules )
 	{
-		if (!m.moduleInterface->PostInitialize(moduleFactories, m_Modules.Count()))
+		// dimhotepus: Initialize with parent to immediately scale UI.
+#ifdef GAMEUI_EXPORTS
+		vgui::Panel *parent = BasePanel();
+#else
+		vgui::Panel *parent = g_pMainPanel;
+#endif
+
+		if (!m.moduleInterface->PostInitialize(moduleFactories, m_Modules.Count(), parent))
 		{
 			bSuccess = false;
 			Error("Platform Error: module failed to initialize\n");
 		}
-		
-#ifdef GAMEUI_EXPORTS
-		m.moduleInterface->SetParent(GetGameUIBasePanel());
-#else
-		m.moduleInterface->SetParent(g_pMainPanel->GetVPanel());
-#endif
 	}
 
 	m_bModulesInitialized = true;

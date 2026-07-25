@@ -364,8 +364,8 @@ void CViewEffects::ApplyShake( Vector& origin, QAngle& angles, float factor )
 //-----------------------------------------------------------------------------
 void CViewEffects::ClearAllShakes()
 {
-	int nShakeCount = m_ShakeList.Count();
-	for ( int i = 0; i < nShakeCount; i++ )
+	intp nShakeCount = m_ShakeList.Count();
+	for ( intp i = 0; i < nShakeCount; i++ )
 	{
 		delete m_ShakeList.Element( i );
 	}
@@ -384,8 +384,8 @@ screenshake_t *CViewEffects::FindLongestShake()
 {
 	screenshake_t *pLongestShake = NULL;
 
-	int nShakeCount = m_ShakeList.Count();
-	for ( int i = 0; i < nShakeCount; i++ )
+	intp nShakeCount = m_ShakeList.Count();
+	for ( intp i = 0; i < nShakeCount; i++ )
 	{
 		screenshake_t *pShake = m_ShakeList.Element( i );
 		if ( pShake && ( !pLongestShake || ( pShake->duration > pLongestShake->duration ) ) )
@@ -579,9 +579,11 @@ void CViewEffects::FadeCalculate( void )
 	// Divide colors
 	if ( m_FadeList.Count() )
 	{
-		m_FadeColorRGBA[0] /= m_FadeList.Count();
-		m_FadeColorRGBA[1] /= m_FadeList.Count();
-		m_FadeColorRGBA[2] /= m_FadeList.Count();
+		Assert(std::numeric_limits<int>::max() >= m_FadeList.Count());
+
+		m_FadeColorRGBA[0] /= static_cast<int>( m_FadeList.Count() );
+		m_FadeColorRGBA[1] /= static_cast<int>( m_FadeList.Count() );
+		m_FadeColorRGBA[2] /= static_cast<int>( m_FadeList.Count() );
 	}
 }
 
@@ -631,10 +633,10 @@ void CViewEffects::GetFadeParams( byte *r, byte *g, byte *b, byte *a, bool *blen
 	// If the intro is overriding our fade, use that instead
 	if ( g_pIntroData && g_pIntroData->m_flCurrentFadeColor[3] )
 	{
-		*r = g_pIntroData->m_flCurrentFadeColor[0];
-		*g = g_pIntroData->m_flCurrentFadeColor[1];
-		*b = g_pIntroData->m_flCurrentFadeColor[2];
-		*a = g_pIntroData->m_flCurrentFadeColor[3];
+		*r = static_cast<byte>(g_pIntroData->m_flCurrentFadeColor[0]);
+		*g = static_cast<byte>(g_pIntroData->m_flCurrentFadeColor[1]);
+		*b = static_cast<byte>(g_pIntroData->m_flCurrentFadeColor[2]);
+		*a = static_cast<byte>(g_pIntroData->m_flCurrentFadeColor[3]);
 		*blend = false;
 		return;
 	}

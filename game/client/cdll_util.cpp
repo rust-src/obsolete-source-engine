@@ -413,7 +413,8 @@ int UTIL_PrecacheDecal( const char *name, bool preload )
 	return effects->Draw_DecalIndexFromName( name );
 }
 
-extern short g_sModelIndexSmoke;
+// dimhotepus: short -> int.
+extern int g_sModelIndexSmoke;
 
 void UTIL_Smoke( const Vector &origin, const float scale, const float framerate )
 {
@@ -798,11 +799,11 @@ int UTIL_ComputeStringWidth( vgui::HFont& font, const wchar_t *str )
 // - replaces '#' at the start of the name with '*'
 //-----------------------------------------------------------------------------
 
-void UTIL_MakeSafeName( const char *oldName, char *newName, int newNameBufSize )
+void UTIL_MakeSafeName( const char *oldName, OUT_Z_CAP(newNameBufSize) char *newName, intp newNameBufSize )
 {
 	Assert( newNameBufSize >= static_cast<int>(sizeof(newName[0])) );
 
-	int newpos = 0;
+	intp newpos = 0;
 
 	for( const char *p=oldName; *p != 0 && newpos < newNameBufSize-1; p++ )
 	{
@@ -847,7 +848,7 @@ void UTIL_MakeSafeName( const char *oldName, char *newName, int newNameBufSize )
 const char * UTIL_SafeName( const char *oldName )
 {
 	static char safeName[ MAX_PLAYER_NAME_LENGTH * 2 + 1 ];
-	UTIL_MakeSafeName( oldName, safeName, sizeof( safeName ) );
+	UTIL_MakeSafeName( oldName, safeName );
 
 	return safeName;
 }
@@ -865,7 +866,7 @@ const char * UTIL_SafeName( const char *oldName )
 //			attempted for a Steam Controller binding in the given action set. If none if found, fallback
 //			is to the usual keyboard binding path.
 //-----------------------------------------------------------------------------
-void UTIL_ReplaceKeyBindings( const wchar_t *inbuf, int inbufsizebytes, OUT_Z_BYTECAP(outbufsizebytes) wchar_t *outbuf, int outbufsizebytes, GameActionSet_t actionset )
+void UTIL_ReplaceKeyBindings( const wchar_t *inbuf, intp inbufsizebytes, OUT_Z_BYTECAP(outbufsizebytes) wchar_t *outbuf, int outbufsizebytes, GameActionSet_t actionset )
 {
 	Assert( outbufsizebytes >= static_cast<int>(sizeof(outbuf[0])) );
 	// copy to a new buf if there are vars
@@ -977,7 +978,7 @@ void UTIL_ReplaceKeyBindings( const wchar_t *inbuf, int inbufsizebytes, OUT_Z_BY
 		++inbuf;
 	}
 
-	outbuf[pos] = '\0';
+	outbuf[pos] = L'\0';
 }
 
 //-----------------------------------------------------------------------------
@@ -988,10 +989,7 @@ void UTIL_ReplaceKeyBindings( const wchar_t *inbuf, int inbufsizebytes, OUT_Z_BY
 //-----------------------------------------------------------------------------
 byte *UTIL_LoadFileForMe( const char *filename, int *pLength )
 {
-	byte *buffer;
-
-	FileHandle_t file;
-	file = filesystem->Open( filename, "rb", "GAME" );
+	FileHandle_t file = filesystem->Open( filename, "rb", "GAME" );
 	if ( FILESYSTEM_INVALID_HANDLE == file )
 	{
 		if ( pLength ) *pLength = 0;
@@ -999,7 +997,7 @@ byte *UTIL_LoadFileForMe( const char *filename, int *pLength )
 	}
 
 	int size = filesystem->Size( file );
-	buffer = new byte[ size + 1 ];
+	byte *buffer = new byte[ size + 1 ];
 	if ( !buffer )
 	{
 		Warning( "UTIL_LoadFileForMe:  Couldn't allocate buffer of size %i for file %s\n", size + 1, filename );
@@ -1010,7 +1008,7 @@ byte *UTIL_LoadFileForMe( const char *filename, int *pLength )
 	filesystem->Close( file );
 
 	// Ensure null terminator
-	buffer[ size ] =0;
+	buffer[ size ] = 0;
 
 	if ( pLength )
 	{

@@ -863,7 +863,7 @@ void CHunterFlechette::Shoot( Vector &vecVelocity, bool bBrightFX )
 	SetThink( &CHunterFlechette::DopplerThink );
 	SetNextThink( gpGlobals->curtime );
 
-	SetContextThink( &CHunterFlechette::BubbleThink, gpGlobals->curtime + 0.1, s_szHunterFlechetteBubbles );
+	SetContextThink( &CHunterFlechette::BubbleThink, gpGlobals->curtime + 0.1f, s_szHunterFlechetteBubbles );
 }
 
 
@@ -1786,7 +1786,7 @@ void CNPC_Hunter::Spawn()
 	float freeKnowledge = hunter_free_knowledge.GetFloat();
 	if ( freeKnowledge < GetEnemies()->GetEnemyDiscardTime() )
 	{
-		GetEnemies()->SetEnemyDiscardTime( MAX( freeKnowledge + 0.1, AI_DEF_ENEMY_DISCARD_TIME ) );
+		GetEnemies()->SetEnemyDiscardTime( MAX( freeKnowledge + 0.1f, AI_DEF_ENEMY_DISCARD_TIME ) );
 	}
 	GetEnemies()->SetFreeKnowledgeDuration( freeKnowledge );
 
@@ -1986,7 +1986,7 @@ void CNPC_Hunter::Activate()
 		GlobalEntity_SetCounter( s_iszHuntersToRunOver, 0 );
 	}
 
-	CMissile::AddCustomDetonator( this, ( GetHullMaxs().AsVector2D() - GetHullMins().AsVector2D() ).Length() * 0.5, GetHullHeight() );
+	CMissile::AddCustomDetonator( this, ( GetHullMaxs().AsVector2D() - GetHullMins().AsVector2D() ).Length() * 0.5f, GetHullHeight() );
 
 	SetupGlobalModelData();
 	
@@ -2665,7 +2665,7 @@ bool CNPC_Hunter::ShouldCharge( const Vector &startPos, const Vector &endPos, bo
 	// We only need to hit the endpos with the edge of our bounding box
 	Vector vecDir = endPos - startPos;
 	VectorNormalize( vecDir );
-	float flWidth = WorldAlignSize().x * 0.5;
+	float flWidth = WorldAlignSize().x * 0.5f;
 	Vector vecTargetPos = endPos - (vecDir * flWidth);
 
 	// See if we can directly move there
@@ -3727,8 +3727,8 @@ void CNPC_Hunter::RunTask( const Task_t *pTask )
 				if ( IsActivityFinished() )
 				{
 					m_flNextChargeTime = gpGlobals->curtime + hunter_charge_min_delay.GetFloat() + random->RandomFloat( 0, 2.5 ) + random->RandomFloat( 0, 2.5 );
-					float delayMultiplier = ( g_pGameRules->IsSkillLevel( SKILL_EASY ) ) ? 1.5 : 1.0;
-					float groupDelay = gpGlobals->curtime +  ( 2.0  + random->RandomFloat( 0, 2 ) ) * delayMultiplier;
+					float delayMultiplier = ( g_pGameRules->IsSkillLevel( SKILL_EASY ) ) ? 1.5f : 1.0f;
+					float groupDelay = gpGlobals->curtime +  ( 2.0f  + random->RandomFloat( 0, 2 ) ) * delayMultiplier;
 					for ( int i = 0; i < g_Hunters.Count(); i++ )
 					{
 						if ( g_Hunters[i] != this && g_Hunters[i]->m_flNextChargeTime < groupDelay )
@@ -4244,9 +4244,6 @@ Activity CNPC_Hunter::NPC_TranslateActivity( Activity baseAct )
 //-----------------------------------------------------------------------------
 void CNPC_Hunter::HandleAnimEvent( animevent_t *pEvent )
 {
-	Vector footPosition;
-	QAngle angles;
-	
 	if ( pEvent->event == AE_HUNTER_FOOTSTEP_LEFT )
 	{
 		LeftFootHit( pEvent->eventtime );
@@ -5229,14 +5226,6 @@ Vector CNPC_Hunter::Weapon_ShootPosition( )
 //-----------------------------------------------------------------------------
 void CNPC_Hunter::MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType )
 {
-	float flTracerDist;
-	Vector vecDir;
-	Vector vecEndPos;
-
-	vecDir = tr.endpos - vecTracerSrc;
-
-	flTracerDist = VectorNormalize( vecDir );
-
 	int nAttachment = LookupAttachment( "MiniGun" );
 
 	UTIL_Tracer( vecTracerSrc, tr.endpos, nAttachment, TRACER_FLAG_USEATTACHMENT, 5000, true, "HunterTracer" );
@@ -5845,7 +5834,7 @@ void CNPC_Hunter::StartBleeding()
 	DispatchParticleEffect( "blood_drip_synth_01", PATTACH_POINT_FOLLOW, this, gm_nHeadBottomAttachment );
 
 	// Emit spurts of our blood
-	SetContextThink( &CNPC_Hunter::BleedThink, gpGlobals->curtime + 0.1, HUNTER_BLEED_THINK );
+	SetContextThink( &CNPC_Hunter::BleedThink, gpGlobals->curtime + 0.1f, HUNTER_BLEED_THINK );
 }
 
 
@@ -5996,7 +5985,7 @@ int CNPC_Hunter::CountRangedAttackers()
 //-----------------------------------------------------------------------------
 void CNPC_Hunter::DelayRangedAttackers( float minDelay, float maxDelay, bool bForced )
 {
-	float delayMultiplier = ( g_pGameRules->IsSkillLevel( SKILL_EASY ) ) ? 1.25 : 1.0;
+	float delayMultiplier = ( g_pGameRules->IsSkillLevel( SKILL_EASY ) ) ? 1.25f : 1.0f;
 	if ( !m_bEnableSquadShootDelay && !bForced )
 	{
 		m_flNextRangeAttack2Time = gpGlobals->curtime + random->RandomFloat( minDelay, maxDelay ) * delayMultiplier;
@@ -6062,7 +6051,7 @@ void CNPC_Hunter::GetShootDir( Vector &vecDir, const Vector &vecSrc, CBaseEntity
 			if ( flDot < -0.8f )
 			{
 				// Our target is facing us, shoot the ground between us.
-				float flPerc = 0.7 + ( 0.1 * nShotNum );
+				float flPerc = 0.7f + ( 0.1f * nShotNum );
 				vecTarget = GetAbsOrigin() + ( flPerc * ( pTargetEntity->GetAbsOrigin() - GetAbsOrigin() ) );
 			}
 			else if ( flDot > 0.8f )
@@ -6363,7 +6352,7 @@ void CNPC_Hunter::DrawDebugGeometryOverlays()
 {
 	if (m_debugOverlays & OVERLAY_BBOX_BIT) 
 	{	
-		float flViewRange	= acos(0.8);
+		float flViewRange	= acos(0.8f);
 		Vector vEyeDir = EyeDirection2D( );
 		Vector vLeftDir, vRightDir;
 		float fSin, fCos;
@@ -6521,7 +6510,7 @@ void CNPC_Hunter::StriderBusterAttached( CBaseEntity *pAttached )
 //-----------------------------------------------------------------------------
 void CNPC_Hunter::StriderBusterDetached( CBaseEntity *pAttached )
 {
-	int elem = m_hAttachedBusters.Find(pAttached);
+	intp elem = m_hAttachedBusters.Find(pAttached);
 	if (elem >= 0)
 	{
 		m_hAttachedBusters.FastRemove(elem);
@@ -6545,7 +6534,7 @@ void CNPC_Hunter::SetAim( const Vector &aimDir, float flInterval )
 	if ( GetEnemy() )
 	{
 		// clamp and dampen movement
-		newPitch = curPitch + 0.8 * UTIL_AngleDiff( UTIL_ApproachAngle( angDir.x, curPitch, 20 ), curPitch );
+		newPitch = curPitch + 0.8f * UTIL_AngleDiff( UTIL_ApproachAngle( angDir.x, curPitch, 20 ), curPitch );
 
 		float flRelativeYaw = UTIL_AngleDiff( angDir.y, GetAbsAngles().y );
 		newYaw = curYaw + UTIL_AngleDiff( flRelativeYaw, curYaw );
@@ -6553,10 +6542,10 @@ void CNPC_Hunter::SetAim( const Vector &aimDir, float flInterval )
 	else
 	{
 		// Sweep your weapon more slowly if you're not fighting someone
-		newPitch = curPitch + 0.6 * UTIL_AngleDiff( UTIL_ApproachAngle( angDir.x, curPitch, 20 ), curPitch );
+		newPitch = curPitch + 0.6f * UTIL_AngleDiff( UTIL_ApproachAngle( angDir.x, curPitch, 20 ), curPitch );
 
 		float flRelativeYaw = UTIL_AngleDiff( angDir.y, GetAbsAngles().y );
-		newYaw = curYaw + 0.6 * UTIL_AngleDiff( flRelativeYaw, curYaw );
+		newYaw = curYaw + 0.6f * UTIL_AngleDiff( flRelativeYaw, curYaw );
 	}
 
 	newPitch = AngleNormalize( newPitch );
@@ -6655,7 +6644,7 @@ void CAI_HunterEscortBehavior::OnDamage( const CTakeDamageInfo &info )
 	{
 		// Start the clock ticking. We'll return the the strider when the timer elapses.
 		m_flTimeEscortReturn = gpGlobals->curtime + random->RandomFloat( 15.0f, 25.0f );
-		GetOuter()->GetSquad()->SetSquadSoundWaitTime( m_flTimeEscortReturn + 1.0 ); // prevent others from breaking escort
+		GetOuter()->GetSquad()->SetSquadSoundWaitTime( m_flTimeEscortReturn + 1.0f ); // prevent others from breaking escort
 	}
 }
 
@@ -6726,7 +6715,7 @@ void CAI_HunterEscortBehavior::GatherConditions( void )
 		if ( GetOuter()->GetSquad()->GetSquadSoundWaitTime() <= gpGlobals->curtime && ((CBasePlayer *)GetEnemy())->IsInAVehicle() )
 		{
 			m_flTimeEscortReturn = gpGlobals->curtime + random->RandomFloat( 15.0f, 25.0f );
-			GetOuter()->GetSquad()->SetSquadSoundWaitTime( m_flTimeEscortReturn + 1.0 ); // prevent others from breaking escort
+			GetOuter()->GetSquad()->SetSquadSoundWaitTime( m_flTimeEscortReturn + 1.0f ); // prevent others from breaking escort
 		}
 	}
 }
@@ -6799,7 +6788,7 @@ void CAI_HunterEscortBehavior::StartTask( const Task_t *pTask )
 				{
 					if ( GetOuter()->GetSquad()->GetSquadMemberNearestTo( GetEnemy()->GetAbsOrigin() ) == GetOuter() )
 					{
-						GetOuter()->BeginVolley( NUM_FLECHETTE_VOLLEY_ON_FOLLOW, gpGlobals->curtime + 1.0 + random->RandomFloat( 0, .25 ) + random->RandomFloat( 0, .25 ) );
+						GetOuter()->BeginVolley( NUM_FLECHETTE_VOLLEY_ON_FOLLOW, gpGlobals->curtime + 1.0f + random->RandomFloat( 0, .25f ) + random->RandomFloat( 0, .25f ) );
 					}
 					else
 					{
@@ -6885,7 +6874,7 @@ void CAI_HunterEscortBehavior::RunTask( const Task_t *pTask )
 										//controller.SoundChangeVolume( pHunter->m_pGunFiringSound, 0, 0.01f );
 
 										bVacate = true;
-										pHunter->BeginVolley( NUM_FLECHETTE_VOLLEY_ON_FOLLOW, gpGlobals->curtime + 1.0 + random->RandomFloat( 0, .25 ) + random->RandomFloat( 0, .25 ) );
+										pHunter->BeginVolley( NUM_FLECHETTE_VOLLEY_ON_FOLLOW, gpGlobals->curtime + 1.0f + random->RandomFloat( 0, .25f ) + random->RandomFloat( 0, .25f ) );
 									}
 								}
 							}
@@ -6958,19 +6947,18 @@ void CAI_HunterEscortBehavior::DistributeFreeHunters()
 	g_TimeLastDistributeFreeHunters = gpGlobals->curtime;
 
 	CUtlVector<CNPC_Hunter *> freeHunters;
-	int i;
 	FindFreeHunters( &freeHunters );
 
 	CAI_BaseNPC **ppNPCs = g_AI_Manager.AccessAIs();
-	for ( i = 0; i < g_AI_Manager.NumAIs() && freeHunters.Count(); i++ )
+	for ( intp i = 0; i < g_AI_Manager.NumAIs() && freeHunters.Count(); i++ )
 	{
-		int nToAdd;
+		intp nToAdd;
 		CNPC_Strider *pStrider = ( ppNPCs[i]->IsAlive() ) ? dynamic_cast<CNPC_Strider *>( ppNPCs[i] ) : NULL;
 		if ( pStrider && !pStrider->CarriedByDropship() )
 		{
 			if ( ( nToAdd = 3 - AIGetNumFollowers( pStrider ) ) > 0 )
 			{
-				for ( int j = freeHunters.Count() - 1; j >= 0 && nToAdd > 0; --j )
+				for ( intp j = freeHunters.Count() - 1; j >= 0 && nToAdd > 0; --j )
 				{
 					DevMsg( "npc_hunter %d assigned to npc_strider %d\n", freeHunters[j]->entindex(), pStrider->entindex() );
 					freeHunters[j]->FollowStrider( pStrider );
@@ -6981,7 +6969,7 @@ void CAI_HunterEscortBehavior::DistributeFreeHunters()
 		}
 	}
 
-	for ( i = 0; i < freeHunters.Count(); i++ )
+	for ( intp i = 0; i < freeHunters.Count(); i++ )
 	{
 		//DevMsg( "npc_hunter %d assigned to free_hunters_squad\n", freeHunters[i]->entindex() );
 		freeHunters[i]->m_EscortBehavior.SetFollowTarget( NULL );
@@ -6992,7 +6980,7 @@ void CAI_HunterEscortBehavior::DistributeFreeHunters()
 	CBaseEntity *pHunterMaker = gEntList.FindEntityByClassname( NULL, "npc_hunter_maker" ); // TODO: this picks the same one every time!
 	if ( pHunterMaker )
 	{
-		for ( i = 0; i < freeHunters.Count(); i++ )
+		for ( intp i = 0; i < freeHunters.Count(); i++ )
 		{
 			freeHunters[i]->m_EscortBehavior.SetFollowTarget( pHunterMaker );
 		}
@@ -7040,9 +7028,9 @@ bool Hunter_IsHunter(CBaseEntity *pEnt)
 void Hunter_StriderBusterLaunched( CBaseEntity *pBuster )
 {
 	CAI_BaseNPC **ppAIs = g_AI_Manager.AccessAIs();
-	int nAIs = g_AI_Manager.NumAIs();
+	intp nAIs = g_AI_Manager.NumAIs();
 
-	for ( int i = 0; i < nAIs; i++ )
+	for ( intp i = 0; i < nAIs; i++ )
 	{
 		CAI_BaseNPC *pNPC = ppAIs[ i ];
 		if ( pNPC && ( pNPC->Classify() == CLASS_COMBINE_HUNTER ) && pNPC->m_lifeState == LIFE_ALIVE )

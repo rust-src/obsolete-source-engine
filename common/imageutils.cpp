@@ -738,7 +738,8 @@ fail:
 	width = png_width;
 	height = png_height;
 
-    png_uint_32 rowbytes;
+	// dimhotepus: Use size_t for memsize type.
+    size_t rowbytes;
 
     /* expand palette images to RGB, low-bit-depth grayscale images to 8 bits,
      * transparency chunks to full alpha channel; strip 16-bit-per-sample
@@ -1695,9 +1696,9 @@ ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const ch
 		if ( pMaterialsSubDir[0] == '\\' || pMaterialsSubDir[0] == '/' )
 			pMaterialsSubDir = pMaterialsSubDir + 1;
 		V_strcat_safe(szOutDir, pMaterialsSubDir, sizeof(szOutDir) );
-		Q_StripTrailingSlash( szOutDir );
-		Q_AppendSlash( szOutDir, sizeof(szOutDir) );
-		Q_FixSlashes( szOutDir, CORRECT_PATH_SEPARATOR );
+		V_StripTrailingSlash( szOutDir );
+		V_AppendSlash( szOutDir );
+		V_FixSlashes( szOutDir, CORRECT_PATH_SEPARATOR );
 
 #ifdef ENGINE_DLL
 		Q_strncpy(finalPath, com_gamedir, sizeof(finalPath));

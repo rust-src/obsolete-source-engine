@@ -186,7 +186,8 @@ void CPrecisionSlider::OnMouseWheeled( int delta )
 		int value = GetValue();
 
 		if( input()->IsKeyDown( KEY_LCONTROL ) || input()->IsKeyDown( KEY_RCONTROL ) )
-			SetValue( value + delta*4 );
+			// dimhotepus: Scale UI.
+			SetValue( value + delta * QuickPropScale( 4 ) );
 		else
 			SetValue( value + delta );
 	}
@@ -3522,6 +3523,9 @@ void CColorLookupUIPanel::ResetBlendFactorSlider()
 
 void CColorLookupUIPanel::OnFileSelected( const char *filename )
 {
+	// dimhotepus: This can take a while, put up a waiting cursor.
+	const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
+
 	m_pLookupOp->LoadLookupTable( filename );
 
 	SetButtonText( );
@@ -4472,7 +4476,8 @@ void COperationListPanel::OnMouseDoublePressed( MouseCode code )
 					m_pNameEditPanel->SendNewLine( true );
 					m_pNameEditPanel->SetCatchEnterKey( true );
 					m_pNameEditPanel->AddActionSignalTarget( this );
-					m_pNameEditPanel->SetSize( 226, 24 );
+					// dimhotepus: Scale UI.
+					m_pNameEditPanel->SetSize( QuickPropScale( 226 ), QuickPropScale( 24 ) );
 					m_pNameEditPanel->SetBgColor( Color(255,255,255,255) );
 					EnterEditMode( row, column, m_pNameEditPanel );
 				}
@@ -4608,7 +4613,8 @@ CColorOperationListPanel::CColorOperationListPanel( vgui::Panel *parent, ColorCo
 	m_pOperationListPanel->AddActionSignalTarget( this );
 
 	vgui::ImageList *pImageList = new vgui::ImageList( false );
-	pImageList->AddImage( scheme()->GetImage( "Resource/icon_hlicon1", false ) );
+	// dimhotepus: Scale UI.
+	pImageList->AddImage( scheme()->GetImage( "Resource/icon_hlicon1", false, IsProportional() ) );
 	m_pOperationListPanel->SetImageList( pImageList, true );
 
 	m_pLookupViewWindow = new CLookupViewWindow( this, CCHandle );
@@ -4921,6 +4927,9 @@ void CColorOperationListPanel::OnKeyCodeTyped( KeyCode code )
 
 void CColorOperationListPanel::OnFileSelected( const char *pFilename )
 {
+	// dimhotepus: This can take a while, put up a waiting cursor.
+	const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
+
 	FileHandle_t file_handle = g_pFileSystem->Open( pFilename, "wb" );
 
 	colorcorrection->LockLookup( m_CCHandle );
@@ -4976,10 +4985,10 @@ void CColorOperationListPanel::LaunchOperationPanel( IColorOperation *pOp )
 		int parentX, parentY;
 		GetParent()->GetPos( parentX, parentY );
 
-		int maxPanels = parentX / 250;
+		int maxPanels = parentX / QuickPropScale( 250 );
 		intp panelOffset = (m_OpPanelList.Count()+1<maxPanels)?m_OpPanelList.Count()+1:maxPanels;
 
-		int xPos = parentX - 250*static_cast<int>(panelOffset);
+		int xPos = parentX - QuickPropScale( 250 )*static_cast<int>(panelOffset);
 
 		pOpPanel->SetPos(  xPos, parentY );
 		pOpPanel->SetSize( QuickPropScale( 250 ), QuickPropScale( BASE_HEIGHT ) );

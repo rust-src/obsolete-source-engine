@@ -437,7 +437,7 @@ bool CBaseGameStats::SaveToFileNOW( bool bForceSyncWrite /* = false */ )
 	{
 		// filename is local to game dir for Steam, so we need to prepend game dir for regular file save
 		char gamePath[256];
-		engine->GetGameDir( gamePath, 256 );
+		engine->GetGameDir( gamePath );
 		Q_StripTrailingSlash( gamePath );
 		Q_snprintf( fullpath, sizeof( fullpath ), "%s/%s", gamePath, GetStatSaveFileName() );
 		Q_strlower( fullpath );
@@ -540,16 +540,17 @@ bool CBaseGameStats::UploadStatsFileNOW( void )
 		return false;
 	}
 
-	double curtime = Plat_FloatTime();
-
-	CBGSDriver.m_tLastUpload = curtime;
+	// dimhotepus: Use 64 bit time_t.
+	time_t now;
+	time(&now);
+	CBGSDriver.m_tLastUpload = now;
 
 	// Update the registry
 #ifndef SWDS
-	IRegistry *reg = InstanceRegistry( "Steam" );
+	auto reg = InstanceRegistry( "Steam" );
 	Assert( reg );
-	reg->WriteInt( GetStatUploadRegistryKeyName(), CBGSDriver.m_tLastUpload );
-	ReleaseInstancedRegistry( reg );
+	// dimhotepus: Use 64 bit time_t.
+	reg->WriteInt64( GetStatUploadRegistryKeyName(), CBGSDriver.m_tLastUpload );
 #endif
 
 	CUtlBuffer buf;
@@ -713,10 +714,10 @@ bool CBaseGameStats_Driver::Init()
 	{
 		// FIXME: Load m_tLastUpload from registry and save it back out, too
 #ifndef SWDS
-		IRegistry *reg = InstanceRegistry( "Steam" );
+		auto reg = InstanceRegistry( "Steam" );
 		Assert( reg );
-		m_tLastUpload = reg->ReadInt( gamestats->GetStatUploadRegistryKeyName(), 0 );
-		ReleaseInstancedRegistry( reg );
+		// dimhotepus: Use 64 bit time_t.
+		m_tLastUpload = reg->ReadInt64( gamestats->GetStatUploadRegistryKeyName(), 0 );
 #endif
 		//load existing stats
 		gamestats->LoadFromFile();
@@ -789,14 +790,14 @@ void CBaseGameStats_Driver::Shutdown()
 
 void CBaseGameStats_Driver::UpdatePerfStats( void )
 {
-	float flCurTime = Plat_FloatTime();
+	double flCurTime = Plat_FloatTime();
 	if (
 		( m_flLastSampleTime == -1 ) || 
 		( flCurTime - m_flLastSampleTime >= STATS_RECORD_INTERVAL ) )
 	{
 		if ( ( m_flLastRealTime > 0 ) && ( flCurTime > m_flLastRealTime ) )
 		{
-			float flFrameRate = 1.0 / ( flCurTime - m_flLastRealTime );
+			float flFrameRate = 1.0f / static_cast<float>( flCurTime - m_flLastRealTime );
 			StatsBufferRecord_t &stat = m_StatsBuffer[m_nWriteIndex];
 			stat.m_flFrameRate = flFrameRate;
 #ifdef CLIENT_DLL
@@ -1455,7 +1456,7 @@ void CBaseGameStats::SetHL2UnlockedChapterStatistic( void )
 	char const *relative = "cfg/config.cfg";
 	char fullpath[ 512 ];
 	char gamedir[256];
-	engine->GetGameDir( gamedir, 256 );
+	engine->GetGameDir( gamedir );
 	Q_snprintf( fullpath, sizeof( fullpath ), "%s/../hl2/%s", gamedir, relative );
 
 	if ( filesystem->FileExists( fullpath ) )

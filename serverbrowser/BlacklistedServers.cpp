@@ -7,6 +7,8 @@
 
 #include "pch_serverbrowser.h"
 
+#include "BlacklistedServers.h"
+
 using namespace vgui;
 
 ConVar sb_showblacklists( "sb_showblacklists", "0", FCVAR_NONE, "If set to 1, blacklist rules will be printed to the console as they're applied." );
@@ -14,10 +16,10 @@ ConVar sb_showblacklists( "sb_showblacklists", "0", FCVAR_NONE, "If set to 1, bl
 //-----------------------------------------------------------------------------
 // Purpose: Server name comparison function
 //-----------------------------------------------------------------------------
-int __cdecl BlacklistedServerNameCompare(ListPanel *pPanel, const ListPanelItem &p1, const ListPanelItem &p2)
+static int __cdecl BlacklistedServerNameCompare(ListPanel *pPanel, const ListPanelItem &p1, const ListPanelItem &p2)
 {
-	blacklisted_server_t *pSvr1 = ServerBrowserDialog().GetBlacklistPage()->GetBlacklistedServer( p1.userData );
-	blacklisted_server_t *pSvr2 = ServerBrowserDialog().GetBlacklistPage()->GetBlacklistedServer( p2.userData );
+	const blacklisted_server_t *pSvr1 = ServerBrowserDialog().GetBlacklistPage()->GetBlacklistedServer( static_cast<unsigned>( p1.userData ) );
+	const blacklisted_server_t *pSvr2 = ServerBrowserDialog().GetBlacklistPage()->GetBlacklistedServer( static_cast<unsigned>( p2.userData ) );
 
 	if ( !pSvr1 && pSvr2 ) 
 		return -1;
@@ -32,10 +34,10 @@ int __cdecl BlacklistedServerNameCompare(ListPanel *pPanel, const ListPanelItem 
 //-----------------------------------------------------------------------------
 // Purpose: list column sort function
 //-----------------------------------------------------------------------------
-int __cdecl BlacklistedIPAddressCompare(ListPanel *pPanel, const ListPanelItem &p1, const ListPanelItem &p2)
+static int __cdecl BlacklistedIPAddressCompare(ListPanel *pPanel, const ListPanelItem &p1, const ListPanelItem &p2)
 {
-	blacklisted_server_t *pSvr1 = ServerBrowserDialog().GetBlacklistPage()->GetBlacklistedServer( p1.userData );
-	blacklisted_server_t *pSvr2 = ServerBrowserDialog().GetBlacklistPage()->GetBlacklistedServer( p2.userData );
+	const blacklisted_server_t *pSvr1 = ServerBrowserDialog().GetBlacklistPage()->GetBlacklistedServer( static_cast<unsigned>( p1.userData ) );
+	const blacklisted_server_t *pSvr2 = ServerBrowserDialog().GetBlacklistPage()->GetBlacklistedServer( static_cast<unsigned>( p2.userData ) );
 
 	if ( !pSvr1 && pSvr2 ) 
 		return -1;
@@ -55,10 +57,10 @@ int __cdecl BlacklistedIPAddressCompare(ListPanel *pPanel, const ListPanelItem &
 //-----------------------------------------------------------------------------
 // Purpose: Player number comparison function
 //-----------------------------------------------------------------------------
-int __cdecl BlacklistedAtCompare(ListPanel *pPanel, const ListPanelItem &p1, const ListPanelItem &p2)
+static int __cdecl BlacklistedAtCompare(ListPanel *pPanel, const ListPanelItem &p1, const ListPanelItem &p2)
 {
-	blacklisted_server_t *pSvr1 = ServerBrowserDialog().GetBlacklistPage()->GetBlacklistedServer( p1.userData );
-	blacklisted_server_t *pSvr2 = ServerBrowserDialog().GetBlacklistPage()->GetBlacklistedServer( p2.userData );
+	const blacklisted_server_t *pSvr1 = ServerBrowserDialog().GetBlacklistPage()->GetBlacklistedServer( static_cast<unsigned>( p1.userData ) );
+	const blacklisted_server_t *pSvr2 = ServerBrowserDialog().GetBlacklistPage()->GetBlacklistedServer( static_cast<unsigned>( p2.userData ) );
 
 	if ( !pSvr1 && pSvr2 ) 
 		return -1;
@@ -81,7 +83,8 @@ int __cdecl BlacklistedAtCompare(ListPanel *pPanel, const ListPanelItem &p1, con
 CBlacklistedServers::CBlacklistedServers( vgui::Panel *parent ) : 
 	vgui::PropertyPage( parent, "BlacklistedGames" )
 {
-	SetSize( 624, 278 );
+	// dimhotepus: Scale UI.
+	SetSize( QuickPropScale( 624 ), QuickPropScale( 278 ) );
 
 	m_pAddServer = new Button(this, "AddServerButton", "#ServerBrowser_AddServer");
 	m_pAddCurrentServer = new Button(this, "AddCurrentServerButton", "#ServerBrowser_AddCurrentServer");
@@ -89,9 +92,9 @@ CBlacklistedServers::CBlacklistedServers( vgui::Panel *parent ) :
 	m_pGameList->SetAllowUserModificationOfColumns(true);
 
 	// Add the column headers
-	m_pGameList->AddColumnHeader(0, "Name", "#ServerBrowser_BlacklistedServers", 50, ListPanel::COLUMN_RESIZEWITHWINDOW | ListPanel::COLUMN_UNHIDABLE);
-	m_pGameList->AddColumnHeader(1, "IPAddr", "#ServerBrowser_IPAddress", 64, ListPanel::COLUMN_HIDDEN);
-	m_pGameList->AddColumnHeader(2, "BlacklistedAt", "#ServerBrowser_BlacklistedDate", 100);
+	m_pGameList->AddColumnHeader(0, "Name", "#ServerBrowser_BlacklistedServers", QuickPropScale( 50 ), ListPanel::COLUMN_RESIZEWITHWINDOW | ListPanel::COLUMN_UNHIDABLE);
+	m_pGameList->AddColumnHeader(1, "IPAddr", "#ServerBrowser_IPAddress", QuickPropScale( 64 ), ListPanel::COLUMN_HIDDEN);
+	m_pGameList->AddColumnHeader(2, "BlacklistedAt", "#ServerBrowser_BlacklistedDate", QuickPropScale( 100 ));
 
 	//m_pGameList->SetColumnHeaderTooltip(0, "#ServerBrowser_PasswordColumn_Tooltip");
 
@@ -144,11 +147,11 @@ bool CBlacklistedServers::AddServersFromFile( const char *pszFilename, bool bRes
 	if ( !pKV->LoadFromFile( g_pFullFileSystem, pszFilename, "GAME" ) )
 		return false;
 
-	for ( KeyValues *pData = pKV->GetFirstSubKey(); pData != NULL; pData = pData->GetNextKey() )
+	for ( auto *pData = pKV->GetFirstSubKey(); pData != NULL; pData = pData->GetNextKey() )
 	{
 		const char *pszName = pData->GetString( "name" );
 
-		uint32 ulDate = pData->GetInt( "date" );
+		uint64 ulDate = pData->GetUint64( "date" );
 		if ( bResetTimes )
 		{
 			time_t today;
@@ -158,7 +161,7 @@ bool CBlacklistedServers::AddServersFromFile( const char *pszFilename, bool bRes
 
 		const char *pszNetAddr = pData->GetString( "addr" );
 
-		if ( pszNetAddr && pszNetAddr[0] && pszName && pszName[0] )
+		if ( !Q_isempty( pszNetAddr ) && !Q_isempty( pszName ) )
 		{
 			blacklisted_server_t *blackServer = m_blackList.AddServer( pszName, pszNetAddr, ulDate );
 
@@ -201,7 +204,7 @@ void CBlacklistedServers::AddServer( gameserveritem_t &server )
 	{
 		// send command to propagate to the client so the client can send it on to the GC
 		char command[ 256 ];
-		Q_snprintf( command, ssize( command ), "rbgc %s\n", blackServer->m_NetAdr.ToString() );
+		V_sprintf_safe( command, "rbgc %s\n", blackServer->m_NetAdr.ToString() );
 		g_pRunGameEngine->AddTextCommand( command );
 	}
 }
@@ -209,7 +212,7 @@ void CBlacklistedServers::AddServer( gameserveritem_t &server )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-blacklisted_server_t *CBlacklistedServers::GetBlacklistedServer( intp iServerID )
+blacklisted_server_t *CBlacklistedServers::GetBlacklistedServer( unsigned iServerID )
 {
 	return m_blackList.GetServer( iServerID );
 }
@@ -237,7 +240,7 @@ void CBlacklistedServers::UpdateBlacklistUI( blacklisted_server_t *blackServer )
 		return;
 
 	KeyValues *kv;
-	int iItemId = m_pGameList->GetItemIDFromUserData( blackServer->m_nServerID );
+	intp iItemId = m_pGameList->GetItemIDFromUserData( blackServer->m_nServerID );
 	if ( m_pGameList->IsValidItemID( iItemId ) )
 	{
 		// we're updating an existing entry
@@ -253,13 +256,12 @@ void CBlacklistedServers::UpdateBlacklistUI( blacklisted_server_t *blackServer )
 	kv->SetString( "name", blackServer->m_szServerName );
 
 	// construct a time string for blacklisted time
-	struct tm *now;
-	now = localtime( (time_t*)&blackServer->m_ulTimeBlacklistedAt );
+	tm *now = localtime( &blackServer->m_ulTimeBlacklistedAt );
 	if ( now ) 
 	{
 		char buf[64];
 		strftime(buf, sizeof(buf), "%a %d %b %I:%M%p", now);
-		Q_strlower(buf + strlen(buf) - 4);
+		V_strlower(buf + strlen(buf) - 4);
 		kv->SetString("BlacklistedAt", buf);
 	}
 
@@ -290,7 +292,7 @@ void CBlacklistedServers::ApplySchemeSettings(vgui::IScheme *pScheme)
 	if ( g_pFullFileSystem->FileExists( pszFileName, "MOD" ) )
 	{
 		pPathID = "MOD";
-	}	
+	}
 	LoadControlSettings( pszFileName, pPathID );
 
 	vgui::HFont hFont = pScheme->GetFont( "ListSmall", IsProportional() );
@@ -318,12 +320,12 @@ void CBlacklistedServers::OnPageShow( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CBlacklistedServers::GetSelectedServerID( void )
+unsigned CBlacklistedServers::GetSelectedServerID( void )
 {
-	int serverID = -1;
+	unsigned serverID = std::numeric_limits<unsigned>::max();
 	if ( m_pGameList->GetSelectedItemsCount() )
 	{
-		serverID = m_pGameList->GetItemUserData( m_pGameList->GetSelectedItem(0) );
+		serverID = static_cast<unsigned>( m_pGameList->GetItemUserData( m_pGameList->GetSelectedItem(0) ) );
 	}
 
 	return serverID;
@@ -337,10 +339,10 @@ void CBlacklistedServers::OnOpenContextMenu(int itemID)
 	CServerContextMenu *menu = ServerBrowserDialog().GetContextMenu( m_pGameList );
 
 	// get the server
-	int serverID = GetSelectedServerID();
+	unsigned serverID = GetSelectedServerID();
 
-	menu->ShowMenu( this,(uint32)-1, false, false, false, false );
-	if ( serverID != -1 )
+	menu->ShowMenu( this, std::numeric_limits<unsigned>::max(), false, false, false, false );
+	if ( serverID != std::numeric_limits<unsigned>::max() )
 	{
 		menu->AddMenuItem("RemoveServer", "#ServerBrowser_RemoveServerFromBlacklist", new KeyValues("RemoveFromBlacklist"), this);
 	}
@@ -366,10 +368,10 @@ void CBlacklistedServers::OnAddServerByName()
 void CBlacklistedServers::OnRemoveFromBlacklist()
 {
 	// iterate the selection
-	for ( int iGame = (m_pGameList->GetSelectedItemsCount() - 1); iGame >= 0; iGame-- )
+	for ( intp iGame = (m_pGameList->GetSelectedItemsCount() - 1); iGame >= 0; iGame-- )
 	{
-		int itemID = m_pGameList->GetSelectedItem( iGame );
-		intp serverID = m_pGameList->GetItemData( itemID )->userData;
+		intp itemID = m_pGameList->GetSelectedItem( iGame );
+		unsigned serverID = static_cast<unsigned>( m_pGameList->GetItemData( itemID )->userData );
 
 		m_pGameList->RemoveItem( itemID );
 		m_blackList.RemoveServer( serverID );

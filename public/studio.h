@@ -100,6 +100,7 @@ struct mstudiodata_t
 #define STUDIO_PROC_AIMATATTACH 4
 #define STUDIO_PROC_JIGGLE 5
 
+
 struct mstudioaxisinterpbone_t
 {
 	DECLARE_BYTESWAP_DATADESC();
@@ -825,7 +826,7 @@ struct mstudioseqdesc_t
 
 	int					numiklocks;
 	int					iklockindex;
-	inline mstudioiklock_t *pIKLock( int i ) const { Assert( i >= 0 && i < numiklocks); return (mstudioiklock_t *)(((byte *)this) + iklockindex) + i; }
+	inline mstudioiklock_t *pIKLock( intp i ) const { Assert( i >= 0 && i < numiklocks); return (mstudioiklock_t *)(((byte *)this) + iklockindex) + i; }
 
 	// Key values
 	int					keyvalueindex;
@@ -2355,6 +2356,15 @@ struct studiohdr_t
 
 	inline int			BoneFlexDriverCount() const { return studiohdr2index ? pStudioHdr2()->m_nBoneFlexDriverCount : 0; }
 	inline const mstudioboneflexdriver_t* BoneFlexDriver( int i ) const { Assert( i >= 0 && i < BoneFlexDriverCount() ); return studiohdr2index ? pStudioHdr2()->pBoneFlexDriver( i ) : nullptr; }
+
+	void* 				VirtualModel() const { return (void*)(intp)virtualModel; }
+	void				SetVirtualModel( void* ptr )
+	{
+		// dimhotepus: Check we are in range.
+		Assert(static_cast<int>(reinterpret_cast<intp>(ptr)) <= std::numeric_limits<int>::max());
+		virtualModel = (int)(intp)ptr;
+	}
+
 
 	// NOTE: No room to add stuff? Up the .mdl file format version 
 	// [and move all fields in studiohdr2_t into studiohdr_t and kill studiohdr2_t],

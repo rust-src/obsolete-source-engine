@@ -112,7 +112,7 @@ void CReplayTime::Write( KeyValues *pOut )
 	char szDay[8];		// Convert day to wide
 	static wchar_t s_wDay[8];
 
-	V_sprintf_safe( szDay, "%i", nDay );
+	V_to_chars( szDay, nDay );
 	pLocalize->ConvertANSIToUnicode( szDay, s_wDay );
 
 	return s_wDay;
@@ -123,7 +123,7 @@ void CReplayTime::Write( KeyValues *pOut )
 	char szYear[8];		// Convert year to wide
 	static wchar_t s_wYear[8];
 
-	V_sprintf_safe( szYear, "%i", nYear );
+	V_to_chars( szYear, nYear );
 	pLocalize->ConvertANSIToUnicode( szYear, s_wYear );
 
 	return s_wYear;
@@ -181,9 +181,8 @@ void CReplayTime::Write( KeyValues *pOut )
 
 		if ( bForceFullFormat || ( !bToday && !bYesterday ) )
 		{
-			pLocalize->ConstructString(
+			pLocalize->ConstructString_safe(
 				s_wBuf,
-				sizeof( s_wBuf ),
 				pLocalize->Find( "#Replay_DateAndTime" ),
 				4,
 				pMonth, pDay, pYear, pTime
@@ -191,9 +190,8 @@ void CReplayTime::Write( KeyValues *pOut )
 		}
 		else
 		{
-			pLocalize->ConstructString(
+			pLocalize->ConstructString_safe(
 				s_wBuf,
-				sizeof( s_wBuf ),
 				pLocalize->Find( "#Replay_SingleWordDateAndTime" ),
 				2,
 				bToday ? pToday : pYesterday,
@@ -205,9 +203,8 @@ void CReplayTime::Write( KeyValues *pOut )
 	{
 		if ( !bToday && !bYesterday )
 		{
-			pLocalize->ConstructString(
+			pLocalize->ConstructString_safe(
 				s_wBuf,
-				sizeof( s_wBuf ),
 				pLocalize->Find( "#Replay_Date" ),
 				3,
 				pMonth, pDay, pYear
@@ -215,7 +212,7 @@ void CReplayTime::Write( KeyValues *pOut )
 		}
 		else
 		{
-			V_wcsncpy( s_wBuf, bToday ? pToday : pYesterday, sizeof( s_wBuf ) );
+			V_wcscpy_safe( s_wBuf, bToday ? pToday : pYesterday );
 		}
 	}
 

@@ -11,7 +11,7 @@
 #include "vgui/KeyCode.h"
 #include "vgui_controls/FileOpenDialog.h"
 #include "filesystem.h"
-#include "vgui/ilocalize.h"
+#include "vgui/ILocalize.h"
 #include "tier0/icommandline.h"
 #include "materialsystem/imaterialsystem.h"
 #include "VGuiMatSurface/IMatSystemSurface.h"
@@ -21,12 +21,12 @@
 #include "dme_controls/AttributeStringChoicePanel.h"
 #include "tier3/tier3.h"
 #include "tier2/fileutils.h"
-#include "vgui/ivgui.h"
+#include "vgui/IVGui.h"
 #include "view_shared.h"
 
 // for tracing
 #include "cmodel.h"
-#include "engine/ienginetrace.h"
+#include "engine/IEngineTrace.h"
 
 using namespace vgui;
 
@@ -39,7 +39,7 @@ const char *GetVGuiControlsModuleName()
 //-----------------------------------------------------------------------------
 // Connect, disconnect
 //-----------------------------------------------------------------------------
-bool ConnectTools( CreateInterfaceFn factory )
+bool ConnectTools( [[maybe_unused]] CreateInterfaceFn factory )
 {
 	return (materials != NULL) && (g_pMatSystemSurface != NULL) && (mdlcache != NULL) && 
 		(studiorender != NULL) && (g_pMaterialSystemHardwareConfig != NULL);
@@ -354,8 +354,8 @@ void CVcdBlockTool::DrawEntitiesInEngine( bool bDrawInEngine )
 		return;
 
 	CDisableUndoScopeGuard guard;
-	int nCount = entities.Count();
-	for ( int i = 0; i < nCount; ++i )
+	intp nCount = entities.Count();
+	for ( intp i = 0; i < nCount; ++i )
 	{
 		CDmeVMFEntity *pEntity = CastElement<CDmeVMFEntity>( entities[i] );
 		Assert( pEntity );
@@ -394,10 +394,10 @@ vgui::HScheme CVcdBlockTool::GetToolScheme()
 //-----------------------------------------------------------------------------
 class CVcdBlockViewMenuButton : public CToolMenuButton
 {
-	DECLARE_CLASS_SIMPLE( CVcdBlockViewMenuButton, CToolMenuButton );
+	DECLARE_CLASS_SIMPLE_OVERRIDE( CVcdBlockViewMenuButton, CToolMenuButton );
 public:
 	CVcdBlockViewMenuButton( CVcdBlockTool *parent, const char *panelName, const char *text, vgui::Panel *pActionSignalTarget );
-	virtual void OnShowMenu(vgui::Menu *menu);
+	void OnShowMenu(vgui::Menu *menu) override;
 
 private:
 	CVcdBlockTool *m_pTool;
@@ -409,7 +409,8 @@ CVcdBlockViewMenuButton::CVcdBlockViewMenuButton( CVcdBlockTool *parent, const c
 	m_pTool = parent;
 
 	AddCheckableMenuItem( "properties", "#VcdBlockProperties", new KeyValues( "OnToggleProperties" ), pActionSignalTarget );
-	AddCheckableMenuItem( "entityreport", "#VcdBlockEntityReport", new KeyValues( "O|ÔglaEq”ípyOeport" ), pActionSignalTarget );
+	// dimhotepus: Fix KeyValues key name.
+	AddCheckableMenuItem( "entityreport", "#VcdBlockEntityReport", new KeyValues( "OnToggleEntityReport" ), pActionSignalTarget );
 
 	AddSeparator();
 
@@ -460,10 +461,10 @@ void CVcdBlockViewMenuButton::OnShowMenu(vgui::Menu *menu)
 //-----------------------------------------------------------------------------
 class CVcdBlockToolMenuButton : public CToolMenuButton
 {
-	DECLARE_CLASS_SIMPLE( CVcdBlockToolMenuButton, CToolMenuButton );
+	DECLARE_CLASS_SIMPLE_OVERRIDE( CVcdBlockToolMenuButton, CToolMenuButton );
 public:
 	CVcdBlockToolMenuButton( CVcdBlockTool *parent, const char *panelName, const char *text, vgui::Panel *pActionSignalTarget );
-	virtual void OnShowMenu(vgui::Menu *menu);
+	void OnShowMenu(vgui::Menu *menu) override;
 
 private:
 	CVcdBlockTool *m_pTool;
@@ -609,8 +610,8 @@ void CVcdBlockTool::ShowEntityInEntityProperties( CDmeVMFEntity *pEntity )
 //-----------------------------------------------------------------------------
 void CVcdBlockTool::DestroyToolContainers()
 {
-	int c = ToolWindow::GetToolWindowCount();
-	for ( int i = c - 1; i >= 0 ; --i )
+	intp c = ToolWindow::GetToolWindowCount();
+	for ( intp i = c - 1; i >= 0 ; --i )
 	{
 		ToolWindow *kill = ToolWindow::GetToolWindow( i );
 		delete kill;
@@ -668,7 +669,7 @@ void CVcdBlockTool::OnToggleEntityReport()
 //-----------------------------------------------------------------------------
 // Creates
 //-----------------------------------------------------------------------------
-void CVcdBlockTool::CreateTools( CVcdBlockDoc *doc )
+void CVcdBlockTool::CreateTools( [[maybe_unused]] CVcdBlockDoc *doc )
 {
 	if ( !m_hProperties.Get() )
 	{
@@ -713,8 +714,8 @@ void CVcdBlockTool::DestroyTools()
 		windowposmgr->SavePositions( "cfg/vcdblock.txt", "VcdBlock" );
 	}
 
-	int c = ToolWindow::GetToolWindowCount();
-	for ( int i = c - 1; i >= 0 ; --i )
+	intp c = ToolWindow::GetToolWindowCount();
+	for ( intp i = c - 1; i >= 0 ; --i )
 	{
 		ToolWindow *kill = ToolWindow::GetToolWindow( i );
 		delete kill;
@@ -829,14 +830,14 @@ void CVcdBlockTool::OnCommand( const char *cmd )
 			GetActionMenu()->SetVisible( false );
 		}
 	}
-	else if ( const char *pSuffix = StringAfterPrefix( cmd, "OnRecent" ) )
+	else if ( const char *pRecentSuffix = StringAfterPrefix( cmd, "OnRecent" ) )
 	{
-		int idx = Q_atoi( pSuffix );
+		int idx = Q_atoi( pRecentSuffix );
 		OpenFileFromHistory( idx );
 	}
-	else if( const char *pSuffix = StringAfterPrefix( cmd, "OnTool" ) )
+	else if( const char *pToolSuffix = StringAfterPrefix( cmd, "OnTool" ) )
 	{
-		int idx = Q_atoi( pSuffix );
+		int idx = Q_atoi( pToolSuffix );
 		enginetools->SwitchToTool( idx );
 	}
 	else if ( !V_stricmp( cmd, "OnUndo" ) )
@@ -893,7 +894,7 @@ void CVcdBlockTool::OnOpen( )
 }
 
 
-bool CVcdBlockTool::OnReadFileFromDisk( const char *pFileName, const char *pFileFormat, KeyValues *pContextKeyValues )
+bool CVcdBlockTool::OnReadFileFromDisk( const char *pFileName, const char *pFileFormat, [[maybe_unused]] KeyValues *pContextKeyValues )
 {
 	OnCloseNoSave();
 
@@ -936,8 +937,8 @@ void CVcdBlockTool::OnRestartLevel()
 	if ( !entities.IsValid() )
 		return;
 
-	int nCount = entities.Count();
-	for ( int i = 0; i < nCount; ++i )
+	intp nCount = entities.Count();
+	for ( intp i = 0; i < nCount; ++i )
 	{
 		CDmeVMFEntity *pEntity = CastElement<CDmeVMFEntity>( entities[i] );
 		Assert( pEntity );
@@ -963,7 +964,7 @@ void CVcdBlockTool::RestartMap()
 	OnRestartLevel();
 }
 
-bool CVcdBlockTool::OnWriteFileToDisk( const char *pFileName, const char *pFileFormat, KeyValues *pContextKeyValues )
+bool CVcdBlockTool::OnWriteFileToDisk( const char *pFileName, const char *pFileFormat, [[maybe_unused]] KeyValues *pContextKeyValues )
 {
 	if ( !m_pDoc )
 		return true;
@@ -1104,7 +1105,7 @@ void CVcdBlockTool::OpenFileFromHistory( int slot )
 //-----------------------------------------------------------------------------
 // Derived classes can implement this to get notified when files are saved/loaded
 //-----------------------------------------------------------------------------
-void CVcdBlockTool::OnFileOperationCompleted( const char *pFileType, bool bWroteFile, vgui::FileOpenStateMachine::CompletionState_t state, KeyValues *pContextKeyValues )
+void CVcdBlockTool::OnFileOperationCompleted( [[maybe_unused]] const char *pFileType, bool bWroteFile, vgui::FileOpenStateMachine::CompletionState_t state, KeyValues *pContextKeyValues )
 {
 	if ( bWroteFile )
 	{
@@ -1141,7 +1142,7 @@ void CVcdBlockTool::OnFileOperationCompleted( const char *pFileType, bool bWrote
 //-----------------------------------------------------------------------------
 // Show the File browser dialog
 //-----------------------------------------------------------------------------
-void CVcdBlockTool::SetupFileOpenDialog( vgui::FileOpenDialog *pDialog, bool bOpenFile, const char *pFileFormat, KeyValues *pContextKeyValues )
+void CVcdBlockTool::SetupFileOpenDialog( vgui::FileOpenDialog *pDialog, [[maybe_unused]] bool bOpenFile, const char *pFileFormat, [[maybe_unused]] KeyValues *pContextKeyValues )
 {
 	char pStartingDir[ MAX_PATH ];
 
@@ -1199,9 +1200,9 @@ void CVcdBlockTool::OnDescribeUndo()
 	CUtlVector< UndoInfo_t > list;
 	g_pDataModel->GetUndoInfo( list );
 
-	Msg( "%i operations in stack\n", list.Count() );
+	Msg( "%zd operations in stack\n", list.Count() );
 
-	for ( int i = list.Count() - 1; i >= 0; --i )
+	for ( intp i = list.Count() - 1; i >= 0; --i )
 	{
 		UndoInfo_t& entry = list[ i ];
 		if ( entry.terminator )
@@ -1238,7 +1239,7 @@ const char *CVcdBlockTool::GetLogoTextureName()
 //-----------------------------------------------------------------------------
 // Inherited from IVcdBlockDocCallback
 //-----------------------------------------------------------------------------
-void CVcdBlockTool::OnDocChanged( const char *pReason, int nNotifySource, int nNotifyFlags )
+void CVcdBlockTool::OnDocChanged( [[maybe_unused]] const char *pReason, [[maybe_unused]] int nNotifySource, int nNotifyFlags )
 {
 	if ( GetInfoTargetBrowser() )
 	{

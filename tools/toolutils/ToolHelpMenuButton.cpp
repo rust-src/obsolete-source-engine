@@ -4,12 +4,12 @@
 //
 //=============================================================================
 
-#include "toolutils/toolswitchmenubutton.h"
-#include "vgui_controls/panel.h"
-#include "toolutils/toolmenubutton.h"
+#include "toolutils/ToolSwitchMenuButton.h"
+#include "vgui_controls/Panel.h"
+#include "toolutils/ToolMenuButton.h"
 #include "toolutils/enginetools_int.h"
 #include "tier1/KeyValues.h"
-#include "vgui_controls/menu.h"
+#include "vgui_controls/Menu.h"
 #include "vgui/ILocalize.h"
 #include "toolframework/ienginetool.h"
 
@@ -22,7 +22,7 @@
 //-----------------------------------------------------------------------------
 class CToolHelpMenuButton : public CToolMenuButton
 {
-	DECLARE_CLASS_SIMPLE( CToolHelpMenuButton, CToolMenuButton );
+	DECLARE_CLASS_SIMPLE_OVERRIDE( CToolHelpMenuButton, CToolMenuButton );
 
 public:
 	CToolHelpMenuButton( char const *toolName, char const *helpBinding, vgui::Panel *parent, const char *panelName, const char *text, vgui::Panel *pActionTarget );
@@ -48,10 +48,10 @@ CToolHelpMenuButton::CToolHelpMenuButton( char const *toolName, char const *help
 	if ( fmt )
 	{
 		wchar_t desc[ 256 ];
-		g_pVGuiLocalize->ConvertANSIToUnicode( toolName, desc, sizeof( desc ) );
+		g_pVGuiLocalize->ConvertANSIToUnicode( toolName, desc );
 
 		wchar_t buf[ 512 ];
-		g_pVGuiLocalize->ConstructString( buf, sizeof( buf ), fmt, 1, desc );
+		g_pVGuiLocalize->ConstructString_safe( buf, fmt, 1, desc );
 
 		AddMenuItem( "help", buf, new KeyValues( "OnHelp" ), pActionTarget, NULL, helpBinding );
 	}

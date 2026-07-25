@@ -122,7 +122,7 @@ bool CHudHintDisplay::SetHintText( wchar_t *text )
 	}
 
 	// clear the existing text
-	for (int i = 0; i < m_Labels.Count(); i++)
+	for (intp i = 0; i < m_Labels.Count(); i++)
 	{
 		m_Labels[i]->MarkForDeletion();
 	}
@@ -134,7 +134,7 @@ bool CHudHintDisplay::SetHintText( wchar_t *text )
 	{
 		wchar_t *line = p;
 		wchar_t *end = wcschr( p, L'\n' );
-		int linelengthbytes = 0;
+		intp linelengthbytes = 0;
 		if ( end )
 		{
 			//*end = 0;	//eek
@@ -144,11 +144,11 @@ bool CHudHintDisplay::SetHintText( wchar_t *text )
 		else
 		{
 			p = NULL;
-		}		
+		}
 
 		// replace any key references with bound keys
 		wchar_t buf[512];
-		UTIL_ReplaceKeyBindings( line, linelengthbytes, buf, sizeof( buf ) );
+		UTIL_ReplaceKeyBindings( line, linelengthbytes, buf );
 
 		// put it in a label
 		vgui::Label *label = vgui::SETUP_PANEL(new vgui::Label(this, NULL, buf));
@@ -230,7 +230,7 @@ void CHudHintDisplay::PerformLayout()
 	// now lay out the sub-labels
 	for ( i=0; i<m_Labels.Count(); ++i )
 	{
-		int xOffset = (wide - m_Labels[i]->GetWide()) * 0.5;
+		int xOffset = (wide - m_Labels[i]->GetWide()) / 2;
 		m_Labels[i]->SetPos( xOffset, y + m_iTextY + i*fontTall );
 	}
 }

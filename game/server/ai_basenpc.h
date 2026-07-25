@@ -452,7 +452,7 @@ public:
 	CAI_Manager();
 	
 	CAI_BaseNPC **	AccessAIs();
-	int				NumAIs();
+	intp			NumAIs() const;
 	
 	void AddAI( CAI_BaseNPC *pAI );
 	void RemoveAI( CAI_BaseNPC *pAI );
@@ -797,7 +797,7 @@ public:
 		CAI_BehaviorBase **ppBehaviors = AccessBehaviors();
 		
 		*ppBehavior = NULL;
-		for ( int i = 0; i < NumBehaviors(); i++ )
+		for ( intp i = 0; i < NumBehaviors(); i++ )
 		{
 			*ppBehavior = dynamic_cast<BEHAVIOR_TYPE *>(ppBehaviors[i]);
 			if ( *ppBehavior )
@@ -816,8 +816,8 @@ public:
 	virtual bool OnBehaviorChangeStatus( [[maybe_unused]]  CAI_BehaviorBase *pBehavior, [[maybe_unused]] bool fCanFinishSchedule ) { return false; }
 
 private:
-	virtual CAI_BehaviorBase **	AccessBehaviors() 	{ return NULL; }
-	virtual int					NumBehaviors()		{ return 0; }
+	virtual CAI_BehaviorBase **	AccessBehaviors() 	{ return nullptr; }
+	virtual intp				NumBehaviors()		{ return 0; }
 
 public:
 	//-----------------------------------------------------
@@ -1964,7 +1964,7 @@ public:
 	virtual CAI_ClassScheduleIdSpace *	GetClassScheduleIdSpace()	{ return &gm_ClassScheduleIdSpace; }
 
 	static int			GetScheduleID	(const char* schedName);
-	static int			GetActivityID	(const char* actName);
+	static intp			GetActivityID	(const char* actName);
 	static int			GetConditionID	(const char* condName);
 	static int			GetTaskID		(const char* taskName);
 	static int			GetSquadSlotID	(const char* slotName);
@@ -1975,7 +1975,7 @@ public:
 	
 	static void			AddEventToSR(const char *eventName, int conID);
 	static const char*	GetEventName	(int actID);
-	static int			GetEventID	(const char* actName);
+	static intp			GetEventID	(const char* actName);
 
 public:
 	//-----------------------------------------------------

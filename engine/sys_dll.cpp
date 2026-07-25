@@ -4,6 +4,7 @@
 
 #if defined(_WIN32) && !defined(_X360)
 #include "winlite.h"
+#include <CommCtrl.h>
 #include <system_error>
 #endif
 #if defined(LINUX)
@@ -46,7 +47,7 @@
 #include "cdll_engine_int.h"
 #include "dt_send.h"
 #include "idedicatedexports.h"
-#include "eifacev21.h"
+#include "eiface.h"
 #include "cl_steamauth.h"
 #include "tier0/etwprof.h"
 #include "tier2/tier2.h"
@@ -339,15 +340,33 @@ void Sys_Printf(const char *fmt, ...)
 }
 
 
-bool Sys_MessageBox(const char *title, const char *info, bool bShowOkAndCancel)
+bool Sys_MessageBox(const char *title, const char *info, bool bShowOkAndCancel, bool bError)
 {
 #ifdef _WIN32
 
-	if ( IDOK == ::MessageBox( NULL, title, info, MB_ICONEXCLAMATION | ( bShowOkAndCancel ? MB_OKCANCEL : MB_OK ) ) )
+	wchar_t wideTitle[512];
+	Q_UTF8ToWString( title, wideTitle, ssize( wideTitle ) );
+
+	wchar_t wideInfo[512];
+	Q_UTF8ToWString( info, wideInfo, ssize( wideInfo ) );
+
+	// dimhotepus: Use modern looking dialog.
+	int nButtonPressed;
+	const HRESULT hr{ ::TaskDialog( nullptr,
+		nullptr,
+		wideTitle,
+		wideTitle,
+		wideInfo,
+		TDCBF_OK_BUTTON | ( bShowOkAndCancel ? TDCBF_CANCEL_BUTTON : TDCBF_OK_BUTTON ),
+		bError ? TD_ERROR_ICON : TD_WARNING_ICON,
+		&nButtonPressed ) };
+	if ( FAILED( hr ) )
 	{
-		return true;
+		// If nice dialog fail (ex. out of memory), then use message box as fallback.
+		return ::MessageBoxA( nullptr, title, info, MB_OK | MB_TOPMOST | MB_ICONERROR ) == IDOK;
 	}
-	return false;
+
+	return nButtonPressed == IDOK;
 
 #elif defined( USE_SDL )
 
@@ -420,11 +439,8 @@ void Sys_Error_Internal( bool bMinidump, const char *error, va_list argsList )
 		!CommandLine()->FindParm( "-nomessagebox" ) &&
 		!CommandLine()->FindParm( "-nocrashdialog" ) )
 	{
-#ifdef _WIN32
-		::MessageBox( NULL, text, "Engine - Error", MB_OK | MB_TOPMOST | MB_ICONERROR );
-#elif defined( USE_SDL )
-		Sys_MessageBox( "Engine Error", text, false );
-#endif
+		// dimhotepus: Use common message box.
+		Sys_MessageBox( "Source Engine - Error", text, false, true );
 	}
 
 	DebuggerBreakIfDebugging();
@@ -463,7 +479,7 @@ void Sys_Error_Internal( bool bMinidump, const char *error, va_list argsList )
 
 			// We always get here because the above filter evaluates to EXCEPTION_EXECUTE_HANDLER
 		}
-#elif defined( OSX )
+#elif defined( POSIX )
 		// Doing this doesn't quite work the way we want because there is no "crashing" thread
 		// and we see "No thread was identified as the cause of the crash; No signature could be created because we do not know which thread crashed" on the back end
 		//SteamAPI_WriteMiniDump( 0, NULL, build_number() );
@@ -471,22 +487,8 @@ void Sys_Error_Internal( bool bMinidump, const char *error, va_list argsList )
 		fprintf( stderr, "\n ##### Sys_Error: %s", text );
 		fflush( stdout );
 
-		int *p = 0;
-#ifdef PLATFORM_64BITS
-		*p = 0xdeadbeefdeadbeef;
-#else
-		*p = 0xdeadbeef;
-#endif
-#elif defined( LINUX )
-		// Doing this doesn't quite work the way we want because there is no "crashing" thread
-		// and we see "No thread was identified as the cause of the crash; No signature could be created because we do not know which thread crashed" on the back end
-		//SteamAPI_WriteMiniDump( 0, NULL, build_number() );
-		int *p = 0;
-#ifdef PLATFORM_64BITS
-		*p = 0xdeadbeefdeadbeef;
-#else
-		*p = 0xdeadbeef;
-#endif
+		// dimhotepus: Fix UB on nullptr dereference.
+		raise( SIGTRAP );
 #else
 #warning "need minidump impl on sys_error"
 #endif
@@ -732,9 +734,9 @@ const char *PrefixMessageGroup(char (&out)[out_size], const char *group,
 
   const size_t length{strlen(message)};
   if (length > 1 && message[length - 1] == '\n') {
-    Q_snprintf(out, std::size(out), "[%.3f][%s] %s", Plat_FloatTime(), out_group, message);
+    V_sprintf_safe(out, "[%.3f][%s] %s", Plat_FloatTime(), out_group, message);
   } else {
-    Q_snprintf(out, std::size(out), "%s", message);
+    V_sprintf_safe(out, "%s", message);
   }
 
   return out;

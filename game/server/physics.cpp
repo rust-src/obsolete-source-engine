@@ -1271,7 +1271,7 @@ static void CallbackHighlight( CBaseEntity *pEntity )
 static void CallbackReport( CBaseEntity *pEntity )
 {
 	const char *pName = STRING(pEntity->GetEntityName());
-	if ( !Q_strlen(pName) )
+	if ( Q_isempty(pName) )
 	{
 		pName = STRING(pEntity->GetModelName());
 	}
@@ -1396,14 +1396,14 @@ public:
 	{
 		if ( !pEntity || !pLink || IsWorldEntity(pEntity) || IsWorldEntity(pLink) )
 			return;
-		int listIndex = m_list.Find(pEntity);
+		auto listIndex = m_list.Find(pEntity);
 		if ( listIndex == m_list.InvalidIndex() )
 		{
 			intp entryIndex = m_entryList.AddToTail();
 			m_entryList[entryIndex].isConstraint = bIsConstraint;
 			listIndex = m_list.Insert( pEntity, entryIndex );
 		}
-		int entryIndex = m_list.Element(listIndex);
+		intp entryIndex = m_list.Element(listIndex);
 		CConstraintFloodEntry &entry = m_entryList.Element(entryIndex);
 		Assert( entry.isConstraint == bIsConstraint );
 		if ( entry.linkList.Find(pLink) < 0 )
@@ -1414,10 +1414,10 @@ public:
 
 	void BuildGraphFromEntity( CBaseEntity *pEntity, CUtlVector<CBaseEntity *> &constraintList )
 	{
-		int listIndex = m_list.Find(pEntity);
+		auto listIndex = m_list.Find(pEntity);
 		if ( listIndex != m_list.InvalidIndex() )
 		{
-			int entryIndex = m_list.Element(listIndex);
+			intp entryIndex = m_list.Element(listIndex);
 			CConstraintFloodEntry &entry = m_entryList.Element(entryIndex);
 			if ( !entry.isMarked )
 			{
@@ -1435,7 +1435,7 @@ public:
 			}
 		}
 	}
-	CUtlMap<CBaseEntity *, int>	m_list;
+	CUtlMap<CBaseEntity *, intp>	m_list;
 	CUtlVector<CConstraintFloodEntry> m_entryList;
 };
 
@@ -1668,7 +1668,7 @@ void PortalPhysFrame( float deltaTime ) //small wrapper for PhysFrame that simul
 // Advance physics by time (in seconds)
 void PhysFrame( float deltaTime )
 {
-	static int lastObjectCount = 0;
+	static intp lastObjectCount = 0;
 	entitem_t *pItem;
 
 	if ( !g_PhysicsHook.ShouldSimulate() )
@@ -2191,7 +2191,7 @@ void CCollisionEvent::UpdateDamageEvents( void )
 	m_damageInflictors.RemoveAll();
 }
 
-void CCollisionEvent::RestoreDamageInflictorState( int inflictorStateIndex, float velocityBlend )
+void CCollisionEvent::RestoreDamageInflictorState( intp inflictorStateIndex, float velocityBlend )
 {
 	inflictorstate_t &state = m_damageInflictors[inflictorStateIndex];
 	if ( state.restored )
@@ -2874,56 +2874,3 @@ void DebugDrawContactPoints(IPhysicsObject *pPhysics)
 	pSnapshot->DeleteAllMarkedContacts( true );
 	pPhysics->DestroyFrictionSnapshot( pSnapshot );
 }
-
-
-
-#if 0
-
-#include "filesystem.h"
-//-----------------------------------------------------------------------------
-// Purpose: This will append a collide to a glview file.  Then you can view the 
-//			collisionmodels with glview.
-// Input  : *pCollide - collision model
-//			&origin - position of the instance of this model
-//			&angles - orientation of instance
-//			*pFilename - output text file
-//-----------------------------------------------------------------------------
-// examples:
-// world:
-//	DumpCollideToGlView( pWorldCollide->solids[0], vec3_origin, vec3_origin, "jaycollide.txt" );
-// static_prop:
-//	DumpCollideToGlView( info.m_pCollide->solids[0], info.m_Origin, info.m_Angles, "jaycollide.txt" );
-//
-//-----------------------------------------------------------------------------
-void DumpCollideToGlView( CPhysCollide *pCollide, const Vector &origin, const QAngle &angles, const char *pFilename )
-{
-	if ( !pCollide )
-		return;
-
-	printf("Writing %s...\n", pFilename );
-	Vector *outVerts;
-	int vertCount = physcollision->CreateDebugMesh( pCollide, &outVerts );
-	FileHandle_t fp = filesystem->Open( pFilename, "ab" );
-	int triCount = vertCount / 3;
-	int vert = 0;
-	VMatrix tmp = SetupMatrixOrgAngles( origin, angles );
-	int i;
-	for ( i = 0; i < vertCount; i++ )
-	{
-		outVerts[i] = tmp.VMul4x3( outVerts[i] );
-	}
-	for ( i = 0; i < triCount; i++ )
-	{
-		filesystem->FPrintf( fp, "3\n" );
-		filesystem->FPrintf( fp, "%6.3f %6.3f %6.3f 1 0 0\n", outVerts[vert].x, outVerts[vert].y, outVerts[vert].z );
-		vert++;
-		filesystem->FPrintf( fp, "%6.3f %6.3f %6.3f 0 1 0\n", outVerts[vert].x, outVerts[vert].y, outVerts[vert].z );
-		vert++;
-		filesystem->FPrintf( fp, "%6.3f %6.3f %6.3f 0 0 1\n", outVerts[vert].x, outVerts[vert].y, outVerts[vert].z );
-		vert++;
-	}
-	filesystem->Close( fp );
-	physcollision->DestroyDebugMesh( vertCount, outVerts );
-}
-#endif
-

@@ -159,7 +159,7 @@ static void MatrixOrthogonalize( matrix3x4_t &matrix, int column )
 	MatrixSetColumn( columns[index2], index2, matrix );
 }
 
-#define SIGN(x) ( (x) < 0 ? -1 : 1 )
+[[nodiscard]] static constexpr inline float SIGN(float x) { return x < 0 ? -1.f : 1.f; }
 
 static QAngle AlignAngles( const QAngle &angles, float cosineAlignAngle )
 {
@@ -191,19 +191,6 @@ static QAngle AlignAngles( const QAngle &angles, float cosineAlignAngle )
 }
 
 
-static void TraceCollideAgainstBBox( const CPhysCollide *pCollide, const Vector &start, const Vector &end, const QAngle &angles, const Vector &boxOrigin, const Vector &mins, const Vector &maxs, trace_t *ptr )
-{
-	physcollision->TraceBox( boxOrigin, boxOrigin + (start-end), mins, maxs, pCollide, start, angles, ptr );
-
-	if ( ptr->DidHit() )
-	{
-		ptr->endpos = start * (1-ptr->fraction) + end * ptr->fraction;
-		ptr->startpos = start;
-		ptr->plane.dist = -ptr->plane.dist;
-		ptr->plane.normal *= -1;
-	}
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: Computes a local matrix for the player clamped to valid carry ranges
 //-----------------------------------------------------------------------------
@@ -222,6 +209,7 @@ static void TraceCollideAgainstBBox( const CPhysCollide *pCollide, const Vector 
 // player can reach down 2ft below his feet (otherwise he'll hold the object above the bottom)
 #define PLAYER_REACH_DOWN_DISTANCE	24
 
+#ifndef CLIENT_DLL
 static void ComputePlayerMatrix( CBasePlayer *pPlayer, matrix3x4_t &out )
 {
 	if ( !pPlayer )
@@ -251,6 +239,7 @@ static void ComputePlayerMatrix( CBasePlayer *pPlayer, matrix3x4_t &out )
 	angles.x = 0;
 	AngleMatrix( angles, origin, out );
 }
+#endif
 
 
 //-----------------------------------------------------------------------------
@@ -585,6 +574,7 @@ void CGrabController::AttachEntity( CBasePlayer *pPlayer, CBaseEntity *pEntity, 
 
 }
 
+#ifndef CLIENT_DLL
 static void ClampPhysicsVelocity( IPhysicsObject *pPhys, float linearLimit, float angularLimit )
 {
 	Vector vel;
@@ -598,6 +588,7 @@ static void ClampPhysicsVelocity( IPhysicsObject *pPhys, float linearLimit, floa
 	angVel *= angSpeed;
 	pPhys->AddVelocity( &vel, &angVel );
 }
+#endif
 
 void CGrabController::DetachEntity( bool bClearVelocity )
 {
@@ -2173,7 +2164,7 @@ CWeaponPhysCannon::FindObjectResult_t CWeaponPhysCannon::FindObject( void )
 	float mass = PhysGetEntityMass( pEntity );
 	if ( mass < 50.0f )
 	{
-		pullDir *= (mass + 0.5) * (1/50.0f);
+		pullDir *= (mass + 0.5f) * (1/50.0f);
 	}
 
 	// Nudge it towards us
@@ -2187,7 +2178,7 @@ CBaseEntity *CWeaponPhysCannon::FindObjectInCone( const Vector &vecOrigin, const
 {
 	// Find the nearest physics-based item in a cone in front of me.
 	CBaseEntity *list[256];
-	float flNearestDist = TraceLength() + 1.0;
+	float flNearestDist = TraceLength() + 1.0f;
 	Vector mins = vecOrigin - Vector( flNearestDist, flNearestDist, flNearestDist );
 	Vector maxs = vecOrigin + Vector( flNearestDist, flNearestDist, flNearestDist );
 

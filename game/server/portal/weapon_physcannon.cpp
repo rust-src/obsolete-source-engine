@@ -334,19 +334,6 @@ static QAngle AlignAngles( const QAngle &angles, float cosineAlignAngle )
 }
 
 
-static void TraceCollideAgainstBBox( const CPhysCollide *pCollide, const Vector &start, const Vector &end, const QAngle &angles, const Vector &boxOrigin, const Vector &mins, const Vector &maxs, trace_t *ptr )
-{
-	physcollision->TraceBox( boxOrigin, boxOrigin + (start-end), mins, maxs, pCollide, start, angles, ptr );
-
-	if ( ptr->DidHit() )
-	{
-		ptr->endpos = start * (1-ptr->fraction) + end * ptr->fraction;
-		ptr->startpos = start;
-		ptr->plane.dist = -ptr->plane.dist;
-		ptr->plane.normal *= -1;
-	}
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: Finds the nearest ragdoll sub-piece to a location and returns it
 // Input  : *pTarget - entity that is the potential ragdoll
@@ -2119,9 +2106,6 @@ void CWeaponPhysCannon::ApplyVelocityBasedForce( CBaseEntity *pEntity, const Vec
 	}
 	else
 	{
-		Vector	vTempVel;
-		AngularImpulse vTempAVel;
-
 		ragdoll_t *pRagdollPhys = pRagdoll->GetRagdoll( );
 		for ( int j = 0; j < pRagdollPhys->listCount; ++j )
 		{
@@ -2737,7 +2721,7 @@ CWeaponPhysCannon::FindObjectResult_t CWeaponPhysCannon::FindObject( void )
 	float mass = PhysGetEntityMass( pEntity );
 	if ( mass < 50.0f )
 	{
-		pullDir *= (mass + 0.5) * (1/50.0f);
+		pullDir *= (mass + 0.5f) * (1/50.0f);
 	}
 
 	// Nudge it towards us
@@ -2753,7 +2737,7 @@ CBaseEntity *CWeaponPhysCannon::MegaPhysCannonFindObjectInCone( const Vector &ve
 {
 	// Find the nearest physics-based item in a cone in front of me.
 	CBaseEntity *list[1024];
-	float flMaxDist = TraceLength() + 1.0;
+	float flMaxDist = TraceLength() + 1.0f;
 	float flNearestDist = flMaxDist;
 	bool bNearestIsCombineBall = bOnlyCombineBalls ? true : false;
 	Vector mins = vecOrigin - Vector( flNearestDist, flNearestDist, flNearestDist );
@@ -2822,7 +2806,7 @@ CBaseEntity *CWeaponPhysCannon::FindObjectInCone( const Vector &vecOrigin, const
 {
 	// Find the nearest physics-based item in a cone in front of me.
 	CBaseEntity *list[256];
-	float flNearestDist = physcannon_tracelength.GetFloat() + 1.0; //Use regular distance.
+	float flNearestDist = physcannon_tracelength.GetFloat() + 1.0f; //Use regular distance.
 	Vector mins = vecOrigin - Vector( flNearestDist, flNearestDist, flNearestDist );
 	Vector maxs = vecOrigin + Vector( flNearestDist, flNearestDist, flNearestDist );
 
@@ -4109,7 +4093,7 @@ void CWeaponPhysCannon::DoEffectClosed( void )
 	// Turn off the center sprite
 	if ( m_hCenterSprite != NULL )
 	{
-		m_hCenterSprite->SetBrightness( 0.0, 0.1f );
+		m_hCenterSprite->SetBrightness( 0, 0.1f );
 		m_hCenterSprite->SetScale( 0.0f, 0.1f );
 		m_hCenterSprite->TurnOff();
 	}
@@ -4138,7 +4122,7 @@ void CWeaponPhysCannon::DoEffectClosed( void )
 		if ( m_hGlowSprites[i] != NULL )
 		{
 			m_hGlowSprites[i]->TurnOn();
-			m_hGlowSprites[i]->SetBrightness( 16.0f, 0.2f );
+			m_hGlowSprites[i]->SetBrightness( 16, 0.2f );
 			m_hGlowSprites[i]->SetScale( 0.3f * flScaleFactor, 0.2f );
 		}
 	}
@@ -4162,7 +4146,7 @@ void CWeaponPhysCannon::DoMegaEffectClosed( void )
 	// Turn off the center sprite
 	if ( m_hCenterSprite != NULL )
 	{
-		m_hCenterSprite->SetBrightness( 0.0, 0.1f );
+		m_hCenterSprite->SetBrightness( 0, 0.1f );
 		m_hCenterSprite->SetScale( 0.0f, 0.1f );
 		m_hCenterSprite->TurnOff();
 	}

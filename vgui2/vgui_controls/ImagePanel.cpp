@@ -85,7 +85,8 @@ void ImagePanel::SetImage(const char *imageName)
 		return;
 
 	delete [] m_pszImageName;
-	m_pszImageName = V_strdup(imageName);
+	// dimhotepus: Protect against nullptr.
+	m_pszImageName = imageName ? V_strdup(imageName) : nullptr;
 	InvalidateLayout(false, true); // force applyschemesettings to run
 }
 
@@ -272,6 +273,8 @@ void ImagePanel::GetSettings(KeyValues *outResourceData)
 	outResourceData->SetInt("tileImage", m_bTileImage);
 	outResourceData->SetInt("tileHorizontally", m_bTileHorizontally);
 	outResourceData->SetInt("tileVertically", m_bTileVertically);
+    // dimhotepus: TF2 backport. Scale UI.
+	outResourceData->SetInt("scaleProportional", m_nScaleProportional);
 }
 
 //-----------------------------------------------------------------------------
@@ -288,7 +291,15 @@ void ImagePanel::ApplySettings(KeyValues *inResourceData)
 
 	m_bPositionImage = inResourceData->GetInt("positionImage", 1);
 	m_bScaleImage = inResourceData->GetInt("scaleImage", 0);
+	// dimhotepus: TF2 backport. Scale UI.
+	m_nScaleProportional = inResourceData->GetInt("scaleProportional", 0);
+
 	m_fScaleAmount = inResourceData->GetFloat("scaleAmount", 0.0f);
+	// dimhotepus: TF2 backport. Scale UI.
+	if ( m_nScaleProportional == 1 && m_bScaleImage && IsProportional() )
+	{
+		m_fScaleAmount *= .001f * ( float )QuickPropScale( 1000 );
+	}
 	m_bTileImage = inResourceData->GetInt("tileImage", 0);
 	m_bTileHorizontally = inResourceData->GetInt("tileHorizontally", m_bTileImage);
 	m_bTileVertically = inResourceData->GetInt("tileVertically", m_bTileImage);
@@ -364,7 +375,8 @@ void ImagePanel::ApplySchemeSettings( IScheme *pScheme )
 	BaseClass::ApplySchemeSettings(pScheme);
 	if ( m_pszImageName && m_pszImageName[0] )
 	{
-		SetImage(scheme()->GetImage(m_pszImageName, m_bScaleImage));
+		// dimhotepus: TF2 backport. Scale UI.
+		SetImage(scheme()->GetImage(m_pszImageName, m_bScaleImage, IsProportional()));
 	}
 }
 

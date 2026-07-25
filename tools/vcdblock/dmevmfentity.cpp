@@ -4,20 +4,20 @@
 //
 //=============================================================================
 
-#include "DmeVMFEntity.h"
+#include "dmevmfentity.h"
 #include "datamodel/dmelementfactoryhelper.h"
 #include "toolframework/itoolentity.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialsystem.h"
-#include "engine/iclientleafsystem.h"
+#include "engine/IClientLeafSystem.h"
 #include "toolutils/enginetools_int.h"
 #include "vcdblocktool.h"
 #include "tier1/KeyValues.h"
 
 // for tracing
 #include "cmodel.h"
-#include "engine/ienginetrace.h"
+#include "engine/IEngineTrace.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -53,7 +53,7 @@ void CDmeVMFEntity::OnConstruction()
 	{
 		// Assign a unique ID to the name
 		char pNameString[128];
-		Q_snprintf( pNameString, sizeof(pNameString), "%d", GetNextEntityId() );
+		V_to_chars( pNameString, GetNextEntityId() );
 		m_Name = pNameString;
 	}
 
@@ -285,7 +285,7 @@ void CDmeVMFEntity::DrawSprite( IMaterial *pMaterial )
 {
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
 
-	float t = 0.5f * sin( Plat_FloatTime() * M_PI / 1.0f ) + 0.5f;
+	float t = 0.5f * sin( static_cast<float>(Plat_FloatTime()) * M_PI_F / 1.0f ) + 0.5f;
 
 	pRenderContext->Bind( pMaterial );
 	IMesh* pMesh = pRenderContext->GetDynamicMesh();
@@ -344,7 +344,7 @@ void CDmeVMFEntity::DrawDragHelpers( IMaterial *pMaterial )
 {
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
 
-	float t = 0.5f * sin( Plat_FloatTime() * M_PI / 1.0f ) + 0.5f;
+	float t = 0.5f * sin( static_cast<float>(Plat_FloatTime()) * M_PI_F / 1.0f ) + 0.5f;
 
 	VMatrix worldToCamera;
 	// pRenderContext->GetMatrix( MATERIAL_VIEW, &worldToCamera );
@@ -408,7 +408,7 @@ void CDmeVMFEntity::DrawFloorTarget( IMaterial *pMaterial )
 {
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
 
-	float t = 0.5f * sin( Plat_FloatTime() * M_PI / 1.0f ) + 0.5f;
+	float t = 0.5f * sin( static_cast<float>(Plat_FloatTime()) * M_PI_F / 1.0f ) + 0.5f;
 
 	// test movement
 	Ray_t ray;
@@ -519,7 +519,7 @@ int CDmeVMFEntity::DrawModel( int flags )
 		// If we have a visible engine entity, we don't need to draw it here
 		// info targets always draw though, because they have no visible model.
 		CDisableUndoScopeGuard guard;
-		float t = 0.5f * sin( Plat_FloatTime() * M_PI / 1.0f ) + 0.5f;
+		float t = 0.5f * sin( static_cast<float>(Plat_FloatTime()) * M_PI_F / 1.0f ) + 0.5f;
 		unsigned char nAlpha = m_bIsDirty ? (unsigned char)(255 * t) : 255;
 		if ( bSelected )
 		{

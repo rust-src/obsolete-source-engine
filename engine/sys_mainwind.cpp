@@ -110,6 +110,80 @@ enum GameInputEventType_t
 	IE_AppActivated,
 };
 
+#if defined(WIN32) && !defined(USE_SDL)
+
+/**
+ * @brief AC power status.
+ */
+enum class SystemPowerAcLineStatus : unsigned char
+{
+	/**
+	 * @brief Offline.
+	 */
+	kOffline = 0,
+	/**
+	 * @brief Online.
+	 */
+	kOnline = 1,
+	/**
+	 * @brief Unknown status.
+	 */
+	kUnknown = 255
+};
+
+/**
+ * @brief The battery charge status flags.
+ */
+enum class SystemPowerBatteryChargeStatusFlags : unsigned char
+{
+	/**
+	 * @brief The battery is not being charged and the battery capacity is
+	 * between low and high.
+	 */
+	kNotChargingAndBetween33And66Percent = 0,
+	/**
+	 * @brief High — the battery capacity is at more than 66 percent.
+	 */
+	kMoreThan66Percent = 1,
+	/**
+	 * @brief Low — the battery capacity is at less than 33 percent.
+	 */
+	kLessThan33Percent = 2,
+	/**
+	 * @brief Critical — the battery capacity is at less than five percent.
+	 */
+	kLessThan5Percent = 4,
+	/**
+	 * @brief Charging.
+	 */
+	kCharging = 8,
+	/**
+	 * @brief No system battery.
+	 */
+	kNoSystemBattery = 128,
+	/**
+	 * @brief Unknown status — unable to read the battery flag information.
+	 */
+	kUnknown = 255
+};
+
+/**
+ * @brief The status of battery saver.  To participate in energy conservation,
+ * avoid resource intensive tasks when battery saver is on.
+ */
+enum class SystemPowerBatterySaverStatus : unsigned char {
+	/**
+	 * @brief Battery saver is off.
+	 */
+	kOff = 0,
+	/**
+	 * @brief Battery saver on.  Save energy where possible.
+	 */
+	kOn = 1
+};
+
+#endif
+
 //-----------------------------------------------------------------------------
 // Purpose: Main game interface, including message pump and window creation
 //-----------------------------------------------------------------------------
@@ -189,6 +263,11 @@ private:
 
 #if defined( WIN32 )
 	HWND			m_hWindow;
+
+	SystemPowerAcLineStatus m_last_ac_line_status{SystemPowerAcLineStatus::kUnknown};
+	SystemPowerBatteryChargeStatusFlags m_last_battery_status_flags{SystemPowerBatteryChargeStatusFlags::kUnknown};
+	SystemPowerBatterySaverStatus m_last_battery_saver_status{SystemPowerBatterySaverStatus::kOff};
+
 #if !defined( USE_SDL )
 	HINSTANCE		m_hInstance;
 
@@ -499,25 +578,7 @@ static LRESULT WINAPI CallDefaultWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam
 }
 #endif
 
-#if defined( WIN32 ) && !defined( USE_SDL )
-
-/**
- * @brief AC power status.
- */
-enum class SystemPowerAcLineStatus : unsigned char {
-	/**
-	 * @brief Offline.
-	 */
-	kOffline = 0,
-	/**
-	 * @brief Online.
-	 */
-	kOnline = 1,
-	/**
-	 * @brief Unknown status.
-	 */
-	kUnknown = 255
-};
+#if defined(WIN32) && !defined(USE_SDL)
 
 [[nodiscard]] const char* GetAcLineStatusDescription(SystemPowerAcLineStatus status) noexcept {
   switch (status) {
@@ -530,41 +591,6 @@ enum class SystemPowerAcLineStatus : unsigned char {
       return "Unknown";
   }
 }
-
-/**
- * @brief The battery charge status flags.
- */
-enum class SystemPowerBatteryChargeStatusFlags : unsigned char {
-	/**
-	 * @brief The battery is not being charged and the battery capacity is
-	 * between low and high.
-	 */
-	kNotChargingAndBetween33And66Percent = 0,
-	/**
-	 * @brief High — the battery capacity is at more than 66 percent.
-	 */
-	kMoreThan66Percent = 1,
-	/**
-	 * @brief Low — the battery capacity is at less than 33 percent.
-	 */
-	kLessThan33Percent = 2,
-	/**
-	 * @brief Critical — the battery capacity is at less than five percent.
-	 */
-	kLessThan5Percent = 4,
-	/**
-	 * @brief Charging.
-	 */
-	kCharging = 8,
-	/**
-	 * @brief No system battery.
-	 */
-	kNoSystemBattery = 128,
-	/**
-	 * @brief Unknown status — unable to read the battery flag information.
-	 */
-	kUnknown = 255
-};
 
 [[nodiscard]] const char* GetBatteryChargeStatusDescription(SystemPowerBatteryChargeStatusFlags flags) noexcept {
   switch (flags) {
@@ -585,21 +611,6 @@ enum class SystemPowerBatteryChargeStatusFlags : unsigned char {
       return "Unknown";
   }
 }
-
-/**
- * @brief The status of battery saver.  To participate in energy conservation,
- * avoid resource intensive tasks when battery saver is on.
- */
-enum class SystemPowerBatterySaverStatus : unsigned char {
-	/**
-	 * @brief Battery saver is off.
-	 */
-	kOff = 0,
-	/**
-	 * @brief Battery saver on.  Save energy where possible.
-	 */
-	kOn = 1
-};
 
 [[nodiscard]] const char *GetBatterySaverStatusDescription(
     SystemPowerBatterySaverStatus status) noexcept {
@@ -714,30 +725,36 @@ LRESULT CGame::WindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 					SYSTEM_POWER_STATUS power_status = {};
 					if (::GetSystemPowerStatus(&power_status))
 					{
-						SystemPowerAcLineStatus ac_line_status =
+						const SystemPowerAcLineStatus new_ac_line_status =
 							static_cast<SystemPowerAcLineStatus>(power_status.ACLineStatus);
-						SystemPowerBatteryChargeStatusFlags battery_status_flags =
+						const SystemPowerBatteryChargeStatusFlags new_battery_status_flags =
 							static_cast<SystemPowerBatteryChargeStatusFlags>(power_status.BatteryFlag);
-						SystemPowerBatterySaverStatus battery_saver_status =
+						const SystemPowerBatterySaverStatus new_battery_saver_status =
 							static_cast<SystemPowerBatterySaverStatus>(power_status.SystemStatusFlag);
 
-						Msg("System power status changed: AC power '%s', battery charge '%s', battery saver '%s'.\n",
-							GetAcLineStatusDescription(ac_line_status),
-							GetBatteryChargeStatusDescription(battery_status_flags),
-							GetBatterySaverStatusDescription(battery_saver_status));
-
-						// The number of seconds of battery life remaining, or
-						// –1 if remaining seconds are unknown or if the device
-						// is connected to AC power.
-						if (power_status.BatteryLifeTime != static_cast<DWORD>(-1))
+						// Only if any status changed, as Windows sends the same ^ statuses in a row.
+						if ( new_ac_line_status != m_last_ac_line_status ||
+							 new_battery_status_flags != m_last_battery_status_flags ||
+							 new_battery_saver_status != m_last_battery_saver_status )
 						{
-							Msg("System power status changed: %lu hours %.1f mins estimated battery life remaining.\n",
-								power_status.BatteryLifeTime / 3600, ((power_status.BatteryLifeTime % 3600) / 60.0));
+							Msg("System power status changed: AC power '%s', battery charge '%s', battery saver '%s'.\n",
+								GetAcLineStatusDescription(new_ac_line_status),
+								GetBatteryChargeStatusDescription(new_battery_status_flags),
+								GetBatterySaverStatusDescription(new_battery_saver_status));
 
-							// Ok, less than 3 minutes left.
-							if (power_status.BatteryLifeTime < 180)
+							// The number of seconds of battery life remaining, or
+							// –1 if remaining seconds are unknown or if the device
+							// is connected to AC power.
+							if (power_status.BatteryLifeTime != static_cast<DWORD>(-1))
 							{
-								Cbuf_AddText( "save low-battery-auto-save" );
+								Msg("System power status changed: %lu hours %.1f mins estimated battery life remaining.\n",
+									power_status.BatteryLifeTime / 3600, ((power_status.BatteryLifeTime % 3600) / 60.0));
+
+								// Ok, less than 3 minutes left.
+								if (power_status.BatteryLifeTime < 180)
+								{
+									Cbuf_AddText( "save low-battery-auto-save" );
+								}
 							}
 						}
 					}
@@ -916,8 +933,8 @@ LRESULT CGame::WindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			rcWindow.right = rcWindow.left + m_rcLastRestoredClientRect.right;
 			rcWindow.bottom = rcWindow.top + m_rcLastRestoredClientRect.bottom;
 
-			const DWORD windowStyle = ::GetWindowLong( hWnd, GWL_STYLE );
-			const DWORD windowExStyle = ::GetWindowLong( hWnd, GWL_EXSTYLE );
+			const DWORD windowStyle = ::GetWindowLong( hWnd, GWL_STYLE ); //-V303
+			const DWORD windowExStyle = ::GetWindowLong( hWnd, GWL_EXSTYLE ); //-V303
 			// dimhotepus: Honor DPI.
 			::AdjustWindowRectExForDpi( &rcWindow, windowStyle, FALSE, windowExStyle, ::GetDpiForWindow( hWnd ) ); //-V303 //-V2002
 			::MoveWindow( hWnd, rcWindow.left, rcWindow.top,
@@ -969,6 +986,22 @@ LRESULT CGame::WindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			UpdateDesktopInformation( wParam, lParam );
 		}
+		break;
+
+	case WM_SETTINGCHANGE:
+	{
+		// dimhotepus: Handle Dark / Light mode change.
+		const wchar_t *area = reinterpret_cast<const wchar_t *>( lParam );
+		if ( area && V_wcscmp( area, L"ImmersiveColorSet" ) == 0 )
+		{
+			// dimhotepus: Reapply Dark or Light mode if any and Mica styles to window title bar.
+			Plat_ApplySystemTitleBarTheme( hWnd, SystemBackdropType::MainWindow );
+		}
+		else
+		{
+			lRet = CallWindowProc( m_ChainedWindowProc, hWnd, uMsg, wParam, lParam );
+		}
+	}
 		break;
 
 	case WM_IME_NOTIFY:
@@ -1027,13 +1060,13 @@ bool CGame::CreateGameWindow( void )
 	if ( KeyValuesAD modinfo("ModInfo");
 		 modinfo->LoadFromFile(g_pFileSystem, "gameinfo.txt") )
 	{
-		V_strncpy( utf8_window_name, modinfo->GetString("game"), sizeof(utf8_window_name) );
+		V_strcpy_safe( utf8_window_name, modinfo->GetString("game") );
 	}
 
 	if (!utf8_window_name[0])
 	{
 		// dimhotepus: Not HALF-LIFE 2 when no info.
-		V_strncpy( utf8_window_name, "N/A", sizeof(utf8_window_name) );
+		V_strcpy_safe( utf8_window_name, "N/A" );
 	}
 
 	if ( IsOpenGL() )
@@ -1141,7 +1174,10 @@ bool CGame::CreateGameWindow( void )
 		Error( "Unable to create game window '%s': %s.\n", utf8_window_name, error.c_str() );
 		return false;
 	}
-	
+
+	// dimhotepus: Apply Dark mode if any and Mica styles to window title bar.
+	Plat_ApplySystemTitleBarTheme( hwnd, SystemBackdropType::MainWindow );
+
 	// NOTE: On some cards, CreateWindowExW slams the FPU control word
 	SetupFPUControlWord();
 
@@ -1471,7 +1507,7 @@ void CGame::PlayStartupVideos( void )
 	int vidFileLength;
 
 	// have to use the malloc memory allocation option in COM_LoadFile since the memory system isn't set up at this point.
-	const char *buffer = (char *) COM_LoadFile( pszFile, 5, &vidFileLength );
+	const char *buffer = (const char *) COM_LoadFile( pszFile, 5, &vidFileLength );
 	
 	if ((buffer == NULL) || (vidFileLength == 0))
 	{

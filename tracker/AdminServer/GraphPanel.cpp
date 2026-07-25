@@ -5,8 +5,6 @@
 // $NoKeywords: $
 //=============================================================================
 
-#include <stdio.h>
-
 #include "GraphPanel.h"
 
 #include <vgui/ISystem.h>
@@ -14,7 +12,6 @@
 #include <vgui/IVGui.h>
 #include <vgui/IScheme.h>
 #include <vgui/ILocalize.h>
-#include <tier1/KeyValues.h>
 
 #include <vgui_controls/Label.h>
 #include <vgui_controls/TextEntry.h>
@@ -26,6 +23,8 @@
 #include <vgui_controls/PHandle.h>
 #include <vgui_controls/PropertySheet.h>
 #include <vgui_controls/CheckButton.h>
+
+#include "tier1/KeyValues.h"
 
 constexpr inline double STATS_UPDATE_RATE{5.0};
 
@@ -46,7 +45,8 @@ using namespace vgui;
 //-----------------------------------------------------------------------------
 CGraphPanel::CGraphPanel(vgui::Panel *parent, const char *name) : PropertyPage(parent, name)
 {
-	SetMinimumSize(300,200);
+	// dimhotepus: Scale UI.
+	SetMinimumSize(QuickPropScale( 300 ),QuickPropScale( 200 ));
 
 	m_pGraphsPanel = new ImagePanel(this,"Graphs");
 	m_pGraphs = new CGraphsImage();
@@ -162,7 +162,8 @@ void CGraphPanel::PerformLayout()
 	{
 		int entry_x,entry_y;
 		entry->GetPos(entry_x,entry_y);
-		entry->SetPos(entry_x,y+(h/2)-8);
+		// dimhotepus: Scale UI.
+		entry->SetPos(entry_x,y+(h/2)-QuickPropScale( 8 ));
 	}
 }
 
@@ -188,7 +189,7 @@ void CGraphPanel::OnServerDataResponse(const char *value, const char *response)
 
 		// days:hours:minutes:seconds
 		char timeText[64];
-		V_sprintf_safe(timeText, "%i", (int)p.players);
+		V_to_chars(timeText, (int)p.players);
 		SetControlString("TotalUsersLabel", timeText);
 
 		// mark the vert combo has changed to force it to update graph ranges
@@ -697,9 +698,9 @@ void CGraphPanel::OnTextChanged(Panel *panel, const char *text)
 			int iMaxVal, iMinVal;
 			m_pGraphs->GetPlayerLimits(iMaxVal, iMinVal);
 
-			V_sprintf_safe(maxText,"%d", iMaxVal);
-			V_sprintf_safe(midText,"%d", (iMaxVal - iMinVal) / 2);
-			V_sprintf_safe(minText,"%d", iMinVal);
+			V_to_chars(maxText, iMaxVal);
+			V_to_chars(midText, (iMaxVal - iMinVal) / 2);
+			V_to_chars(minText, iMinVal);
 
 			SetAxisLabels(m_pGraphs->GetPlayersColor(), maxText, midText, minText);
 		}

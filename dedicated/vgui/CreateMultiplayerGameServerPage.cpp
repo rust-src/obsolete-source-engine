@@ -108,15 +108,16 @@ CCreateMultiplayerGameServerPage::CCreateMultiplayerGameServerPage(
   m_pSavedData = nullptr;
   m_pGameInfo = nullptr;
 
-  SetMinimumSize(310, 350);
-  SetSize(310, 350);
+  // dimhotepus: Scale UI.
+  SetMinimumSize(QuickPropScale(310), QuickPropScale(350));
+  SetSize(QuickPropScale(310), QuickPropScale(350));
   SetSizeable(false);
 
   SetTitle("#Start_Server_Title", true);
 
   m_pMapList = new ComboBox(this, "MapList", 10, false);
-  m_pMapList->SetEnabled(
-      false);  // a mod needs to be chosen first to populate the map list
+  // a mod needs to be chosen first to populate the map list
+  m_pMapList->SetEnabled(false);
   m_pMapList->SetEditable(false);
 
   m_pNetworkCombo = new ComboBox(this, "NetworkCombo", 10, false);
@@ -128,9 +129,9 @@ CCreateMultiplayerGameServerPage::CCreateMultiplayerGameServerPage(
   m_pNetworkCombo->ActivateItem(defaultItem);
 
   m_pNumPlayers = new ComboBox(this, "NumPlayers", 10, false);
-  char num[3];
+  char num[4];
   for (int i = 1; i <= MAX_PLAYERS; i++) {
-    V_sprintf_safe(num, "%i", i);
+    V_to_chars(num, i);
     m_pNumPlayers->AddItem(num, nullptr);
   }
   m_pNumPlayers->ActivateItemByRow(23);  // 24 players by default
@@ -317,7 +318,7 @@ bool CCreateMultiplayerGameServerPage::BadRconChars(const char *pass) {
 
 const char *ToString(int val) {
   static char text[256];
-  Q_snprintf(text, sizeof(text), "%i", val);
+  V_to_chars(text, val);
   return text;
 }
 
@@ -523,8 +524,8 @@ void CCreateMultiplayerGameServerPage::LoadModListInDirectory(
     const char *pDirectoryName) {
   char searchString[MAX_PATH * 2];
   V_strcpy_safe(searchString, pDirectoryName);
-  Q_AppendSlash(searchString, sizeof(searchString));
-  Q_strncat(searchString, "*.*", sizeof(searchString), COPY_ALL_CHARACTERS);
+  V_AppendSlash(searchString);
+  V_strcat_safe(searchString, "*.*");
 
   FileFindHandle_t findHandle = FILESYSTEM_INVALID_FIND_HANDLE;
   const char *filename =
@@ -540,9 +541,8 @@ void CCreateMultiplayerGameServerPage::LoadModListInDirectory(
         V_strcpy_safe(fullFilename, filename);
       } else {
         V_strcpy_safe(fullFilename, pDirectoryName);
-        Q_AppendSlash(fullFilename, sizeof(fullFilename));
-        Q_strncat(fullFilename, filename, sizeof(fullFilename),
-                  COPY_ALL_CHARACTERS);
+        V_AppendSlash(fullFilename);
+        V_strcat_safe(fullFilename, filename);
       }
 
       LoadPossibleMod(fullFilename);
@@ -556,8 +556,7 @@ void CCreateMultiplayerGameServerPage::LoadModListInDirectory(
 void CCreateMultiplayerGameServerPage::LoadPossibleMod(
     const char *pGameDirName) {
   char gameInfoFilename[1024];
-  Q_snprintf(gameInfoFilename, sizeof(gameInfoFilename) - 1, "%s\\gameinfo.txt",
-             pGameDirName);
+  V_sprintf_safe(gameInfoFilename, "%s\\gameinfo.txt", pGameDirName);
   if (!g_pFullFileSystem->FileExists(gameInfoFilename)) return;
 
   // don't want to add single player games to the list
@@ -702,13 +701,18 @@ void CCreateMultiplayerGameServerPage::LoadMapList() {
     }
   }
 
-  // Load the maps for the GameDir
-  iMapsFound += LoadMaps(m_szMod);
+  {
+    // dimhotepus: This can take a while, put up a waiting cursor.
+    const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
 
-  // If we're using a "fallback_dir" in liblist.gam then include those maps...
-  const char *pszFallback = GetLiblistFallbackDir(m_szMod);
-  if (pszFallback[0]) {
-    iMapsFound += LoadMaps(pszFallback);
+    // Load the maps for the GameDir
+    iMapsFound += LoadMaps(m_szMod);
+
+    // If we're using a "fallback_dir" in liblist.gam then include those maps...
+    const char *pszFallback = GetLiblistFallbackDir(m_szMod);
+    if (pszFallback[0]) {
+      iMapsFound += LoadMaps(pszFallback);
+    }
   }
 
   if (iMapsFound < 1) {

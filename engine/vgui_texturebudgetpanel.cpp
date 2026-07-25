@@ -25,16 +25,16 @@ static void TextureCVarChangedCallBack( IConVar *pConVar, const char *pOldString
 
 ConVar texture_budget_panel_global( "texture_budget_panel_global", "0", 0, "Show global times in the texture budget panel." );
 ConVar showbudget_texture( "showbudget_texture", "0", FCVAR_CHEAT, "Enable the texture budget panel." );
-ConVar showbudget_texture_global_sum( "showbudget_texture_global_sum", "0.0f" );
+ConVar showbudget_texture_global_sum( "showbudget_texture_global_sum", "0.0" );
 
 
 // Commands to turn on the texture budget panel, with per-FRAME settings.
-void showbudget_texture_on_f()
+static void showbudget_texture_on_f()
 {
 	texture_budget_panel_global.SetValue( 0 );
 	showbudget_texture.SetValue( 1 );
 }
-void showbudget_texture_off_f()
+static void showbudget_texture_off_f()
 {
 	showbudget_texture.SetValue( 0 );
 }
@@ -43,12 +43,12 @@ ConCommand showbudget_texture_off( "-showbudget_texture", showbudget_texture_off
 
 
 // Commands to turn on the texture budget panel, with GLOBAL settings.
-void showbudget_texture_global_on_f()
+static void showbudget_texture_global_on_f()
 {
 	texture_budget_panel_global.SetValue( 1 );
 	showbudget_texture.SetValue( 1 );
 }
-void showbudget_texture_global_off_f()
+static void showbudget_texture_global_off_f()
 {
 	showbudget_texture.SetValue( 0 );
 }
@@ -62,7 +62,8 @@ ConVar texture_budget_panel_width( "texture_budget_panel_width", "512", FCVAR_AR
 ConVar texture_budget_panel_height( "texture_budget_panel_height", "284", FCVAR_ARCHIVE, "height in pixels of the budget panel", TextureCVarChangedCallBack );
 ConVar texture_budget_panel_bottom_of_history_fraction( "texture_budget_panel_bottom_of_history_fraction", ".25", FCVAR_ARCHIVE, "number between 0 and 1", TextureCVarChangedCallBack );
 
-ConVar texture_budget_background_alpha( "texture_budget_background_alpha", "128", FCVAR_ARCHIVE, "how translucent the budget panel is" );
+// dimhotepus: Limit alpha to 0..255 byte range.
+ConVar texture_budget_background_alpha( "texture_budget_background_alpha", "128", FCVAR_ARCHIVE, "how translucent the budget panel is", true, 0, true, 255 );
 
 
 CTextureBudgetPanel *GetTextureBudgetPanel( void )
@@ -107,20 +108,14 @@ CTextureBudgetPanel::~CTextureBudgetPanel()
 	}
 }
 
-			 
+
 void CTextureBudgetPanel::OnTick()
 {
 	BaseClass::OnTick();
-	if ( showbudget_texture.GetBool() )
-	{
-		m_pModeLabel->SetVisible( true );
-		SetVisible( true );
-	}
-	else
-	{
-		m_pModeLabel->SetVisible( false );
-		SetVisible( false );
-	}
+
+	const bool isVisible = showbudget_texture.GetBool();
+	m_pModeLabel->SetVisible( isVisible );
+	SetVisible( isVisible );
 }
 
 
@@ -139,18 +134,20 @@ void CTextureBudgetPanel::SendConfigDataToBase()
 	CBudgetPanelConfigData data;
 
 	// Copy the budget group names in.
+	// dimhotepus: Cache loop invariants.
+	const auto currentCounterGroup = GetCurrentCounterGroup();
+	constexpr const char *pPrefixes[2] = { "TexGroup_global_", "TexGroup_frame_" };
+	char alternateName[256];
+
 	for ( int i=0; i < g_VProfCurrentProfile.GetNumCounters(); i++ )
 	{
-		if ( g_VProfCurrentProfile.GetCounterGroup( i ) == GetCurrentCounterGroup() )
+		if ( g_VProfCurrentProfile.GetCounterGroup( i ) == currentCounterGroup )
 		{		
 			// Strip off the TexGroup__ prefix.
 			const char *pGroupName = g_VProfCurrentProfile.GetCounterName( i );
-			char alternateName[256];
 
-			const char *pPrefixes[2] = { "TexGroup_global_", "TexGroup_frame_" };
 			for ( int iPrefix=0; iPrefix < 2; iPrefix++ )
 			{
-
 				if ( strstr( pGroupName, pPrefixes[iPrefix] ) == pGroupName )
 				{
 					intp len = V_strlen( pPrefixes[iPrefix] );
@@ -185,17 +182,33 @@ void CTextureBudgetPanel::SendConfigDataToBase()
 
 	// Use the middle three fifths for history labels.
 	data.m_HistoryLabelValues.SetSize( 3 );
-	for ( int i=0; i < data.m_HistoryLabelValues.Count(); i++ )
+	for ( intp i=0; i < data.m_HistoryLabelValues.Count(); i++ )
 	{
 		data.m_HistoryLabelValues[i] = (i+1) * data.m_flHistoryRange / 4;
 	}
 
 	data.m_flBackgroundAlpha = texture_budget_background_alpha.GetFloat();
 	
+	// 0 by default.
 	data.m_xCoord = texture_budget_panel_x.GetInt();
 	data.m_yCoord = texture_budget_panel_y.GetInt();
+	// dimhotepus: Scale default values.
+	if ( data.m_yCoord == 450 )
+	{
+		data.m_yCoord = QuickPropScale( data.m_yCoord );
+	}
 	data.m_Width = texture_budget_panel_width.GetInt();
+	// dimhotepus: Scale default values.
+	if ( data.m_Width == 512 )
+	{
+		data.m_Width = QuickPropScale( data.m_Width );
+	}
 	data.m_Height = texture_budget_panel_height.GetInt();
+	// dimhotepus: Scale default values.
+	if ( data.m_Height == 284 )
+	{
+		data.m_Height = QuickPropScale( data.m_Height );
+	}
 
 	// Shift it..
 	if ( data.m_xCoord + data.m_Width > videomode->GetModeStereoWidth() )
@@ -224,7 +237,8 @@ void CTextureBudgetPanel::PerformLayout()
 
 	m_pModeLabel->SetText( pStr );
 	int width = g_pMatSystemSurface->DrawTextLen( m_pModeLabel->GetFont(), "%s", pStr );
-	m_pModeLabel->SetSize( width + 10, m_pModeLabel->GetTall() );
+	// dimhotepus: Scale UI.
+	m_pModeLabel->SetSize( width + QuickPropScale( 10 ), m_pModeLabel->GetTall() );
 
 	int x, y;
 	GetPos( x, y );
@@ -256,9 +270,11 @@ void CTextureBudgetPanel::SnapshotTextureHistory()
 	CVProfile *pProf = &g_VProfCurrentProfile;
 
 	m_SumOfValues = 0;
+	// dimhotepus: Cache loop invariants.
+	const auto currentCounterGroup1 = GetCurrentCounterGroup();
 	for ( int i=0; i < pProf->GetNumCounters(); i++ )
 	{
-		if ( pProf->GetCounterGroup( i ) == GetCurrentCounterGroup() )
+		if ( pProf->GetCounterGroup( i ) == currentCounterGroup1 )
 		{
 			// The counters are in bytes and the panel is all in kilobytes.
 			uintp value = pProf->GetCounterValue( i ) / 1024;
@@ -288,9 +304,11 @@ void CTextureBudgetPanel::SnapshotTextureHistory()
 
 	// Count up the current number of counters.
 	int nCounters = 0;
+	// dimhotepus: Cache loop invariants.
+	const auto currentCounterGroup2 = GetCurrentCounterGroup();
 	for ( int i=0; i < g_VProfCurrentProfile.GetNumCounters(); i++ )
 	{
-		if ( g_VProfCurrentProfile.GetCounterGroup( i ) == GetCurrentCounterGroup() )
+		if ( g_VProfCurrentProfile.GetCounterGroup( i ) == currentCounterGroup2 )
 			++nCounters;
 	}
 
@@ -305,9 +323,11 @@ void CTextureBudgetPanel::SnapshotTextureHistory()
 	m_BudgetHistoryOffset = ( m_BudgetHistoryOffset + 1 ) % BUDGET_HISTORY_COUNT;
 
 	int groupID = 0;
+	// dimhotepus: Cache loop invariants.
+	const auto currentCounterGroup3 = GetCurrentCounterGroup();
 	for ( int i=0; i < pProf->GetNumCounters(); i++ )
 	{
-		if ( pProf->GetCounterGroup( i ) == GetCurrentCounterGroup() )
+		if ( pProf->GetCounterGroup( i ) == currentCounterGroup3 )
 		{
 			// The counters are in bytes and the panel is all in kilobytes.
 			uintp value = pProf->GetCounterValue( i ) / 1024;
@@ -320,10 +340,10 @@ void CTextureBudgetPanel::SnapshotTextureHistory()
 
 void CTextureBudgetPanel::SetTimeLabelText()
 {
-	for ( int i=0; i < m_TimeLabels.Count(); i++ )
+	for ( intp i=0; i < m_TimeLabels.Count(); i++ )
 	{
 		char text[512];
-		Q_snprintf( text, sizeof( text ), "%.1fM", (float)( i * GetConfigData().m_flTimeLabelInterval ) / 1024 );
+		V_sprintf_safe( text, "%.1fM", (float)( i * GetConfigData().m_flTimeLabelInterval ) / 1024 );
 		m_TimeLabels[i]->SetText( text );
 	}
 }
@@ -331,10 +351,10 @@ void CTextureBudgetPanel::SetTimeLabelText()
 
 void CTextureBudgetPanel::SetHistoryLabelText()
 {
-	for ( int i=0; i < m_HistoryLabels.Count(); i++ )
+	for ( intp i=0; i < m_HistoryLabels.Count(); i++ )
 	{
 		char text[512];
-		Q_snprintf( text, sizeof( text ), "%.1fM", GetConfigData().m_HistoryLabelValues[i] / 1024 );
+		V_sprintf_safe( text, "%.1fM", GetConfigData().m_HistoryLabelValues[i] / 1024 );
 		m_HistoryLabels[i]->SetText( text );
 	}
 }

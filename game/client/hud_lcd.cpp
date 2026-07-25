@@ -42,11 +42,7 @@ constexpr inline int DT_RIGHT = 3;
 #include "tier0/memdbgon.h"
 
 #define G15_RESOURCE_FILE "resource/g15.res"
-#ifdef PLATFORM_64BITS
-#define G15_MODULE_NAME "bin/x64/g15.dll"
-#else
-#define G15_MODULE_NAME "bin/g15.dll"
-#endif
+#define G15_MODULE_NAME PLATFORM_BIN_DIR CORRECT_PATH_SEPARATOR_S "g15" DLL_EXT_STRING
 
 #define SMALL_ITEM_HEIGHT	10
 #define G15_DEFAULT_MAX_CHAT_HISTORY 4
@@ -514,8 +510,8 @@ void CLCD::ShowItems_R( CLCDPage *page, unsigned int dwCurTime, CUtlVector< CLCD
 					int subPage = 0;
 					int spItems = 0;
 
-					int ecount = validIndices.Count();
-					for ( int e = 0; e < ecount; ++e )
+					intp ecount = validIndices.Count();
+					for ( intp e = 0; e < ecount; ++e )
 					{
 						// Now fixup any strings
 						int index = validIndices[ e ];
@@ -525,7 +521,7 @@ void CLCD::ShowItems_R( CLCDPage *page, unsigned int dwCurTime, CUtlVector< CLCD
 						V_to_chars( s2, index + 1 );
 						
 						// Now replace "playerindex" with the index as needed
-						for( int r = 0; r < ag->m_Definition.Count(); ++r )
+						for( intp r = 0; r < ag->m_Definition.Count(); ++r )
 						{
 							CLCDItem *newItem = NULL;
 
@@ -1380,11 +1376,11 @@ void CLCD::LookupToken( char const *in, CUtlString& value )
 		Q_snprintf( sz, sizeof( sz ), "%s", *( ( const bool *)pInputData + iIndex ) ? "true" : "false" );
 		break;
 	case FIELD_INTEGER:
-		Q_snprintf( sz, sizeof( sz ), "%i", *( (const int *)pInputData + iIndex ));
+		V_to_chars( sz, *( (const int *)pInputData + iIndex ));
 		break;
 		
 	case FIELD_SHORT:
-		Q_snprintf( sz, sizeof( sz ), "%i", *( (const short *)pInputData + iIndex ) );
+		V_to_chars( sz, *( (const short *)pInputData + iIndex ) );
 		break;
 		
 	case FIELD_CHARACTER:

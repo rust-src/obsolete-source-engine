@@ -4,18 +4,18 @@
 //
 //===========================================================================//
 
-#include "InfoTargetPropertiesPanel.h"
+#include "infotargetpropertiespanel.h"
 #include "tier1/KeyValues.h"
 #include "tier1/utlbuffer.h"
 #include "iregistry.h"
-#include "vgui/ivgui.h"
-#include "vgui_controls/listpanel.h"
-#include "vgui_controls/textentry.h"
-#include "vgui_controls/checkbutton.h"
-#include "vgui_controls/combobox.h"
-#include "vgui_controls/radiobutton.h"
-#include "vgui_controls/messagebox.h"
-#include "vgui_controls/scrollbar.h"
+#include "vgui/IVGui.h"
+#include "vgui_controls/ListPanel.h"
+#include "vgui_controls/TextEntry.h"
+#include "vgui_controls/CheckButton.h"
+#include "vgui_controls/ComboBox.h"
+#include "vgui_controls/RadioButton.h"
+#include "vgui_controls/MessageBox.h"
+#include "vgui_controls/ScrollBar.h"
 #include "vcdblockdoc.h"
 #include "vcdblocktool.h"
 #include "datamodel/dmelement.h"
@@ -23,7 +23,7 @@
 #include "dme_controls/soundpicker.h"
 #include "dme_controls/soundrecordpanel.h"
 #include "matsys_controls/picker.h"
-#include "vgui_controls/fileopendialog.h"
+#include "vgui_controls/FileOpenDialog.h"
 #include "filesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -33,12 +33,12 @@ using namespace vgui;
 
 class CScrollableEditablePanel : public vgui::EditablePanel
 {
-	DECLARE_CLASS_SIMPLE( CScrollableEditablePanel, vgui::EditablePanel );
+	DECLARE_CLASS_SIMPLE_OVERRIDE( CScrollableEditablePanel, vgui::EditablePanel );
 
 public:
 	CScrollableEditablePanel( vgui::Panel *pParent, vgui::EditablePanel *pChild, const char *pName );
 	virtual ~CScrollableEditablePanel() {}
-	virtual void PerformLayout();
+	void PerformLayout() override;
 
 	MESSAGE_FUNC( OnScrollBarSliderMoved, "ScrollBarSliderMoved" );
 
@@ -55,8 +55,8 @@ CScrollableEditablePanel::CScrollableEditablePanel( vgui::Panel *pParent, vgui::
 	m_pChild->SetParent( this );
 
 	m_pScrollBar = new vgui::ScrollBar( this, "VerticalScrollBar", true ); 
-	m_pScrollBar->SetWide( 16 );
-	m_pScrollBar->SetAutoResize( PIN_TOPRIGHT, AUTORESIZE_DOWN, 0, 0, -16, 0 );
+	m_pScrollBar->SetWide( QuickPropScale( 16 ) );
+	m_pScrollBar->SetAutoResize( PIN_TOPRIGHT, AUTORESIZE_DOWN, 0, 0, QuickPropScale( -16 ), 0 );
 	m_pScrollBar->AddActionSignalTarget( this );
 }
 
@@ -64,7 +64,7 @@ void CScrollableEditablePanel::PerformLayout()
 {
 	BaseClass::PerformLayout();
 
-	m_pChild->SetWide( GetWide() - 16 );
+	m_pChild->SetWide( GetWide() - QuickPropScale( 16 ) );
 	m_pScrollBar->SetRange( 0, m_pChild->GetTall() );
 	m_pScrollBar->SetRangeWindow( GetTall() );
 }
@@ -125,7 +125,7 @@ CInfoTargetPropertiesPanel::CInfoTargetPropertiesPanel( CVcdBlockDoc *pDoc, vgui
 //-----------------------------------------------------------------------------
 void CInfoTargetPropertiesPanel::TextEntryToAttribute( vgui::TextEntry *pEntry, const char *pAttributeName )
 {
-	int nLen = pEntry->GetTextLength();
+	intp nLen = pEntry->GetTextLength();
 	char *pBuf = (char*)_alloca( nLen+1 );
 	pEntry->GetText( pBuf, nLen+1 );
 	m_hEntity->SetValue( pAttributeName, pBuf );
@@ -136,10 +136,11 @@ void CInfoTargetPropertiesPanel::TextEntriesToVector( vgui::TextEntry *pEntry[3]
 	Vector vec;
 	for ( int i = 0; i < 3; ++i )
 	{
-		int nLen = pEntry[i]->GetTextLength();
+		intp nLen = pEntry[i]->GetTextLength();
 		char *pBuf = (char*)_alloca( nLen+1 );
 		pEntry[i]->GetText( pBuf, nLen+1 );
-		vec[i] = atof( pBuf );
+		// dimhotepus: atof -> strtof.
+		vec[i] = strtof( pBuf, nullptr );
 	}
 	m_hEntity->SetValue( pAttributeName, vec );
 	clienttools->MarkClientRenderableDirty( m_hEntity );

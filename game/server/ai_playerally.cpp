@@ -209,7 +209,7 @@ void CAI_AllySpeechManager::OnSpokeConcept( CAI_PlayerAlly *pPlayerAlly, AIConce
 		{
 			CAI_BaseNPC **ppAIs = g_AI_Manager.AccessAIs();
 			CAI_PlayerAlly *pTalker;
-			for ( int i = 0; i < g_AI_Manager.NumAIs(); i++ )
+			for ( intp i = 0; i < g_AI_Manager.NumAIs(); i++ )
 			{
 				pTalker = dynamic_cast<CAI_PlayerAlly *>(ppAIs[i]);
 
@@ -775,12 +775,12 @@ void CAI_PlayerAlly::PostSpeakDispatchResponse( AIConcept_t concept, AI_Response
 		// Set the input parameter to the random number we used to find the Question
 		variant_t value;
 		value.SetInt( m_iQARandomNumber );
-		g_EventQueue.AddEvent( GetSpeechTarget(), pszInput, value, duration + .2, this, this );
+		g_EventQueue.AddEvent( GetSpeechTarget(), pszInput, value, duration + .2f, this, this );
 
 		if ( GetSpeechTarget()->MyNPCPointer() )
 		{
-			AddLookTarget( GetSpeechTarget()->MyNPCPointer(), 1.0, duration + random->RandomFloat( 0.4, 1.2 ), 0.5 );
-			GetSpeechTarget()->MyNPCPointer()->AddLookTarget( this, 1.0, duration + random->RandomFloat( 0.4, 1 ), 0.7 );
+			AddLookTarget( GetSpeechTarget()->MyNPCPointer(), 1.0f, duration + random->RandomFloat( 0.4f, 1.2f ), 0.5f );
+			GetSpeechTarget()->MyNPCPointer()->AddLookTarget( this, 1.0f, duration + random->RandomFloat( 0.4f, 1 ), 0.7f );
 		}
 
 		// Don't let anyone else butt in.
@@ -1308,11 +1308,10 @@ CBaseEntity *CAI_PlayerAlly::FindSpeechTarget( int flags )
 	float 			closestDistSq 	= FLT_MAX;
 	CBaseEntity *	pNearest 		= NULL;
 	float			distSq;
-	int				i;
 	
 	if ( flags & AIST_PLAYERS )
 	{
-		for ( i = 1; i <= gpGlobals->maxClients; i++ )
+		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
 		{
 			CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
 			if ( pPlayer )
@@ -1339,7 +1338,7 @@ CBaseEntity *CAI_PlayerAlly::FindSpeechTarget( int flags )
 	
 	if ( flags & AIST_NPCS )
 	{
-		for ( i = 0; i < g_AI_Manager.NumAIs(); i++ )
+		for ( intp i = 0; i < g_AI_Manager.NumAIs(); i++ )
 		{
 			CAI_BaseNPC *pNPC = (g_AI_Manager.AccessAIs())[i];
 

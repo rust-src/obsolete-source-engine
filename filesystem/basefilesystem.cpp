@@ -19,6 +19,8 @@
 #include "zip_utils.h"
 #include "packfile.h"
 
+#include "posix_file_stream.h"
+
 #ifndef DEDICATED
 #include "keyvaluescompiler.h"
 #endif
@@ -87,12 +89,12 @@ static void LogFileOpen( const char *vpk, const char *pFilename, const char *pAb
 		return;
 
 	// Open file for write or append
-	FILE *f = fopen( "opened_files.txt", mode );
-	Assert( f );
-	if ( f )
+	auto [f, rc] = se::posix::posix_file_stream_factory::open( "opened_files.txt", mode );
+	Assert( !rc );
+	if ( !rc )
 	{
-		fprintf( f, "%s, %s, %s\n", vpk, pFilename, pAbsPath );
-		fclose(f);
+		std::tie(std::ignore, rc) = f.print( "%s, %s, %s\n", vpk, pFilename, pAbsPath );
+		Assert( !rc );
 
 		// If this was the first time, switch from write to append for further writes
 		mode = "at";
@@ -295,6 +297,9 @@ CBaseFileSystem::CBaseFileSystem()
 
 	// allows very specifc constrained behavior
 	m_DVDMode = DVDMODE_OFF;
+
+	m_pBaseDir[0] = '\0';
+	m_iBaseLength = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -420,38 +425,41 @@ void CBaseFileSystem::Shutdown()
 		if( CommandLine()->FindParm( "-fs_logbins" ) >= 0 )
 		{
 			char cwd[MAX_FILEPATH];
-			getcwd( cwd, MAX_FILEPATH-1 );
+			if( !getcwd( cwd, MAX_FILEPATH-1 ) ) 
+			{
+				// dimhotepus: Warn if getcwd failed.
+				Warning(FileWarningLevel_t::FILESYSTEM_WARNING, "Enable to get cd: %s.\n", strerror(errno));
+			}
 			fprintf( m_pLogFile, "set binsrc=\"%s\"\n", cwd );
 			fprintf( m_pLogFile, "mkdir \"%%fs_target%%\"\n" );
 			fprintf( m_pLogFile, "copy \"%%binsrc%%\\hl2.exe\" \"%%fs_target%%\"\n" );
 			fprintf( m_pLogFile, "copy \"%%binsrc%%\\hl2.dat\" \"%%fs_target%%\"\n" );
-			fprintf( m_pLogFile, "mkdir \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\*.asi\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\materialsystem.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\shaderapidx9.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\filesystem_stdio.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\soundemittersystem.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\stdshader*.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\shader_nv*.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\launcher.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\engine.dll\" \"%%fs_target%%\\bin\"\n" );
+			fprintf( m_pLogFile, "mkdir \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\*.asi\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\materialsystem.dll\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\shaderapidx9.dll\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\filesystem_stdio.dll\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\soundemittersystem.dll\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\stdshader*.dll\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\launcher.dll\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\engine.dll\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
 
 #ifdef _WIN64
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\mss64.dll\" \"%%fs_target%%\\bin\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\mss64.dll\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
 #else
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\mss32.dll\" \"%%fs_target%%\\bin\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\mss32.dll\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
 #endif
 
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\tier0.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\vgui2.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\vguimatsurface.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\voice_miles.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\vphysics.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\vstdlib.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\studiorender.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\vaudio_miles.dll\" \"%%fs_target%%\\bin\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\tier0.dll\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\vgui2.dll\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\vguimatsurface.dll\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\voice_miles.dll\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\vphysics.dll\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\vstdlib.dll\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\studiorender.dll\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\" PLATFORM_BIN_DIR "\\vaudio_miles.dll\" \"%%fs_target%%\\" PLATFORM_BIN_DIR "\"\n" );
 			fprintf( m_pLogFile, "copy \"%%binsrc%%\\hl2\\resource\\*.ttf\" \"%%fs_target%%\\hl2\\resource\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\hl2\\bin\\gameui.dll\" \"%%fs_target%%\\hl2\\bin\"\n" );
+			fprintf( m_pLogFile, "copy \"%%binsrc%%\\hl2\\" PLATFORM_BIN_DIR "\\gameui.dll\" \"%%fs_target%%\\hl2\\" PLATFORM_BIN_DIR "\"\n" );
 		}
 		fprintf( m_pLogFile, "goto done\n" );
 		fprintf( m_pLogFile, ":error\n" );
@@ -755,13 +763,13 @@ void CBaseFileSystem::AddVPKFile( char const *pPath, const char *pPathID, Search
 
 	// See if we already have this vpk file as a search path
 	CPackedStoreRefCount *pVPK = nullptr;
-	for ( intp i = 0; i < m_SearchPaths.Count(); i++ )
+	for ( auto &s : m_SearchPaths )
 	{
-		CPackedStoreRefCount *p = m_SearchPaths[i].GetPackedStore();
+		CPackedStoreRefCount *p = s.GetPackedStore();
 		if ( p && V_stricmp( p->FullPathName(), nameBuf ) == 0 )
 		{
 			// Already present
-			if ( m_SearchPaths[i].GetPath() == pathIDSym )
+			if ( s.GetPath() == pathIDSym )
 				return;
 
 			// Present, but for a different path
@@ -865,12 +873,12 @@ bool CBaseFileSystem::AddPackFileFromPath( const char *pPath, const char *pakfil
 		return false;
 	}
 
-	// NOTE: Opening .bsp fiels inside of VPK files is not supported
+	// NOTE: Opening .bsp fields inside of VPK files is not supported
 
 	// Get the length of the pack file:
-	FS_fseek( ( FILE * )pf->m_hPackFileHandleFS, 0, FILESYSTEM_SEEK_TAIL );
-	int64 len = FS_ftell( ( FILE * )pf->m_hPackFileHandleFS );
-	FS_fseek( ( FILE * )pf->m_hPackFileHandleFS, 0, FILESYSTEM_SEEK_HEAD );
+	// dimhotepus: FS_fseek now returns offset.
+	int64 len = FS_fseek( pf->m_hPackFileHandleFS, 0, FILESYSTEM_SEEK_TAIL );
+	FS_fseek( pf->m_hPackFileHandleFS, 0, FILESYSTEM_SEEK_HEAD );
 
 	if ( !pf->Prepare( len ) )
 	{
@@ -1221,7 +1229,7 @@ void CBaseFileSystem::BeginMapAccess()
 			if ( pPackFile && pPackFile->m_bIsMapPath )
 			{
 				pPackFile->AddRef();
-				pPackFile->m_mutex.Lock();
+				AUTO_LOCK(pPackFile->m_mutex);
 
 #if defined( SUPPORT_PACKED_STORE )
 				if ( pPackFile->m_nOpenFiles == 0 && pPackFile->m_hPackFileHandleFS == nullptr && !pPackFile->m_hPackFileHandleVPK )
@@ -1241,7 +1249,6 @@ void CBaseFileSystem::BeginMapAccess()
 //#endif
 				}
 				pPackFile->m_nOpenFiles++;
-				pPackFile->m_mutex.Unlock();
 			}
 		}
 	}
@@ -1258,9 +1265,8 @@ void CBaseFileSystem::EndMapAccess()
 
 			if ( pPackFile && pPackFile->m_bIsMapPath )
 			{
-				pPackFile->m_mutex.Lock();
-				pPackFile->m_nOpenFiles--;
-				if ( pPackFile->m_nOpenFiles == 0  )
+				AUTO_LOCK(pPackFile->m_mutex);
+				if ( --pPackFile->m_nOpenFiles == 0  )
 				{
 					if ( pPackFile->m_hPackFileHandleFS )
 					{
@@ -1268,7 +1274,6 @@ void CBaseFileSystem::EndMapAccess()
 						pPackFile->m_hPackFileHandleFS = nullptr;
 					}
 				}
-				pPackFile->m_mutex.Unlock();
 				pPackFile->Release();
 			}
 		}
@@ -1335,9 +1340,9 @@ void CBaseFileSystem::AddSearchPathInternal( const char *pPath, const char *path
 
 	// Clean up the name
 	char newPath[ MAX_FILEPATH ];
-	if ( pPath[0] == 0 )
+	if ( Q_isempty( pPath ) )
 	{
-		newPath[0] = newPath[1] = 0;
+		newPath[0] = newPath[1] = '\0';
 	}
 	else
 	{
@@ -1355,14 +1360,19 @@ void CBaseFileSystem::AddSearchPathInternal( const char *pPath, const char *path
 		AddSeperatorAndFixPath( newPath );
 	}
 
+	// dimhotepus: As Raphael suggested, cache base path here.
+	if ( V_strcmp( pathID, "BASE_PATH" ) == 0 )
+	{
+		V_strcpy_safe( m_pBaseDir, newPath );
+		m_iBaseLength = V_strlen( m_pBaseDir );
+	}
+	
 	// Make sure that it doesn't already exist
-	CUtlSymbol pathSym, pathIDSym;
-	pathSym = g_PathIDTable.AddString( newPath );
-	pathIDSym = g_PathIDTable.AddString( pathID );
-	intp i;
+	CUtlSymbol pathSym = g_PathIDTable.AddString( newPath );
+	CUtlSymbol pathIDSym = g_PathIDTable.AddString( pathID );
 	intp c = m_SearchPaths.Count();
 	int id = 0;
-	for ( i = 0; i < c; i++ )
+	for ( intp i = 0; i < c; i++ )
 	{
 		CSearchPath *pSearchPath = &m_SearchPaths[i];
 		if ( pSearchPath->GetPath() == pathSym && pSearchPath->GetPathID() == pathIDSym )
@@ -1420,10 +1430,10 @@ void CBaseFileSystem::AddSearchPathInternal( const char *pPath, const char *path
 //-----------------------------------------------------------------------------
 CBaseFileSystem::CSearchPath *CBaseFileSystem::FindSearchPathByStoreId( int storeId )
 {
-	FOR_EACH_VEC( m_SearchPaths, i )
+	for ( auto &s : m_SearchPaths )
 	{
-		if ( m_SearchPaths[i].m_storeId == storeId )
-			return &m_SearchPaths[i];
+		if ( s.m_storeId == storeId )
+			return &s;
 	}
 
 	return nullptr;
@@ -1434,20 +1444,19 @@ CBaseFileSystem::CSearchPath *CBaseFileSystem::FindSearchPathByStoreId( int stor
 //-----------------------------------------------------------------------------
 void CBaseFileSystem::AddSearchPath( const char *pPath, const char *pathID, SearchPathAdd_t addType )
 {
-	intp currCount = m_SearchPaths.Count();
+	[[maybe_unused]] const intp oldPathsCount = m_SearchPaths.Count();
 
 	AddSearchPathInternal( pPath, pathID, addType, true );
 
-	if ( currCount != m_SearchPaths.Count() )
+#ifdef _DEBUG
+	if ( oldPathsCount != m_SearchPaths.Count() )
 	{
 #if !defined( DEDICATED )
-		if ( IsDebug() )
-		{
-			// spew updated search paths
-			// PrintSearchPaths();
-		}
+		// spew updated search paths
+		// PrintSearchPaths();
 #endif
 	}
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1981,7 +1990,12 @@ void CBaseFileSystem::LogFileAccess( const char *pFullFileName )
 	fprintf( m_pLogFile, "%s", buf ); // STEAM OK
 #else
 	char cwd[MAX_FILEPATH];
-	getcwd( cwd, MAX_FILEPATH-1 );
+	if( !getcwd( cwd, MAX_FILEPATH-1 ) ) 
+	{
+		// dimhotepus: Warn if getcwd failed.
+		Warning(FileWarningLevel_t::FILESYSTEM_WARNING, "Enable to get cd: %s.\n", strerror(errno));
+		return;
+	}
 	V_strcat_safe( cwd, "\\" );
 	const size_t cwdLen = strlen( cwd );
 	if( Q_strnicmp( cwd, pFullFileName, cwdLen ) == 0 )
@@ -4093,7 +4107,7 @@ void CBaseFileSystem::GetLocalCopy( const char *pFileName )
 //          *pFixedUpFileName - a buffer to put the converted filename into
 //          sizeFixedUpFileName - the size of the above buffer in chars 
 //-----------------------------------------------------------------------------
-bool CBaseFileSystem::FixUpPath( const char *pFileName, char *pFixedUpFileName, int sizeFixedUpFileName )
+bool CBaseFileSystem::FixUpPath( const char *pFileName, OUT_Z_CAP(sizeFixedUpFileName) char *pFixedUpFileName, int sizeFixedUpFileName )
 {
 	//  If appropriate fixes up the filename to ensure that it's handled properly by the system.
 	//
@@ -4107,21 +4121,14 @@ bool CBaseFileSystem::FixUpPath( const char *pFileName, char *pFixedUpFileName, 
 	}
 	else 
 	{
-		//  Get the BASE_PATH, skip past  - if necessary, and lowercase the rest
-		//  Not just yet...
-		char pBaseDir[MAX_PATH];
-
-		//  Need to get "BASE_PATH" from the filesystem paths, and then check this name against it.
-		//
-		const int iBaseLength = GetSearchPath_safe( "BASE_PATH", true, pBaseDir );
-		if ( iBaseLength )
+		// raphael: BASE_PATH already in m_pBaseDir as quering it here wastes performance.
+		// If the first part of the pFixedUpFilename is pBaseDir
+		// then lowercase the part after that.
+		if ( !Q_isempty(m_pBaseDir) && m_iBaseLength > 0 &&
+			(m_iBaseLength+1 < V_strlen( pFixedUpFileName ) ) &&
+			(0 != V_strncmp( m_pBaseDir, pFixedUpFileName, m_iBaseLength ) )  )
 		{
-			//  If the first part of the pFixedUpFilename is pBaseDir
-			//  then lowercase the part after that.
-			if ( *pBaseDir && (iBaseLength+1 < V_strlen( pFixedUpFileName ) ) && (0 != V_strncmp( pBaseDir, pFixedUpFileName, iBaseLength ) )  )
-			{
-				V_strlower( &pFixedUpFileName[iBaseLength-1] );
-			}
+			V_strlower( &pFixedUpFileName[m_iBaseLength-1] );
 		}
 	}
 
@@ -5226,7 +5233,7 @@ void CFileHandle::SetBufferSize( int nBytes )
 	}
 }
 
-int CFileHandle::Read( void* pBuffer, int nLength )
+int CFileHandle::Read( OUT_BYTECAP(nLength) void* pBuffer, int nLength )
 {
 	Assert( IsValid() );
 	return Read( pBuffer, -1, nLength );
@@ -5301,9 +5308,8 @@ int CFileHandle::Seek( int64 nOffset, int nWhence )
 
 	if ( m_pFile )
 	{
-		m_fs->FS_fseek( m_pFile, nOffset, nWhence );
-		// TODO - FS_fseek should return the resultant offset
-		return 0;
+		// dimhotepus: Return seek offset like other paths do.
+		return m_fs->FS_fseek( m_pFile, nOffset, nWhence );
 	}
 
 	if ( m_pPackFileHandle )

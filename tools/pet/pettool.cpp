@@ -11,8 +11,8 @@
 #include "vgui/KeyCode.h"
 #include "vgui_controls/FileOpenDialog.h"
 #include "filesystem.h"
-#include "vgui/ilocalize.h"
-#include "dme_controls/elementpropertiestree.h"
+#include "vgui/ILocalize.h"
+#include "dme_controls/ElementPropertiesTree.h"
 #include "tier0/icommandline.h"
 #include "materialsystem/imaterialsystem.h"
 #include "VGuiMatSurface/IMatSystemSurface.h"
@@ -20,7 +20,7 @@
 #include "particlesystemdefinitionbrowser.h"
 #include "particlesystempropertiescontainer.h"
 #include "dme_controls/AttributeStringChoicePanel.h"
-#include "dme_controls/ParticleSystemPanel.h"
+#include "dme_controls/particlesystempanel.h"
 #include "datamodel/dmelementfactoryhelper.h"
 #include "matsys_controls/picker.h"
 #include "tier2/fileutils.h"
@@ -28,7 +28,7 @@
 #include "particles/particles.h"
 #include "dmserializers/idmserializers.h"
 #include "dme_controls/dmepanel.h"
-#include "vgui/ivgui.h"
+#include "vgui/IVGui.h"
 
 using namespace vgui;
 
@@ -49,7 +49,7 @@ const char *GetVGuiControlsModuleName()
 //-----------------------------------------------------------------------------
 // Connect, disconnect
 //-----------------------------------------------------------------------------
-bool ConnectTools( CreateInterfaceFn factory )
+bool ConnectTools( [[maybe_unused]] CreateInterfaceFn factory )
 {
 	// Attach to the dmserializers instance of the particle system
 	return (materials != NULL) && (g_pMatSystemSurface != NULL) && (g_pMDLCache != NULL) && (studiorender != NULL) && (g_pMaterialSystemHardwareConfig != NULL);
@@ -178,10 +178,10 @@ vgui::HScheme CPetTool::GetToolScheme()
 //-----------------------------------------------------------------------------
 class CPetViewMenuButton : public CToolMenuButton
 {
-	DECLARE_CLASS_SIMPLE( CPetViewMenuButton, CToolMenuButton );
+	DECLARE_CLASS_SIMPLE_OVERRIDE( CPetViewMenuButton, CToolMenuButton );
 public:
 	CPetViewMenuButton( CPetTool *parent, const char *panelName, const char *text, vgui::Panel *pActionSignalTarget );
-	virtual void OnShowMenu(vgui::Menu *menu);
+	void OnShowMenu(vgui::Menu *menu) override;
 
 private:
 	CPetTool *m_pTool;
@@ -254,10 +254,10 @@ void CPetViewMenuButton::OnShowMenu(vgui::Menu *menu)
 //-----------------------------------------------------------------------------
 class CPetToolMenuButton : public CToolMenuButton
 {
-	DECLARE_CLASS_SIMPLE( CPetToolMenuButton, CToolMenuButton );
+	DECLARE_CLASS_SIMPLE_OVERRIDE( CPetToolMenuButton, CToolMenuButton );
 public:
 	CPetToolMenuButton( CPetTool *parent, const char *panelName, const char *text, vgui::Panel *pActionSignalTarget );
-	virtual void OnShowMenu(vgui::Menu *menu);
+	void OnShowMenu(vgui::Menu *menu) override;
 
 private:
 	CPetTool *m_pTool;
@@ -416,8 +416,8 @@ CDmeParticleSystemDefinition* CPetTool::GetCurrentParticleSystem( void )
 //-----------------------------------------------------------------------------
 void CPetTool::DestroyToolContainers()
 {
-	int c = ToolWindow::GetToolWindowCount();
-	for ( int i = c - 1; i >= 0 ; --i )
+	intp c = ToolWindow::GetToolWindowCount();
+	for ( intp i = c - 1; i >= 0 ; --i )
 	{
 		ToolWindow *kill = ToolWindow::GetToolWindow( i );
 		delete kill;
@@ -485,7 +485,7 @@ void CPetTool::OnToggleParticlePreview()
 //-----------------------------------------------------------------------------
 // Creates
 //-----------------------------------------------------------------------------
-void CPetTool::CreateTools( CPetDoc *doc )
+void CPetTool::CreateTools( [[maybe_unused]] CPetDoc *doc )
 {
 	if ( !m_hProperties.Get() )
 	{
@@ -529,8 +529,8 @@ void CPetTool::DestroyTools()
 {
 	SetCurrentParticleSystem( NULL );
 
-	int c = ToolWindow::GetToolWindowCount();
-	for ( int i = c - 1; i >= 0 ; --i )
+	intp c = ToolWindow::GetToolWindowCount();
+	for ( intp i = c - 1; i >= 0 ; --i )
 	{
 		ToolWindow *kill = ToolWindow::GetToolWindow( i );
 		delete kill;
@@ -654,14 +654,14 @@ void CPetTool::OnCommand( const char *cmd )
 			GetActionMenu()->SetVisible( false );
 		}
 	}
-	else if ( const char *pSuffix = StringAfterPrefix( cmd, "OnRecent" ) )
+	else if ( const char *pRecentSuffix = StringAfterPrefix( cmd, "OnRecent" ) )
 	{
-		int idx = Q_atoi( pSuffix );
+		int idx = Q_atoi( pRecentSuffix );
 		OpenFileFromHistory( idx );
 	}
-	else if ( const char *pSuffix = StringAfterPrefix( cmd, "OnTool" ) )
+	else if ( const char *pToolSuffex = StringAfterPrefix( cmd, "OnTool" ) )
 	{
-		int idx = Q_atoi( pSuffix );
+		int idx = Q_atoi( pToolSuffex );
 		enginetools->SwitchToTool( idx );
 	}
 	else if ( !V_stricmp( cmd, "OnUndo" ) )
@@ -721,7 +721,7 @@ void CPetTool::OnOpen( )
 	OpenFile( PET_FILE_FORMAT, pSaveFileName, PET_FILE_FORMAT, nFlags );
 }
 
-bool CPetTool::OnReadFileFromDisk( const char *pFileName, const char *pFileFormat, KeyValues *pContextKeyValues )
+bool CPetTool::OnReadFileFromDisk( const char *pFileName, const char *pFileFormat, [[maybe_unused]] KeyValues *pContextKeyValues )
 {
 	OnCloseNoSave();
 
@@ -769,7 +769,7 @@ void CPetTool::SaveAndTest()
 	}
 }
 
-bool CPetTool::OnWriteFileToDisk( const char *pFileName, const char *pFileFormat, KeyValues *pContextKeyValues )
+bool CPetTool::OnWriteFileToDisk( const char *pFileName, const char *pFileFormat, [[maybe_unused]] KeyValues *pContextKeyValues )
 {
 	if ( !m_pDoc )
 		return true;
@@ -867,7 +867,7 @@ void CPetTool::OpenFileFromHistory( int slot )
 //-----------------------------------------------------------------------------
 // Derived classes can implement this to get notified when files are saved/loaded
 //-----------------------------------------------------------------------------
-void CPetTool::OnFileOperationCompleted( const char *pFileType, bool bWroteFile, vgui::FileOpenStateMachine::CompletionState_t state, KeyValues *pContextKeyValues )
+void CPetTool::OnFileOperationCompleted( [[maybe_unused]] const char *pFileType, bool bWroteFile, vgui::FileOpenStateMachine::CompletionState_t state, KeyValues *pContextKeyValues )
 {
 	if ( bWroteFile )
 	{
@@ -910,7 +910,7 @@ void CPetTool::OnFileOperationCompleted( const char *pFileType, bool bWroteFile,
 //-----------------------------------------------------------------------------
 // Show the File browser dialog
 //-----------------------------------------------------------------------------
-void CPetTool::SetupFileOpenDialog( vgui::FileOpenDialog *pDialog, bool bOpenFile, const char *pFileFormat, KeyValues *pContextKeyValues )
+void CPetTool::SetupFileOpenDialog( vgui::FileOpenDialog *pDialog, [[maybe_unused]] bool bOpenFile, [[maybe_unused]] const char *pFileFormat, [[maybe_unused]] KeyValues *pContextKeyValues )
 {
 	char pStartingDir[ MAX_PATH ];
 
@@ -960,9 +960,9 @@ void CPetTool::OnDescribeUndo()
 	CUtlVector< UndoInfo_t > list;
 	g_pDataModel->GetUndoInfo( list );
 
-	Msg( "%i operations in stack\n", list.Count() );
+	Msg( "%zd operations in stack\n", list.Count() );
 
-	for ( int i = list.Count() - 1; i >= 0; --i )
+	for ( intp i = list.Count() - 1; i >= 0; --i )
 	{
 		UndoInfo_t& entry = list[ i ];
 		if ( entry.terminator )
@@ -987,7 +987,7 @@ const char *CPetTool::GetLogoTextureName()
 //-----------------------------------------------------------------------------
 // Inherited from IPetDocCallback
 //-----------------------------------------------------------------------------
-void CPetTool::OnDocChanged( const char *pReason, int nNotifySource, int nNotifyFlags )
+void CPetTool::OnDocChanged( [[maybe_unused]] const char *pReason, int nNotifySource, int nNotifyFlags )
 {
 	CDmeParticleSystemDefinition *pParticleSystem = GetCurrentParticleSystem();
 	if ( m_pDoc && GetParticlePreview() && pParticleSystem )
@@ -1069,7 +1069,8 @@ bool CPetTool::LoadDocument( const char *pDocName )
 
 	KeyValues *pMessage = new KeyValues( "ParticleSystemUpdated" );
 	pMessage->SetPtr( "definitionBits", buf.Base() );
-	pMessage->SetInt( "definitionSize", buf.TellMaxPut() );
+	// dimhotepus: int -> uint64.
+	pMessage->SetUint64( "definitionSize", buf.TellMaxPut() );
 	PostMessageToAllTools( pMessage );
 	pMessage->deleteThis();
 	return true;

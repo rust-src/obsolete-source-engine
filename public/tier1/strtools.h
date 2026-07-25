@@ -421,7 +421,7 @@ template <intp cchDest> wchar_t *V_wcscat_safe( INOUT_Z_ARRAY wchar_t (&pDest)[c
 char *V_strnlwr( INOUT_Z_CAP(count) char *pBuf, size_t count);
 template <intp cchDest> char *V_strlwr_safe( INOUT_Z_ARRAY char (&pBuf)[cchDest] )
 { 
-	return _V_strnlwr( pBuf, cchDest ); 
+	return V_strnlwr( pBuf, cchDest ); 
 }
 
 // Unicode string conversion policies - what to do if an illegal sequence is encountered
@@ -1184,7 +1184,7 @@ template <typename NameArray>
 		return false;
 	}
 
-	V_snprintf( name, memsize, "%s%d", prefix, i );
+	V_snprintf( name, memsize, "%s%zd", prefix, i );
 	return true;
 }
 
@@ -1603,6 +1603,32 @@ V_to_chars(OUT_Z_ARRAY char (&buffer)[size], TFloat value)
 	// Overflow.
 	*buffer = '\0';
 	return std::errc::value_too_large;
+}
+
+// Removes any possible formatting codes and double quote characters from the input string
+template<intp maxlen>
+void V_StripInvalidCharacters( INOUT_Z_ARRAY char (&pszInput)[maxlen] )
+{
+	char szOutput[maxlen];
+	
+	char *pIn = pszInput;
+	char *pOut = szOutput;
+
+	*pOut = '\0';
+
+	while ( *pIn )
+	{
+		if ( ( *pIn != '"' ) && ( *pIn != '%' ) )
+		{
+			*pOut++ = *pIn;
+		}
+		pIn++;
+	}
+
+	*pOut = '\0';
+
+	// Copy back over, in place
+	V_strcpy_safe( pszInput, szOutput );
 }
 
 #endif // !defined( VSTDLIB_DLL_EXPORT )

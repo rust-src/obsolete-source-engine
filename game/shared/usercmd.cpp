@@ -174,8 +174,7 @@ void WriteUsercmd( bf_write *buf, const CUserCmd *to, const CUserCmd *from )
 	{
 		buf->WriteOneBit( 1 );
 		buf->WriteShort( to->entitygroundcontact.Count() );
-		int i;
-		for (i = 0; i < to->entitygroundcontact.Count(); i++)
+		for (intp i = 0; i < to->entitygroundcontact.Count(); i++)
 		{
 			buf->WriteUBitLong( to->entitygroundcontact[i].entindex, MAX_EDICT_BITS );
 			buf->WriteBitCoord( to->entitygroundcontact[i].minheight );
@@ -263,7 +262,7 @@ void ReadUsercmd( bf_read *buf, CUserCmd *move, CUserCmd *from )
 
 	if ( buf->ReadOneBit() )
 	{
-		move->impulse = buf->ReadUBitLong( 8 );
+		move->impulse = static_cast<byte>(buf->ReadUBitLong( 8 ));
 	}
 
 

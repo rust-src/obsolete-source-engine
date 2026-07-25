@@ -47,7 +47,7 @@ CommandMenu::~CommandMenu()
 	ClearMenu();
 }
 
-void CommandMenu::OnMessage(const KeyValues *params, VPANEL fromPanel)
+void CommandMenu::OnMessage(const KeyValues *params, vgui::VPANEL fromPanel)
 {
 	char text[255];
 	bool bHandled = false;
@@ -262,7 +262,7 @@ bool CommandMenu::LoadFromKeyValues( KeyValues * params )
 	if ( !params )
 		return false;
 
-	V_sprintf_safe( m_CurrentTeam, "%i", GetLocalPlayerTeam() );
+	V_to_chars( m_CurrentTeam, GetLocalPlayerTeam() );
 
 	V_FileBase( engine->GetLevelName(), m_CurrentMap );
 	

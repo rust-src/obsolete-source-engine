@@ -325,6 +325,9 @@ CNewGameDialog::CNewGameDialog(vgui::Panel *parent, bool bCommentaryMode) : Base
 	int chapterIndex = 0;
 
 	{
+		// dimhotepus: This can take a while, put up a waiting cursor.
+    	const vgui::ScopedPanelWaitCursor scopedWaitCursor{this};
+
 		FileFindHandle_t findHandle = FILESYSTEM_INVALID_FIND_HANDLE;
 		const char *fileName = g_pFullFileSystem->FindFirst( "cfg/chapter*.cfg", &findHandle );
 		while ( fileName && chapterIndex < MAX_CHAPTERS )
@@ -486,7 +489,8 @@ void CNewGameDialog::ApplySettings( KeyValues *inResourceData )
 		idx = ypos;
 	}
 
-	m_pCenterBg->SetTall( inResourceData->GetInt( "centerbgtall", 0 ) );
+	// dimhotepus: Scale UI,
+	m_pCenterBg->SetTall( QuickPropScale( inResourceData->GetInt( "centerbgtall", 0 ) ) );
 
 	g_ScrollSpeedSlow = inResourceData->GetFloat( "scrollslow", 0.0f );
 	g_ScrollSpeedFast = inResourceData->GetFloat( "scrollfast", 0.0f );
@@ -668,7 +672,7 @@ void CNewGameDialog::UpdateBonusSelection( void )
 		// Best label
 		if ( iBest != -1 )
 		{
-			V_sprintf_safe( szBuff, "%i", iBest );
+			V_to_chars( szBuff, iBest );
 			g_pVGuiLocalize->ConvertANSIToUnicode( szBuff, szWideBuff2 );
 			g_pVGuiLocalize->ConstructString_safe( szWideBuff, g_pVGuiLocalize->Find( "#GameUI_BonusMapsBest" ), 1, szWideBuff2 );
 			g_pVGuiLocalize->ConvertUnicodeToANSI( szWideBuff, szBuff );
@@ -684,7 +688,7 @@ void CNewGameDialog::UpdateBonusSelection( void )
 		// Next label
 		if ( iNext != -1 )
 		{
-			V_sprintf_safe( szBuff, "%i", iNext );
+			V_to_chars( szBuff, iNext );
 			g_pVGuiLocalize->ConvertANSIToUnicode( szBuff, szWideBuff2 );
 			g_pVGuiLocalize->ConstructString_safe( szWideBuff, g_pVGuiLocalize->Find( "#GameUI_BonusMapsGoal" ), 1, szWideBuff2 );
 			g_pVGuiLocalize->ConvertUnicodeToANSI( szWideBuff, szBuff );

@@ -3494,7 +3494,7 @@ bool CAI_Navigator::MarkCurWaypointFailedLink( void )
 		if ( bBlockAll )
 		{
 			CAI_Node *pDestNode = GetNetwork()->GetNode( endID );
-			for ( int i = 0; i < pDestNode->NumLinks(); i++ )
+			for ( intp i = 0; i < pDestNode->NumLinks(); i++ )
 			{
 				CAI_Link *pLink = pDestNode->GetLinkByIndex( i );
 				pLink->m_LinkInfo |= bits_LINK_STALE_SUGGESTED;
@@ -4142,7 +4142,7 @@ void CAI_Navigator::DrawDebugRouteOverlay(void)
 
 		if (waypoint->GetNext()) 
 		{
-			Vector RGB = GetRouteColor(waypoint->GetNext()->NavType(), waypoint->GetNext()->Flags());
+			RGB = GetRouteColor(waypoint->GetNext()->NavType(), waypoint->GetNext()->Flags());
 			NDebugOverlay::Line(waypoint->GetPos(), waypoint->GetNext()->GetPos(),RGB[0],RGB[1],RGB[2], true,0);
 		}
 		waypoint = waypoint->GetNext();

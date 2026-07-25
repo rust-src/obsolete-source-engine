@@ -1360,10 +1360,10 @@ INetworkStringTable *CNetworkStringTableContainer::CreateStringTableEx( const ch
 //-----------------------------------------------------------------------------
 INetworkStringTable *CNetworkStringTableContainer::FindTable( const char *tableName ) const
 {
-	for ( int i = 0; i < m_Tables.Count(); i++ )
+	for ( auto *t : m_Tables )
 	{
-		if ( !Q_stricmp( tableName, m_Tables[ i ]->GetTableName() ) )
-			return m_Tables[i];
+		if ( !Q_stricmp( tableName, t->GetTableName() ) )
+			return t;
 	}
 
 	return NULL;
@@ -1399,7 +1399,7 @@ void CNetworkStringTableContainer::WriteBaselines( bf_write &buf )
 
 	SVC_CreateStringTable msg;
 
-	size_t msg_buffer_size = 2 * NET_MAX_PAYLOAD;
+	constexpr intp msg_buffer_size = 2 * NET_MAX_PAYLOAD;
 	char *msg_buffer = new char[ msg_buffer_size ];
 	if ( !msg_buffer )
 	{
@@ -1430,16 +1430,16 @@ void CNetworkStringTableContainer::WriteBaselines( bf_write &buf )
 			// TERROR: bzip-compress the stringtable before adding it to the packet.  Yes, the whole packet will be bzip'd,
 			// but the uncompressed data also has to be under the NET_MAX_PAYLOAD limit.
 			unsigned int numBytes = msg.m_DataOut.GetNumBytesWritten();
-			unsigned int compressedSize = (unsigned int)numBytes;
-			char *compressedData = new char[numBytes];
+			unsigned int compressedSize = numBytes;
+			std::unique_ptr<char[]> compressedData = std::make_unique<char[]>(numBytes);
 
-			if ( COM_BufferToBufferCompress_Snappy( compressedData, &compressedSize, (char *)msg.m_DataOut.GetData(), numBytes ) )
+			if ( COM_BufferToBufferCompress_Snappy( compressedData.get(), &compressedSize, (char *)msg.m_DataOut.GetData(), numBytes ) )
 			{
 				msg.m_bDataCompressed = true;
 				msg.m_DataOut.Reset();
 				msg.m_DataOut.WriteLong( numBytes );	// uncompressed size
 				msg.m_DataOut.WriteLong( compressedSize );	// compressed size
-				msg.m_DataOut.WriteBits( compressedData, compressedSize * 8 );	// compressed data
+				msg.m_DataOut.WriteBits( compressedData.get(), compressedSize * 8 );	// compressed data
 
 				// if ( compressstringtablbaselines > 1 )
 				{
@@ -1448,8 +1448,6 @@ void CNetworkStringTableContainer::WriteBaselines( bf_write &buf )
 							table->GetTableName(), numBytes, compressedSize, compressTimer.GetDuration().GetMillisecondsF() );
 				}
 			}
-
-			delete [] compressedData;
 		}
 
 		if ( !msg.WriteToBuffer( buf ) )
@@ -1460,7 +1458,7 @@ void CNetworkStringTableContainer::WriteBaselines( bf_write &buf )
 		int after = buf.GetNumBytesWritten();
 		if ( sv_dumpstringtables.GetBool() )
 		{
-			DevMsg( "CNetworkStringTableContainer::WriteBaselines wrote %d bytes for table %s [space remaining %d bytes]\n", after - before, table->GetTableName(), buf.GetNumBytesLeft() );
+			DevMsg( "CNetworkStringTableContainer::WriteBaselines wrote %d bytes for table %s [space remaining %zd bytes]\n", after - before, table->GetTableName(), buf.GetNumBytesLeft() );
 		}
 	}
 

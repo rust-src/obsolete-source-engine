@@ -8,14 +8,8 @@
 #ifndef TOOLMENUBAR_H
 #define TOOLMENUBAR_H
 
-#ifdef _WIN32
-#pragma once
-#endif
 
-
-#include "vgui_controls/menubar.h"
-
-using namespace vgui;
+#include "vgui_controls/MenuBar.h"
 
 
 //-----------------------------------------------------------------------------
@@ -34,19 +28,19 @@ class CBaseToolSystem;
 //-----------------------------------------------------------------------------
 class CToolMenuBar : public vgui::MenuBar
 {
-	DECLARE_CLASS_SIMPLE( CToolMenuBar, vgui::MenuBar );
+	DECLARE_CLASS_SIMPLE_OVERRIDE( CToolMenuBar, vgui::MenuBar );
 
 public:
 	CToolMenuBar( CBaseToolSystem *parent, const char *panelName );
-	virtual void PerformLayout();
+	void PerformLayout() override;
 	void SetToolName( const char *name );
 	void SetInfo( const char *text );
 
 	CBaseToolSystem *GetToolSystem();
 
 protected:
-	Label		*m_pInfo;
-	Label		*m_pToolName;
+	vgui::Label		*m_pInfo;
+	vgui::Label		*m_pToolName;
 	CBaseToolSystem *m_pToolSystem;
 };
 
@@ -56,15 +50,15 @@ protected:
 //-----------------------------------------------------------------------------
 class CToolFileMenuBar : public CToolMenuBar
 {
-	DECLARE_CLASS_SIMPLE( CToolFileMenuBar, CToolMenuBar );
+	DECLARE_CLASS_SIMPLE_OVERRIDE( CToolFileMenuBar, CToolMenuBar );
 
 public:
 	CToolFileMenuBar( CBaseToolSystem *parent, const char *panelName );
-	virtual void PerformLayout();
+	void PerformLayout() override;
 	void SetFileName( const char *pFileName );
 
 private:
-	Label		*m_pFileName;
+	vgui::Label		*m_pFileName;
 };
 
 

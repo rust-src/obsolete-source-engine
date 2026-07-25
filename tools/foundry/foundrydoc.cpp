@@ -14,7 +14,7 @@
 #include "filesystem.h"
 #include "foundrytool.h"
 #include "toolframework/ienginetool.h"
-#include "dmevmfentity.h"
+#include "DmeVMFEntity.h"
 
 
 //-----------------------------------------------------------------------------
@@ -113,7 +113,7 @@ bool CFoundryDoc::LoadFromFile( const char *pFileName )
 	Q_strncpy( m_pVMFFileName, pFileName, nLen );
 	Q_strncat( m_pVMFFileName, "\\content\\", sizeof(m_pVMFFileName) );
 	Q_strncat( m_pVMFFileName, pGame + 6, sizeof(m_pVMFFileName) );
-	Q_SetExtension( m_pVMFFileName, ".vmf", sizeof(m_pVMFFileName) );
+	V_SetExtension( m_pVMFFileName, ".vmf" );
 
 	CDmElement *pVMF = NULL;
 	if ( g_pDataModel->RestoreFromFile( m_pVMFFileName, NULL, "vmf", &pVMF ) == DMFILEID_INVALID )
@@ -138,7 +138,7 @@ bool CFoundryDoc::LoadFromFile( const char *pFileName )
 
 void CFoundryDoc::SaveToFile( )
 {
-	if ( m_hRoot.Get() && m_pVMFFileName && m_pVMFFileName[0] )
+	if ( m_hRoot.Get() && !Q_isempty( m_pVMFFileName ) )
 	{
 		g_pDataModel->SaveToFile( m_pVMFFileName, NULL, "keyvalues", "vmf", m_hRoot );
 	}
@@ -174,8 +174,8 @@ void CFoundryDoc::DeleteEntity( CDmeVMFEntity *pEntity )
 	if ( !entities.IsValid() )
 		return;
 
-	int nCount = entities.Count();
-	for ( int i = 0; i < nCount; ++i )
+	intp nCount = entities.Count();
+	for ( intp i = 0; i < nCount; ++i )
 	{
 		if ( pEntity == CastElement< CDmeVMFEntity >( entities[i] ) )
 		{
@@ -267,14 +267,14 @@ void CFoundryDoc::AddOriginalEntities( CUtlBuffer &entityBuf, const char *pActua
 //-----------------------------------------------------------------------------
 // Copy in other entities from the editable VMF
 //-----------------------------------------------------------------------------
-void CFoundryDoc::AddVMFEntities( CUtlBuffer &entityBuf, const char *pActualEntityData )
+void CFoundryDoc::AddVMFEntities( CUtlBuffer &entityBuf, [[maybe_unused]] const char *pActualEntityData )
 {
 	const CDmrElementArray<CDmElement> entityArray( m_hRoot, "entities" );
 	if ( !entityArray.IsValid() )
 		return;
 
-	int nCount = entityArray.Count();
-	for ( int iEntity = 0; iEntity < nCount; ++iEntity )
+	intp nCount = entityArray.Count();
+	for ( intp iEntity = 0; iEntity < nCount; ++iEntity )
 	{
 		CDmElement *pEntity = entityArray[iEntity];
 		const char *pClassName = pEntity->GetValueString( "classname" );
@@ -283,7 +283,7 @@ void CFoundryDoc::AddVMFEntities( CUtlBuffer &entityBuf, const char *pActualEnti
 
 		// Don't spawn those classes we grab from the actual compiled map
 		bool bDontUse = false;
-		for ( int i = 0; s_pUseOriginalClasses[i]; ++i )
+		for ( intp i = 0; s_pUseOriginalClasses[i]; ++i )
 		{
 			if ( !Q_stricmp( pClassName, s_pUseOriginalClasses[i] ) )
 			{

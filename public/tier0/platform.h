@@ -106,6 +106,43 @@
 	#error "Please define your platform"
 #endif
 
+// dimhotepus: TF2 backport.
+#if PLATFORM_WINDOWS_PC
+
+# if PLATFORM_64BITS
+#  define PLATFORM_DIR "\\x64"
+# else
+#  define PLATFORM_DIR ""
+# endif
+
+//#elif PLATFORM_LINUX
+#elif LINUX
+
+# if PLATFORM_64BITS
+#  define PLATFORM_DIR "/linux64"
+# else
+#  define PLATFORM_DIR ""
+# endif
+
+//#elif PLATFORM_OSX
+#elif OSX
+
+#if PLATFORM_ARM
+#  define PLATFORM_DIR "/osxarm64"
+#else
+# if PLATFORM_64BITS
+#  define PLATFORM_DIR "/osx64"
+# else
+#  define PLATFORM_DIR ""
+# endif
+#endif
+
+#else
+# error "Define a platform dir for me!"
+#endif
+
+#define PLATFORM_BIN_DIR "bin" PLATFORM_DIR
+
 #if !defined( _WIN32 )
 using HWND = void *;
 #endif // !_WIN32
@@ -451,11 +488,11 @@ constexpr inline std::enable_if_t<std::is_pointer_v<T>, R> POINTER_TO_INT(T p) n
 
 // Marks the codepath from here until the next branch entry point as unreachable,
 // and asserts if any attempt is made to execute it.
-#define UNREACHABLE() { Assert(0); HINT(0); }
+#define UNREACHABLE() { Assert(0); unreachable(); }
 
 // In cases where no default is present or appropriate, this causes MSVC to generate
 // as little code as possible, and throw an assertion in debug.
-#define NO_DEFAULT default: UNREACHABLE();
+#define NO_DEFAULT default: { Assert(0); unreachable(); }
 
 #if defined( LINUX ) && ((__GNUC__ * 100) + __GNUC_MINOR__) >= 406
   // based on some Jonathan Wakely macros on the net...
@@ -767,8 +804,10 @@ inline int16 BigShort( int16 val )
 	{
 		return WordSwap( val );
 	}
-
-	return val;
+	else
+	{
+		return val;
+	}
 }
 template <bool isLittleEndian = endian::native == endian::little>
 inline uint16 BigWord( uint16 val )
@@ -777,8 +816,10 @@ inline uint16 BigWord( uint16 val )
 	{
 		return WordSwap( val );
 	}
-
-	return val;
+	else
+	{
+		return val;
+	}
 }
 template <bool isLittleEndian = endian::native == endian::little>
 inline long BigLong( long val )
@@ -786,13 +827,15 @@ inline long BigLong( long val )
 	if constexpr (isLittleEndian)
 	{
 		// dimhotepus: Honor size ex for LP64.
-		if constexpr (sizeof(val) <= 4)
+		if constexpr (sizeof(val) <= 4) //-V112
 			return DWordSwap( val );
 		else
 			return QWordSwap( val );
 	}
-
-	return val;
+	else
+	{
+		return val;
+	}
 }
 template <bool isLittleEndian = endian::native == endian::little>
 inline uint32 BigDWord( uint32 val )
@@ -801,8 +844,10 @@ inline uint32 BigDWord( uint32 val )
 	{
 		return DWordSwap( val );
 	}
-
-	return val;
+	else
+	{
+		return val;
+	}
 }
 template <bool isLittleEndian = endian::native == endian::little>
 inline int16 LittleShort( int16 val )
@@ -811,8 +856,10 @@ inline int16 LittleShort( int16 val )
 	{
 		return val;
 	}
-
-	return WordSwap( val );
+	else
+	{
+		return WordSwap( val );
+	}
 }
 template <bool isLittleEndian = endian::native == endian::little>
 inline uint16 LittleWord( uint16 val )
@@ -821,19 +868,18 @@ inline uint16 LittleWord( uint16 val )
 	{
 		return val;
 	}
-
-	return WordSwap( val );
+	else
+	{
+		return WordSwap( val );
+	}
 }
 template <bool isLittleEndian = endian::native == endian::little>
 inline long LittleLong( long val )
 {
 	if constexpr (isLittleEndian)
-	{
 		return val;
-	}
-
 	// dimhotepus: Honor size ex for LP64.
-	if constexpr (sizeof(val) <= 4)
+	else if constexpr (sizeof(val) <= 4) //-V112
 		return DWordSwap( val );
 	else
 		return QWordSwap( val );
@@ -845,8 +891,10 @@ inline uint32 LittleDWord( uint32 val )
 	{
 		return val;
 	}
-
-	return DWordSwap(val);
+	else
+	{
+		return DWordSwap(val);
+	}
 }
 template <bool isLittleEndian = endian::native == endian::little>
 inline uint64 LittleQWord( uint64 val )
@@ -855,8 +903,10 @@ inline uint64 LittleQWord( uint64 val )
 	{
 		return val;
 	}
-
-	return QWordSwap( val ); 
+	else
+	{
+		return QWordSwap( val );
+	}
 }
 inline int16 SwapShort( int16 val )					{ return WordSwap( val ); }
 inline uint16 SwapWord( uint16 val )				{ return WordSwap( val ); }
@@ -1302,6 +1352,21 @@ inline bool Plat_IsInDebugSession( bool bForceRecheck = false ) { return false; 
 
 // dimhotepus: Check user is admin or priviledged one.
 PLATFORM_INTERFACE bool Plat_IsUserAnAdmin();
+
+#ifdef _WIN32
+enum class SystemBackdropType
+{
+	Auto,        // [Default] Let DWM automatically decide the system-drawn backdrop for this window.
+	None,        // Do not draw any system backdrop.
+	MainWindow,  // Draw the backdrop material effect corresponding to a long-lived window.
+	TransientWindow,  // Draw the backdrop material effect corresponding to a transient window.
+	TabbedWindow,  // Draw the backdrop material effect corresponding to a window with a tabbed title bar.
+};
+
+// dimhotepus: Apply system Mica materials and Dark mode (if enabled) to window.
+// See https://learn.microsoft.com/en-us/windows/apps/design/style/mica
+PLATFORM_INTERFACE bool Plat_ApplySystemTitleBarTheme( void *window, SystemBackdropType backDropType );
+#endif
 
 //-----------------------------------------------------------------------------
 // Returns true if running on a 64 bit (windows) OS

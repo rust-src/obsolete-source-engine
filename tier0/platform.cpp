@@ -8,6 +8,10 @@
 #include <cerrno>
 
 #include "winlite.h"
+#include <dwmapi.h>
+
+// dimhotepus: COM errors.
+#include "windows/com_error_category.h"
 #endif
 
 #if defined(POSIX)
@@ -323,6 +327,93 @@ bool Plat_IsUserAnAdmin() {
   // program, due to suid bit.
   return uid < 0 || euid == 0 || uid != euid;
 #endif
+}
+
+[[nodiscard]] static bool ShouldAppUseLightTheme() {
+	HKEY personalizeKey;
+	// Light mode by default if not supported.
+	DWORD value = 1;
+	LSTATUS ok{::RegOpenKeyExW(HKEY_CURRENT_USER,
+		L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+		0, KEY_READ, &personalizeKey)};
+	if (personalizeKey) {
+		DWORD valueType, valueSize = sizeof(value);
+
+		ok = ::RegQueryValueExW(personalizeKey,
+			L"AppsUseLightTheme",
+			nullptr,
+			&valueType,
+			reinterpret_cast<byte*>(&value),
+			&valueSize);
+
+		::RegCloseKey(personalizeKey);
+
+		// Light mode by default if not supported.
+		value = ok == ERROR_SUCCESS && valueType == REG_DWORD ? value : 1;
+	}
+
+	return value > 0;
+}
+
+// dimhotepus: Apply system Mica materials to window.
+// See https://learn.microsoft.com/en-us/windows/apps/design/style/mica
+bool Plat_ApplySystemTitleBarTheme(void *window,
+                                   SystemBackdropType backDropType) {
+	static_assert(to_underlying(SystemBackdropType::Auto) == DWMSBT_AUTO);
+	static_assert(to_underlying(SystemBackdropType::None) == DWMSBT_NONE);
+	static_assert(to_underlying(SystemBackdropType::MainWindow) ==
+	              DWMSBT_MAINWINDOW);
+	static_assert(to_underlying(SystemBackdropType::TransientWindow) ==
+	              DWMSBT_TRANSIENTWINDOW);
+	static_assert(to_underlying(SystemBackdropType::TabbedWindow) ==
+	              DWMSBT_TABBEDWINDOW);
+	
+	bool ok = true;
+	
+	// dimhotepus: Since Windows 11 21H1 (22000) SDK
+	// DWM has DWMWA_USE_IMMERSIVE_DARK_MODE & DWMWA_SYSTEMBACKDROP_TYPE.
+#if defined(WDK_NTDDI_VERSION) && (WDK_NTDDI_VERSION >= NTDDI_WIN11_ZN)
+	// Detect current app window text is light or dark and apply Dark mode.
+	const BOOL enableDarkMode{ShouldAppUseLightTheme() ? FALSE : TRUE};
+	HRESULT hr{::DwmSetWindowAttribute(static_cast<HWND>(window),
+		DWMWA_USE_IMMERSIVE_DARK_MODE, &enableDarkMode, sizeof(enableDarkMode))};
+	if (FAILED(hr)) {
+		const int windowTextSize =
+			GetWindowTextLengthA(static_cast<HWND>(window)) + 1;
+		char *windowText = stackallocT(char, windowTextSize);
+		GetWindowTextA(static_cast<HWND>(window), windowText, windowTextSize);
+
+		Warning(
+			"Unable to apply user Color Mode preferences to window 0x%p (%s): %s\n",
+			window, windowText,
+			se::win::com::com_error_category().message(hr).c_str());
+
+		ok = false;
+	}
+
+	const DWM_SYSTEMBACKDROP_TYPE dwm_backdrop_type =
+		static_cast<DWM_SYSTEMBACKDROP_TYPE>(to_underlying(backDropType));
+	hr = ::DwmSetWindowAttribute(
+		static_cast<HWND>(window), DWMWA_SYSTEMBACKDROP_TYPE,
+		&dwm_backdrop_type, sizeof(dwm_backdrop_type));
+	if (FAILED(hr)) {
+		const int windowTextSize =
+			GetWindowTextLengthA(static_cast<HWND>(window)) + 1;
+		char *windowText = stackallocT(char, windowTextSize);
+		GetWindowTextA(static_cast<HWND>(window), windowText, windowTextSize);
+
+		Warning(
+			"Unable to apply backdrop material effect to window 0x%p (%s): %s\n",
+			window, windowText,
+			se::win::com::com_error_category().message(hr).c_str());
+
+		ok = false;
+	}
+#else
+	ok = false;
+#endif
+
+	return ok;
 }
 
 

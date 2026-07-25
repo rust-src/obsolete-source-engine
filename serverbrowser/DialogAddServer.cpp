@@ -7,6 +7,8 @@
 
 #include "pch_serverbrowser.h"
 
+#include "DialogAddServer.h"
+
 using namespace vgui;
 
 //-----------------------------------------------------------------------------
@@ -23,30 +25,35 @@ CDialogAddServer::CDialogAddServer(vgui::Panel *parent, IGameList *gameList) : F
 	SetSizeable( false );
 
 	m_pTabPanel = new PropertySheet(this, "GameTabs");
-	m_pTabPanel->SetTabWidth(72);
+	// dimhotepus: Scale UI.
+	m_pTabPanel->SetTabWidth(QuickPropScale( 72 ));
 
 	m_pDiscoveredGames = new ListPanel( this, "Servers" );
 
 	// Add the column headers
-	m_pDiscoveredGames->AddColumnHeader(0, "Password", "#ServerBrowser_Password", 16, ListPanel::COLUMN_FIXEDSIZE | ListPanel::COLUMN_IMAGE);
-	m_pDiscoveredGames->AddColumnHeader(1, "Bots", "#ServerBrowser_Bots", 16, ListPanel::COLUMN_FIXEDSIZE | ListPanel::COLUMN_IMAGE | ListPanel::COLUMN_HIDDEN);
-	m_pDiscoveredGames->AddColumnHeader(2, "Secure", "#ServerBrowser_Secure", 16, ListPanel::COLUMN_FIXEDSIZE | ListPanel::COLUMN_IMAGE);
+	
+	// dimhotepus: Scale UI.
+	m_pDiscoveredGames->AddColumnHeader(0, "Password", "#ServerBrowser_Password", QuickPropScale( 16 ), ListPanel::COLUMN_FIXEDSIZE | ListPanel::COLUMN_IMAGE);
+	m_pDiscoveredGames->AddColumnHeader(1, "Bots", "#ServerBrowser_Bots", QuickPropScale( 16 ), ListPanel::COLUMN_FIXEDSIZE | ListPanel::COLUMN_IMAGE | ListPanel::COLUMN_HIDDEN);
+	m_pDiscoveredGames->AddColumnHeader(2, "Secure", "#ServerBrowser_Secure", QuickPropScale( 16 ), ListPanel::COLUMN_FIXEDSIZE | ListPanel::COLUMN_IMAGE);
 
 	bool bGameSupportsReplay = GameSupportsReplay();
 
-	int nReplayWidth = 16;
+	// dimhotepus: Scale UI.
+	int nReplayWidth = QuickPropScale( 16 );
 	if ( !bGameSupportsReplay )
 	{
 		nReplayWidth = 0;
 	}
-
+	
+	// dimhotepus: Scale UI.
 	m_pDiscoveredGames->AddColumnHeader(3, "Replay", "#ServerBrowser_Replay", nReplayWidth, ListPanel::COLUMN_FIXEDSIZE | ListPanel::COLUMN_IMAGE);
-	m_pDiscoveredGames->AddColumnHeader(4, "Name", "#ServerBrowser_Servers", 20, ListPanel::COLUMN_RESIZEWITHWINDOW | ListPanel::COLUMN_UNHIDABLE);
-	m_pDiscoveredGames->AddColumnHeader(5, "IPAddr", "#ServerBrowser_IPAddress", 60, ListPanel::COLUMN_HIDDEN);
-	m_pDiscoveredGames->AddColumnHeader(6, "GameDesc", "#ServerBrowser_Game", 150);
-	m_pDiscoveredGames->AddColumnHeader(7, "Players", "#ServerBrowser_Players", 60);
-	m_pDiscoveredGames->AddColumnHeader(8, "Map", "#ServerBrowser_Map", 80);
-	m_pDiscoveredGames->AddColumnHeader(9, "Ping", "#ServerBrowser_Latency", 60);
+	m_pDiscoveredGames->AddColumnHeader(4, "Name", "#ServerBrowser_Servers", QuickPropScale( 20 ), ListPanel::COLUMN_RESIZEWITHWINDOW | ListPanel::COLUMN_UNHIDABLE);
+	m_pDiscoveredGames->AddColumnHeader(5, "IPAddr", "#ServerBrowser_IPAddress", QuickPropScale( 60 ), ListPanel::COLUMN_HIDDEN);
+	m_pDiscoveredGames->AddColumnHeader(6, "GameDesc", "#ServerBrowser_Game", QuickPropScale( 150 ));
+	m_pDiscoveredGames->AddColumnHeader(7, "Players", "#ServerBrowser_Players", QuickPropScale( 60 ));
+	m_pDiscoveredGames->AddColumnHeader(8, "Map", "#ServerBrowser_Map", QuickPropScale( 80 ));
+	m_pDiscoveredGames->AddColumnHeader(9, "Ping", "#ServerBrowser_Latency", QuickPropScale( 60 ));
 
 	m_pDiscoveredGames->SetColumnHeaderTooltip(0, "#ServerBrowser_PasswordColumn_Tooltip");
 	m_pDiscoveredGames->SetColumnHeaderTooltip(1, "#ServerBrowser_BotColumn_Tooltip");
@@ -99,7 +106,8 @@ CDialogAddServer::CDialogAddServer(vgui::Panel *parent, IGameList *gameList) : F
 	// Initially, we aren't high enough to show the tab panel.
 	int x, y;
 	m_pTabPanel->GetPos( x, y );
-	m_OriginalHeight = m_pTabPanel->GetTall() + y + 50;
+	// dimhotepus: Scale UI.
+	m_OriginalHeight = m_pTabPanel->GetTall() + y + QuickPropScale( 50 );
 	SetTall( y );
 }
 
@@ -325,16 +333,18 @@ void CDialogAddServer::ApplySchemeSettings( IScheme *pScheme )
 	BaseClass::ApplySchemeSettings( pScheme );
 
 	ImageList *imageList = new ImageList(false);
-	imageList->AddImage(scheme()->GetImage("servers/icon_password", false));
-	imageList->AddImage(scheme()->GetImage("servers/icon_bots", false));
-	imageList->AddImage(scheme()->GetImage("servers/icon_robotron", false));
-	imageList->AddImage(scheme()->GetImage("servers/icon_secure_deny", false));
-	imageList->AddImage(scheme()->GetImage("servers/icon_replay", false));
+	// dimhotepus: Scale UI.
+	imageList->AddImage(scheme()->GetImage("servers/icon_password", false, IsProportional()));
+	imageList->AddImage(scheme()->GetImage("servers/icon_bots", false, IsProportional()));
+	imageList->AddImage(scheme()->GetImage("servers/icon_robotron", false, IsProportional()));
+	imageList->AddImage(scheme()->GetImage("servers/icon_secure_deny", false, IsProportional()));
+	imageList->AddImage(scheme()->GetImage("servers/icon_replay", false, IsProportional()));
 
-	intp passwordColumnImage = imageList->AddImage(scheme()->GetImage("servers/icon_password_column", false));
-	intp botColumnImage = imageList->AddImage(scheme()->GetImage("servers/icon_bots_column", false));
-	intp secureColumnImage = imageList->AddImage(scheme()->GetImage("servers/icon_robotron_column", false));
-	intp replayColumnImage = imageList->AddImage(scheme()->GetImage("servers/icon_replay_column", false));
+	// dimhotepus: Scale UI.
+	intp passwordColumnImage = imageList->AddImage(scheme()->GetImage("servers/icon_password_column", false, IsProportional()));
+	intp botColumnImage = imageList->AddImage(scheme()->GetImage("servers/icon_bots_column", false, IsProportional()));
+	intp secureColumnImage = imageList->AddImage(scheme()->GetImage("servers/icon_robotron_column", false, IsProportional()));
+	intp replayColumnImage = imageList->AddImage(scheme()->GetImage("servers/icon_replay_column", false, IsProportional()));
 
 	m_pDiscoveredGames->SetImageList(imageList, true);
 	vgui::HFont hFont = pScheme->GetFont( "ListSmall", IsProportional() );
@@ -355,14 +365,7 @@ void CDialogAddServer::ApplySchemeSettings( IScheme *pScheme )
 void CDialogAddServer::OnItemSelected()
 {
 	int nSelectedItem = m_pDiscoveredGames->GetSelectedItem(0);
-	if( nSelectedItem != -1 ) 
-	{
-		m_pAddSelectedServerButton->SetEnabled( true );
-	}
-	else
-	{
-		m_pAddSelectedServerButton->SetEnabled( false );
-	}
+	m_pAddSelectedServerButton->SetEnabled( nSelectedItem != -1 );
 }
 
 //-----------------------------------------------------------------------------

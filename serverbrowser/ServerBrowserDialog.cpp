@@ -17,9 +17,11 @@
 //=============================================================================
 #include "pch_serverbrowser.h"
 
+#include "ServerBrowserDialog.h"
+
 #include "qlimits.h"
 
-#if defined( _WIN32 ) && !defined( _X360 )
+#if defined( _WIN32 )
 #define WIN32_LEAN_AND_MEAN
 #include <winsock.h>
 #endif
@@ -78,17 +80,19 @@ CServerBrowserDialog::CServerBrowserDialog(vgui::Panel *parent) : Frame(parent, 
 	m_pSpectateGames = new CSpectateGames(this);
 	m_pLanGames = new CLanGames(this);
 	m_pFriendsGames = new CFriendsGames(this);
-
-	SetMinimumSize( BASE_WIDTH, 384 );
-	SetSize( BASE_WIDTH, 384 );
+	// dimhotepus: Scale UI.
+	SetMinimumSize( QuickPropScale( BASE_WIDTH ), QuickPropScale( 384 ) );
+	SetSize( QuickPropScale( BASE_WIDTH ), QuickPropScale( 384 ) );
 
 	m_pGameList = m_pInternetGames;
 
-	m_pContextMenu =  new CServerContextMenu(this);;
+	m_pContextMenu =  new CServerContextMenu(this);
 
 	// property sheet
 	m_pTabPanel = new PropertySheet(this, "GameTabs");
-	m_pTabPanel->SetTabWidth(72);
+	
+	// dimhotepus: Scale UI.
+	m_pTabPanel->SetTabWidth(QuickPropScale( 72 ));
 	m_pTabPanel->AddPage(m_pInternetGames, "#ServerBrowser_InternetTab");
 	m_pTabPanel->AddPage(m_pFavorites, "#ServerBrowser_FavoritesTab");
 	m_pTabPanel->AddPage(m_pHistory, "#ServerBrowser_HistoryTab");
@@ -171,7 +175,7 @@ void CServerBrowserDialog::Initialize()
 //-----------------------------------------------------------------------------
 // Purpose: returns a server in the list
 //-----------------------------------------------------------------------------
-gameserveritem_t *CServerBrowserDialog::GetServer( uintp serverID )
+gameserveritem_t *CServerBrowserDialog::GetServer( unsigned serverID )
 {
 	if (m_pGameList)
 		return m_pGameList->GetServer( serverID );
@@ -332,7 +336,7 @@ void CServerBrowserDialog::BlacklistsChanged()
 //-----------------------------------------------------------------------------
 // Purpose: Updates status test at bottom of window
 //-----------------------------------------------------------------------------
-void CServerBrowserDialog::UpdateStatusText(const char *fmt, ...)
+void CServerBrowserDialog::UpdateStatusText(PRINTF_FORMAT_STRING const char *fmt, ...)
 {
 	if ( !m_pStatusLabel )
 		return;
@@ -414,7 +418,7 @@ void CServerBrowserDialog::AddServerToFavorites(gameserveritem_t &server)
 		{
 			// send command to propagate to the client so the client can send it on to the GC
 			char command[ 256 ];
-			Q_snprintf( command, ssize( command ), "rfgc %s\n", server.m_NetAdr.GetConnectionAddressString() );
+			V_sprintf_safe( command, "rfgc %s\n", server.m_NetAdr.GetConnectionAddressString() );
 			g_pRunGameEngine->AddTextCommand( command );
 		}
 	}
@@ -503,8 +507,7 @@ CDialogGameInfo *CServerBrowserDialog::OpenGameInfoDialog( IGameList *gameList, 
 	if ( !pServer )
 		return NULL;
 
-	CDialogGameInfo *gameDialog = new CDialogGameInfo( NULL, pServer->m_NetAdr.GetIP(), pServer->m_NetAdr.GetQueryPort(), pServer->m_NetAdr.GetConnectionPort(), gameList->GetConnectCode() );
-	gameDialog->SetParent(GetVParent());
+	auto *gameDialog = new CDialogGameInfo( this, pServer->m_NetAdr.GetIP(), pServer->m_NetAdr.GetQueryPort(), pServer->m_NetAdr.GetConnectionPort(), gameList->GetConnectCode() );
 	gameDialog->AddActionSignalTarget(this);
 	gameDialog->Run( pServer->GetName() );
 	intp i = m_GameInfoDialogs.AddToTail();
@@ -517,9 +520,8 @@ CDialogGameInfo *CServerBrowserDialog::OpenGameInfoDialog( IGameList *gameList, 
 //-----------------------------------------------------------------------------
 CDialogGameInfo *CServerBrowserDialog::OpenGameInfoDialog( int serverIP, uint16 connPort, uint16 queryPort, const char *pszConnectCode )
 {
-	CDialogGameInfo *gameDialog = new CDialogGameInfo(NULL, serverIP, queryPort, connPort, pszConnectCode);
+	auto *gameDialog = new CDialogGameInfo(this, serverIP, queryPort, connPort, pszConnectCode);
 	gameDialog->AddActionSignalTarget(this);
-	gameDialog->SetParent(GetVParent());
 	gameDialog->Run("");
 	intp i = m_GameInfoDialogs.AddToTail();
 	m_GameInfoDialogs[i] = gameDialog;
@@ -792,10 +794,10 @@ void CServerBrowserDialog::OnKeyCodePressed( vgui::KeyCode code )
 			  nButtonCode == STEAMCONTROLLER_DPAD_DOWN ||
 			  nButtonCode == KEY_DOWN )
 	{
-		CBaseGamesPage *pGamesPage = dynamic_cast< CBaseGamesPage* >( m_pTabPanel->GetActivePage() );
+		auto *pGamesPage = dynamic_cast< CBaseGamesPage* >( m_pTabPanel->GetActivePage() );
 		if ( pGamesPage )
 		{
-			ListPanel *pListPanel = dynamic_cast< ListPanel * >( pGamesPage->GetActiveList() );
+			auto *pListPanel = dynamic_cast< ListPanel * >( pGamesPage->GetActiveList() );
 			if ( pListPanel )
 			{
 				if ( pListPanel->GetSelectedItem( 0 ) == -1 )

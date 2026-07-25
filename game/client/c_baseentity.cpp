@@ -106,8 +106,8 @@ static CUtlLinkedList<C_BaseEntity*, unsigned short> g_TeleportList;
 class CPredictableList : public IPredictableList
 {
 public:
-	virtual C_BaseEntity *GetPredictable( int slot );
-	virtual int GetPredictableCount( void );
+	C_BaseEntity *GetPredictable( intp slot ) override;
+	intp GetPredictableCount( void ) override;
 
 protected:
 	void	AddToPredictableList( ClientEntityHandle_t add );
@@ -191,16 +191,16 @@ void CPredictableList::RemoveFromPredictablesList( ClientEntityHandle_t remove )
 // Input  : slot - 
 // Output : C_BaseEntity
 //-----------------------------------------------------------------------------
-C_BaseEntity *CPredictableList::GetPredictable( int slot )
+C_BaseEntity *CPredictableList::GetPredictable( intp slot )
 {
 	return cl_entitylist->GetBaseEntityFromHandle( m_Predictables[ slot ] );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
-// Output : int
+// Output : intp
 //-----------------------------------------------------------------------------
-int CPredictableList::GetPredictableCount( void )
+intp CPredictableList::GetPredictableCount( void )
 {
 	return m_Predictables.Count();
 }
@@ -212,10 +212,9 @@ int CPredictableList::GetPredictableCount( void )
 //-----------------------------------------------------------------------------
 static C_BaseEntity *FindPreviouslyCreatedEntity( CPredictableId& testId )
 {
-	int c = predictables->GetPredictableCount();
+	intp c = predictables->GetPredictableCount();
 
-	int i;
-	for ( i = 0; i < c; i++ )
+	for ( intp i = 0; i < c; i++ )
 	{
 		C_BaseEntity *e = predictables->GetPredictable( i );
 		if ( !e || !e->IsClientCreated() )
@@ -246,11 +245,11 @@ public:
 class CRecordingList : public IRecordingList
 {
 public:
-	virtual void	AddToList( ClientEntityHandle_t add );
-	virtual void	RemoveFromList( ClientEntityHandle_t remove );
+	void	AddToList( ClientEntityHandle_t add ) override;
+	void	RemoveFromList( ClientEntityHandle_t remove ) override;
 
-	virtual int		Count();
-	IClientRenderable *Get( int index );
+	int		Count() override;
+	IClientRenderable *Get( int index ) override;
 private:
 	CUtlVector< ClientEntityHandle_t > m_Recording;
 };
@@ -577,7 +576,7 @@ END_PREDICTION_DATA()
 void SpewInterpolatedVar( CInterpolatedVar< Vector > *pVar )
 {
 	Msg( "--------------------------------------------------\n" );
-	intp i = pVar->GetHead();
+	int i = pVar->GetHead();
 	Vector v0(0, 0, 0);
 	CApparentVelocity<Vector> apparent(v0);
 	float prevtime = 0.0f;
@@ -601,7 +600,7 @@ void SpewInterpolatedVar( CInterpolatedVar< Vector > *pVar, float flNow, float f
 	float target = flNow - flInterpAmount;
 
 	Msg( "--------------------------------------------------\n" );
-	intp i = pVar->GetHead();
+	int i = pVar->GetHead();
 	Vector v0(0, 0, 0);
 	CApparentVelocity<Vector> apparent(v0);
 	float newtime = 999999.0f;
@@ -631,7 +630,7 @@ void SpewInterpolatedVar( CInterpolatedVar< Vector > *pVar, float flNow, float f
 			else
 			{
 				bSpew = true;
-				intp savei = std::exchange(i, pVar->GetNext( i ));
+				int savei = std::exchange(i, pVar->GetNext( i ));
 				float oldtertime = 0.0f;
 				pVar->GetHistoryValue( i, oldtertime );
 
@@ -669,7 +668,7 @@ void SpewInterpolatedVar( CInterpolatedVar< Vector > *pVar, float flNow, float f
 void SpewInterpolatedVar( CInterpolatedVar< float > *pVar )
 {
 	Msg( "--------------------------------------------------\n" );
-	intp i = pVar->GetHead();
+	int i = pVar->GetHead();
 	CApparentVelocity<float> apparent(0.0f);
 	while ( 1 )
 	{
@@ -805,7 +804,7 @@ void C_BaseEntity::Interp_SetupMappings( VarMapping_t *map )
 	{
 		IInterpolatedVar *watcher = e.watcher;
 		void *data = e.data;
-		int type = e.type;
+		auto type = e.type;
 
 		watcher->Setup( data, type );
 		watcher->SetInterpolationAmount( GetInterpolationAmount( watcher->GetType() ) ); 
@@ -1779,13 +1778,21 @@ void C_BaseEntity::SetMoveType( MoveType_t val, MoveCollide_t moveCollide /*= MO
 	}
 #endif
 
- 	m_MoveType = val;
+	static_assert(
+		std::numeric_limits<decltype(m_MoveType)>::min() <= MoveType_t::MOVETYPE_NONE &&
+		std::numeric_limits<decltype(m_MoveType)>::max() >= MoveType_t::MOVETYPE_LAST);
+
+ 	m_MoveType = static_cast<decltype(m_MoveType)>(val);
 	SetMoveCollide( moveCollide );
 }
 
 void C_BaseEntity::SetMoveCollide( MoveCollide_t val )
 {
-	m_MoveCollide = val;
+	static_assert(
+		std::numeric_limits<decltype(m_MoveCollide)>::min() <= MoveCollide_t::MOVECOLLIDE_DEFAULT &&
+		std::numeric_limits<decltype(m_MoveCollide)>::max() >= MoveCollide_t::MOVECOLLIDE_COUNT);
+
+	m_MoveCollide = static_cast<decltype(m_MoveCollide)>(val);
 }
 
 
@@ -2743,8 +2750,8 @@ void C_BaseEntity::OnStoreLastNetworkedValue()
 		MoveToLastReceivedPosition( true );
 	}
 
-	int c = m_VarMap.m_Entries.Count();
-	for ( int i = 0; i < c; i++ )
+	intp c = m_VarMap.m_Entries.Count();
+	for ( intp i = 0; i < c; i++ )
 	{
 		VarMapEntry_t *e = &m_VarMap.m_Entries[ i ];
 		IInterpolatedVar *watcher = e->watcher;
@@ -2778,8 +2785,8 @@ void C_BaseEntity::OnLatchInterpolatedVariables( int flags )
 
 	PREDICTION_TRACKVALUECHANGESCOPE_ENTITY( this, bUpdateLastNetworkedValue ? "latch+net" : "latch" );
 
-	int c = m_VarMap.m_Entries.Count();
-	for ( int i = 0; i < c; i++ )
+	intp c = m_VarMap.m_Entries.Count();
+	for ( intp i = 0; i < c; i++ )
 	{
 		VarMapEntry_t *e = &m_VarMap.m_Entries[ i ];
 		IInterpolatedVar *watcher = e->watcher;
@@ -3022,8 +3029,8 @@ bool C_BaseEntity::ShouldInterpolate()
 
 void C_BaseEntity::ProcessTeleportList()
 {
-	int iNext;
-	for ( int iCur=g_TeleportList.Head(); iCur != g_TeleportList.InvalidIndex(); iCur=iNext )
+	unsigned short iNext;
+	for ( auto iCur=g_TeleportList.Head(); iCur != g_TeleportList.InvalidIndex(); iCur=iNext )
 	{
 		iNext = g_TeleportList.Next( iCur );
 		C_BaseEntity *pCur = g_TeleportList[iCur];
@@ -3092,8 +3099,8 @@ void C_BaseEntity::ProcessInterpolatedList()
 	CheckInterpolatedVarParanoidMeasurement();
 
 	// Interpolate the minimal set of entities that need it.
-	int iNext;
-	for ( int iCur=g_InterpolationList.Head(); iCur != g_InterpolationList.InvalidIndex(); iCur=iNext )
+	unsigned short iNext;
+	for ( auto iCur=g_InterpolationList.Head(); iCur != g_InterpolationList.InvalidIndex(); iCur=iNext )
 	{
 		iNext = g_InterpolationList.Next( iCur );
 		C_BaseEntity *pCur = g_InterpolationList[iCur];
@@ -3239,8 +3246,8 @@ void C_BaseEntity::AddVisibleEntities()
 	VPROF_BUDGET( "C_BaseEntity::AddVisibleEntities", VPROF_BUDGETGROUP_WORLD_RENDERING );
 
 	// Let non-dormant client created predictables get added, too
-	int c = predictables->GetPredictableCount();
-	for ( int i = 0 ; i < c ; i++ )
+	intp c = predictables->GetPredictableCount();
+	for ( intp i = 0 ; i < c ; i++ )
 	{
 		C_BaseEntity *pEnt = predictables->GetPredictable( i );
 		if ( !pEnt )
@@ -5613,7 +5620,7 @@ void C_BaseEntity::DrawBBoxVisualizations( void )
 		Vector vecRenderMins, vecRenderMaxs;
 		GetRenderBounds( vecRenderMins, vecRenderMaxs );
 		debugoverlay->AddBoxOverlay( GetRenderOrigin(), vecRenderMins, vecRenderMaxs,
-			GetRenderAngles(), 255, 0, 255, 0, 0.01 );
+			GetRenderAngles(), 255, 0, 255, 0, 0.01f );
 	}
 }
 
@@ -5777,8 +5784,7 @@ int C_BaseEntity::RestoreData( const char *context, int slot, int type )
 	AddEFlags( savedEFlags );
 
 	// restore original model index and change via SetModelIndex
-	int newModelIndex = m_nModelIndex;
-	m_nModelIndex = oldModelIndex;
+	int newModelIndex = std::exchange(m_nModelIndex, oldModelIndex);
 	int overrideModelIndex = CalcOverrideModelIndex();
 	if( overrideModelIndex != -1 )
 		newModelIndex = overrideModelIndex;
@@ -6337,12 +6343,12 @@ bool C_BaseEntity::ValidateEntityAttachedToPlayer( bool &bShouldRetry )
 }
 #endif // TF_CLIENT_DLL
 
-
-void C_BaseEntity::AddVar( void *data, IInterpolatedVar *watcher, int type, bool bSetup )
+// dimhotepus: int -> byte.
+void C_BaseEntity::AddVar( void *data, IInterpolatedVar *watcher, byte type, bool bSetup )
 {
 	// Only add it if it hasn't been added yet.
 	bool bAddIt = true;
-	for ( int i=0; i < m_VarMap.m_Entries.Count(); i++ )
+	for ( intp i=0; i < m_VarMap.m_Entries.Count(); i++ )
 	{
 		if ( m_VarMap.m_Entries[i].watcher == watcher )
 		{
@@ -6392,7 +6398,7 @@ void C_BaseEntity::AddVar( void *data, IInterpolatedVar *watcher, int type, bool
 
 void C_BaseEntity::RemoveVar( void *data, bool bAssert )
 {
-	for ( int i=0; i < m_VarMap.m_Entries.Count(); i++ )
+	for ( intp i=0; i < m_VarMap.m_Entries.Count(); i++ )
 	{
 		if ( m_VarMap.m_Entries[i].data == data )
 		{

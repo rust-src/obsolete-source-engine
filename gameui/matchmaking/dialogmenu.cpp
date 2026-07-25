@@ -14,9 +14,7 @@
 #include "qlimits.h"
 #include "dialogmenu.h"
 #include "BasePanel.h"
-#include "vgui_controls/ImagePanel.h"
-#include "iachievementmgr.h"			// for iachievement abstract class in CAchievementItem
-#include "achievementsdialog.h"			// for helper functions used by both pc and xbox achievements
+#include "basedialog.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -66,8 +64,9 @@ void CMenuItem::ApplySettings( KeyValues *pSettings )
 {
 	BaseClass::ApplySettings( pSettings );
 
-	m_nBottomMargin = pSettings->GetInt( "bottommargin", 0 );
-	m_nRightMargin	= pSettings->GetInt( "rightmargin", 0 );
+	// dimhotepus: Scale UI.
+	m_nBottomMargin = QuickPropScale( pSettings->GetInt( "bottommargin", 0 ) );
+	m_nRightMargin	= QuickPropScale( pSettings->GetInt( "rightmargin", 0 ) );
 
 	int x, y;
 	m_pTitle->GetPos( x, y );
@@ -108,8 +107,8 @@ void CMenuItem::ApplySchemeSettings( vgui::IScheme *pScheme )
 		m_pDescription->SetFgColor( pScheme->GetColor( "MatchmakingMenuItemDescriptionColor", Color( 0, 0, 0, 255 ) ) );
 	}
 
-		KeyValues *pKeys = BasePanel()->GetConsoleControlSettings()->FindKey( "MenuItem.res" );
-		ApplySettings( pKeys );
+	KeyValues *pKeys = BasePanel()->GetConsoleControlSettings()->FindKey( "MenuItem.res" );
+	ApplySettings( pKeys );
 }
 
 //-----------------------------------------------------------------------
@@ -176,7 +175,8 @@ void CMenuItem::OnClick()
 CCommandItem::CCommandItem( CDialogMenu *pParent, const char *pTitleLabel, const char *pDescLabel, const char *pCommand ) 
 	: BaseClass( pParent, pTitleLabel, pDescLabel )
 {
-	Q_strncpy( m_szCommand, pCommand, MAX_COMMAND_LEN );
+	m_bHasFocus = false;
+	V_strcpy_safe( m_szCommand, pCommand );
 }
 
 CCommandItem::~CCommandItem()
@@ -263,62 +263,6 @@ void CPlayerItem::OnClick()
 }
 
 //-----------------------------------------------------------------------
-// CBrowserItem
-//
-// Menu item used to display session search results.
-//-----------------------------------------------------------------------
-CBrowserItem::CBrowserItem( CDialogMenu *pParent, const char *pHost, const char *pPlayers, const char *pScenario, const char *pPing ) 
-	: BaseClass( pParent, pHost, NULL, "SelectSession" )
-{
-	m_pPlayers = new vgui::Label( this, "players", pPlayers );
-	m_pScenario = new vgui::Label( this, "scenario", pScenario );
-	m_pPing = new vgui::Label( this, "ping", pPing );
-}
-
-CBrowserItem::~CBrowserItem()
-{
-	delete m_pPlayers;
-	delete m_pScenario;
-	delete m_pPing;
-}
-
-void CBrowserItem::PerformLayout()
-{
-	BaseClass::PerformLayout();
-
-	int x, y, wide, tall;
-	m_pPing->GetBounds( x, y, wide, tall );
-
-	m_pScenario->SizeToContents();
-	int sx, sy;
-	m_pScenario->GetPos( sx, sy );
-	m_pScenario->SetPos( x - m_pScenario->GetWide() - m_nRightMargin, sy );
-
-	SetSize( x + wide, GetTall() );
-}
-
-void CBrowserItem::ApplySettings( KeyValues *pSettings )
-{
-	BaseClass::ApplySettings( pSettings );
-}
-
-void CBrowserItem::ApplySchemeSettings( vgui::IScheme *pScheme )
-{
-	BaseClass::ApplySchemeSettings( pScheme );
-
-	Color fgcolor = pScheme->GetColor( "MatchmakingMenuItemDescriptionColor", Color( 64, 64, 64, 255 ) );
-	m_pPlayers->SetFgColor( fgcolor );
-	m_pScenario->SetFgColor( fgcolor );
-
-	m_pPing->SetContentAlignment( vgui::Label::a_center );
-
-	KeyValues *pKeys = BasePanel()->GetConsoleControlSettings()->FindKey( "BrowserItem.res" );
-	ApplySettings( pKeys );
-
-	SetFocus( false );
-}
-
-//-----------------------------------------------------------------------
 // COptionsItem
 //
 // Menu item used to present a list of options for the player to select
@@ -329,7 +273,10 @@ COptionsItem::COptionsItem( CDialogMenu *pParent, const char *pLabel )
 {
 	m_nActiveOption = m_Options.InvalidIndex();
 	m_nOptionsXPos = 0;
+	m_nOptionsMinWide = 0;
+	m_nOptionsLeftMargin = 0;
 	m_nMaxOptionWidth = 0;
+	m_nArrowGap = 0;
 
 	m_szOptionsFont[0] = '\0';
 	m_hOptionsFont = vgui::INVALID_FONT;
@@ -353,10 +300,8 @@ void COptionsItem::PerformLayout()
 	int optionWide = max( m_nOptionsMinWide, GetWide() - m_nOptionsXPos - m_pRightArrow->GetWide() - m_nOptionsLeftMargin );
 	int optionTall = GetTall();
 
-	for ( int i = 0; i < m_OptionLabels.Count(); ++i )
+	for ( auto *pOption : m_OptionLabels )
 	{
-		vgui::Label *pOption = m_OptionLabels[i];
-
 		pOption->SetBounds( m_nOptionsXPos, 0, optionWide, optionTall );
 	}
 
@@ -384,13 +329,13 @@ void COptionsItem::PerformLayout()
 void COptionsItem::ApplySettings( KeyValues *pSettings )
 {
 	BaseClass::ApplySettings( pSettings );
+	// dimhotepus: Scale UI.
+	m_nOptionsXPos			= QuickPropScale( pSettings->GetInt( "optionsxpos", 0 ) );
+	m_nOptionsMinWide		= QuickPropScale( pSettings->GetInt( "optionsminwide", 0 ) );
+	m_nOptionsLeftMargin	= QuickPropScale( pSettings->GetInt( "optionsleftmargin", 0 ) );
+	m_nArrowGap				= QuickPropScale( pSettings->GetInt( "arrowgap", 0 ) );
 
-	m_nOptionsXPos			= pSettings->GetInt( "optionsxpos", 0 );
-	m_nOptionsMinWide		= pSettings->GetInt( "optionsminwide", 0 );
-	m_nOptionsLeftMargin	= pSettings->GetInt( "optionsleftmargin", 0 );
-	m_nArrowGap				= pSettings->GetInt( "arrowgap", 0 );
-
-	Q_strncpy( m_szOptionsFont, pSettings->GetString( "optionsfont", "Default" ), sizeof( m_szOptionsFont ) );
+	V_strcpy_safe( m_szOptionsFont, pSettings->GetString( "optionsfont", "Default" ) );
 }
 
 void COptionsItem::ApplySchemeSettings( vgui::IScheme *pScheme )
@@ -410,16 +355,16 @@ void COptionsItem::SetFocus( const bool bActive )
 {
 	if ( bActive )
 	{
-		for ( int i = 0; i < m_OptionLabels.Count(); ++i )
+		for ( auto *l : m_OptionLabels )
 		{
-			m_OptionLabels[i]->SetBgColor( m_BgColorActive );
+			l->SetBgColor( m_BgColorActive );
 		}
 	}
 	else
 	{
-		for ( int i = 0; i < m_OptionLabels.Count(); ++i )
+		for ( auto *l : m_OptionLabels )
 		{
-			m_OptionLabels[i]->SetBgColor( m_BgColor );
+			l->SetBgColor( m_BgColor );
 		}
 	}
 }
@@ -530,135 +475,6 @@ void COptionsItem::SetOptionFocusPrev()
 
 
 //-----------------------------------------------------------------------
-// CAchievementItem
-//
-// Menu item used to present an achievement - including image, title,
-// description, points and unlock date. Clicking the item opens another
-// dialog with additional information about the achievement.
-//-----------------------------------------------------------------------
-CAchievementItem::CAchievementItem( CDialogMenu *pParent, const wchar_t *pName, const wchar_t *pDesc, uint points, bool bUnlocked, IAchievement* pSourceAchievement ) 
-	: BaseClass( pParent, "", "" )
-{
-	// Title and description were returned as results of a system query,
-	// and are therefore already localized.
-	m_pTitle->SetText( pName );
-
-	if ( IsX360() )
-	{
-		wchar_t buf[120];
-
-		// Get the screen size
-		int wide, tall;
-		vgui::surface()->GetScreenSize(wide, tall);
-
-		unsigned int iWrapLen;
-
-		if ( tall <= BASE_HEIGHT )
-		{
-			iWrapLen = 50;
-		}
-		else
-		{
-			iWrapLen = 65;
-		}
-
-		// let's do some wrapping on this label
-		wcsncpy( buf, pDesc, sizeof(buf) / sizeof( wchar_t ) );
-
-		if ( wcslen(buf) > iWrapLen )
-		{
-			int iPos = iWrapLen;
-
-			while ( iPos > 0 && buf[iPos] != L' ' )
-			{
-				iPos--;
-			}
-
-			if ( iPos > 0 && buf[iPos] == L' ' )
-			{
-				buf[iPos] = L'\n';
-			}				
-		}
-
-		m_pDescription->SetText( buf );
-	}
-	else
-	{
-		m_pDescription->SetText( pDesc );
-	}
-
-	m_pSourceAchievement = pSourceAchievement;
-
-	m_pPercentageBarBackground = SETUP_PANEL( new vgui::ImagePanel( this, "PercentageBarBackground" ) );
-	m_pPercentageBar = SETUP_PANEL( new vgui::ImagePanel( this, "PercentageBar" ) );
-	m_pPercentageText = SETUP_PANEL( new vgui::Label( this, "PercentageText", "" ) );
-
-	// Set the status icons
-	m_pLockedIcon = SETUP_PANEL( new vgui::ImagePanel( this, "lockedicon" ) );
-	m_pUnlockedIcon = SETUP_PANEL( new vgui::ImagePanel( this, "unlockedicon" ) );
-
-	// Achievement image
-	m_pImage = new vgui::ImagePanel( this, "icon" );
-}
-
-CAchievementItem::~CAchievementItem()
-{
-	delete m_pImage;
-	delete m_pPoints;
-	delete m_pLockedIcon;
-	delete m_pUnlockedIcon;
-	delete m_pPercentageBarBackground;
-	delete m_pPercentageBar;
-	delete m_pPercentageText;
-}
-
-void CAchievementItem::PerformLayout()
-{
-	BaseClass::PerformLayout();
-
-	int x, y;
-
- 	m_pPoints->SizeToContents();
-	m_pPoints->GetPos( x, y );
- 	x = GetWide() - m_pPoints->GetWide() - m_nRightMargin;
- 	m_pPoints->SetPos( x, y );
-
-}
-
-void CAchievementItem::ApplySchemeSettings( vgui::IScheme *pScheme )
-{
-	BaseClass::ApplySchemeSettings( pScheme );
-
-	KeyValues*pKeys = BasePanel()->GetConsoleControlSettings()->FindKey( "AchievementItem.res" );	
-	ApplySettings( pKeys );
-
-	m_pImage->SetBgColor( Color( 32, 32, 32, 255 ) );
-	m_pImage->SetFgColor( Color( 32, 32, 32, 255 ) );
-	m_pImage->SetPaintBackgroundEnabled( true );
-
-	m_pPoints->SetFgColor( pScheme->GetColor( "MatchmakingMenuItemDescriptionColor", Color( 64, 64, 64, 255 ) ) );
-
-	// Set icon image
-	LoadAchievementIcon( m_pImage, m_pSourceAchievement );
-
-	// Percentage completion bar (for progressive achievements)
-	UpdateProgressBar( this, m_pSourceAchievement, m_clrProgressBar );
-
-	if ( m_pSourceAchievement && m_pSourceAchievement->IsAchieved() )
-	{
-		m_pLockedIcon->SetVisible( false );
-		m_pUnlockedIcon->SetVisible ( true );
-		m_pImage->SetVisible( true );
-	}
-	else
-	{
-		m_pLockedIcon->SetVisible( true );
-		m_pUnlockedIcon->SetVisible( false );
-		m_pImage->SetVisible( false );
-	}
-}
-
-//-----------------------------------------------------------------------
 // CSectionedItem
 //
 // Menu item used to display some number of data entries, which are arranged
@@ -682,7 +498,7 @@ CSectionedItem::~CSectionedItem()
 
 void CSectionedItem::ClearSections()
 {
-	for ( int i = 0; i < m_Sections.Count(); ++i )
+	for ( intp i = 0; i < m_Sections.Count(); ++i )
 	{
 		section_s &sec = m_Sections[i];
 		delete sec.pLabel;
@@ -694,7 +510,7 @@ void CSectionedItem::PerformLayout()
 	BaseClass::PerformLayout();
 
 	int tall = GetTall();
-	for ( int i = 0; i < m_Sections.Count(); ++i )
+	for ( intp i = 0; i < m_Sections.Count(); ++i )
 	{
 		vgui::Label *pLabel = m_Sections[i].pLabel;
 		if ( !m_bHeader )
@@ -703,7 +519,8 @@ void CSectionedItem::PerformLayout()
 			pLabel->SetFgColor( m_pParent->GetColumnColor(i) );
 		}
 		pLabel->SetBounds( m_pParent->GetColumnXPos(i), 0, m_pParent->GetColumnWide(i), tall );
-		pLabel->SetTextInset( 10, m_bHeader ? 5 : m_pParent->GetColumnYPos(i) ); // only use ypos for the y-inset if we're not a header
+		// dimhotepus: Scale UI.
+		pLabel->SetTextInset( QuickPropScale( 10 ), m_bHeader ? QuickPropScale( 5 ) : m_pParent->GetColumnYPos(i) ); // only use ypos for the y-inset if we're not a header
 	}
 }
 
@@ -729,14 +546,15 @@ void CSectionedItem::AddSection( const char *pText, int align )
 	sec.pLabel = new vgui::Label( this, "Section", pText );
 	SETUP_PANEL( sec.pLabel );
 	sec.pLabel->SetContentAlignment( (vgui::Label::Alignment)align );
-	sec.pLabel->SetTextInset( 10, 0 );
+	// dimhotepus: Scale UI.
+	sec.pLabel->SetTextInset( QuickPropScale( 10 ), 0 );
 	sec.pLabel->SetBgColor( Color( 209, 112, 52, 128 ) );
 	m_Sections.AddToTail( sec );
 }
 
 void CSectionedItem::SetActiveColumn( int col )
 {
-	for ( int i = 0; i < m_Sections.Count(); ++i )
+	for ( intp i = 0; i < m_Sections.Count(); ++i )
 	{
 		m_Sections[i].pLabel->SetPaintBackgroundEnabled( i == col );
 	}
@@ -815,22 +633,9 @@ CCommandItem *CDialogMenu::AddCommandItem( const char *pTitleLabel, const char *
 	return (CCommandItem*)AddItemInternal( new CCommandItem( this, pTitleLabel, pDescLabel, pCommand ) );
 }
 
-CBrowserItem *CDialogMenu::AddBrowserItem( const char *pHost, const char *pPlayers, const char *pScenario, const char *pPing )
-{
-	// Results are added to the menu at runtime, so the layout needs to be updated after each addition.
-	CBrowserItem *pItem = (CBrowserItem*)AddItemInternal( new CBrowserItem( this, pHost, pPlayers, pScenario, pPing ) );
-	PerformLayout();
-	return pItem;
-}
-
 COptionsItem *CDialogMenu::AddOptionsItem( const char *pLabel )
 {
 	return (COptionsItem*)AddItemInternal( new COptionsItem( this, pLabel ) );
-}
-
-CAchievementItem *CDialogMenu::AddAchievementItem( const wchar_t *pName, const wchar_t *pDesc, uint points, bool bUnlocked, IAchievement* pSourceAchievement  )
-{
-	return (CAchievementItem*)AddItemInternal( new CAchievementItem( this, pName, pDesc, points, bUnlocked, pSourceAchievement ) );
 }
 
 CSectionedItem *CDialogMenu::AddSectionedItem( const char **ppEntries, int ct )
@@ -874,13 +679,14 @@ void CDialogMenu::PerformLayout()
 
 	if ( m_bHasHeader )
 	{
-		yPos = 40;
+		// dimhotepus: Scale UI.
+		yPos = QuickPropScale( 40 );
 		m_pHeader->SetPos( 0, 0 );
 		m_pHeader->SetWide( wide );
 		m_pHeader->PerformLayout();
 	}
 
-	for ( int i = 0; i < m_MenuItems.Count(); ++i )
+	for ( intp i = 0; i < m_MenuItems.Count(); ++i )
 	{
 		CMenuItem *pItem = m_MenuItems[i];
 
@@ -914,8 +720,9 @@ void CDialogMenu::ApplySettings( KeyValues *pResourceData )
 {
 	BaseClass::ApplySettings( pResourceData );
 
-	m_nItemSpacing		 = pResourceData->GetInt( "itemspacing", 2 );
-	m_nMinWide			 = pResourceData->GetInt( "minwide", 0 );
+	// dimhotepus: Scale UI.
+	m_nItemSpacing		 = QuickPropScale( pResourceData->GetInt( "itemspacing", 2 ) );
+	m_nMinWide			 = QuickPropScale( pResourceData->GetInt( "minwide", 0 ) );
 	m_nActiveColumn		 = pResourceData->GetInt( "activecolumn", -1 );
 	m_nMaxVisibleItems	 = pResourceData->GetInt( "maxvisibleitems", 1000 ); // arbitrarily large
 	m_nMaxVisibleColumns = pResourceData->GetInt( "maxvisiblecolumns", 1000 ); // arbitrarily large
@@ -932,12 +739,14 @@ void CDialogMenu::ApplySettings( KeyValues *pResourceData )
 			{
 				columninfo_s col;
 				col.bSortDown	= true;
-				col.xpos		= pColumn->GetInt( "xpos", xPos );
-				col.ypos		= pColumn->GetInt( "ypos", 0 );
-				col.wide		= pColumn->GetInt( "wide", 0 );
+				// dimhotepus: Scale UI.
+				col.xpos		= QuickPropScale( pColumn->GetInt( "xpos", xPos ) );
+				col.ypos		= QuickPropScale( pColumn->GetInt( "ypos", 0 ) );
+				col.wide		= QuickPropScale( pColumn->GetInt( "wide", 0 ) );
 				col.align		= pColumn->GetInt( "align", 3 ); // west by default
 				col.bLocked		= pColumn->GetInt( "locked", 0 );
-				col.hFont		= m_pScheme->GetFont( pColumn->GetString( "font", "default" ) );
+				// dimhotepus: Scale UI.
+				col.hFont		= m_pScheme->GetFont( pColumn->GetString( "font", "default" ), IsProportional() );
 				col.color		= m_pScheme->GetColor( pColumn->GetString( "fgcolor" ), Color( 0, 0, 0, 255 ) );
 				
 				ppHeader[idx++] = pColumn->GetString( "header", "" );
@@ -958,7 +767,8 @@ void CDialogMenu::ApplySettings( KeyValues *pResourceData )
 		SETUP_PANEL( m_pHeader );
 
 		m_pHeader->SetPaintBackgroundEnabled( false );
-		vgui::HFont headerFont = m_pScheme->GetFont( pColumnData->GetString( "headerfont", "default" ) );
+		// dimhotepus: Scale UI.
+		vgui::HFont headerFont = m_pScheme->GetFont( pColumnData->GetString( "headerfont", "default" ), IsProportional() );
 		Color headerColor = m_pScheme->GetColor( pColumnData->GetString( "headerfgcolor" ), Color( 0, 0, 0, 255 ) );
 		for ( int i = 0; i < idx; ++i )
 		{
@@ -1082,11 +892,11 @@ void CDialogMenu::ApplySchemeSettings( vgui::IScheme *pScheme )
 //--------------------------------------------------------------------------------------
 void CDialogMenu::SetFocus( int idx )
 {
-	int itemCt = (unsigned int)m_MenuItems.Count();
+	intp itemCt = m_MenuItems.Count();
 	if ( idx >= itemCt )
 		return;
 
-	for ( int i = 0; i < itemCt; ++i )
+	for ( intp i = 0; i < itemCt; ++i )
 	{
 		m_MenuItems[i]->SetFocus( i == idx );
 	}
@@ -1125,9 +935,7 @@ void CDialogMenu::SortMenuItems()
 			bool bSwap = bSortDown ? diff > 0 : diff < 0;
 			if ( bSwap )
 			{
-				CMenuItem *pTemp = m_MenuItems[j+1];
-				m_MenuItems[j+1] = m_MenuItems[j];
-				m_MenuItems[j] = pTemp;
+				std::swap( m_MenuItems[j+1], m_MenuItems[j] );
 
 				m_pParent->SwapMenuItems( j, j+1 );
 			}
@@ -1390,7 +1198,8 @@ int	CDialogMenu::GetColumnXPos( int idx )
 		if ( trueIdx < m_iUnlocked )
 		{
 			// Put it offscreen
-			xpos = -100 - col.wide;
+			// dimhotepus: Scale UI.
+			xpos = QuickPropScale( -100 ) - col.wide;
 		}
 		else
 		{
@@ -1427,7 +1236,7 @@ int CDialogMenu::GetColumnAlignment( int idx )
 //-----------------------------------------------------------------------
 // Return the specified column font
 //-----------------------------------------------------------------------
-HFont CDialogMenu::GetColumnFont( int idx )
+vgui::HFont CDialogMenu::GetColumnFont( int idx )
 {
 	return m_Columns[idx].hFont;
 }

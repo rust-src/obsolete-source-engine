@@ -3298,7 +3298,7 @@ void CBasePlayer::PhysicsSimulate( void )
 	// If we're running multiple ticks this frame, don't peel off all of the commands, spread them out over
 	// the server ticks.  Use blocks of two in alternate ticks
 	int commandLimit = CBaseEntity::IsSimulatingOnAlternateTicks() ? 2 : 1;
-	int commandsToRun = vecAvailCommands.Count();
+	intp commandsToRun = vecAvailCommands.Count();
 	if ( gpGlobals->simTicksThisFrame >= commandLimit && vecAvailCommands.Count() > commandLimit )
 	{
 		int commandsToRollOver = MIN( vecAvailCommands.Count(), ( gpGlobals->simTicksThisFrame - 1 ) );
@@ -3390,7 +3390,12 @@ void CBasePlayer::PhysicsSimulate( void )
 			pi->m_nNumCmds = commandsToRun;
 		}
 	}
-	else if ( GetTimeSinceLastUserCommand() > sv_player_usercommand_timeout.GetFloat() )
+	// dimhotepus: Need to check m_flLastUserCommandTime to fix https://github.com/Source-Authors/Obsoletium/issues/27
+	// RunNullCommand sets pl.fixangle = FIXANGLE_NONE which causes CGameClient::WriteViewAngleUpdate to not send SVC_FixAngle
+	// In turn missed SVC_FixAngle will not update CCLientState::viewangles and player will not get a correct view angles after save load.
+	// 
+	// So add m_flLastUserCommandTime check to ensure we are playing the game, not loading from save (when null command should be skipped).
+	else if ( m_flLastUserCommandTime && GetTimeSinceLastUserCommand() > sv_player_usercommand_timeout.GetFloat() )
 	{
 		// no usercommand from player after some threshold
 		// server should start RunNullCommand as if client sends an empty command so that Think and gamestate related things run properly
@@ -3587,7 +3592,7 @@ void CBasePlayer::DumpPerfToRecipient( CBasePlayer *pRecipient, int nMaxRecords 
 		}
 
 		char line[ 128 ];
-		int len = Q_snprintf( line, sizeof( line ), "%.3f %d %d %.3f %.3f vel %.2f\n",
+		int len = Q_snprintf( line, sizeof( line ), "%.3lf %d %d %.3f %.3f vel %.2f\n",
 			pi->m_flTime,
 			pi->m_nNumCmds,
 			pi->m_nTicksCorrected,
@@ -3597,7 +3602,7 @@ void CBasePlayer::DumpPerfToRecipient( CBasePlayer *pRecipient, int nMaxRecords 
 
 		if ( curpos + len > 200 )
 		{
-			ClientPrint( pRecipient, HUD_PRINTCONSOLE, (char const *)buf );
+			ClientPrint( pRecipient, HUD_PRINTCONSOLE, buf );
 			buf[ 0 ] = 0;
 			curpos = 0;
 		}
@@ -3626,14 +3631,14 @@ void CBasePlayer::DumpPerfToRecipient( CBasePlayer *pRecipient, int nMaxRecords 
 		const CPlayerCmdInfo *pi = &m_vecPlayerCmdInfo[ i ];
 
 		char line[ 128 ];
-		int len = Q_snprintf( line, sizeof( line ), "%.3f %d %d\n",
+		int len = Q_snprintf( line, sizeof( line ), "%.3lf %d %d\n",
 			pi->m_flTime,
 			pi->m_nNumCmds,
 			pi->m_nDroppedPackets );
 
 		if ( curpos + len > 200 )
 		{
-			ClientPrint( pRecipient, HUD_PRINTCONSOLE, (char const *)buf );
+			ClientPrint( pRecipient, HUD_PRINTCONSOLE, buf );
 			buf[ 0 ] = 0;
 			curpos = 0;
 		}
@@ -7119,13 +7124,13 @@ QAngle CBasePlayer::AutoaimDeflection( Vector &vecSrc, autoaim_params_t &params 
 		}
 	}
 
-	int count = AimTarget_ListCount();
+	intp count = AimTarget_ListCount();
 	if ( count )
 	{
-		CBaseEntity **pList = (CBaseEntity **)stackalloc( sizeof(CBaseEntity *) * count );
+		CBaseEntity **pList = stackallocT( CBaseEntity *, count );
 		AimTarget_ListCopy( pList, count );
 
-		for ( int i = 0; i < count; i++ )
+		for ( intp i = 0; i < count; i++ )
 		{
 			Vector center;
 			Vector dir;

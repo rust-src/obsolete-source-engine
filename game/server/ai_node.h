@@ -110,10 +110,10 @@ public:
 	CAI_Hint*		GetHint()					{ return m_pHint; }
 	void			SetHint( CAI_Hint *pHint )	{ m_pHint = pHint; }
 
-	int				NumLinks() const		{ return m_Links.Count(); }
+	intp			NumLinks() const		{ return m_Links.Count(); }
 	void			ClearLinks()			{ m_Links.Purge(); }
 	CAI_Link *		GetLink( int destNodeId );
-	CAI_Link *		GetLinkByIndex( int i )	{ return m_Links[i]; }
+	CAI_Link *		GetLinkByIndex( intp i )	{ return m_Links[i]; }
 
 	bool 			IsLocked() const			{ return ( m_flNextUseTime > gpGlobals->curtime ); }
 	void			Lock( float duration )		{ m_flNextUseTime = gpGlobals->curtime + duration; }
@@ -126,7 +126,7 @@ public:
 	CAI_Link*		HasLink(int nNodeID);				// Return link to nNodeID or NULL
 
 	void			ShuffleLinks();						// Called before GetShuffeledLinks to reorder 
-	CAI_Link*		GetShuffeledLink(int nNum);			// Used to get links in different order each time
+	CAI_Link*		GetShuffeledLink(intp nNum);		// Used to get links in different order each time
 
 	int 			GetId() const			{ return m_iID; }
 	

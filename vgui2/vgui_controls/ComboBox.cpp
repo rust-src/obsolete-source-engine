@@ -41,7 +41,8 @@ void ComboBoxButton::ApplySchemeSettings(IScheme *pScheme)
 #ifdef OSX
 	SetTextInset(-3, 0);
 #else
-	SetTextInset(3, 0);
+	// dimhotepus: Scale UI.
+	SetTextInset( QuickPropScale( 3 ), 0 );
 #endif
 	SetDefaultBorder(pScheme->GetBorder("ScrollBarButtonBorder"));
 	
@@ -70,9 +71,10 @@ void ComboBoxButton::OnCursorExited()
 
 } // namespace vgui
 
-vgui::Panel *ComboBox_Factory()
+// dimhotepus: Add parent to scale UI.
+vgui::Panel *ComboBox_Factory( vgui::Panel* parent  )
 {
-	return new ComboBox( NULL, NULL, 5, true );
+	return new ComboBox( parent, NULL, 5, true );
 }
 DECLARE_BUILD_FACTORY_CUSTOM( ComboBox, ComboBox_Factory );
 
@@ -323,7 +325,8 @@ void ComboBox::PerformLayout()
 
 	int buttonSize = min( tall, fontTall );
 	
-	int buttonY = ( ( tall - 1 ) - buttonSize ) / 2;
+	// dimhotepus: Scale UI.
+	int buttonY = ( ( tall - QuickPropScale( 1 ) ) - buttonSize ) / 2;
 
 	// Some dropdown button icons in our games are wider than they are taller. We need to factor that in.
 	int button_wide, button_tall;
