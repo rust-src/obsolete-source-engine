@@ -835,7 +835,7 @@ void CBaseServer::WriteDeltaEntities( CBaseClient *client, CClientFrame *to, CCl
 			intp nEntityStartBit = pBuf.GetNumBitsWritten();
 
 			// Figure out how we want to write this entity.
-			SV_DetermineUpdateType( u  );
+			SV_DetermineUpdateType( u );
 			SV_WriteEntityUpdate( u );
 
 			if ( !bIsTracing )
