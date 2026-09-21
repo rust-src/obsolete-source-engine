@@ -375,14 +375,14 @@ void CMDLPicker::OnAssetSelected( KeyValues *pParams )
 //-----------------------------------------------------------------------------
 void CMDLPicker::OnCommand( const char *pCommand )
 {
-	if ( !Q_stricmp( pCommand, "ChooseLightProbe" ) )
+	if ( V_strieq( pCommand, "ChooseLightProbe" ) )
 	{
 		CAssetPickerFrame *pPicker = new CAssetPickerFrame( this, "Select Light Probe (.prb) File",
 			"Light Probe", "prb", "materials/lightprobes", "lightprobe" );
 		pPicker->DoModal();
 		return;
 	}
-	else if ( !Q_stricmp( pCommand, "OutputDirectorySelect" ) )
+	else if ( V_strieq( pCommand, "OutputDirectorySelect" ) )
 	{
 		if ( !m_hDirectorySelectDialog.Get() )
 		{
@@ -399,12 +399,12 @@ void CMDLPicker::OnCommand( const char *pCommand )
 		m_hDirectorySelectDialog->DoModal();
 		return;
 	}
-	else if ( !Q_stricmp( pCommand, "Capture" ) )
+	else if ( V_strieq( pCommand, "Capture" ) )
 	{
 		CaptureScreenCaps();
 		return;
 	}
-	else if ( !Q_stricmp( pCommand, "GenerateBackpackIcons" ) )
+	else if ( V_strieq( pCommand, "GenerateBackpackIcons" ) )
 	{
 		// shut off the ground grid
 		vgui::CheckButton *pGroundToggle = (vgui::CheckButton *)m_pRenderPage->FindChildByName( "NoGround" );
@@ -425,17 +425,17 @@ void CMDLPicker::OnCommand( const char *pCommand )
 
 		return;
 	}
-	else if ( !Q_stricmp( pCommand, "SaveCaps" ) )
+	else if ( V_strieq( pCommand, "SaveCaps" ) )
 	{
 		SaveCaps( NULL );
 		return;
 	}
-	else if ( !Q_stricmp( pCommand, "RestoreCaps" ) )
+	else if ( V_strieq( pCommand, "RestoreCaps" ) )
 	{
 		if ( input()->IsKeyDown( KEY_RCONTROL ) || input()->IsKeyDown( KEY_LCONTROL ) )
 		{
-			int nCount = m_AssetList.Count();
-			for ( int i = 0; i < nCount; ++i )
+			intp nCount = m_AssetList.Count();
+			for ( intp i = 0; i < nCount; ++i )
 			{
 				if ( m_pAssetBrowser->IsItemVisible( m_AssetList[ i ].m_nItemId ) &&
 					 m_pAssetBrowser->IsItemSelected( m_AssetList[ i ].m_nItemId ) )
@@ -516,9 +516,7 @@ const char *CMDLPicker::CaptureModel( int nModIndex, const char *AssetName, cons
 //	pRenderContext->ClearColor4ub( 0, 0, 0, 0 ); 
 //	pRenderContext->ClearBuffers( true, true );
 
-	Color NewPanelColor;
-	
-	NewPanelColor.SetColor( 0, 0, 0, 0 );
+	Color NewPanelColor( 0, 0, 0, 0 );
 	m_pMDLPreview->SetBackgroundColor( NewPanelColor );
 
 	g_pVGuiSurface->PaintTraverseEx( m_pMDLPreview->GetVPanel(), false );
@@ -656,9 +654,9 @@ void CMDLPicker::CaptureScreenCaps( void )
 		bSelectedOnly = true;
 	}
 
-	int nCount = m_AssetList.Count();
-	int nNumItems = 0;
-	for ( int i = 0; i < nCount; ++i )
+	intp nCount = m_AssetList.Count();
+	intp nNumItems = 0;
+	for ( intp i = 0; i < nCount; ++i )
 	{
 		if ( m_pAssetBrowser->IsItemVisible( m_AssetList[ i ].m_nItemId ) &&
 			( !bSelectedOnly || m_pAssetBrowser->IsItemSelected( m_AssetList[ i ].m_nItemId ) ) )
@@ -774,7 +772,7 @@ void *VTexFilesystemFactory( const char *pName, int *pReturnCode )
 
 void* MdlPickerFSFactory( const char *pName, int *pReturnCode )
 {
-	if ( Q_stricmp( pName, FILESYSTEM_INTERFACE_VERSION ) == 0 )
+	if ( V_strieq( pName, FILESYSTEM_INTERFACE_VERSION ) )
 		return g_pFullFileSystem;
 
 	return NULL;
@@ -1271,7 +1269,7 @@ void CMDLPicker::RefreshActivitiesAndSequencesList()
 				if ( activityNames.Find( pActivityName ) == activityNames.InvalidIndex() )
 				{
 					KeyValuesAD pkv( new KeyValues("node", "activity", pActivityName ) );
-					int nItemID = m_pActivitiesList->AddItem( pkv, 0, false, false );
+					intp nItemID = m_pActivitiesList->AddItem( pkv, 0, false, false );
 
 					KeyValuesAD pDrag( new KeyValues( "drag", "text", pActivityName ) );
 					pDrag->SetString( "texttype", "activityName" );
@@ -1286,7 +1284,7 @@ void CMDLPicker::RefreshActivitiesAndSequencesList()
 			if ( pSequenceName && pSequenceName[0] )
 			{
 				KeyValuesAD pkv( new KeyValues("node", "sequence", pSequenceName) );
-				int nItemID = m_pSequencesList->AddItem( pkv, 0, false, false );
+				intp nItemID = m_pSequencesList->AddItem( pkv, 0, false, false );
 
 				KeyValuesAD pDrag( new KeyValues( "drag", "text", pSequenceName ) );
 				pDrag->SetString( "texttype", "sequenceName" );
@@ -1445,7 +1443,7 @@ const char *CMDLPicker::GetSelectedSequenceName()
 	if ( !m_pSequencesPage  )
 		return NULL;
 
-	int nIndex = m_pSequencesList->GetSelectedItem( 0 );
+	intp nIndex = m_pSequencesList->GetSelectedItem( 0 );
 	if ( nIndex >= 0 )
 	{
 		KeyValues *pkv = m_pSequencesList->GetItem( nIndex );
@@ -1460,7 +1458,7 @@ const char *CMDLPicker::GetSelectedActivityName()
 	if ( !m_pActivitiesPage  )
 		return NULL;
 
-	int nIndex = m_pActivitiesList->GetSelectedItem( 0 );
+	intp nIndex = m_pActivitiesList->GetSelectedItem( 0 );
 	if ( nIndex >= 0 )
 	{
 		KeyValues *pkv = m_pActivitiesList->GetItem( nIndex );
@@ -1474,7 +1472,7 @@ int	CMDLPicker::GetSelectedSkin()
 	if ( !m_pSkinsPage )
 		return 0;
 
-	int nIndex = m_pSkinsList->GetSelectedItem( 0 );
+	intp nIndex = m_pSkinsList->GetSelectedItem( 0 );
 	if ( nIndex >= 0 )
 	{
 		return nIndex;
@@ -1512,7 +1510,7 @@ void CMDLPicker::SelectSequence( const char *pSequenceName )
 	for (int i = 0; i < pstudiohdr->GetNumSeq(); i++)
 	{
 		mstudioseqdesc_t &seqdesc = pstudiohdr->pSeqdesc( i );
-		if ( !Q_stricmp( seqdesc.pszLabel(), pSequenceName ) )
+		if ( V_strieq( seqdesc.pszLabel(), pSequenceName ) )
 		{
 			m_pMDLPreview->SetSequence( i );
 			break;
@@ -1657,10 +1655,11 @@ void CMDLPicker::UpdateInfoTab()
 	if ( !hdr )
 		return;
 	
-	int nMass = hdr->mass;
+	// dimhotepus: Do not truncate model mass to int
+	float fMass = hdr->mass;
 	Panel *pTempPanel = m_pInfoPage->FindChildByName("MassValue");
-	char massBuff[10];
-	V_to_chars( massBuff, nMass );
+	char massBuff[16];
+	V_to_chars( massBuff, fMass );
 	((vgui::Label *)pTempPanel)->SetText( massBuff );
 	bool bIsStatic = hdr->flags & STUDIOHDR_FLAGS_STATIC_PROP;
 	bool bIsPhysics = false;
@@ -1729,7 +1728,7 @@ int CMDLPicker::UpdatePropDataList( const char* pszPropData, bool &bIsStatic )
 			beginChunk = strchr( beginChunk, '\"' ) + 1;
 			endChunk = strchr( beginChunk, '\"' );
 			Q_memcpy( valueText, beginChunk, endChunk - beginChunk );		
-			if( !Q_strcmp( keyText, "allowstatic" ) && !Q_strcmp( valueText , "1" ) )
+			if( V_streq( keyText, "allowstatic" ) && V_streq( valueText , "1" ) )
 			{
 				if ( !bIsStatic )
 				{					
@@ -1740,8 +1739,8 @@ int CMDLPicker::UpdatePropDataList( const char* pszPropData, bool &bIsStatic )
 			}
 			KeyValuesAD pkv( new KeyValues("node", "key", keyText, "value", valueText ) );
 			m_pPropDataList->AddItem( pkv, 0, false, false );
-			Q_memset( keyText, 0, 255 );
-			Q_memset( valueText, 0, 255 );
+			BitwiseClear( keyText );
+			BitwiseClear( valueText );
 			iCount++;
 			beginChunk = endChunk + 1;
 			beginChunk = strchr( beginChunk, '\"' );

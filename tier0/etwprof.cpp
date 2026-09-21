@@ -79,7 +79,9 @@ public:
 	// QPC frequency
 	LARGE_INTEGER m_frequency;
 
-} g_ETWRegister;
+};
+
+static CETWRegister g_ETWRegister;
 
 // Call QueryPerformanceCounter
 static int64 GetQPCTime()
@@ -94,10 +96,10 @@ static int64 GetQPCTime()
 static float QPCToMS( int64 nDelta )
 {
 	// Convert from a QPC delta to seconds.
-	auto flSeconds = ( float )( nDelta / double( g_ETWRegister.m_frequency.QuadPart ) );
+	const auto flSeconds = double( nDelta ) / double( g_ETWRegister.m_frequency.QuadPart );
 
 	// Convert from seconds to milliseconds
-	return flSeconds * 1000;
+	return static_cast<float>( flSeconds * 1000.0 );
 }
 
 // Public functions for emitting ETW events.

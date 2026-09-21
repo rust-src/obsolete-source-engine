@@ -2119,7 +2119,7 @@ bool CTFGCServerSystem::ShouldHibernate()
 void CTFGCServerSystem::FireGameEvent( IGameEvent *event )
 {
 	// Disconnected from gameserver
-	if ( !Q_stricmp( event->GetName(), "player_disconnect" ) )
+	if ( V_strieq( event->GetName(), "player_disconnect" ) )
 	{
 		const char * pszReason = event->GetString( "reason", "" );
 		if ( Q_strstr( pszReason, "kick" ) || Q_strstr( pszReason, "Kick" ) || Q_strstr( pszReason, g_pszVoteKickString ) )
@@ -3206,7 +3206,7 @@ void CTFGCServerSystem::UpdateConnectedPlayersAndServerInfo( CMsgGameServerMatch
 	     ( eGameServerInfoState == m_eLastGameServerUpdateState ) &&
 	     ( eGameServerInfoMatchmakingMode == m_eLastGameServerUpdateMatchmakingMode ) &&
 	     // map changes are infrequent, and matter quite a bit, so always send them
-	     Q_stricmp( m_sLastGameServerUpdateMap, sGameServerInfoMap ) == 0 )
+	     V_strieq( m_sLastGameServerUpdateMap, sGameServerInfoMap ) )
 	{
 
 		// No need to send periodic updates if we're not participating and don't think we have a lobby or match at all.
@@ -3215,7 +3215,7 @@ void CTFGCServerSystem::UpdateConnectedPlayersAndServerInfo( CMsgGameServerMatch
 
 		// Check for certain rules changes.  When they change, we care about them being
 		// eventually correct, but it's not urgent
-		if ( ( Q_stricmp( m_sLastGameServerUpdateTags, sGameServerInfoTags ) != 0 ) ||
+		if ( ( !V_strieq( m_sLastGameServerUpdateTags, sGameServerInfoTags ) ) ||
 		     ( nMaxHumans != m_nLastGameServerUpdateMaxHumans ) ||
 		     ( nBotCountToSend != m_nLastGameServerUpdateBotCount ) )
 		{
@@ -3305,7 +3305,7 @@ void CTFGCServerSystem::UpdateConnectedPlayersAndServerInfo( CMsgGameServerMatch
 	     ( msg.Body().matchmaking_state() == m_eLastGameServerUpdateState ) &&
 	     ( msg.Body().matchmaking_mode() == m_eLastGameServerUpdateMatchmakingMode ) &&
 	     // map changes are infrequent, and matter quite a bit, so always send them
-	     Q_stricmp( m_sLastGameServerUpdateMap, msg.Body().map().c_str() ) == 0 )
+	     V_strieq( m_sLastGameServerUpdateMap, msg.Body().map().c_str() ) )
 	{
 
 		// No need to send periodic updates if we're not participating and don't think we have a lobby or match at all.
@@ -3314,7 +3314,7 @@ void CTFGCServerSystem::UpdateConnectedPlayersAndServerInfo( CMsgGameServerMatch
 
 		// Check for certain rules changes.  When they change, we care about them being
 		// eventually correct, but it's not urgent
-		if ( ( Q_stricmp( m_sLastGameServerUpdateTags, msg.Body().tags().c_str() ) != 0 ) ||
+		if ( ( !V_strieq( m_sLastGameServerUpdateTags, msg.Body().tags().c_str() ) ) ||
 		     ( msg.Body().max_players() != (uint32)m_nLastGameServerUpdateMaxHumans ) ||
 		     ( msg.Body().bot_count() != (uint32)m_nLastGameServerUpdateBotCount ) )
 		{

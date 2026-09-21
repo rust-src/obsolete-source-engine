@@ -97,7 +97,8 @@ void PerforceFileExplorer::SetCurrentDirectory( const char *pFullPath )
 	if ( !pFullPath )
 		return;
 
-	while ( isspace( *pFullPath ) )
+	// dimhotepus: isspace -> V_isspace.
+	while ( V_isspace( *pFullPath ) )
 	{
 		++pFullPath;
 	}
@@ -191,7 +192,7 @@ void PerforceFileExplorer::PopulateFileList()
 
 	for ( ; pFileName; pFileName = g_pFullFileSystem->FindNext( h ) )
 	{
-		if ( !Q_stricmp( pFileName, ".." ) || !Q_stricmp( pFileName, "." ) )
+		if ( V_streq( pFileName, ".." ) || V_streq( pFileName, "." ) )
 			continue;
 
 		if ( !Q_IsAbsolutePath( pFileName ) )
@@ -276,7 +277,7 @@ void PerforceFileExplorer::OnFolderUp()
 	V_StripTrailingSlash( pUpDirectory );
 
 	// This occurs at the root directory
-	if ( !Q_stricmp( pUpDirectory, "." ) )
+	if ( V_streq( pUpDirectory, "." ) )
 		return;
 	SetCurrentDirectory( pUpDirectory ); 
 }

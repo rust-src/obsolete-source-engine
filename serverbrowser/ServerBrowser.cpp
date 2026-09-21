@@ -294,6 +294,10 @@ void CServerBrowser::Shutdown()
 	{
 		m_hInternetDlg->Close();
 		m_hInternetDlg->MarkForDeletion();
+
+		// dimhotepus: Give panels a chance to settle so things
+		//  Marked for deletion will actually get deleted
+		vgui::ivgui()->RunFrame();
 	}
 
 #if defined( STEAM )
@@ -312,7 +316,6 @@ void CServerBrowser::Shutdown()
 //-----------------------------------------------------------------------------
 bool CServerBrowser::OpenGameInfoDialog( uint64 ulSteamIDFriend, const char *pszConnectCode )
 {
-#if !defined( _X360 ) // X360TBD: SteamFriends()
 	if ( m_hInternetDlg.Get() )
 	{
 		// activate an already-existing dialog
@@ -330,12 +333,11 @@ bool CServerBrowser::OpenGameInfoDialog( uint64 ulSteamIDFriend, const char *psz
 			uint16 usConnPort = friendGameInfo.m_usGamePort;
 			if ( friendGameInfo.m_usQueryPort < QUERY_PORT_ERROR )
 				usConnPort = friendGameInfo.m_usQueryPort;
-			CDialogGameInfo *pDialogGameInfo = m_hInternetDlg->OpenGameInfoDialog( friendGameInfo.m_unGameIP, friendGameInfo.m_usGamePort, usConnPort, pszConnectCode );
-			pDialogGameInfo->SetFriend( ulSteamIDFriend );
+			CDialogGameInfo *pDialogGameInfoNew = m_hInternetDlg->OpenGameInfoDialog( friendGameInfo.m_unGameIP, friendGameInfo.m_usGamePort, usConnPort, pszConnectCode );
+			pDialogGameInfoNew->SetFriend( ulSteamIDFriend );
 			return true;
 		}
 	}
-#endif
 	return false;
 }
 

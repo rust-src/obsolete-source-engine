@@ -136,7 +136,7 @@ ChunkHandler_t CChunkHandlerMap::GetHandler(const char *pszChunkName, void **ppD
 	auto *pNode = m_pHandlers;
 	while (pNode != NULL)
 	{
-		if (!stricmp(pNode->Handler.szChunkName, pszChunkName))
+		if (V_strieq(pNode->Handler.szChunkName, pszChunkName))
 		{
 			*ppData = pNode->Handler.pData;
 			return(pNode->Handler.pfnHandler);
@@ -285,7 +285,7 @@ const char *CChunkFile::GetErrorText(ChunkFileResult_t eResult)
 
 		case ChunkFile_OpenFail:
 		{
-			Q_snprintf(szError, sizeof( szError ), "%s", strerror(errno)) ;
+			V_strcpy_safe(szError, strerror(errno));
 			break;
 		}
 
@@ -503,7 +503,7 @@ ChunkFileResult_t CChunkFile::ReadNext(OUT_Z_CAP(nNameSize) char *szName, intp n
 				{
 					case OPERATOR:
 					{
-						if (!stricmp(szNext, "{"))
+						if (V_streq(szNext, "{"))
 						{
 							// Beginning of new chunk.
 							m_nCurrentDepth++;
@@ -547,7 +547,7 @@ ChunkFileResult_t CChunkFile::ReadNext(OUT_Z_CAP(nNameSize) char *szName, intp n
 
 			case OPERATOR:
 			{
-				if (!stricmp(szName, "}"))
+				if (V_streq(szName, "}"))
 				{
 					// End of current chunk.
 					m_nCurrentDepth--;

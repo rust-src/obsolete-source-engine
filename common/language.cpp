@@ -87,7 +87,7 @@ ELanguage PchLanguageToELanguage( const char *pchShortName, ELanguage eDefault )
 
 	for ( auto &n : s_LanguageNames )
 	{
-		if ( !Q_stricmp( pchShortName, n.m_pchShortName ) )
+		if ( V_strieq( pchShortName, n.m_pchShortName ) )
 		{
 			return n.m_ELanguage;
 		}
@@ -112,7 +112,8 @@ ELanguage PchLanguageICUCodeToELanguage( const char *pchICUCode, ELanguage eDefa
 
 	// we only have 5 character ICU codes so this should be enough room
 	char rchCleanedCode[ 6 ];
-	V_strcpy_safe( rchCleanedCode, pchICUCode );
+	// dimhotepus: Copy only first 5 chars (from like en_US.UTF-8.
+	V_strncpy( rchCleanedCode, pchICUCode, ssize( rchCleanedCode ) );
 	if( nLen >= 3 && rchCleanedCode[ 2 ] == '-' )
 	{
 		rchCleanedCode[ 2 ] = '_';

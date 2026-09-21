@@ -56,6 +56,13 @@ void CDemoUIPanel::InstallDemoUI( vgui::Panel *parent )
 	Assert( g_pDemoUI );
 }
 
+// dimhotepus: Pair with install.
+void CDemoUIPanel::UninstallDemoUI()
+{
+	g_pDemoUI->MarkForDeletion();
+	g_pDemoUI = nullptr;
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: Basic help dialog
 //-----------------------------------------------------------------------------
@@ -172,10 +179,10 @@ void CDemoUIPanel::OnTick()
 	
 	// set filename text
 	m_pCurrentDemo->SetText( demoaction->GetCurrentDemoFile() );
-	bool bHasDemoFile = demoaction->GetCurrentDemoFile()[0] != 0;
+	bool bHasDemoFile = !Q_isempty( demoaction->GetCurrentDemoFile() );
 
 	// set play button text
-	if (  bIsPlaying )
+	if ( bIsPlaying )
 	{
 		m_pPlayPauseResume->SetText( demoplayer->IsPlaybackPaused() ? "Resume" : "Pause" );
 	}
@@ -216,11 +223,11 @@ void CDemoUIPanel::OnTick()
 // Command issued
 void CDemoUIPanel::OnCommand(const char *command)
 {
-	if ( !Q_strcasecmp( command, "stop" ) )
+	if ( V_strieq( command, "stop" ) )
 	{
 		Cbuf_AddText( "disconnect\n" );
 	}
-	else if ( !Q_strcasecmp( command, "play" ) )
+	else if ( V_strieq( command, "play" ) )
 	{
 		if ( !demoplayer->IsPlayingBack() )
 		{
@@ -234,27 +241,27 @@ void CDemoUIPanel::OnCommand(const char *command)
 			Cbuf_AddText( !demoplayer->IsPlaybackPaused() ? "demo_pause\n" : "demo_resume\n" );
 		}
 	}
-	else if ( !Q_strcasecmp( command, "load" ) )
+	else if ( V_strieq( command, "load" ) )
 	{
 		OnLoad();
 	}
-	else if ( !Q_strcasecmp( command, "reload" ) )
+	else if ( V_strieq( command, "reload" ) )
 	{
 		Cbuf_AddText( "demo_gototick 0 0 1\n" );
 	}
-	else if ( !Q_strcasecmp( command, "edit" ) )
+	else if ( V_strieq( command, "edit" ) )
 	{
 		OnEdit();
 	}
-	else if ( !Q_strcasecmp( command, "smooth" ) )
+	else if ( V_strieq( command, "smooth" ) )
 	{
 		OnSmooth();
 	}
-	else if ( !Q_strcasecmp( command, "nextframe" ) )
+	else if ( V_strieq( command, "nextframe" ) )
 	{
 		demoplayer->SkipToTick( 1, true, true );
 	}
-	else if ( !Q_strcasecmp( command, "gototick" ) )
+	else if ( V_strieq( command, "gototick" ) )
 	{
 		char tick[ 32 ];
 		m_pGotoTick->GetText( tick );
@@ -267,7 +274,7 @@ void CDemoUIPanel::OnCommand(const char *command)
 		// demoplayer->PausePlayback( -1 );
 		// demoplayer->SkipToTick( Q_atoi(tick), false );
 	}
-	else if ( !Q_strcasecmp( command, "drive" ) )
+	else if ( V_strieq( command, "drive" ) )
 	{
 		GetCurrentView();
 	}
@@ -279,12 +286,13 @@ void CDemoUIPanel::OnCommand(const char *command)
 
 void CDemoUIPanel::OnMessage(const KeyValues *params, VPANEL fromPanel)
 {
-	BaseClass::OnMessage( params, fromPanel );
-
-	if ( !Q_strcmp( "SliderMoved", params->GetName() ) )
+	if ( V_streq( "SliderMoved", params->GetName() ) )
 	{
 		demoplayer->SetPlaybackTimeScale( GetPlaybackScale() );
 	}
+
+	// dimhotepus: Delete destroys memory, need to postpone.
+	BaseClass::OnMessage( params, fromPanel );
 }
 
 void CDemoUIPanel::OnEdit()
@@ -344,7 +352,7 @@ void CDemoUIPanel::OnFileSelected( char const *fullpath )
 	char ext[ 10 ];
 	V_ExtractFileExtension( relativepath, ext );
 
-	if ( Q_strcasecmp( ext, "dem" ) )
+	if ( !V_strieq( ext, "dem" ) )
 	{
 		return;
 	}
@@ -540,7 +548,7 @@ void CDemoUIPanel::HandleInput( bool active )
 		// Convert to pitch/yaw
 
 		float pitch = (float)dy * 0.22f;
-		float yaw = -(float)dx * 0.22;
+		float yaw = -(float)dx * 0.22f;
 
 		// Apply mouse
 		m_ViewAngles.x += pitch;
@@ -608,6 +616,13 @@ void CDemoUIPanel2::Install( vgui::Panel *pParentBkgnd, vgui::Panel *pParentFgnd
 
 	g_pDemoUI2 = new CDemoUIPanel2( pParentBkgnd, pParentFgnd, bPutToForeground );
 	Assert( g_pDemoUI2 );
+}
+
+// dimhotepus: Pair with install.
+void CDemoUIPanel2::Uninstall()
+{
+	g_pDemoUI2->MarkForDeletion();
+	g_pDemoUI2 = nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -711,7 +726,7 @@ void CDemoUIPanel2::OnTick()
 
 	// set filename text
 	SetTitle( va( "Demo Playback - %s", demoaction->GetCurrentDemoFile() ), true );
-	bool bHasDemoFile = demoaction->GetCurrentDemoFile()[0] != 0;
+	bool bHasDemoFile = !Q_isempty( demoaction->GetCurrentDemoFile() );
 
 	// set play button text
 	if (  bIsPlaying )
@@ -766,11 +781,11 @@ void CDemoUIPanel2::OnTick()
 // Command issued
 void CDemoUIPanel2::OnCommand(const char *command)
 {
-	if ( !Q_strcasecmp( command, "stop" ) )
+	if ( V_strieq( command, "stop" ) )
 	{
 		Cbuf_AddText( "disconnect\n" );
 	}
-	else if ( !Q_strcasecmp( command, "play" ) )
+	else if ( V_strieq( command, "play" ) )
 	{
 		if ( !demoplayer->IsPlayingBack() )
 		{
@@ -781,15 +796,15 @@ void CDemoUIPanel2::OnCommand(const char *command)
 			demoplayer->IsPlaybackPaused() ? demoplayer->ResumePlayback() : demoplayer->PausePlayback( -1.f );
 		}
 	}
-	else if ( !Q_strcasecmp( command, "load" ) )
+	else if ( V_strieq( command, "load" ) )
 	{
 		OnLoad();
 	}
-	else if ( !Q_strcasecmp( command, "reload" ) )
+	else if ( V_strieq( command, "reload" ) )
 	{
 		Cbuf_AddText( "demo_gototick 0 0 1\n" );
 	}
-	else if ( !Q_strcasecmp( command, "nextframe" ) )
+	else if ( V_strieq( command, "nextframe" ) )
 	{
 		Cbuf_AddText( "demo_gototick 1 1 1\n" );
 	}
@@ -801,14 +816,13 @@ void CDemoUIPanel2::OnCommand(const char *command)
 
 void CDemoUIPanel2::OnMessage(const KeyValues *params, VPANEL fromPanel)
 {
-	BaseClass::OnMessage( params, fromPanel );
 
 	//
 	// Speed scale
 	//
 	if ( fromPanel == m_pSpeedScale->GetVPanel() )
 	{
-		if ( !Q_strcmp( "SliderMoved", params->GetName() ) )
+		if ( V_streq( "SliderMoved", params->GetName() ) )
 		{
 			demoplayer->SetPlaybackTimeScale( GetPlaybackScale() );
 		}
@@ -819,7 +833,7 @@ void CDemoUIPanel2::OnMessage(const KeyValues *params, VPANEL fromPanel)
 	//
 	if ( fromPanel == m_pProgress->GetVPanel() )
 	{
-		if ( !Q_strcmp( "SliderDragStart", params->GetName() ) )
+		if ( V_streq( "SliderDragStart", params->GetName() ) )
 		{
 			// Pause the demo when starting dragging around
 			if ( demoplayer->IsPlayingBack() && !demoplayer->IsPlaybackPaused() )
@@ -828,7 +842,7 @@ void CDemoUIPanel2::OnMessage(const KeyValues *params, VPANEL fromPanel)
 			}
 		}
 
-		if ( !Q_strcmp( "SliderDragEnd", params->GetName() ) )
+		if ( V_streq( "SliderDragEnd", params->GetName() ) )
 		{
 			int iNewTickPos = m_pProgress->GetValue();
 			int iDemoCurrentTickPos = demoplayer->GetPlaybackTick();
@@ -837,10 +851,13 @@ void CDemoUIPanel2::OnMessage(const KeyValues *params, VPANEL fromPanel)
 				Cbuf_AddText( va( "demo_gototick %d 0 1\n", iNewTickPos ) );
 		}
 
-		if ( !Q_strcmp( "SliderMoved", params->GetName() ) )
+		if ( V_streq( "SliderMoved", params->GetName() ) )
 		{
 		}
 	}
+
+	// dimhotepus: Delete destroys memory, need to postpone.
+	BaseClass::OnMessage( params, fromPanel );
 }
 
 void CDemoUIPanel2::OnLoad()
@@ -874,7 +891,7 @@ void CDemoUIPanel2::OnFileSelected( char const *fullpath )
 	char ext[ 10 ];
 	V_ExtractFileExtension( relativepath, ext );
 
-	if ( Q_strcasecmp( ext, "dem" ) )
+	if ( !V_strieq( ext, "dem" ) )
 	{
 		return;
 	}

@@ -10,15 +10,16 @@
 #pragma once
 
 #include <cstring>
+#include "tier0/commonmacros.h"
 
-#define STRING_HASH_TABLE_SIZE 701
+constexpr inline int STRING_HASH_TABLE_SIZE{701};
 
 template <class T> class CStringHash
 {
 public:
 	CStringHash() 
 	{
-		memset( m_HashTable, 0, sizeof( StringHashNode_t * ) * STRING_HASH_TABLE_SIZE );
+		BitwiseClear( m_HashTable );
 	}
 	~CStringHash()
 	{
@@ -68,9 +69,7 @@ public:
 			newEntry->next = m_HashTable[hashID];
 			m_HashTable[hashID] = newEntry;
 		}
-		intp len = V_strlen( string ) + 1;
-		newEntry->string = new char[len];
-		Q_strncpy( newEntry->string, string, len );
+		newEntry->string = V_strdup( string );
 		newEntry->data = val;
 		return true;
 	}
@@ -99,7 +98,8 @@ private:
 
 		while( *s )
 		{
-			result += tolower( ( int )*s ) * 6029;
+			// dimhotepus: tolower -> V_tolower.
+			result += static_cast<unsigned>(V_tolower( *s )) * 6029;
 			result *= 5749;
 			s++;
 		}

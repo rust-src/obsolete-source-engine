@@ -86,7 +86,7 @@ void CMapsList::RunFrame()
 void CMapsList::ServerResponded()
 {
 	char store[2048];
-	strcpy(store, m_pRcon->RconResponse());
+	V_strcpy_safe(store, m_pRcon->RconResponse());
 	char *cur=store;
 	char *next=NULL;
 	int i=0,k=0;
@@ -147,7 +147,7 @@ void CMapsList::ServerResponded()
 
 				if ( strchr(tmpMap,'/') )  // remove the directory part of the map name
 				{ 
-					strcpy(tmpMap,strrchr(tmpMap,'/')+1);	
+					V_strcpy_safe(tmpMap,strrchr(tmpMap,'/')+1);	
 				}
 
 				for(k=0;k<m_MapsList.Count();k++)  // now check it doesn't already exist inside the map list...
@@ -164,7 +164,7 @@ void CMapsList::ServerResponded()
 					Maps_t map;
 					// this map wasn't found already
 					v_strncpy(map.name,tmpMap,strlen(tmpMap)+1);
-					if( !strcmp("(fs)",mapsLine.GetToken(0)) )
+					if( V_streq("(fs)",mapsLine.GetToken(0)) )
 					{ // name
 						map.type=FS;
 					}

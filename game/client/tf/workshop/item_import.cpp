@@ -490,7 +490,7 @@ void CTFFileImportTextEditDialog::ApplySchemeSettings( vgui::IScheme *pScheme )
 //-----------------------------------------------------------------------------
 void CTFFileImportTextEditDialog::OnCommand( const char *command )
 {
-	if ( V_stricmp( command, "Done" ) == 0 )
+	if ( V_strieq( command, "Done" ) )
 	{
 		if ( m_sCommand.IsEmpty() )
 		{
@@ -2000,7 +2000,7 @@ protected:
 	{
 		for ( int nModelIndex = 0; nModelIndex < NUM_IMPORT_LODS; ++nModelIndex )
 		{
-			if ( V_stricmp( m_pItemValues->GetString( CFmtStr( kClassLODNFile, kClassFolders[ nClassIndex ], nModelIndex ) ), "" ) != 0 )
+			if ( !V_strieq( m_pItemValues->GetString( CFmtStr( kClassLODNFile, kClassFolders[ nClassIndex ], nModelIndex ) ), "" ) )
 				return true;
 		}
 		return false;
@@ -2306,7 +2306,7 @@ void CImportPreviewItemPanel::ApplySchemeSettings( vgui::IScheme *pScheme )
 //-----------------------------------------------------------------------------
 void CImportPreviewItemPanel::OnCommand( const char *command )
 {
-	if ( V_strcasecmp( command, "show_explanations" ) == 0 )
+	if ( V_strieq( command, "show_explanations" ) )
 	{
 		CExplanationPopup *pPopup = dynamic_cast<CExplanationPopup*>( FindChildByName("StartExplanation") );
 		if ( pPopup )
@@ -2314,13 +2314,13 @@ void CImportPreviewItemPanel::OnCommand( const char *command )
 			pPopup->Popup();
 		}
 	}
-	else if ( V_strcasecmp( command, "action" ) == 0 )
+	else if ( V_strieq( command, "action" ) )
 	{
 		StartAction();
 	}
-	else if ( V_strcasecmp( command, "BuildPreview" ) == 0 ||
-			  V_strcasecmp( command, "EditQC" ) == 0 ||
-			  V_strcasecmp( command, "EditQCI" ) == 0 ||
+	else if ( V_strieq( command, "BuildPreview" ) ||
+			  V_strieq( command, "EditQC" ) ||
+			  V_strieq( command, "EditQCI" ) ||
 			  V_strncasecmp( command, "EditMaterial", V_strlen( "EditMaterial" ) ) == 0 )
 	{
 		// Dispatch directly to our parent because the base class tries to run the command through the console interpreter
@@ -2602,12 +2602,12 @@ int CImportPreviewItemPanel::GetSequence( const char *pszGesture )
 	CStudioHdr studioHdr( m_pPlayerModelPanel->GetStudioHdr(), g_pMDLCache );
 
 	// Look for the bind pose by label since it's not an activity
-	if ( !pszGesture && V_strcasecmp( m_sCurrentPose.Get(), "ref" ) == 0 )
+	if ( !pszGesture && V_strieq( m_sCurrentPose.Get(), "ref" ) )
 	{
 		for ( int iSeq = 0; iSeq < studioHdr.GetNumSeq(); ++iSeq )
 		{
 			mstudioseqdesc_t &seqDesc = studioHdr.pSeqdesc( iSeq );
-			if ( V_strcasecmp( seqDesc.pszLabel(), m_sCurrentPose.Get() ) == 0 )
+			if ( V_strieq( seqDesc.pszLabel(), m_sCurrentPose.Get() ) )
 			{
 				return iSeq;
 			}
@@ -2763,7 +2763,7 @@ void CImportPreviewItemPanel::OnTextChanged( KeyValues *data )
 		{
 			KeyValues *pData = pComboBox->GetActiveItemUserData();
 			const char *pszPose = pData->GetString( "pose" );
-			if ( V_strcmp( pszPose, m_sCurrentPose ) != 0 )
+			if ( !V_streq( pszPose, m_sCurrentPose ) )
 			{
 				m_sCurrentPose = pszPose;
 				UpdateActivity();
@@ -2938,7 +2938,7 @@ void CTFFileImportDialog::ApplySchemeSettings( vgui::IScheme *pScheme )
 			{
 				for ( int j=0; j<ARRAYSIZE(kPrefabs); ++j )
 				{
-					if ( V_strcmp( kPrefabs[j], pPrefabKeyValues->GetName() ) == 0 )
+					if ( V_streq( kPrefabs[j], pPrefabKeyValues->GetName() ) )
 					{
 						pKeyValues->SetString( kItemPrefab, pPrefabKeyValues->GetName() );
 						m_pTypeComboBox->AddItem( CFmtStr( "#TF_ItemPrefab_%s", pPrefabKeyValues->GetName() ), pKeyValues );
@@ -3217,23 +3217,23 @@ void CTFFileImportDialog::ApplySchemeSettings( vgui::IScheme *pScheme )
 //-----------------------------------------------------------------------------
 void CTFFileImportDialog::OnCommand( const char *command )
 {
-	if ( V_stricmp( command, "Load" ) == 0 )
+	if ( V_strieq( command, "Load" ) )
 	{
 		OnCommandLoad();
 	}
-	else if ( V_stricmp( command, "Save" ) == 0 )
+	else if ( V_strieq( command, "Save" ) )
 	{
 		OnCommandSave();
 	}
-	else if ( V_stricmp( command, "ClearIcon" ) == 0 )
+	else if ( V_strieq( command, "ClearIcon" ) )
 	{
 		SetItemIcon( "" );
 	}
-	else if ( V_stricmp( command, "BrowseIcon" ) == 0 )
+	else if ( V_strieq( command, "BrowseIcon" ) )
 	{
 		OnCommandBrowseIcon();
 	}
-	else if ( V_stricmp( command, "UpdateBodygroup" ) == 0 )
+	else if ( V_strieq( command, "UpdateBodygroup" ) )
 	{
 		OnCommandUpdateBodygroup();
 	}
@@ -3260,7 +3260,7 @@ void CTFFileImportDialog::OnCommand( const char *command )
 
 		OnCommandBrowseLOD( index );
 	}
-	else if ( V_stricmp( command, "SwapVMT" ) == 0 )
+	else if ( V_strieq( command, "SwapVMT" ) )
 	{
 		OnCommandSwapVMT();
 	}
@@ -3282,19 +3282,19 @@ void CTFFileImportDialog::OnCommand( const char *command )
 			OnCommandEditMaterial( nSkinIndex, nMaterialIndex );
 		}
 	}
-	else if ( V_stricmp( command, "UpdateAnimationLoopable" ) == 0 )
+	else if ( V_strieq( command, "UpdateAnimationLoopable" ) )
 	{
 		SetLoopableTaunt( IsLoopableTaunt(), GetAnimationLoopStartTime() );
 	}
-	else if ( V_stricmp( command, "ClearAnimationSource" ) == 0 )
+	else if ( V_strieq( command, "ClearAnimationSource" ) )
 	{
 		SetAnimationSource( m_nSelectedClass, NULL );
 	}
-	else if ( V_stricmp( command, "ClearAnimationVCD" ) == 0 )
+	else if ( V_strieq( command, "ClearAnimationVCD" ) )
 	{
 		SetAnimationVCD( m_nSelectedClass, NULL );
 	}
-	else if ( V_stricmp( command, "BrowseAnimationSource" ) == 0 )
+	else if ( V_strieq( command, "BrowseAnimationSource" ) )
 	{
 		if ( m_nSelectedClass == TF_CLASS_UNDEFINED )
 		{
@@ -3304,7 +3304,7 @@ void CTFFileImportDialog::OnCommand( const char *command )
 
 		OnCommandBrowseAnimationSource();
 	}
-	else if ( V_stricmp( command, "BrowseAnimationVCD" ) == 0 )
+	else if ( V_strieq( command, "BrowseAnimationVCD" ) )
 	{
 		if ( m_nSelectedClass == TF_CLASS_UNDEFINED )
 		{
@@ -3314,35 +3314,35 @@ void CTFFileImportDialog::OnCommand( const char *command )
 
 		OnCommandBrowseAnimationVCD();
 	}
-	else if ( V_stricmp( command, "EditQC" ) == 0 )
+	else if ( V_strieq( command, "EditQC" ) )
 	{
 		OnCommandEditQC();
 	}
-	else if ( V_stricmp( command, "EditQCI") == 0 )
+	else if ( V_strieq( command, "EditQCI") )
 	{
 		OnCommandEditQCI();
 	}
-	else if ( V_stricmp( command, "EditQCDone" ) == 0 )
+	else if ( V_strieq( command, "EditQCDone" ) )
 	{
 		OnCommandEditQCDone();
 	}
-	else if ( V_stricmp( command, "EditQCIDone" ) == 0 )
+	else if ( V_strieq( command, "EditQCIDone" ) )
 	{
 		OnCommandEditQCIDone();
 	}
-	else if ( V_stricmp( command, "BuildPreview" ) == 0 )
+	else if ( V_strieq( command, "BuildPreview" ) )
 	{
 		OnCommandBuild( BUILD_PREVIEW );
 	}
-	else if ( V_stricmp( command, "BuildVerify") == 0 )
+	else if ( V_strieq( command, "BuildVerify") )
 	{
 		OnCommandBuild( BUILD_VERIFY );
 	}
-	else if ( V_stricmp( command, "BuildFinal" ) == 0 )
+	else if ( V_strieq( command, "BuildFinal" ) )
 	{
 		OnCommandBuild( BUILD_FINAL );
 	}
-	else if ( V_stricmp( command, "PreviewDone" ) == 0 )
+	else if ( V_strieq( command, "PreviewDone" ) )
 	{
 		CleanupPreviewData();
 	}
@@ -3595,7 +3595,7 @@ void CTFFileImportDialog::OnCommandEditMaterialDone( int nSkinIndex, int nMateri
 void CTFFileImportDialog::OnCommandEditQC()
 {
 	// The QC template is dependent on the item type, so make sure that's set first
-	if ( V_strcmp( GetItemPrefab(), "" ) == 0 )
+	if ( Q_isempty( GetItemPrefab() ) )
 	{
 		ShowMessageBox( "#TF_SteamWorkshop_Error", "#TF_ImportFile_BuildFailedNoType" );
 		return;
@@ -3622,7 +3622,7 @@ void CTFFileImportDialog::OnCommandEditQC()
 void CTFFileImportDialog::OnCommandEditQCI()
 {
 	// The QC template is dependent on the item type, so make sure that's set first
-	if ( V_strcmp(GetItemPrefab(), "") == 0 )
+	if ( Q_isempty(GetItemPrefab()) )
 	{
 		ShowMessageBox( "#TF_SteamWorkshop_Error", "#TF_ImportFile_BuildFailedNoType" );
 		return;
@@ -4102,7 +4102,7 @@ void CTFFileImportDialog::SetItemPrefab( const char *pszPrefab )
 		for ( int i = 0; i < m_pTypeComboBox->GetItemCount(); ++i )
 		{
 			KeyValues *pKeyValues = m_pTypeComboBox->GetItemUserData( m_pTypeComboBox->GetItemIDFromRow( i ) );
-			if ( V_strcasecmp( pszPrefab, pKeyValues->GetString( kItemPrefab ) ) == 0 )
+			if ( V_strieq( pszPrefab, pKeyValues->GetString( kItemPrefab ) ) )
 			{
 				bFound = true;
 				m_pTypeComboBox->ActivateItemByRow( i );
@@ -4448,7 +4448,7 @@ const char *CTFFileImportDialog::GetUserAnimationQCTemplate( int nSelectedClass,
 const char *CTFFileImportDialog::GetQCTemplate( int nSelectedClass )
 {
 	const char *pszQCText = GetItemValues()->GetString( CFmtStr( kClassQC, kClassFolders[nSelectedClass] ) );
-	if ( V_strlen(pszQCText) == 0 )
+	if ( Q_isempty(pszQCText) )
 	{
 		CUtlString strQCTemplateFile;
 		if ( GetItemPrefabValue( m_nPrefab == PREFAB_TAUNT ? "misc" : GetItemPrefab(), "qc_template", strQCTemplateFile ) )
@@ -4476,7 +4476,7 @@ const char *CTFFileImportDialog::GetQCTemplate( int nSelectedClass )
 const char *CTFFileImportDialog::GetQCITemplate( int nSelectedClass )
 {
 	const char *pszQCText = GetItemValues()->GetString( CFmtStr( kClassQCI, kClassFolders[nSelectedClass] ) );
-	if ( V_strlen(pszQCText) == 0 )
+	if ( Q_isempty(pszQCText) )
 	{
 		CUtlString strQCITemplateFile = CItemUpload::Manifest()->GetQCITemplate();
 		CAssetTF asset;
@@ -5239,7 +5239,7 @@ CTFFileImportDialog::BUILD_RESULT CTFFileImportDialog::ValidateMaterialValues( K
 		},
 	};
 
-	if ( V_strcasecmp( pKV->GetName(), MATERIAL_SHADER ) != 0 )
+	if ( !V_strieq( pKV->GetName(), MATERIAL_SHADER ) )
 	{
 		return BUILD_FAILED_MATERIALMISSINGSHADER;
 	}
@@ -5909,10 +5909,10 @@ void CTFFileImportDialog::SetDirty( bool bDirty )
 //-----------------------------------------------------------------------------
 static int FindSuffix( const char *pszString, const char *pszSuffix )
 {
-	int nStringLen = V_strlen(pszString);
-	int nSuffixLen = V_strlen(pszSuffix);
-	int nSuffixOffset = nStringLen - nSuffixLen;
-	if ( nSuffixOffset >= 0 && V_strcasecmp( (pszString + nSuffixOffset), pszSuffix ) == 0 )
+	intp nStringLen = V_strlen(pszString);
+	intp nSuffixLen = V_strlen(pszSuffix);
+	intp nSuffixOffset = nStringLen - nSuffixLen;
+	if ( nSuffixOffset >= 0 && V_strieq( pszString + nSuffixOffset, pszSuffix ) )
 	{
 		return nSuffixOffset;
 	}
@@ -6263,7 +6263,7 @@ CTFFileImportDialog::BUILD_RESULT CTFFileImportDialog::AddMaterialsToAsset( CAss
 				{
 					MATERIAL_FILE_TYPE materialFileType = (MATERIAL_FILE_TYPE)nTextureType;
 					const char *pszTexturePath = GetMaterialTextureFile( nSkinIndex, nValidVMTIndex, materialFileType );
-					if ( V_strlen( pszTexturePath ) == 0 )
+					if ( Q_isempty pszTexturePath ) )
 					{
 						continue;
 					}
@@ -6343,12 +6343,12 @@ CTFFileImportDialog::BUILD_RESULT CTFFileImportDialog::Build( BUILD_STAGE buildS
 	// check for build errors
 	if ( !bPreview )
 	{
-		if ( V_strcmp( GetItemName(), "" ) == 0 )
+		if ( Q_isempty( GetItemName() ) )
 		{
 			return BUILD_FAILED_NONAME;
 		}
 
-		if ( V_strcmp( GetItemPrefab(), "" ) == 0 )
+		if ( Q_isempty( GetItemPrefab() ) )
 		{
 			return BUILD_FAILED_NOTYPE;
 		}
@@ -6388,7 +6388,7 @@ CTFFileImportDialog::BUILD_RESULT CTFFileImportDialog::Build( BUILD_STAGE buildS
 			}
 		}
 
-		if ( V_strcmp( GetItemIcon(), "" ) == 0 )
+		if ( Q_isempty( GetItemIcon() ) )
 		{
 			return BUILD_FAILED_NOBACKPACKICON;
 		}
@@ -6428,7 +6428,7 @@ CTFFileImportDialog::BUILD_RESULT CTFFileImportDialog::Build( BUILD_STAGE buildS
 	Assert( pItemData != NULL );
 
 	const char *pszIcon = GetItemIcon();
-	if ( V_strlen( pszIcon ) > 0 )
+	if ( !Q_isempty( pszIcon ) )
 	{
 		int nNumIconTypes = CItemUpload::Manifest()->GetNumIconTypes();
 		if ( nNumIconTypes > 0 )
@@ -6686,7 +6686,7 @@ KeyValues *CTFFileImportDialog::BuildItemSchema( const char *pszItemName )
 	}
 
 	const char *pszIcon = GetItemIcon();
-	if ( V_strlen( pszIcon ) > 0 )
+	if ( !Q_isempty( pszIcon ) )
 	{
 		if ( asset.SetTargetIcon( 0, pszIcon ) )
 		{
@@ -6857,11 +6857,11 @@ KeyValues *CTFFileImportDialog::BuildItemSchema( const char *pszItemName )
 CTFFileImportDialog::LOAD_RESULT CTFFileImportDialog::Load( const char *pszFilePath, const char *pathID, CUtlString &sFailedPath )
 {
 	const char *pszExtension = V_GetFileExtension( pszFilePath );
-	if ( V_strcasecmp( pszExtension, "txt" ) == 0 )
+	if ( V_strieq( pszExtension, "txt" ) )
 	{
 		return LoadTxt( pszFilePath, pathID, sFailedPath );
 	}
-	if ( V_strcasecmp( pszExtension, "zip" ) == 0 )
+	if ( V_strieq( pszExtension, "zip" ) )
 	{
 		return LoadZip( pszFilePath, pathID, sFailedPath );
 	}
@@ -7271,7 +7271,7 @@ bool CTFFileImportDialog::ClassHasModels( int nClassIndex )
 {
 	for ( int nModelIndex = 0; nModelIndex < NUM_IMPORT_LODS; ++nModelIndex )
 	{
-		if ( V_stricmp( GetItemValues()->GetString( CFmtStr( kClassLODNFile, kClassFolders[ nClassIndex ], nModelIndex ) ), "" ) != 0 )
+		if ( !V_strieq( GetItemValues()->GetString( CFmtStr( kClassLODNFile, kClassFolders[ nClassIndex ], nModelIndex ) ), "" ) )
 			return true;
 	}
 	return false;
@@ -7492,7 +7492,7 @@ void CTFFileImportDialog::SetEquipRegion( const char* pszEquipRegion )
 		for ( int i = 0; i < m_pEquipRegionComboBox->GetItemCount(); ++i )
 		{
 			KeyValues *pKeyValues = m_pEquipRegionComboBox->GetItemUserData( m_pEquipRegionComboBox->GetItemIDFromRow( i ) );
-			if ( V_strcasecmp( pszEquipRegion, pKeyValues->GetString( kEquipRegion ) ) == 0 )
+			if ( V_strieq( pszEquipRegion, pKeyValues->GetString( kEquipRegion ) ) )
 			{
 				bFound = true;
 				m_pEquipRegionComboBox->ActivateItemByRow( i );

@@ -47,13 +47,13 @@ void CBaseGrenadeConcussion::FallThink(void)
 		Remove( );
 		return;
 	}
-	CSoundEnt::InsertSound ( SOUND_DANGER, GetAbsOrigin() + GetAbsVelocity() * 0.5, GetAbsVelocity().Length( ), 0.2 );
+	CSoundEnt::InsertSound ( SOUND_DANGER, GetAbsOrigin() + GetAbsVelocity() * 0.5f, GetAbsVelocity().Length( ), 0.2f );
 
-	SetNextThink( gpGlobals->curtime + random->RandomFloat(0.05, 0.1) );
+	SetNextThink( gpGlobals->curtime + random->RandomFloat(0.05f, 0.1f) );
 
 	if (GetWaterLevel() != WaterLevel::WL_NotInWater)
 	{
-		SetAbsVelocity( GetAbsVelocity() * 0.5 );
+		SetAbsVelocity( GetAbsVelocity() * 0.5f );
 	}
 
 	Vector 	pos = GetAbsOrigin() + Vector(random->RandomFloat(-4, 4), random->RandomFloat(-4, 4), random->RandomFloat(-4, 4));
@@ -63,7 +63,7 @@ void CBaseGrenadeConcussion::FallThink(void)
 	te->Sprite( filter, 0.0,
 		&pos,
 		m_nTrailSprite,
-		random->RandomFloat(0.5, 0.8),
+		random->RandomFloat(0.5f, 0.8f),
 		200 );
 }
 

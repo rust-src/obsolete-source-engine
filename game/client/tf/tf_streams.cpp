@@ -195,10 +195,12 @@ static void Helper_ConfigureStreamInfoPreviewImages( CStreamInfo &info, CTFStrea
 			{
 				FileFindHandle_t hFind = NULL;
 				int numRemove = 0;
-				for ( char const *szFileName = g_pFullFileSystem->FindFirst( CFmtStr( "%s/*", s_pszCacheImagePath ), &hFind );
-					szFileName && *szFileName; szFileName = g_pFullFileSystem->FindNext( hFind ) )
+				char const *szFileName = g_pFullFileSystem->FindFirst( CFmtStr( "%s/*", s_pszCacheImagePath ), &hFind );
+				RunCodeAtScopeExit(	g_pFullFileSystem->FindClose( hFind ) );
+				
+				for ( ;	szFileName && *szFileName; szFileName = g_pFullFileSystem->FindNext( hFind ) )
 				{
-					if ( !Q_strcmp( ".", szFileName ) || !Q_strcmp( "..", szFileName ) ) continue;
+					if ( V_streq( ".", szFileName ) || V_streq( "..", szFileName ) ) continue;
 					CFmtStr fmtFilename( "%s/%s", s_pszCacheImagePath, szFileName );
 					long lFileTime = g_pFullFileSystem->GetFileTime( fmtFilename, "GAME" );
 					if ( ( lFileTime >= lDirectoryTime - 72*3600 ) && ( lFileTime <= lDirectoryTime + 72*3600 ) )
@@ -213,7 +215,6 @@ static void Helper_ConfigureStreamInfoPreviewImages( CStreamInfo &info, CTFStrea
 					}
 				}
 				DevMsg( 2, "Streams preview cache evicted %u files\n", numRemove );
-				g_pFullFileSystem->FindClose( hFind );
 			}
 
 			g_pFullFileSystem->CreateDirHierarchy( s_pszCacheImagePath, "GAME" );
@@ -343,7 +344,7 @@ static int Helper_SortStreamsByViewersCount( const CStreamInfo *a, const CStream
 
 static void Helper_ConvertLanguageToCountryCode( CUtlString &s )
 {
-	if ( !Q_stricmp(s, "en") )
+	if ( V_strieq(s, "en") )
 		s = "gb";
 }
 
@@ -463,7 +464,7 @@ CStreamInfo* CTFStreamManager::GetStreamInfoByName( char const *szName )
 	
 	for ( int idx = 0; idx < m_streamInfoVec.Count(); ++ idx )
 	{
-		if ( !V_strcmp( szName, m_streamInfoVec[idx].m_sGlobalName.Get() ) )
+		if ( V_streq( szName, m_streamInfoVec[idx].m_sGlobalName.Get() ) )
 			return &m_streamInfoVec[idx];
 	}
 
@@ -539,7 +540,8 @@ void CTFStreamManager::UpdateTwitchTvAccounts()
 	//
 	// Create HTTP download job
 	//
-	m_hHTTPRequestHandleTwitchTv = steamapicontext->SteamHTTP()->CreateHTTPRequest( k_EHTTPMethodGET, CFmtStr( "http://api.twitch.tv/api/steam/%llu", m_pLoadingAccount->m_uiSteamID ) );
+	// dimhotepus: http:// -> https://
+	m_hHTTPRequestHandleTwitchTv = steamapicontext->SteamHTTP()->CreateHTTPRequest( k_EHTTPMethodGET, CFmtStr( "https://api.twitch.tv/api/steam/%llu", m_pLoadingAccount->m_uiSteamID ) );
 	steamapicontext->SteamHTTP()->SetHTTPRequestHeaderValue( m_hHTTPRequestHandleTwitchTv, "Accept", cl_streams_request_accept.GetString() );
 	DevMsg( "Requesting twitch.tv account link...\n" );
 

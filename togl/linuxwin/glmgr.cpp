@@ -30,6 +30,7 @@
 #include "tier0/icommandline.h"
 
 #include "tier0/vprof.h"
+#include "tier1/strtools.h"
 #include "glmtexinlines.h"
 
 #include "materialsystem/IShader.h"
@@ -2461,13 +2462,13 @@ GLMContext::GLMContext( IDirect3DDevice9 *pDevice, GLMDisplayParams *params )
 // 		m_bUseSamplerObjects = false;
 // 	}
 	
-// 	if ( CommandLine()->CheckParm( "-gl_disablesamplerobjects" ) )
+// 	if ( CommandLine()->HasParm( "-gl_disablesamplerobjects" ) )
 // 	{
 	// Disable sampler object usage for now since ScaleForm isn't aware of them
 	// and doesn't know how to push/pop their binding state. It seems we don't
 	// really use them in this codebase anyhow, except to preload textures.
 	m_bUseSamplerObjects = false;
-	if ( CommandLine()->CheckParm( "-gl_enablesamplerobjects" ) )
+	if ( CommandLine()->HasParm( "-gl_enablesamplerobjects" ) )
 		m_bUseSamplerObjects = true;
 
 	// Try to get some more free memory by relying on driver host copies instead of ours.
@@ -2476,7 +2477,7 @@ GLMContext::GLMContext( IDirect3DDevice9 *pDevice, GLMDisplayParams *params )
 	// Sadly, we have to enable tex client storage for srgb decoding. This should only happen
 	//  on Macs w/ OSX 10.6.
 	m_bTexClientStorage = !gGL->m_bHave_GL_EXT_texture_sRGB_decode;
-	if ( CommandLine()->CheckParm( "-gl_texclientstorage" ) )
+	if ( CommandLine()->HasParm( "-gl_texclientstorage" ) )
 		m_bTexClientStorage = true;
 
 	GLMDebugPrintf( "GL sampler object usage: %s\n", m_bUseSamplerObjects ? "ENABLED" : "DISABLED" );
@@ -2516,7 +2517,7 @@ GLMContext::GLMContext( IDirect3DDevice9 *pDevice, GLMDisplayParams *params )
 	}
 
 	m_bUseBoneUniformBuffers = true;
-	if (CommandLine()->CheckParm("-disableboneuniformbuffers"))
+	if (CommandLine()->HasParm("-disableboneuniformbuffers"))
 	{
 		m_bUseBoneUniformBuffers = false;
 	}
@@ -2527,20 +2528,20 @@ GLMContext::GLMContext( IDirect3DDevice9 *pDevice, GLMDisplayParams *params )
 	m_displayParamsValid = false;
 
 	// peek at any CLI options
-	m_slowAssertEnable = CommandLine()->FindParm("-glmassertslow") != 0;
-	m_slowSpewEnable = CommandLine()->FindParm("-glmspewslow") != 0;
-	m_checkglErrorsAfterEveryBatch = CommandLine()->FindParm("-glcheckerrors") != 0;
+	m_slowAssertEnable = CommandLine()->HasParm("-glmassertslow");
+	m_slowSpewEnable = CommandLine()->HasParm("-glmspewslow");
+	m_checkglErrorsAfterEveryBatch = CommandLine()->HasParm("-glcheckerrors");
 	m_slowCheckEnable = m_slowAssertEnable || m_slowSpewEnable || m_checkglErrorsAfterEveryBatch;
 
 	m_drawingLangAtFrameStart = m_drawingLang = kGLMGLSL;		// default to GLSL
 	
 	// this affects FlushDrawStates which will route program bindings, uniform delivery, sampler setup, and enables accordingly.
 
-	if ( CommandLine()->FindParm("-glslmode") )
+	if ( CommandLine()->HasParm("-glslmode") )
 	{
 		m_drawingLangAtFrameStart = m_drawingLang = kGLMGLSL;
 	}
-	if ( CommandLine()->FindParm("-arbmode") && !CommandLine()->FindParm("-glslcontrolflow") )
+	if ( CommandLine()->HasParm("-arbmode") && !CommandLine()->HasParm("-glslcontrolflow") )
 	{
 		m_drawingLangAtFrameStart = m_drawingLang = kGLMARB;
 	}
@@ -2569,7 +2570,7 @@ GLMContext::GLMContext( IDirect3DDevice9 *pDevice, GLMDisplayParams *params )
 	IncrementWindowRefCount();
 
 	// If we're using GL_ARB_debug_output, go ahead and setup the callback here.
-	if ( gGL->m_bHave_GL_ARB_debug_output && CommandLine()->FindParm( "-gl_debug" ) ) 
+	if ( gGL->m_bHave_GL_ARB_debug_output && CommandLine()->HasParm( "-gl_debug" ) ) 
 	{
 #if GLMDEBUG
 		// Turning this on is a perf loss, but it ensures that you can (at least) swap to the other 
@@ -2598,7 +2599,7 @@ GLMContext::GLMContext( IDirect3DDevice9 *pDevice, GLMDisplayParams *params )
 	}
 
 
-	if (CommandLine()->FindParm("-glmspewcaps"))
+	if (CommandLine()->HasParm("-glmspewcaps"))
 	{
 		DumpCaps();
 	}
@@ -2663,15 +2664,15 @@ GLMContext::GLMContext( IDirect3DDevice9 *pDevice, GLMDisplayParams *params )
 
 	m_paramWriteMode = eParamWriteDirtySlotRange;	// default to fastest mode
 	
-	if (CommandLine()->FindParm("-glmwriteallslots"))				m_paramWriteMode = eParamWriteAllSlots;
-	if (CommandLine()->FindParm("-glmwriteshaderslots"))			m_paramWriteMode = eParamWriteShaderSlots;
-	if (CommandLine()->FindParm("-glmwriteshaderslotsoptional"))	m_paramWriteMode = eParamWriteShaderSlotsOptional;
-	if (CommandLine()->FindParm("-glmwritedirtyslotrange"))			m_paramWriteMode = eParamWriteDirtySlotRange;
+	if (CommandLine()->HasParm("-glmwriteallslots"))				m_paramWriteMode = eParamWriteAllSlots;
+	if (CommandLine()->HasParm("-glmwriteshaderslots"))			m_paramWriteMode = eParamWriteShaderSlots;
+	if (CommandLine()->HasParm("-glmwriteshaderslotsoptional"))	m_paramWriteMode = eParamWriteShaderSlotsOptional;
+	if (CommandLine()->HasParm("-glmwritedirtyslotrange"))			m_paramWriteMode = eParamWriteDirtySlotRange;
 	
 	m_attribWriteMode = eAttribWriteDirty;
 
-	if (CommandLine()->FindParm("-glmwriteallattribs"))				m_attribWriteMode = eAttribWriteAll;
-	if (CommandLine()->FindParm("-glmwritedirtyattribs"))			m_attribWriteMode = eAttribWriteDirty;	
+	if (CommandLine()->HasParm("-glmwriteallattribs"))				m_attribWriteMode = eAttribWriteAll;
+	if (CommandLine()->HasParm("-glmwritedirtyattribs"))			m_attribWriteMode = eAttribWriteDirty;	
 
 	m_pairCache	= new CGLMShaderPairCache( this );
 	m_pBoundPair = NULL;
@@ -2752,23 +2753,23 @@ GLMContext::GLMContext( IDirect3DDevice9 *pDevice, GLMDisplayParams *params )
 #ifdef OSX
 	bool new_mtgl = m_caps.m_hasPerfPackage1;	// i.e. 10.6.4 plus new driver
 	
-	if ( CommandLine()->FindParm("-glmenablemtgl2") )
+	if ( CommandLine()->HasParm("-glmenablemtgl2") )
 	{
 		new_mtgl = true;
 	}
 
-	if ( CommandLine()->FindParm("-glmdisablemtgl2") )
+	if ( CommandLine()->HasParm("-glmdisablemtgl2") )
 	{
 		new_mtgl = false;
 	}
 
 	bool mtgl_on = params->m_mtgl;
-	if (CommandLine()->FindParm("-glmenablemtgl"))
+	if (CommandLine()->HasParm("-glmenablemtgl"))
 	{
 		mtgl_on = true;
 	}
 	
-	if (CommandLine()->FindParm("-glmdisablemtgl"))
+	if (CommandLine()->HasParm("-glmdisablemtgl"))
 	{
 		mtgl_on = false;
 	}
@@ -3350,7 +3351,7 @@ void GLMContext::DebugDump( GLMDebugHookInfo *info, uint options, uint vertDumpM
 			}
 			else
 			{
-				strcpy( attribtemp, "no attrib map" );
+				V_strcpy_safe( attribtemp, "no attrib map" );
 			}
 			
 			char *trans = strstr(vp->m_text, "#// trans#");
@@ -3360,7 +3361,7 @@ void GLMContext::DebugDump( GLMDebugHookInfo *info, uint options, uint vertDumpM
 			}
 			else
 			{
-				strcpy( transtemp, "no translation info" );
+				V_strcpy_safe( transtemp, "no translation info" );
 			}
 			
 			char *linkpath = "no file link";
@@ -3397,7 +3398,7 @@ void GLMContext::DebugDump( GLMDebugHookInfo *info, uint options, uint vertDumpM
 			}
 			else
 			{
-				strcpy( transtemp, "no translation info" );
+				V_strcpy_safe( transtemp, "no translation info" );
 			}
 			
 			char *linkpath = "no file link";
@@ -3485,7 +3486,7 @@ void GLMContext::DebugDump( GLMDebugHookInfo *info, uint options, uint vertDumpM
 							// bone
 							char bonelabel[100];
 
-							sprintf(bonelabel, "MODEL_BONE%-2d", (slotIndex-58)/3 );
+							V_sprintf_safe(bonelabel, "MODEL_BONE%-2d", (slotIndex-58)/3 );
 							printmat( bonelabel, slotIndex, 3, values );
 
 							slotIndex += 3;
@@ -3641,11 +3642,11 @@ void GLMContext::DebugDump( GLMDebugHookInfo *info, uint options, uint vertDumpM
 				char	sizestr[100];
 				if (setdesc->m_nCompCount < 32)
 				{
-					sprintf( sizestr, "%d", setdesc->m_nCompCount);
+					V_sprintf_safe( sizestr, "%d", setdesc->m_nCompCount);
 				}
 				else
 				{
-					strcpy( sizestr, GLMDecode( eGL_ENUM, setdesc->m_nCompCount ) );
+					V_strcpy_safe( sizestr, GLMDecode( eGL_ENUM, setdesc->m_nCompCount ) );
 				}
 				
 				if (pSetup->m_vtxAttribMap[index] != 0xBB)
@@ -3686,14 +3687,13 @@ void GLMContext::DebugDump( GLMDebugHookInfo *info, uint options, uint vertDumpM
 		for( int vtxIndex=-1; vtxIndex < realEnd; vtxIndex++ )	// vtxIndex will jump from -1 to start after first spin, not necessarily to 0
 		{
 			char buf[64000];
-			char *mark = buf;
 			
 			// index -1 is the first run through the loop, we just print a header
 			
 			// iterate attrs
 			if (vtxIndex>=0)
 			{
-				mark += sprintf(mark, "-D-  %04d: ", vtxIndex );
+				V_sprintfcat_safe(buf, "-D-  %04d: ", vtxIndex );
 			}
 			
 				// for transform dumping, we latch values as we spot them
@@ -3729,11 +3729,11 @@ void GLMContext::DebugDump( GLMDebugHookInfo *info, uint options, uint vertDumpM
 					
 					if (vtxIndex <0)
 					{
-						mark += sprintf(mark, "[%s%1d @ offs=%04d / strd %03d] ", GLMDecode(eD3D_VTXDECLUSAGE, usage ), usageindex, fieldoffset, stride );
+						V_sprintfcat_safe(buf, "[%s%1d @ offs=%04d / strd %03d] ", GLMDecode(eD3D_VTXDECLUSAGE, usage ), usageindex, fieldoffset, stride );
 					}
 					else
 					{
-						mark += sprintf(mark, "[%s%1d ", GLMDecode(eD3D_VTXDECLUSAGE, usage ), usageindex );
+						V_sprintfcat_safe(buf, "[%s%1d ", GLMDecode(eD3D_VTXDECLUSAGE, usage ), usageindex );
 						
 						if (desc->m_nCompCount<32)
 						{
@@ -3745,7 +3745,7 @@ void GLMContext::DebugDump( GLMDebugHookInfo *info, uint options, uint vertDumpM
 									case GL_FLOAT:
 									{
 										float	*floatbase = (float*)attrBase;
-										mark += sprintf(mark, (usage != D3DDECLUSAGE_TEXCOORD) ? "%c%7.3f " : "%c%.3f", fieldname[which], floatbase[which] );
+										V_sprintfcat_safe(buf, (usage != D3DDECLUSAGE_TEXCOORD) ? "%c%7.3f " : "%c%.3f", fieldname[which], floatbase[which] );
 										
 										if (usage==D3DDECLUSAGE_POSITION)
 										{
@@ -3770,13 +3770,13 @@ void GLMContext::DebugDump( GLMDebugHookInfo *info, uint options, uint vertDumpM
 									case GL_UNSIGNED_BYTE:
 									{
 										unsigned char *unchbase = (unsigned char*)attrBase;
-										mark += sprintf(mark, "%c$%02X ", fieldname[which], unchbase[which] );
+										V_sprintfcat_safe(buf, "%c$%02X ", fieldname[which], unchbase[which] );
 									}
 									break;
 
 									default:
 										// hold off on other formats for now
-										mark += sprintf(mark, "%c????? ", fieldname[which] );
+										V_sprintfcat_safe(buf, "%c????? ", fieldname[which] );
 									break;
 								}
 							}
@@ -3795,7 +3795,7 @@ void GLMContext::DebugDump( GLMDebugHookInfo *info, uint options, uint vertDumpM
 											case GL_UNSIGNED_BYTE:
 											{
 												unsigned char *unchbase = (unsigned char*)attrBase;
-												mark += sprintf(mark, "%c$%02X ", fieldname[which], unchbase[which] );
+												V_sprintfcat_safe(buf, "%c$%02X ", fieldname[which], unchbase[which] );
 												
 												if (usage==D3DDECLUSAGE_BLENDINDICES)
 												{
@@ -3817,7 +3817,7 @@ void GLMContext::DebugDump( GLMDebugHookInfo *info, uint options, uint vertDumpM
 								break;
 							}
 						}
-						mark += sprintf(mark, "] " );
+						V_sprintfcat_safe(buf, "] " );
 					}
 				}
 			}
@@ -3911,7 +3911,7 @@ void GLMContext::DebugDump( GLMDebugHookInfo *info, uint options, uint vertDumpM
 			}
 			else
 			{	// no more < and > around vert dump lines
-				//mark += sprintf(mark, "" );
+				//V_sprintfcat_safe(buf, "" );
 			}
 		}
 	}
@@ -5463,16 +5463,16 @@ return;
 			
 			decodedStr2 = GLMDecode( eGL_ERROR, errorcode2 );
 
-			sprintf( errbuf, "\n%s - GL Error %08x/%08x = '%s / %s'\n", comment, errorcode, errorcode2, decodedStr, decodedStr2 );
+			V_sprintf_safe( errbuf, "\n%s - GL Error %08x/%08x = '%s / %s'\n", comment, errorcode, errorcode2, decodedStr, decodedStr2 );
 		}
 		else
 		{
-			sprintf( errbuf, "\n%s - GL Error %08x = '%s'\n", comment, errorcode, decodedStr );
+			V_sprintf_safe( errbuf, "\n%s - GL Error %08x = '%s'\n", comment, errorcode, decodedStr );
 		}
 
 		if ( m_params.m_glErrToConsole )
 		{
-			printf("%s", errbuf );
+			fprintf(stderr, "%s", errbuf );
 		}
 		
 		if ( m_params.m_glErrToDebugger )
@@ -5943,7 +5943,7 @@ void GLMTester::Test2( void )
 		for( int j=0; j<16; j++)
 		{
 			char text[256];
-			sprintf(text, "The quick brown fox jumped over the lazy dog %d times", i );
+			V_sprintf_safe(text, "The quick brown fox jumped over the lazy dog %d times", i );
 			
 			float theta = ( (i*0.10f) + (j * 6.28f) ) / 16.0f;
 			
@@ -6060,7 +6060,7 @@ void GLMTester::Test3( void )
 		for( int j=0; j<16; j++)
 		{
 			char text[256];
-			sprintf(text, "This here is running through a trivial vertex shader");
+			V_sprintf_safe(text, "This here is running through a trivial vertex shader");
 			
 			float theta = ( (i*0.10f) + (j * 6.28f) ) / 16.0f;
 			

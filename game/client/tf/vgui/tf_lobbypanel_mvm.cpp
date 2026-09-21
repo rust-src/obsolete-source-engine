@@ -221,7 +221,7 @@ void CLobbyPanel_MvM::FireGameEvent( IGameEvent *event )
 
 	const char *pszEventName = event->GetName();
 
-	if ( !Q_stricmp( pszEventName, "mm_lobby_member_join" ) )
+	if ( V_strieq( pszEventName, "mm_lobby_member_join" ) )
 	{
 #ifdef USE_MVM_TOUR
 		WriteTourList();
@@ -230,7 +230,7 @@ void CLobbyPanel_MvM::FireGameEvent( IGameEvent *event )
 
 		return;
 	}
-	else if ( !Q_stricmp( pszEventName, "mm_lobby_member_leave" ) )
+	else if ( V_strieq( pszEventName, "mm_lobby_member_leave" ) )
 	{
 #ifdef USE_MVM_TOUR
 		WriteTourList();
@@ -286,7 +286,7 @@ void CLobbyPanel_MvM::SetMannUpTicketCount( int nCount )
 	m_pMannUpTicketImage->SetImage( nCount > 0 ? "pve/mvm_ticket_active" : "pve/mvm_ticket_inactive" );
 
 	char szCount[ 5 ];
-	V_snprintf( szCount, sizeof( szCount ), "%i", nCount );
+	V_to_chars( szCount, nCount );
 
 	m_MvMEconItemsGroupBox->SetDialogVariable( "ticket_count", szCount );
 }
@@ -294,7 +294,7 @@ void CLobbyPanel_MvM::SetMannUpTicketCount( int nCount )
 void CLobbyPanel_MvM::SetSquadSurplusCount( int nCount )
 {
 	char szCount[ 5 ];
-	V_snprintf( szCount, sizeof( szCount ), "%i", nCount );
+	V_to_chars( szCount, nCount );
 
 	m_MvMEconItemsGroupBox->SetDialogVariable( "voucher_count", szCount );
 }

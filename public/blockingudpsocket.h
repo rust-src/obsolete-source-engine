@@ -11,19 +11,19 @@
 class CBlockingUDPSocket
 {
 public:
-	explicit CBlockingUDPSocket();
+	CBlockingUDPSocket();
 	virtual ~CBlockingUDPSocket();
 
 	bool WaitForMessage( float timeOutInSeconds );
-	unsigned int ReceiveSocketMessage( struct sockaddr_in *packet_from, unsigned char *buf, size_t bufsize );
-	bool SendSocketMessage( const struct sockaddr_in& rRecipient, const unsigned char *buf, size_t bufsize );
+	unsigned int ReceiveSocketMessage( struct sockaddr_in *packet_from, unsigned char *buf, size_t bufsize ) const;
+	bool SendSocketMessage( const struct sockaddr_in& rRecipient, const unsigned char *buf, size_t bufsize ) const;
 
 	bool IsValid() const { return m_Socket != kInvalidSocketHandle; }
 
 protected:
 	bool CreateSocket();
 
-	class Impl;
+	struct Impl;
 	Impl				*m_pImpl;
 
 	netadr_t			m_cserIP;

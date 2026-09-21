@@ -875,7 +875,7 @@ void FileOpenDialog::OnOpenInExplorer()
 //-----------------------------------------------------------------------------
 void FileOpenDialog::OnCommand(const char *command)
 {
-	if (!stricmp(command, "Cancel"))
+	if (V_strieq(command, "Cancel"))
 	{
 		Close();
 	}
@@ -1326,13 +1326,13 @@ bool FileOpenDialog::ExtensionMatchesFilter( const char *pExt )
 		if (curFilter[0] == 0)
 			break;
 
-		if ( !Q_stricmp( curFilter, "*" ) || !Q_stricmp( curFilter, "*.*" ) )
+		if ( V_streq( curFilter, "*" ) || V_streq( curFilter, "*.*" ) )
 			return true;
 
 		// FIXME: This isn't exactly right, but tough cookies;
 		// it assumes the first two characters of the filter are *.
 		Assert( curFilter[0] == '*' && curFilter[1] == '.' );
-		if ( !Q_stricmp( &curFilter[2], pExt ) )
+		if ( V_strieq( &curFilter[2], pExt ) )
 			return true;
 	}
 
@@ -1376,7 +1376,7 @@ void FileOpenDialog::ChooseExtension( OUT_Z_CAP(nBufLen) char *pExt, intp nBufLe
 		if (curFilter[0] == 0)
 			break;
 
-		if ( !Q_stricmp( curFilter, "*" ) || !Q_stricmp( curFilter, "*.*" ) )
+		if ( V_streq( curFilter, "*" ) || V_streq( curFilter, "*.*" ) )
 			continue;
 
 		// FIXME: This isn't exactly right, but tough cookies;
@@ -1441,7 +1441,7 @@ void FileOpenDialog::OnSelectFolder()
 
 	Q_StripTrailingSlash( pFileName );
 
-	if ( !stricmp(pFileName, "..") )
+	if ( V_streq(pFileName, "..") )
 	{
 		MoveUpFolder();
 
@@ -1450,7 +1450,7 @@ void FileOpenDialog::OnSelectFolder()
 		return;
 	}
 
-	if ( !stricmp(pFileName, ".") )
+	if ( V_streq(pFileName, ".") )
 	{
 		// clear the name text
 		m_pFileNameEdit->SetText("");
@@ -1504,7 +1504,7 @@ void FileOpenDialog::OnOpen()
 	bool bSpecifiedDirectory = ( nLen > 0 && ( pFileName[nLen-1] == '/' || pFileName[nLen-1] == '\\' ) ) && (!IsOSX() || ( !Q_stristr( pFileName, ".app" ) ) );
 	V_StripTrailingSlash( pFileName );
 
-	if ( !stricmp(pFileName, "..") )
+	if ( V_streq(pFileName, "..") )
 	{
 		MoveUpFolder();
 		
@@ -1513,7 +1513,7 @@ void FileOpenDialog::OnOpen()
 		return;
 	}
 
-	if ( !stricmp(pFileName, ".") )
+	if ( V_streq(pFileName, ".") )
 	{
 		// clear the name text
 		m_pFileNameEdit->SetText("");

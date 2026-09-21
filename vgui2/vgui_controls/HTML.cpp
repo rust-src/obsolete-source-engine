@@ -141,7 +141,8 @@ m_UpdateTooltip( this, &HTML::BrowserUpdateToolTip ),
 m_HideTooltip( this, &HTML::BrowserHideToolTip )
 #endif
 {
-	m_iHTMLTextureID = 0;
+	// dimhotepus: 0 -> -1.
+	m_iHTMLTextureID = -1;
 	m_bCanGoBack = false;
 	m_bCanGoForward = false;
 	m_bInFind = false;
@@ -239,6 +240,13 @@ HTML::~HTML()
 //		surface()->DeleteCursor( m_vecHCursor[i].m_Cursor );
 	}
 	m_vecHCursor.RemoveAll();
+
+	// dimhotepus: Do not leak texture.
+	if ( m_iHTMLTextureID != -1 )
+	{
+		surface()->DeleteTextureByID( m_iHTMLTextureID );
+		m_iHTMLTextureID = -1;
+	}
 }
 
 
@@ -268,7 +276,7 @@ void HTML::Paint()
 	//VPROF_BUDGET( "HTML::Paint()", VPROF_BUDGETGROUP_OTHER_VGUI );
 	BaseClass::Paint();
 
-	if ( m_iHTMLTextureID != 0 )
+	if ( m_iHTMLTextureID != -1 )
 	{
 		surface()->DrawSetTexture( m_iHTMLTextureID );
 		int tw = 0, tt = 0;
@@ -1058,42 +1066,42 @@ void HTML::OnKillFocus()
 //-----------------------------------------------------------------------------
 void HTML::OnCommand( const char *pchCommand )
 {
-	if ( !Q_stricmp( pchCommand, "back" ) )
+	if ( V_strieq( pchCommand, "back" ) )
 	{
 		PostActionSignal( new KeyValues( "HTMLBackRequested" ) );
 	}
-	else if ( !Q_stricmp( pchCommand, "forward" ) )
+	else if ( V_strieq( pchCommand, "forward" ) )
 	{
 		PostActionSignal( new KeyValues( "HTMLForwardRequested" ) );
 	}
-	else if ( !Q_stricmp( pchCommand, "reload" ) )
+	else if ( V_strieq( pchCommand, "reload" ) )
 	{
 		Refresh();
 	}
-	else if ( !Q_stricmp( pchCommand, "stop" ) )
+	else if ( V_strieq( pchCommand, "stop" ) )
 	{
 		StopLoading();
 	}
-	else if ( !Q_stricmp( pchCommand, "viewsource" ) )
+	else if ( V_strieq( pchCommand, "viewsource" ) )
 	{
 		if (m_SteamAPIContext.SteamHTMLSurface())
 			m_SteamAPIContext.SteamHTMLSurface()->ViewSource( m_unBrowserHandle );
 	}
-	else if ( !Q_stricmp( pchCommand, "copy" ) )
+	else if ( V_strieq( pchCommand, "copy" ) )
 	{
 		if (m_SteamAPIContext.SteamHTMLSurface())
 			m_SteamAPIContext.SteamHTMLSurface()->CopyToClipboard( m_unBrowserHandle );
 	}
-	else if ( !Q_stricmp( pchCommand, "paste" ) )
+	else if ( V_strieq( pchCommand, "paste" ) )
 	{
 		if (m_SteamAPIContext.SteamHTMLSurface())
 			m_SteamAPIContext.SteamHTMLSurface()->PasteFromClipboard( m_unBrowserHandle );
 	}
-	else if ( !Q_stricmp( pchCommand, "copyurl" ) )
+	else if ( V_strieq( pchCommand, "copyurl" ) )
 	{
 		system()->SetClipboardText( m_sCurrentURL, m_sCurrentURL.Length() );
 	}
-	else if ( !Q_stricmp( pchCommand, "copylink" ) )
+	else if ( V_strieq( pchCommand, "copylink" ) )
 	{
 		int x, y;
 		m_pContextMenu->GetPos( x, y );
@@ -1224,15 +1232,15 @@ HTML::CHTMLFindBar::CHTMLFindBar( HTML *parent ) : EditablePanel( parent, "FindB
 //-----------------------------------------------------------------------------
 void HTML::CHTMLFindBar::OnCommand( const char *pchCmd )
 {
-	if ( !Q_stricmp( pchCmd, "close" ) )
+	if ( V_strieq( pchCmd, "close" ) )
 	{
 		m_pParent->HideFindDialog();
 	}
-	else if ( !Q_stricmp( pchCmd, "previous" ) )
+	else if ( V_strieq( pchCmd, "previous" ) )
 	{
 		m_pParent->FindPrevious();
 	}
-	else if ( !Q_stricmp( pchCmd, "next" ) )
+	else if ( V_strieq( pchCmd, "next" ) )
 	{
 		m_pParent->FindNext();
 	}
@@ -1249,23 +1257,23 @@ void HTML::CHTMLFindBar::OnCommand( const char *pchCmd )
 void HTML::BrowserNeedsPaint( HTML_NeedsPaint_t *pCallback )
 {
 	int tw = 0, tt = 0;
-	if ( m_iHTMLTextureID != 0 )
+	if ( m_iHTMLTextureID != -1 )
 	{
 		tw = m_allocedTextureWidth;
 		tt = m_allocedTextureHeight;
 	}
 
-	if ( m_iHTMLTextureID != 0 && ( ( _vbar->IsVisible() && pCallback->unScrollY > 0 && abs( (int)pCallback->unScrollY - m_scrollVertical.m_nScroll) > 5 ) || ( _hbar->IsVisible() && pCallback->unScrollX > 0 && abs( (int)pCallback->unScrollX - m_scrollHorizontal.m_nScroll ) > 5 ) ) )
+	if ( m_iHTMLTextureID != -1 && ( ( _vbar->IsVisible() && pCallback->unScrollY > 0 && abs( (int)pCallback->unScrollY - m_scrollVertical.m_nScroll) > 5 ) || ( _hbar->IsVisible() && pCallback->unScrollX > 0 && abs( (int)pCallback->unScrollX - m_scrollHorizontal.m_nScroll ) > 5 ) ) )
 	{
 		m_bNeedsFullTextureUpload = true;
 		return;
 	}
 
 	// update the vgui texture
-	if ( m_bNeedsFullTextureUpload || m_iHTMLTextureID == 0  || tw != (int)pCallback->unWide || tt != (int)pCallback->unTall )
+	if ( m_bNeedsFullTextureUpload || m_iHTMLTextureID == -1 || tw != (int)pCallback->unWide || tt != (int)pCallback->unTall )
 	{
 		m_bNeedsFullTextureUpload = false;
-		if ( m_iHTMLTextureID != 0 )
+		if ( m_iHTMLTextureID != -1 )
 			surface()->DeleteTextureByID( m_iHTMLTextureID );
 
 		// if the dimensions changed we also need to re-create the texture ID to support the overlay properly (it won't resize a texture on the fly, this is the only control that needs
@@ -1295,7 +1303,7 @@ void HTML::BrowserNeedsPaint( HTML_NeedsPaint_t *pCallback )
 //-----------------------------------------------------------------------------
 bool HTML::OnStartRequest( const char *url, const char *target, const char *pchPostData, bool bIsRedirect )
 {
-	if ( !url || !Q_stricmp( url, "about:blank") )
+	if ( !url || V_strieq( url, "about:blank") )
 		return true ; // this is just webkit loading a new frames contents inside an existing page
 
 	HideFindDialog();
@@ -1321,7 +1329,7 @@ bool HTML::OnStartRequest( const char *url, const char *target, const char *pchP
 
 	if ( m_bNewWindowsOnly && bIsRedirect )
 	{
-		if ( target && ( !Q_stricmp( target, "_blank" ) || !Q_stricmp( target, "_new" ) )  ) // only allow NEW windows (_blank ones)
+		if ( target && ( V_strieq( target, "_blank" ) || V_strieq( target, "_new" ) )  ) // only allow NEW windows (_blank ones)
 		{
 			return true;
 		}
@@ -1331,7 +1339,7 @@ bool HTML::OnStartRequest( const char *url, const char *target, const char *pchP
 		}
 	}
 
-	if ( target && !Q_strlen( target ) )
+	if ( target && Q_isempty( target ) )
 	{
 		m_sCurrentURL = url;
 

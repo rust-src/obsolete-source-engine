@@ -346,7 +346,7 @@ void C_DODRagdoll::Interp_Copy( C_BaseAnimatingOverlay *pSourceEntity )
 		for ( int j=0; j < pSrc->m_Entries.Count(); j++ )
 		{
 			VarMapEntry_t *pSrcEntry = &pSrc->m_Entries[j];
-			if ( !Q_strcmp( pSrcEntry->watcher->GetDebugName(),
+			if ( V_streq( pSrcEntry->watcher->GetDebugName(),
 				pDestEntry->watcher->GetDebugName() ) )
 			{
 				pDestEntry->watcher->Copy( pSrcEntry->watcher );
@@ -2523,7 +2523,7 @@ void C_DODPlayer::AvoidPlayers( CUserCmd *pCmd )
 	float flAvoidRadius = 0.0f;
 
 	Vector vecAvoidCenter, vecAvoidMin, vecAvoidMax;
-	for ( int i = 0; i < pTeam->GetNumPlayers(); ++i )
+	for ( intp i = 0; i < pTeam->GetNumPlayers(); ++i )
 	{
 		C_DODPlayer *pAvoidPlayer = static_cast< C_DODPlayer * >( pTeam->GetPlayer( i ) );
 		if ( pAvoidPlayer == NULL )

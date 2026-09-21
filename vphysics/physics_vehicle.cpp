@@ -278,7 +278,7 @@ public:
 	vehicleparams_t &GetVehicleParamsForChange() override			{ return m_vehicleData; }
 	int GetWheelCount(void) override									{ return m_wheelCount; }
 	IPhysicsObject* GetWheel(int index) override;
-	bool GetWheelContactPoint( int index, Vector *pContactPoint, int *pSurfaceProps ) override;
+	bool GetWheelContactPoint( int index, Vector *pContactPoint, intp *pSurfaceProps ) override;
 	void SetWheelFriction(int wheelIndex, float friction) override;
 
 	void SetEngineDisabled( bool bDisable ) override				{ m_bEngineDisable = bDisable; }
@@ -330,7 +330,7 @@ protected:
 	void CalcEngine( float throttle, float brake_val, bool handbrake, float steeringVal, bool torqueBoost );
 	void CalcEngineTransmission( float flThrottle );
 
-	virtual bool IsBoosting( void );
+	bool IsBoosting( void );
 
 private:
 	void ResetState();
@@ -373,7 +373,7 @@ CVehicleController::CVehicleController()
 	// dimhotepus: Use safe defaults.
 	m_pEnv = nullptr;
 	m_pGameTrace = nullptr;
-	memset( &m_vehicleData, 0, sizeof(m_vehicleData) );
+	BitwiseClear( m_vehicleData );
 	// dimhotepus: Unknown vehicle type.
 	m_nVehicleType = 0;
 
@@ -385,15 +385,12 @@ void CVehicleController::ResetState()
 {
 	m_pCarSystem = NULL;
 	m_flVelocity[0] = m_flVelocity[1]= m_flVelocity[2] = 0.0f;
-	for ( int i = 0; i < VEHICLE_MAX_WHEEL_COUNT; i++ )
-	{
-		m_pWheels[i] = NULL;
-	}
+	BitwiseClear( m_pWheels );
 	m_pCarBody = NULL;
 	m_torqueScale = 1;
 	m_wheelCount = 0;
 	m_wheelRadius = 0;
-	memset( &m_currentState, 0, sizeof(m_currentState) );
+	BitwiseClear( m_currentState );
 	m_bodyMass = 0;
 	// dimhotepus: Need to reset total wheel mass, too.
 	m_totalWheelMass = 0;
@@ -448,7 +445,7 @@ void CVehicleController::SetWheelFriction(int wheelIndex, float friction)
 	pAirboat->SetWheelFriction( wheelIndex, friction );
 }
 
-bool CVehicleController::GetWheelContactPoint( int index, Vector *pContactPoint, int *pSurfaceProps )
+bool CVehicleController::GetWheelContactPoint( int index, Vector *pContactPoint, intp *pSurfaceProps )
 {
 	bool bSet = false;
 	if ( index < m_wheelCount )
@@ -520,7 +517,7 @@ IVP_Real_Object *CVehicleController::CreateWheel( int wheelIndex, vehicle_axlepa
 	}
 
 	objectparams_t params;
-	memset( &params, 0, sizeof(params) );
+	BitwiseClear( params );
 
 	Vector bodyPosition;
 	QAngle bodyAngles;
@@ -591,7 +588,7 @@ void CVehicleController::CreateTraceData( int wheelIndex, vehicle_axleparams_t &
 		return;
 
 	objectparams_t params;
-	memset( &params, 0, sizeof( params ) );
+	BitwiseClear( params );
 
 	Vector bodyPosition;
 	QAngle bodyAngles;
@@ -1094,7 +1091,7 @@ void CVehicleController::UpdateSkidding( bool bHandbrake )
 
 		Vector contact;
 		Vector velocity;
-		int surfaceProps;
+		intp surfaceProps;
 		m_currentState.wheelsInContact = 0;
 
 		for( int iWheel = 0; iWheel < m_wheelCount; ++iWheel )
@@ -1364,7 +1361,7 @@ void CVehicleController::CalcEngine( float throttle, float brake_val, bool handb
 void CVehicleController::GetCarSystemDebugData( vehicle_debugcarsystem_t &debugCarSystem )
 {
 	IVP_CarSystemDebugData_t carSystemDebugData;
-	memset(&carSystemDebugData,0,sizeof(carSystemDebugData));
+	memset( &carSystemDebugData, 0, sizeof(carSystemDebugData) );
 	m_pCarSystem->GetCarSystemDebugData( carSystemDebugData );
 
 	// Raycast car wheel trace data.
@@ -1413,8 +1410,8 @@ void CVehicleController::WriteToTemplate( vphysics_save_cvehiclecontroller_t &co
 	controllerTemplate.m_bTraceData = m_bTraceData;
 	controllerTemplate.m_bOccupied = m_bOccupied;
 	controllerTemplate.m_bEngineDisable = m_bEngineDisable;
-	memcpy( &controllerTemplate.m_currentState, &m_currentState, sizeof(m_currentState) );
-	memcpy( &controllerTemplate.m_vehicleData, &m_vehicleData, sizeof(m_vehicleData) );
+	BitwiseCopy( &m_currentState, &controllerTemplate.m_currentState, 1 );
+	BitwiseCopy( &m_vehicleData, &controllerTemplate.m_vehicleData, 1 );
 	for (int i = 0; i < VEHICLE_MAX_WHEEL_COUNT; ++i )
 	{
 		controllerTemplate.m_pWheels[i] = m_pWheels[i];

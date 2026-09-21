@@ -1146,7 +1146,7 @@ int CElementPropertiesTreeInternal::OpenPath( const CUtlVector< TreeItem_t > &pa
 			if ( isArrayElement )
 			{
 				Assert( childTreeItem.m_pArrayElement );
-				Assert( !V_strcmp( childTreeItem.m_pAttributeName, pAttributeName ) );
+				Assert( V_streq( childTreeItem.m_pAttributeName, pAttributeName ) );
 				int nArrayIndex = childData->GetInt( "arrayIndex", -1 );
 				const CDmrElementArray<> array( pAttribute );
 				if ( nArrayIndex >= 0 && array[ nArrayIndex ] == childTreeItem.m_pArrayElement )
@@ -1159,7 +1159,7 @@ int CElementPropertiesTreeInternal::OpenPath( const CUtlVector< TreeItem_t > &pa
 			else
 			{
 				Assert( !childTreeItem.m_pArrayElement );
-				if ( !V_strcmp( childTreeItem.m_pAttributeName, pAttributeName ) )
+				if ( V_streq( childTreeItem.m_pAttributeName, pAttributeName ) )
 				{
 					bFound = true;
 					itemIndex = nChildIndex;
@@ -1667,9 +1667,9 @@ void CElementPropertiesTreeInternal::OnSortByName()
 
 		bRefreshNeeded = true;
 		CDmElement **pArray = stackallocT( CDmElement*, nCount );
-		for ( intp i = 0; i < nCount; ++i )
+		for ( intp j = 0; j < nCount; ++j )
 		{
-			pArray[i] = elementArray[i];
+			pArray[j] = elementArray[j];
 		}
 
 		qsort( pArray, nCount, sizeof( CDmElement* ), ElementNameSortFunc );
@@ -1677,9 +1677,9 @@ void CElementPropertiesTreeInternal::OnSortByName()
 		elementArray.RemoveAll();
 		elementArray.AddMultipleToTail( nCount );
 
-		for ( intp i = 0; i < nCount; ++i )
+		for ( intp j = 0; j < nCount; ++j )
 		{
-			elementArray.Set( i, pArray[i] );
+			elementArray.Set( j, pArray[j] );
 		}
 	}
 
@@ -1820,8 +1820,8 @@ bool CElementPropertiesTreeInternal::BuildExpansionListToFindElement_R(
 			intp idx = nAttributes - 1;
 			for ( CDmAttribute *attribute = element->FirstAttribute(); attribute; attribute = attribute->NextAttribute(), --idx )
 			{
-				const char *attributeName = attribute->GetName();
-				if ( !Q_stricmp( attributeName, sr.attributeName.Get() ) )
+				const char *innerAttributeName = attribute->GetName();
+				if ( V_strieq( innerAttributeName, sr.attributeName.Get() ) )
 				{
 					expandIndices.AddToTail( idx );
 					break;
@@ -1834,10 +1834,10 @@ bool CElementPropertiesTreeInternal::BuildExpansionListToFindElement_R(
 	intp idx = nAttributes - 1;
 	for ( CDmAttribute *attribute = element->FirstAttribute(); attribute; attribute = attribute->NextAttribute(), --idx )
 	{
-		const char *attributeName = attribute->GetName();
+		const char *innerAttributeName = attribute->GetName();
 		if ( attribute->GetType() == AT_ELEMENT )
 		{
-			if ( !BuildExpansionListToFindElement_R( visited, depth + 1, sr, element, attribute->GetValueElement<CDmElement>(), attributeName, -1, expandIndices ) )
+			if ( !BuildExpansionListToFindElement_R( visited, depth + 1, sr, element, attribute->GetValueElement<CDmElement>(), innerAttributeName, -1, expandIndices ) )
 			{
 				expandIndices.AddToTail( idx );
 				return false;
@@ -1850,7 +1850,7 @@ bool CElementPropertiesTreeInternal::BuildExpansionListToFindElement_R(
 			intp c = elementArray.Count();
 			for ( intp i = 0; i < c; ++i )
 			{
-				if ( !BuildExpansionListToFindElement_R( visited, depth + 1, sr, element, elementArray[ i ], attributeName, i, expandIndices ) )
+				if ( !BuildExpansionListToFindElement_R( visited, depth + 1, sr, element, elementArray[ i ], innerAttributeName, i, expandIndices ) )
 				{
 					expandIndices.AddToTail( i );
 					expandIndices.AddToTail( idx );
@@ -2028,7 +2028,7 @@ void CElementPropertiesTreeInternal::OnNavSearch( const char *text )
 		return;
 	}
 
-	bool changed = Q_stricmp( text, m_szSearchStr ) != 0 ? true : false;
+	bool changed = !V_strieq( text, m_szSearchStr );
 	if ( changed )
 	{
 		m_SearchResults.RemoveAll();
@@ -2812,11 +2812,11 @@ void CElementPropertiesTreeInternal::OnFileSelected( KeyValues *params )
 	const char *pFullPath = params->GetString( "fullpath" );
 	KeyValues *pContext = params->FindKey( "context" );
 	const char *pCommand = pContext->GetString( "command" );
-	if ( V_strcmp( pCommand, "OnImportElement" ) == 0 )
+	if ( V_streq( pCommand, "OnImportElement" ) )
 	{
 		OnImportElement( pFullPath, pContext );
 	}
-	else if ( V_strcmp( pCommand, "OnExportElement" ) == 0 )
+	else if ( V_streq( pCommand, "OnExportElement" ) )
 	{
 		OnExportElement( pFullPath, pContext );
 	}
@@ -2852,7 +2852,7 @@ void CElementPropertiesTreeInternal::UpdateTree()
 		m_AttributeWidgets.RemoveAll();
 
 		char label[ 256 ];
-		Q_snprintf( label, sizeof( label ), "%s", m_hObject->GetValueString( "name" ) );
+		V_strcpy_safe( label, m_hObject->GetValueString( "name" ) );
 		constexpr bool editableLabel = true;
 
 		KeyValuesAD kv( "item" );
@@ -3292,7 +3292,7 @@ void CElementPropertiesTreeInternal::OnLabelChanged( int itemIndex, const char *
 	}
 
 	// No change!!!
-	if ( !Q_stricmp( oldString, newString ) )
+	if ( V_strieq( oldString, newString ) )
 		return;
 
 	CDmElement *pElement = GetElementKeyValue< CDmElement >( data, "dmeelement" );
@@ -3528,9 +3528,9 @@ void CElementPropertiesTreeInternal::OnItemDropped( int itemIndex, CUtlVector< K
 	// Mouse if over an array entry which is an element array type...
 	if ( isArrayElement )
 	{
-		bool bReplace = Q_stricmp( cmd, "replace" ) == 0;
-		bool bBefore  = Q_stricmp( cmd, "before" ) == 0;
-		bool bAfter   = Q_stricmp( cmd, "after" ) == 0 || Q_stricmp( cmd, "default" ) == 0;
+		bool bReplace = V_strieq( cmd, "replace" );
+		bool bBefore  = V_strieq( cmd, "before" );
+		bool bAfter   = V_strieq( cmd, "after" ) || V_strieq( cmd, "default" );
 		if ( !bReplace && !bBefore && !bAfter )
 		{
 			Warning( "Unknown command '%s'\n", cmd );
@@ -3591,9 +3591,9 @@ void CElementPropertiesTreeInternal::OnItemDropped( int itemIndex, CUtlVector< K
 		}
 		else
 		{
-			bool bTail = !cmd[ 0 ] || !Q_stricmp( cmd, "default" ) || !Q_stricmp( cmd, "tail" );
-			bool bHead = !bTail && !Q_stricmp( cmd, "head" );
-			bool bReplace = !bTail && !bHead && !Q_stricmp( cmd, "replace" );
+			bool bTail = !cmd[ 0 ] || V_strieq( cmd, "default" ) || V_strieq( cmd, "tail" );
+			bool bHead = !bTail && V_strieq( cmd, "head" );
+			bool bReplace = !bTail && !bHead && V_strieq( cmd, "replace" );
 			if ( !bTail && !bHead && !bReplace )
 			{
 				Warning( "Unknown command '%s'\n", cmd );
@@ -3800,7 +3800,7 @@ int CElementPropertiesTreeInternal::FindTreeItem( int nParentIndex, const TreeIt
 		}
 
 		if ( ( pElement == info.m_pElement ) && ( pArrayElement == info.m_pArrayElement ) &&
-			!Q_stricmp( pAttributeName, info.m_pAttributeName ) )
+			V_strieq( pAttributeName, info.m_pAttributeName ) )
 		{
 			return nChildIndex;
 		}
@@ -4418,17 +4418,17 @@ void CElementPropertiesTree::SetObject( CDmElement *object )
 
 void CElementPropertiesTree::OnCommand( const char *cmd )
 {
-	if ( !Q_stricmp( cmd, "close" ) )
+	if ( V_strieq( cmd, "close" ) )
 	{
 		m_pProperties->ApplyChanges();
 		MarkForDeletion();
 	}
-	else if ( !Q_stricmp( cmd, "apply" ) )
+	else if ( V_strieq( cmd, "apply" ) )
 	{
 		m_pProperties->ApplyChanges();
 		m_pProperties->Refresh();
 	}
-	else if ( !Q_stricmp( cmd, "cancel" ) )
+	else if ( V_strieq( cmd, "cancel" ) )
 	{
 		MarkForDeletion();
 	}

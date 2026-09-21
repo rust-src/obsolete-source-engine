@@ -95,8 +95,8 @@ static DownloadCache *TheDownloadCache = NULL;
 DownloadCache::DownloadCache()
 {
 	m_cache = NULL;
-	memset(m_cachefileKey, 0, sizeof(m_cachefileKey));
-	memset(m_timestampKey, 0, sizeof(m_timestampKey));
+	BitwiseClear(m_cachefileKey);
+	BitwiseClear(m_timestampKey);
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -243,10 +243,9 @@ static bool DecompressBZipToDisk( const char *outFilename, const char *srcFilena
 		bool bMapFile = false;
 		char szOutFilenameBase[MAX_PATH];
 		Q_FileBase( outFilename, szOutFilenameBase );
-		const char *pszMapName = cl.m_szLevelBaseName;
-		if ( pszMapName && pszMapName[0] )
+		if ( !Q_isempty( cl.m_szLevelBaseName ) )
 		{
-			bMapFile = ( Q_stricmp( szOutFilenameBase, pszMapName ) == 0 );
+			bMapFile = V_strieq( szOutFilenameBase, cl.m_szLevelBaseName );
 		}
 
 		while ( 1 )
@@ -520,7 +519,8 @@ void CDownloadManager::SetupURLPath( RequestContext_t *pRequestContext, const ch
 //--------------------------------------------------------------------------------------------------------------
 void CDownloadManager::SetupServerURL( RequestContext_t *pRequestContext )
 {
-	V_strcpy_safe( pRequestContext->serverURL, cl.m_NetChannel->GetRemoteAddress().ToString() );
+	char buffer[32];
+	V_strcpy_safe( pRequestContext->serverURL, cl.m_NetChannel->GetRemoteAddress().ToString_safe(buffer) );
 }
 //--------------------------------------------------------------------------------------------------------------
 bool CDownloadManager::HasMapBeenDownloadedFromServer( const char *serverMapName )
@@ -531,7 +531,7 @@ bool CDownloadManager::HasMapBeenDownloadedFromServer( const char *serverMapName
 	for ( int i=0; i<m_downloadedMaps.Count(); ++i )
 	{
 		const char *oldServerMapName = m_downloadedMaps[i];
-		if ( oldServerMapName && !stricmp( serverMapName, oldServerMapName ) )
+		if ( oldServerMapName && V_strieq( serverMapName, oldServerMapName ) )
 		{
 			return true;
 		}
@@ -639,7 +639,7 @@ void CDownloadManager::QueueInternal( const char *pBaseURL, const char *pURLPath
 	}
 
 	// Otherwise, put it in the game dir
-	if ( szBasePath[0] == '\0' )
+	if ( Q_isempty( szBasePath ) )
 		V_strcpy_safe( szBasePath, com_gamedir );
 
 	// Setup game path

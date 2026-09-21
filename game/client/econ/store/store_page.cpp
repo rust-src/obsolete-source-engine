@@ -1095,13 +1095,13 @@ void CStorePage::OnPageShow( void )
 //-----------------------------------------------------------------------------
 CStorePricePanel* CStorePage::CreatePricePanel( int iIndex )
 {
-	if ( m_pPageData && !Q_strcmp( m_pPageData->m_pchPageClass, "CStorePage_Popular" ) )
+	if ( m_pPageData && V_streq( m_pPageData->m_pchPageClass, "CStorePage_Popular" ) )
 		return vgui::SETUP_PANEL( new CStorePricePanel_Popular( this, "StorePrice", iIndex + 1 ) );
 
-	if ( m_pPageData && !Q_strcmp( m_pPageData->m_pchPageClass, "CStorePage_New" ) )
+	if ( m_pPageData && V_streq( m_pPageData->m_pchPageClass, "CStorePage_New" ) )
 		return vgui::SETUP_PANEL( new CStorePricePanel_New( this, "StorePrice" ) );
 
-	if ( m_pPageData && !Q_strcmp( m_pPageData->m_pchPageClass, "CStorePage_Bundles" ) )
+	if ( m_pPageData && V_streq( m_pPageData->m_pchPageClass, "CStorePage_Bundles" ) )
 		return vgui::SETUP_PANEL( new CStorePricePanel_Bundles( this, "StorePrice" ) );
 
 	return vgui::SETUP_PANEL( new CStorePricePanel( this, "StorePrice" ) );
@@ -1115,7 +1115,7 @@ void CStorePage::OrderItemsForDisplay( CUtlVector<const econ_store_entry_t *>& v
 	/*
 	// See how I tread upon all the holy concepts of OOP.
 	if ( m_pPageData &&
-		 !Q_strcmp( m_pPageData->m_pchPageClass, "CStorePage_Bundles" ) &&
+		 V_streq( m_pPageData->m_pchPageClass, "CStorePage_Bundles" ) &&
 		 !ShouldUseNewStore() )
 	{
 		vecItems.Sort( &ItemDisplayOrderSort_UseSortOverride );
@@ -1210,7 +1210,7 @@ void CStorePage::OnCommand( const char *command )
 		EconUI()->GetStorePanel()->InitiateCheckout( false );
 		return;
 	}
-	else if ( !Q_stricmp( command, "show_details" ) )
+	else if ( V_strieq( command, "show_details" ) )
 	{
 		if ( m_pSelectedPanel )
 		{
@@ -1222,7 +1222,7 @@ void CStorePage::OnCommand( const char *command )
 		}
 		return;
 	}
-	else if ( !Q_stricmp( command, "show_preview" ) )
+	else if ( V_strieq( command, "show_preview" ) )
 	{
 		SetDetailsVisible( false );
 		return;
@@ -1231,11 +1231,12 @@ void CStorePage::OnCommand( const char *command )
 	{
 		if ( steamapicontext && steamapicontext->SteamFriends() )
 		{
-			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( "http://steamcommunity.com/market/search?appid=440" );
+			// dimhotepus: http:// -> https://
+			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( "https://steamcommunity.com/market/search?appid=440" );
 		}
 		return;
 	}
-	else if ( !Q_stricmp( command, "reloadscheme" ) )
+	else if ( V_strieq( command, "reloadscheme" ) )
 	{
 		InvalidateLayout( false, true );
 		SetVisible( true );

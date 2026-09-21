@@ -98,9 +98,9 @@ namespace se::dedicated {
 CCreateMultiplayerGameServerPage::CCreateMultiplayerGameServerPage(
     vgui::Panel *parent, const char *name)
     : Frame(parent, name) {
-  memset(&m_iServer, 0x0, sizeof(serveritem_t));
+  memset(&m_iServer, 0x0, sizeof(m_iServer));
   // dimhotepus: Ensure no UB on uninitialized mod read.
-  memset(m_szMod, 0x0, sizeof(m_szMod));
+  BitwiseClear(m_szMod);
 
   // as we are a popup frame we need to store this seperately
   m_MainPanel = parent;
@@ -122,7 +122,7 @@ CCreateMultiplayerGameServerPage::CCreateMultiplayerGameServerPage(
   m_pNetworkCombo = new ComboBox(this, "NetworkCombo", 10, false);
   int defaultItem = m_pNetworkCombo->AddItem("#Internet", nullptr);
   int lanItem = m_pNetworkCombo->AddItem("#LAN", nullptr);
-  if (CommandLine()->CheckParm("-steam") && IsSteamInOfflineMode()) {
+  if (CommandLine()->HasParm("-steam") && IsSteamInOfflineMode()) {
     defaultItem = lanItem;
   }
   m_pNetworkCombo->ActivateItem(defaultItem);
@@ -173,13 +173,13 @@ CCreateMultiplayerGameServerPage::CCreateMultiplayerGameServerPage(
   m_szPassword[0] = 0;
   m_iMaxPlayers = 24;
 
-  if (CommandLine()->CheckParm("-steam") && IsSteamInOfflineMode()) {
+  if (CommandLine()->HasParm("-steam") && IsSteamInOfflineMode()) {
     m_pNetworkCombo->SetEnabled(false);
   }
 
   SetVisible(true);
 
-  if (CommandLine()->CheckParm("-steam") && IsSteamInOfflineMode()) {
+  if (CommandLine()->HasParm("-steam") && IsSteamInOfflineMode()) {
     // dimhotepus: Own message box to scale it.
     auto *box = new vgui::MessageBox("#Start_Server_Offline_Title",
                                      "#Start_Server_Offline_Warning", this);
@@ -242,7 +242,7 @@ void CCreateMultiplayerGameServerPage::LoadConfig() {
         for (int i = 0; i < m_pGameCombo->GetItemCount(); i++) {
           if (!m_pGameCombo->IsItemIDValid(i)) continue;
 
-          if (!stricmp(m_pGameCombo->GetItemUserData(i)->GetString("gamedir"),
+          if (V_strieq(m_pGameCombo->GetItemUserData(i)->GetString("gamedir"),
                        mod)) {
             // item found in list, activate
             m_pGameCombo->ActivateItem(i);
@@ -334,11 +334,11 @@ void CCreateMultiplayerGameServerPage::OnCommand(const char *cmd) {
   m_iPort = GetControlInt("PortEdit", 27015);
 
   // dimhotepus: Handle window close command.
-  if (!stricmp(cmd, "cancel") || !stricmp(cmd, "close")) {
+  if (V_strieq(cmd, "cancel") || V_strieq(cmd, "close")) {
     vgui::ivgui()->PostMessage(m_MainPanel->GetVPanel(), new KeyValues("Quit"),
                                NULL);
     Close();
-  } else if (!stricmp(cmd, "start")) {
+  } else if (V_strieq(cmd, "start")) {
     // save our current settings
     SetConfig(m_szHostName, m_szPassword, m_iMaxPlayers, m_szMod, GetMapName(),
               m_pNetworkCombo->GetActiveItem() != 0, secure, m_iPort);
@@ -422,14 +422,13 @@ bool CCreateMultiplayerGameServerPage::LaunchOldDedicatedServer(
 
         char commandLine[1024 * 4];
         commandLine[0] = 0;
-        V_snprintf(commandLine, sizeof(commandLine),
-                   "\"%ssteam.exe\" -applaunch 205 -HiddenLaunch", steamDir);
+        V_sprintf_safe(commandLine,
+                       "\"%ssteam.exe\" -applaunch 205 -HiddenLaunch",
+                       steamDir);
 
         // Feed it all the parameters chosen in the UI so it doesn't redisplay
         // the UI.
-        STARTUPINFO si;
-        memset(&si, 0, sizeof(si));
-        si.cb = sizeof(si);
+        STARTUPINFO si = {sizeof(si)};
 
         PROCESS_INFORMATION pi;
         if (!CreateProcess(NULL, commandLine, NULL, NULL, false, 0, NULL,
@@ -457,7 +456,7 @@ void CCreateMultiplayerGameServerPage::LoadMODList() {
   m_pGameCombo->DeleteAllItems();
 
   // add steam games
-  if (CommandLine()->CheckParm("-steam")) {
+  if (CommandLine()->HasParm("-steam")) {
     constexpr char pSteamGamesFilename[] = "hlds_steamgames.vdf";
 
     KeyValuesAD gamesFile(pSteamGamesFilename);
@@ -506,7 +505,7 @@ void CCreateMultiplayerGameServerPage::LoadModListInDirectory(
     // add to the mod list
     if (filename[0] != '.' && g_pFullFileSystem->FindIsDirectory(findHandle)) {
       char fullFilename[MAX_PATH];
-      if (Q_stricmp(pDirectoryName, ".") == 0) {
+      if (V_streq(pDirectoryName, ".")) {
         // If we don't do this, then the games in hlds_steamgames.vdf will get
         // listed twice since their gamedir is listed as "cstrike" and "hl2mp",
         // not ".\cstrike" or ".\hl2mp".
@@ -555,7 +554,7 @@ void CCreateMultiplayerGameServerPage::AddMod(const char *pGameDirName,
 
   // If this mod supports multiplayer, then we'll add it.
   const char *gameType = pGameInfo->GetString("type", "singleplayer_only");
-  if (Q_stricmp(gameType, "singleplayer_only") != 0) {
+  if (!V_strieq(gameType, "singleplayer_only")) {
     // Validate the gameinfo.txt format..
     KeyValues *pSub = pGameInfo->FindKey("FileSystem");
     if (!pSub) Error("%s missing FileSystem key.", pGameInfoFilename);
@@ -650,7 +649,7 @@ void CCreateMultiplayerGameServerPage::LoadMapList() {
   m_pMapList->DeleteAllItems();
 
   Assert(!Q_isempty(m_szMod));
-  if (strlen(m_szMod) < 1) {
+  if (Q_isempty(m_szMod)) {
     m_pMapList->SetEnabled(false);
     return;
   }
@@ -658,7 +657,7 @@ void CCreateMultiplayerGameServerPage::LoadMapList() {
   m_pMapList->SetEnabled(true);
   m_pStartServerButton->SetEnabled(true);
 
-  if (CommandLine()->CheckParm("-steam")) {
+  if (CommandLine()->HasParm("-steam")) {
     KeyValues *userData = m_pGameCombo->GetActiveItemUserData();
     if (userData && userData->GetString("DedicatedServerStartMap", nullptr)) {
       // set only
@@ -731,7 +730,7 @@ void CCreateMultiplayerGameServerPage::OnTextChanged(Panel *panel) {
     char hostname[256];
     GetControlString("ServerNameEdit", m_szHostName, sizeof(m_szHostName));
     V_sprintf_safe(hostname, "%s dedicated server", m_szGameName);
-    if (!stricmp(m_szHostName, hostname)) {
+    if (V_strieq(m_szHostName, hostname)) {
       updateHostname = true;
     }
 

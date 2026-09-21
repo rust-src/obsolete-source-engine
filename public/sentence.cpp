@@ -224,11 +224,6 @@ CBasePhonemeTag::CBasePhonemeTag()
 	m_nPhonemeCode = 0;
 }
 
-CBasePhonemeTag::CBasePhonemeTag( const CBasePhonemeTag& from )
-{
-	memcpy( this, &from, sizeof(*this) );
-}
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -292,13 +287,11 @@ void CPhonemeTag::SetTag( const char *phoneme )
 {
 	delete m_szPhoneme;
 	m_szPhoneme = NULL;
-	if ( !phoneme || !phoneme [ 0 ] )
+	if ( Q_isempty( phoneme ) )
 		return;
 
-	intp len = Q_strlen( phoneme ) + 1;
-	m_szPhoneme = new char[ len ];
+	m_szPhoneme = V_strdup( phoneme );
 	Assert( m_szPhoneme );
-	Q_strncpy( m_szPhoneme, phoneme, len );
 }
 
 char const *CPhonemeTag::GetTag() const
@@ -398,7 +391,7 @@ int CSentence::LanguageForName( char const *name )
 	{
 		CCLanguage *entry = &g_CCLanguageLookup[ l ];
 		Assert( entry->type == l );
-		if ( !stricmp( entry->name, name ) )
+		if ( V_strieq( entry->name, name ) )
 			return l;
 	}
 	return -1;
@@ -587,7 +580,7 @@ void CSentence::ParseCloseCaption( CUtlBuffer& buf )
 			V_strcpy_safe( cc_type, token );
 
 			bool unicode = false;
-			if ( !stricmp( cc_type, "unicode" ) )
+			if ( V_strieq( cc_type, "unicode" ) )
 			{
 				unicode = true;
 			}
@@ -636,11 +629,11 @@ void CSentence::ParseOptions( CUtlBuffer& buf )
 		buf.GetString( token );
 		Q_strncpy( value, token, sizeof( value ) );
 
-		if ( !strcmpi( key, "voice_duck" ) )
+		if ( V_strieq( key, "voice_duck" ) )
 		{
 			SetVoiceDuck( atoi(value) ? true : false );
 		}
-		else if ( !strcmpi( key, "checksum" ) )
+		else if ( V_strieq( key, "checksum" ) )
 		{
 			SetDataCheckSum( (unsigned int)atoi( value ) );
 		}
@@ -674,25 +667,25 @@ void CSentence::ParseDataVersionOnePointZero( CUtlBuffer& buf )
 		if ( token[0] != '{' )
 			break;
 
-		if ( !stricmp( section, "PLAINTEXT" ) )
+		if ( V_strieq( section, "PLAINTEXT" ) )
 		{
 			ParsePlaintext( buf );
 		}
-		else if ( !stricmp( section, "WORDS" ) )
+		else if ( V_strieq( section, "WORDS" ) )
 		{
 			ParseWords( buf );
 		}
-		else if ( !stricmp( section, "EMPHASIS" ) )
+		else if ( V_strieq( section, "EMPHASIS" ) )
 		{
 			ParseEmphasis( buf );
 		}		
-		else if ( !stricmp( section, "CLOSECAPTION" ) )
+		else if ( V_strieq( section, "CLOSECAPTION" ) )
 		{
 			// NOTE:  CLOSECAPTION IS NO LONGER VALID
 			// This just skips the section of data.
 			ParseCloseCaption( buf );
 		}
-		else if ( !stricmp( section, "OPTIONS" ) )
+		else if ( V_strieq( section, "OPTIONS" ) )
 		{
 			ParseOptions( buf );
 		}
@@ -1214,6 +1207,9 @@ CWordTag *CSentence::GetWordForPhoneme( CPhonemeTag *phoneme )
 //-----------------------------------------------------------------------------
 CSentence& CSentence::operator=( const CSentence& src )
 {
+	// dimhotepus: Protect against self-assignment
+	if ( &src == this ) return *this;
+
 	// Clear current stuff
 	Reset();
 
@@ -1263,7 +1259,7 @@ void CSentence::Append( float starttime, const CSentence& src )
 	// Combine
 	for ( const auto *word : src.m_Words )
 	{
-		CWordTag *newWord = new CWordTag( *word );
+		auto *newWord = new CWordTag( *word );
 
 		newWord->m_flStartTime += starttime;
 		newWord->m_flEndTime += starttime;
@@ -1278,20 +1274,21 @@ void CSentence::Append( float starttime, const CSentence& src )
 		AddWordTag( newWord );
 	}
 
-	if ( src.GetText()[ 0 ] )
+	if ( !Q_isempty( src.GetText() ) )
 	{
 		char fulltext[ 4096 ];
 		if ( GetText()[ 0 ] )
 		{
-			Q_snprintf( fulltext, sizeof( fulltext ), "%s %s", GetText(), src.GetText() );
+			V_sprintf_safe( fulltext, "%s %s", GetText(), src.GetText() );
 		}
 		else
 		{
-			Q_strncpy( fulltext, src.GetText(), sizeof( fulltext ) );
+			V_strcpy_safe( fulltext, src.GetText() );
 		}
 		SetText( fulltext );
 	}
 
+	// copying.
 	for ( auto s : src.m_EmphasisSamples )
 	{
 		s.time += starttime;
@@ -1317,15 +1314,13 @@ void CSentence::SetText( const char *text )
 	delete[] m_szText;
 	m_szText = NULL;
 
-	if ( !text || !text[ 0 ] )
+	if ( Q_isempty( text ) )
 	{
 		return;
 	}
 
-	size_t len = strlen( text ) + 1;
-	m_szText = new char[ len ];
+	m_szText = V_strdup( text );
 	Assert( m_szText );
-	Q_strncpy( m_szText, text, len );
 #endif
 }
 
@@ -1637,7 +1632,8 @@ bool CSentence::ShouldSplitWord( char in )
 	if ( (unsigned char)in > SCHAR_MAX )
 		return true;
 
-	if ( ispunct( in ) )
+	// dimhotepus: ispunct -> V_ispunct.
+	if ( V_ispunct( in ) )
 	{
 		// don't split on apostrophe
 		if ( in == '\'' )

@@ -156,8 +156,11 @@ inline bool ValidStackAddress( void *pAddress, const void *pNoLessThan, const vo
 	return true;
 }
 
+// dimhotepus: CLang and GCC do not support it.
+#if !defined(COMPILER_CLANG) && !defined(COMPILER_GCC)
 #pragma auto_inline( off )
-intp GetCallStack_Fast( void **pReturnAddressesOut, intp iArrayCount, intp iSkipCount )
+#endif
+intp GetCallStack_Fast( [[maybe_unused]] void **pReturnAddressesOut, [[maybe_unused]] intp iArrayCount, [[maybe_unused]] intp iSkipCount )
 {
 	//Only tested in windows. This function won't work with frame pointer omission enabled. "vpc /nofpo" all projects
 #if (defined( TIER0_FPO_DISABLED ) || defined( _DEBUG )) && (defined( WIN32 ) && !defined( _X360 ) && !defined(_M_X64))
@@ -239,8 +242,10 @@ intp GetCallStack_Fast( void **pReturnAddressesOut, intp iArrayCount, intp iSkip
 
 #endif
 }
+// dimhotepus: CLang and GCC do not support it.
+#if !defined(COMPILER_CLANG) && !defined(COMPILER_GCC)
 #pragma auto_inline( on )
-
+#endif
 
 
 
@@ -693,8 +698,8 @@ public:
 		AUTO_LOCK( m_Mutex );
 
 		//Only enabled for P4 and Steam Beta builds
-		if( (CommandLine()->FindParm( "-steam" ) != 0) && //is steam
-			(CommandLine()->FindParm( "-internalbuild" ) == 0) ) //is not steam beta
+		if( CommandLine()->HasParm( "-steam" ) && //is steam
+			!CommandLine()->HasParm( "-internalbuild" ) ) //is not steam beta
 		{
 			//disable the toolset by falsifying initialized state
 			m_bIsInitialized = true;
@@ -745,6 +750,8 @@ public:
 		if( m_pSymSetSearchPath == nullptr )
 			m_pSymSetSearchPath = SymSetSearchPath_DummyFn;
 
+SE_GCC_BEGIN_WARNING_OVERRIDE_SCOPE()
+SE_GCC_DISABLE_CAST_FUNCTION_TYPE_STRICT_WARNING()
 		m_pSymEnumerateModules64 = (PFN_SymEnumerateModules64) ::GetProcAddress( m_hDbgHelpDll, "SymEnumerateModules64" );
 		if( m_pSymEnumerateModules64 == nullptr )
 			m_pSymEnumerateModules64 = SymEnumerateModules64_DummyFn;
@@ -786,6 +793,7 @@ public:
 		m_pCaptureStackBackTrace = (PFN_CaptureStackBackTrace) ::GetProcAddress( m_hNTDllDll, "RtlCaptureStackBackTrace" );
 		if( m_pCaptureStackBackTrace == NULL )		m_pCaptureStackBackTrace = CaptureStackBackTrace_DummyFn;
 #endif
+SE_GCC_END_WARNING_OVERRIDE_SCOPE()
 
 
 		m_pSymSetOptions( m_pSymGetOptions() |

@@ -398,7 +398,7 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequenceFromModifiers(
 	// randomly pick between the highest scoring sequences ( NOTE: this method of selecting a sequence ignores activity weights )
 	if ( IsInPrediction() )
 	{
-		return topScoring[ SharedRandomInt( "SelectWeightedSequence", 0, topScoring.Count() - 1 ) ];
+		return topScoring[ SharedRandomInt( "SelectWeightedSequence", (intp)0, topScoring.Count() - 1 ) ];
 	}
 	
 	return topScoring[ RandomIntp( 0, topScoring.Count() - 1 ) ];
@@ -844,7 +844,7 @@ bool GotoSequence( CStudioHdr *pstudiohdr, int iCurrentSequence, float flCurrent
 			if (pstudiohdr->ExitNode( i ) == iEndNode && pstudiohdr->EntryNode( i ) == iInternNode)
 			{
 				iNextDir = -1;
-				flNextCycle = 0.999;	
+				flNextCycle = 0.999f;
 				nNextSequence = i;
 				return true;
 			}
@@ -914,7 +914,7 @@ int FindBodygroupByName( CStudioHdr *pstudiohdr, const char *name )
 	for ( group = 0; group < pstudiohdr->numbodyparts(); group++ )
 	{
 		mstudiobodyparts_t *pbodypart = pstudiohdr->pBodypart( group );
-		if ( !Q_strcasecmp( name, pbodypart->pszName() ) )
+		if ( V_strieq( name, pbodypart->pszName() ) )
 		{
 			return group;
 		}
@@ -990,7 +990,7 @@ int FindHitboxSetByName( CStudioHdr *pstudiohdr, const char *name )
 		if ( !set )
 			continue;
 
-		if ( !stricmp( set->pszName(), name ) )
+		if ( V_strieq( set->pszName(), name ) )
 			return i;
 	}
 

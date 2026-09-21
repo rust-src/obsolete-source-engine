@@ -233,11 +233,8 @@ bool CFileSystem_Steam::IsFileInSteamCache2( const char *file )
 	{
 		return false;
 	}
-	else
-	{
-		steam->FindClose( h, &error );
-	}
 
+	RunCodeAtScopeExit(steam->FindClose( h, &error ));
 	return true;
 }
 
@@ -328,7 +325,7 @@ void CFileSystem_Steam::Shutdown()
 	TSteamError steamError;
 
 	// If we're not running Steam in local mode, remove all mount points from the STEAM VFS.
-	if ( !CommandLine()->CheckParm("-steamlocal") && !m_bSelfMounted && !steam->UnmountAppFilesystem(&steamError) )
+	if ( !CommandLine()->HasParm("-steamlocal") && !m_bSelfMounted && !steam->UnmountAppFilesystem(&steamError) )
 	{
 #ifdef WIN32
 		OutputDebugString(steamError.szDesc);
@@ -1194,7 +1191,7 @@ HANDLE CFileSystem_Steam::FS_FindFirstFile(const char *findname, WIN32_FIND_DATA
 	else
 	{
 		hResult = (HANDLE)steamResult;
-		strcpy(dat->cFileName, steamFindInfo.cszName);
+		V_strcpy_safe(dat->cFileName, steamFindInfo.cszName);
 		
 // NEED TO DEAL WITH THIS STUFF!!!  FORTUNATELY HALF-LIFE DOESN'T USE ANY OF IT
 // AND ARCANUM USES _findfirst() etc.
@@ -1237,7 +1234,7 @@ bool CFileSystem_Steam::FS_FindNextFile(HANDLE handle, WIN32_FIND_DATA *dat)
 
 	if ( result )
 	{
-		strcpy(dat->cFileName, steamFindInfo.cszName);
+		V_strcpy_safe(dat->cFileName, steamFindInfo.cszName);
 		if ( steamFindInfo.bIsDir )
 			dat->dwFileAttributes |= FILE_ATTRIBUTE_DIRECTORY;
 		else
@@ -1474,6 +1471,8 @@ void CFileSystem_Steam::ViewSteamCache(const char* szDir, bool bRecurse)
 
 	if ( h != STEAM_INVALID_HANDLE )
 	{
+		RunCodeAtScopeExit(steam->FindClose( h, &error ));
+
 		do 
 		{
 			Msg( "View Steam Cache: '%s%c%s' \n", szDir, CORRECT_PATH_SEPARATOR, info.cszName );
@@ -1487,8 +1486,6 @@ void CFileSystem_Steam::ViewSteamCache(const char* szDir, bool bRecurse)
 			ret = steam->FindNext( h, &info, &error );
 
 		} while( 0 == ret );
-
-		steam->FindClose( h, &error );
 	}
 }
 
@@ -1516,11 +1513,8 @@ bool CFileSystem_Steam::IsFileInSteamCache( const char *file )
 	{
 		return false;
 	}
-	else
-	{
-		steam->FindClose( h, &error );
-	}
 
+	RunCodeAtScopeExit( steam->FindClose( h, &error ) );
 	return true;
 }
 

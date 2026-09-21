@@ -98,6 +98,12 @@ extern	char	com_basedir[MAX_OSPATH];
 extern	char	com_gamedir[MAX_OSPATH];
 
 byte *COM_LoadStackFile (IN_Z const char *path, OUT_BYTECAP(bufsize) void *buffer, int bufsize, int& filesize );
+template<int size>
+byte *COM_LoadStackFile (IN_Z const char *path, OUT_Z_ARRAY char (&buffer)[size], int& filesize )
+{
+	return COM_LoadStackFile( path, buffer, size, filesize );
+}
+
 void COM_LoadCacheFile (IN_Z const char *path, cache_user_t *cu);
 byte* COM_LoadFile (IN_Z const char *path, int usehunk, int *pLength);
 

@@ -69,8 +69,7 @@ struct FS_LocalToGlobal_t
 		Assert( count > 0 );
 		m_nCount = count;
 		m_Mapping = new int[ m_nCount ];
-		// dimhotepus: Type-safe clear.
-		BitwiseClear( m_Mapping, m_nCount * sizeof( int ) );
+		memset( m_Mapping, 0, m_nCount * sizeof( int ) );
 	}
 
 	FS_LocalToGlobal_t( const FS_LocalToGlobal_t& src )
@@ -192,8 +191,10 @@ public:
 
 	int				m_blinktoggle;
 
-	static int		AddGlobalFlexController( const char *szName );
-	static char const *GetGlobalFlexControllerName( int idx );
+	// dimhotepus: int -> UtlSymId_t.
+	static UtlSymId_t AddGlobalFlexController( const char *szName );
+	// dimhotepus: int -> UtlSymId_t.
+	static char const *GetGlobalFlexControllerName( UtlSymId_t idx );
 
 	// bah, this should be unified with all prev/current stuff.
 

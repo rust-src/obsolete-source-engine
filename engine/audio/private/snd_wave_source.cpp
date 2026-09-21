@@ -102,6 +102,9 @@ CAudioSourceWave::CAudioSourceWave( CSfxTable *pSfx )
 #ifdef _DEBUG
 	if ( m_pSfx )
 		m_pDebugName = strdup( m_pSfx->getname() );
+	else
+		// dimhotepus: Ensure always initialized.
+		m_pDebugName = nullptr;
 #endif
 
 	m_pTempSentence = NULL;
@@ -120,6 +123,9 @@ CAudioSourceWave::CAudioSourceWave( CSfxTable *pSfx, CAudioSourceCachedInfo *inf
 #ifdef _DEBUG
 	if ( m_pSfx )
 		m_pDebugName = strdup( m_pSfx->getname() );
+	else
+		// dimhotepus: Ensure always initialized.
+		m_pDebugName = nullptr;
 #endif
 
 	m_refCount = 0;
@@ -2068,7 +2074,7 @@ bool CAudioSourceCache::Init( size_t memSize )
 	Msg( "CAudioSourceCache: Init\n" );
 #endif
 
-	m_bSndCacheDebug = CommandLine()->FindParm( "-sndcachedebug" ) ? true : false;
+	m_bSndCacheDebug = CommandLine()->HasParm( "-sndcachedebug" );
 
 	if ( !wavedatacache->Init( memSize ) )
 	{
@@ -2093,9 +2099,9 @@ bool CAudioSourceCache::Init( size_t memSize )
 		bool bFound = false;
 		FOR_EACH_VEC( m_vecCaches, idxCache )
 		{
-			if ( V_stricmp( szSearchPath, m_vecCaches[idxCache]->m_szSearchPath ) == 0 )
+			if ( V_strieq( szSearchPath, m_vecCaches[idxCache]->m_szSearchPath ) )
 			{
-				Assert( V_strcmp( szSearchPath, m_vecCaches[idxCache]->m_szSearchPath ) == 0 ); // case *should* match exactly
+				Assert( V_streq( szSearchPath, m_vecCaches[idxCache]->m_szSearchPath ) ); // case *should* match exactly
 				bFound = true;
 				break;
 			}
@@ -2116,7 +2122,7 @@ CAudioSourceCache::SearchPathCache *CAudioSourceCache::FindCacheForSearchPath( c
 	FOR_EACH_VEC( m_vecCaches, idx )
 	{
 		SearchPathCache *pCache = m_vecCaches[idx];
-		if ( V_stricmp( pCache->m_szSearchPath, pszSearchPath ) == 0 )
+		if ( V_strieq( pCache->m_szSearchPath, pszSearchPath ) )
 		{
 			return pCache;
 		}
@@ -2428,7 +2434,7 @@ void CAudioSourceCache::BuildCache( char const *pszSearchPath )
 		CAudioSourceCachedInfo::s_CurrentType = CAudioSource::AUDIO_SOURCE_WAV;
 		char szExt[ 10 ] = { 0 };
 		V_ExtractFileExtension( pszFilename, szExt );
-		if ( V_stricmp( szExt, "mp3" ) == 0 )
+		if ( V_strieq( szExt, "mp3" ) )
 		{
 			CAudioSourceCachedInfo::s_CurrentType = CAudioSource::AUDIO_SOURCE_MP3;
 		}

@@ -362,8 +362,8 @@ void CBaseTFVehicle::VehiclePassengerThink( void )
 	// See if there are any team members nearby
 	if ( GetTeam() )
 	{
-		int iNumPlayers = GetTFTeam()->GetNumPlayers();
-		for ( int i = 0; i < iNumPlayers; i++ )
+		intp iNumPlayers = GetTFTeam()->GetNumPlayers();
+		for ( intp i = 0; i < iNumPlayers; i++ )
 		{
 			if ( GetTFTeam()->GetPlayer(i) )
 			{

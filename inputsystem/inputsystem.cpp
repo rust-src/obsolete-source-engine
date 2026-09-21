@@ -5,6 +5,7 @@
 //===========================================================================//
 #ifdef _WIN32
 #include "winlite.h"
+#include <windowsx.h>
 #endif
 
 #include "inputsystem.h"
@@ -41,16 +42,22 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CInputSystem, IInputSystem,
 // Constructor, destructor
 //-----------------------------------------------------------------------------
 CInputSystem::CInputSystem()
+#ifdef _WIN32
+	: m_dblCurrentClickTime{ GetDoubleClickTime() }
+#endif
 {
 #if defined(USE_SDL)
-  m_pLauncherMgr = nullptr;
+	m_pLauncherMgr = nullptr;
 #endif
 	m_ChainedWndProc = nullptr;
 	m_hAttachedHWnd = nullptr;
 	m_bEnabled = true;
 	m_bPumpEnabled = true;
 	m_bIsPolling = false;
-	memset( m_currentActionSet, 0, sizeof(m_currentActionSet) );
+	BitwiseClear( m_currentActionSet );
+#ifdef _WIN32
+	BitwiseClear( m_dblClickTime );
+#endif
 	m_StartupTimeTick = 0;
 	m_nLastPollTick = 0;
 	m_nLastSampleTick = 0;
@@ -60,14 +67,14 @@ CInputSystem::CInputSystem()
 	m_nJoystickCount = 0;
 	m_bJoystickInitialized = false;
 	m_bXController = false;
-	memset( m_pJoystickInfo, 0, sizeof(m_pJoystickInfo) );
+	BitwiseClear( m_pJoystickInfo );
 
-	memset( m_pRadialMenuStickVal, 0, sizeof(m_pRadialMenuStickVal) );
+	BitwiseClear( m_pRadialMenuStickVal );
 	memset( m_Device, 0, sizeof(m_Device) );
 	m_unNumConnected = 0;
 	m_flLastSteamControllerInput = 0.0F;
 	m_nJoystickBaseline = 0;
-	memset( m_nControllerType, 0, sizeof(m_nControllerType) );
+	BitwiseClear( m_nControllerType );
 
 	m_bSteamController = false;
 	m_bSteamControllerActionsInitialized = false;
@@ -79,8 +86,8 @@ CInputSystem::CInputSystem()
 	m_bNovintDevices = false;
 #endif
 
-	memset( m_appXKeys, 0, sizeof(m_appXKeys) );
-	memset( m_XDevices, 0, sizeof(m_XDevices) );
+	BitwiseClear( m_appXKeys );
+	BitwiseClear( m_XDevices );
 	m_PrimaryUserId = INVALID_USER_ID;
 
 	m_bRawInputSupported = false;
@@ -94,7 +101,7 @@ CInputSystem::CInputSystem()
 #endif
 
 	m_bConsoleTextMode = false;
-	m_bSkipControllerInitialization = CommandLine()->CheckParm( "-nosteamcontroller" );
+	m_bSkipControllerInitialization = CommandLine()->HasParm( "-nosteamcontroller" );
 
 	static_assert( (MAX_JOYSTICKS + 7) >> 3 < sizeof(unsigned short) );
 }
@@ -321,6 +328,9 @@ void CInputSystem::DetachFromWindow( )
 	[[maybe_unused]] const bool is_succeeded{!!RegisterRawInputDevices(Rid, std::size(Rid), sizeof(Rid[0]))};
 	Assert(is_succeeded);
 
+	// dimhotepus: Reset raw input support.
+	m_bRawInputSupported = false;
+
 	// NVNT inform novint devices loss of window
 	DetachWindowFromNovintDevices( );
 #endif
@@ -364,14 +374,14 @@ void CInputSystem::ClearInputState()
 	{
 		InputState_t& state = m_InputState[i];
 		state.m_ButtonState.ClearAll();
-		memset( state.m_pAnalogDelta, 0, ANALOG_CODE_LAST * sizeof(int) );
-		memset( state.m_pAnalogValue, 0, ANALOG_CODE_LAST * sizeof(int) );
-		memset( state.m_ButtonPressedTick, 0, BUTTON_CODE_LAST * sizeof(int) );
-		memset( state.m_ButtonReleasedTick, 0, BUTTON_CODE_LAST * sizeof(int) );
+		BitwiseClear( state.m_pAnalogDelta );
+		BitwiseClear( state.m_pAnalogValue );
+		BitwiseClear( state.m_ButtonPressedTick );
+		BitwiseClear( state.m_ButtonReleasedTick );
 		state.m_Events.Purge();
 		state.m_bDirty = false;
 	}
-	memset( m_appXKeys, 0, XUSER_MAX_COUNT * XK_MAX_KEYS * sizeof(appKey_t) );
+	BitwiseClear( m_appXKeys );
 }
 
 //-----------------------------------------------------------------------------
@@ -381,7 +391,7 @@ void CInputSystem::ResetInputState()
 {
 	ReleaseAllButtons();
 	ZeroAnalogState( 0, ANALOG_CODE_LAST - 1 );
-	memset( m_appXKeys, 0, XUSER_MAX_COUNT * XK_MAX_KEYS * sizeof(appKey_t) );
+	BitwiseClear( m_appXKeys );
 
 	m_mouseRawAccumX = m_mouseRawAccumY = 0;
 }
@@ -541,6 +551,18 @@ void CInputSystem::CopyInputState( InputState_t *pDest, const InputState_t &src,
 
 
 #if defined( PLATFORM_WINDOWS_PC )
+// dimhotepus: Get window cursor position.
+static POINT GetWindowCursorPos( HWND window )
+{
+	Assert( window );
+
+	POINT cursorPos;
+	GetCursorPos( &cursorPos );
+	ScreenToClient( window, &cursorPos );
+
+	return cursorPos;
+}
+
 void CInputSystem::PollInputState_Windows()
 {
 	if ( m_bPumpEnabled )
@@ -558,6 +580,15 @@ void CInputSystem::PollInputState_Windows()
 			TranslateMessage( &msg );
 			DispatchMessage( &msg );
 		}
+	}
+
+	// dimhotepus: Instead of WM_MOUSEMOVE get position here to speedup.
+	if ( m_bRawInputSupported )
+	{
+		POINT cursorPos = GetWindowCursorPos( m_hAttachedHWnd );
+		InputState_t &state = m_InputState[ m_bIsPolling ];
+
+		UpdateMousePositionState( state, cursorPos.x, cursorPos.y );
 	}
 }
 #endif
@@ -760,7 +791,8 @@ void CInputSystem::PollInputState_Platform()
 
 				case CocoaEvent_MouseMove:
 				{
-					UpdateMousePositionState( state, (short)pEvent->m_MousePos[0], (short)pEvent->m_MousePos[1] );
+					// dimhotepus: short -> int to handle multiple monitors.
+					UpdateMousePositionState( state, (int)pEvent->m_MousePos[0], (int)pEvent->m_MousePos[1] );
 
 					InputEvent_t event;
 					memset( &event, 0, sizeof(event) );
@@ -1189,7 +1221,8 @@ void CInputSystem::SetCursorPosition( int x, int y )
 }
 
 
-void CInputSystem::UpdateMousePositionState( InputState_t &state, short x, short y )
+// dimhotepus: short -> int to handle multiple monitors.
+void CInputSystem::UpdateMousePositionState( InputState_t &state, int x, int y )
 {
 	int nOldX = state.m_pAnalogValue[ MOUSE_X ];
 	int nOldY = state.m_pAnalogValue[ MOUSE_Y ];
@@ -1217,6 +1250,10 @@ void CInputSystem::UpdateMousePositionState( InputState_t &state, short x, short
 	}
 }
 
+#ifdef _WIN32
+// dimhotepus: Define to enable ETW profiling. Was enabled by default but too costly.
+// #define INPUT_ETW_MARKS_ENABLED
+#endif
 
 //-----------------------------------------------------------------------------
 // Handles input messages
@@ -1261,54 +1298,74 @@ LRESULT CInputSystem::WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
 		break;
 
 	case WM_LBUTTONDOWN:
+		// dimhotepus: Raw mouse input support.
+		if ( !m_bRawInputSupported )
 		{
 			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_LEFT, true );
-			ETWMouseDown( 0, (short)LOWORD(lParam), (short)HIWORD(lParam) );
+			// dimhotepus: LOWORD -> GET_X_LPARAM, HIWORD -> GET_Y_LPARAM
+			ETWMouseDown( 0, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) );
 			UpdateMouseButtonState( nButtonMask );
 		}
 		break;
 
 	case WM_LBUTTONUP:
+		// dimhotepus: Raw mouse input support.
+		if ( !m_bRawInputSupported )
 		{
 			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_LEFT, false );
-			ETWMouseUp( 0, (short)LOWORD(lParam), (short)HIWORD(lParam) );
+			// dimhotepus: LOWORD -> GET_X_LPARAM, HIWORD -> GET_Y_LPARAM
+			ETWMouseUp( 0, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) );
 			UpdateMouseButtonState( nButtonMask );
 		}
 		break;
 
 	case WM_RBUTTONDOWN:
+		// dimhotepus: Raw mouse input support.
+		if ( !m_bRawInputSupported )
 		{
 			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_RIGHT, true );
-			ETWMouseDown( 2, (short)LOWORD(lParam), (short)HIWORD(lParam) );
+			// dimhotepus: LOWORD -> GET_X_LPARAM, HIWORD -> GET_Y_LPARAM
+			ETWMouseDown( 2, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) );
 			UpdateMouseButtonState( nButtonMask );
 		}
 		break;
 
 	case WM_RBUTTONUP:
+		// dimhotepus: Raw mouse input support.
+		if ( !m_bRawInputSupported )
 		{
 			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_RIGHT, false );
-			ETWMouseUp( 2, (short)LOWORD(lParam), (short)HIWORD(lParam) );
+			// dimhotepus: LOWORD -> GET_X_LPARAM, HIWORD -> GET_Y_LPARAM
+			ETWMouseUp( 2, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) );
 			UpdateMouseButtonState( nButtonMask );
 		}
 		break;
 
 	case WM_MBUTTONDOWN:
+		// dimhotepus: Raw mouse input support.
+		if ( !m_bRawInputSupported )
 		{
 			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_MIDDLE, true );
-			ETWMouseDown( 1, (short)LOWORD(lParam), (short)HIWORD(lParam) );
+			// dimhotepus: LOWORD -> GET_X_LPARAM, HIWORD -> GET_Y_LPARAM
+			ETWMouseDown( 1, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) );
 			UpdateMouseButtonState( nButtonMask );
 		}
 		break;
 
 	case WM_MBUTTONUP:
+		// dimhotepus: Raw mouse input support.
+		if ( !m_bRawInputSupported )
 		{
 			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_MIDDLE, false );
-			ETWMouseUp( 1, (short)LOWORD(lParam), (short)HIWORD(lParam) );
+			// dimhotepus: LOWORD -> GET_X_LPARAM, HIWORD -> GET_Y_LPARAM
+			ETWMouseUp( 1, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) );
 			UpdateMouseButtonState( nButtonMask );
 		}
 		break;
 
 	case WM_XBUTTONDOWN:
+		// dimhotepus: Raw mouse input support.
+		if ( !m_bRawInputSupported )
 		{
 			ButtonCode_t code = ( GET_XBUTTON_WPARAM( wParam ) == XBUTTON1 ) ? MOUSE_4 : MOUSE_5;
 			int nButtonMask = ButtonMaskFromMouseWParam( wParam, code, true );
@@ -1320,6 +1377,8 @@ LRESULT CInputSystem::WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
 		break;
 
 	case WM_XBUTTONUP:
+		// dimhotepus: Raw mouse input support.
+		if ( !m_bRawInputSupported )
 		{
 			ButtonCode_t code = ( GET_XBUTTON_WPARAM( wParam ) == XBUTTON1 ) ? MOUSE_4 : MOUSE_5;
 			int nButtonMask = ButtonMaskFromMouseWParam( wParam, code, false );
@@ -1331,30 +1390,41 @@ LRESULT CInputSystem::WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
 		break;
 
 	case WM_LBUTTONDBLCLK:
+		// dimhotepus: Raw mouse input support.
+		if ( !m_bRawInputSupported )
 		{
 			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_LEFT, true );
-			ETWMouseDown( 0, (short)LOWORD(lParam), (short)HIWORD(lParam) );
+			// dimhotepus: LOWORD -> GET_X_LPARAM, HIWORD -> GET_Y_LPARAM
+			ETWMouseDown( 0, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) );
 			UpdateMouseButtonState( nButtonMask, MOUSE_LEFT );
 		}
 		break;
 
 	case WM_RBUTTONDBLCLK:
+		// dimhotepus: Raw mouse input support.
+		if ( !m_bRawInputSupported )
 		{
 			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_RIGHT, true );
-			ETWMouseDown( 2, (short)LOWORD(lParam), (short)HIWORD(lParam) );
+			// dimhotepus: LOWORD -> GET_X_LPARAM, HIWORD -> GET_Y_LPARAM
+			ETWMouseDown( 2, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) );
 			UpdateMouseButtonState( nButtonMask, MOUSE_RIGHT );
 		}
 		break;
 
 	case WM_MBUTTONDBLCLK:
+		// dimhotepus: Raw mouse input support.
+		if ( !m_bRawInputSupported )
 		{
 			int nButtonMask = ButtonMaskFromMouseWParam( wParam, MOUSE_MIDDLE, true );
-			ETWMouseDown( 1, (short)LOWORD(lParam), (short)HIWORD(lParam) );
+			// dimhotepus: LOWORD -> GET_X_LPARAM, HIWORD -> GET_Y_LPARAM
+			ETWMouseDown( 1, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) );
 			UpdateMouseButtonState( nButtonMask, MOUSE_MIDDLE );
 		}
 		break;
 
 	case WM_XBUTTONDBLCLK:
+		// dimhotepus: Raw mouse input support.
+		if ( !m_bRawInputSupported )
 		{
 			ButtonCode_t code = ( GET_XBUTTON_WPARAM( wParam ) == XBUTTON1 ) ? MOUSE_4 : MOUSE_5;
 			int nButtonMask = ButtonMaskFromMouseWParam( wParam, code, true );
@@ -1414,6 +1484,8 @@ LRESULT CInputSystem::WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
 		break;
 
 	case WM_MOUSEWHEEL:
+		// dimhotepus: Raw mouse input support.
+		if ( !m_bRawInputSupported )
 		{
 			ButtonCode_t code = GET_WHEEL_DELTA_WPARAM( wParam ) > 0 ? MOUSE_WHEEL_UP : MOUSE_WHEEL_DOWN;
 			state.m_ButtonPressedTick[ to_underlying(code) ] = state.m_ButtonReleasedTick[ to_underlying(code) ] = m_nLastSampleTick;
@@ -1434,14 +1506,186 @@ LRESULT CInputSystem::WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
 				UINT bufferSize{ sizeof(RAWINPUT) };
 				alignas(RAWINPUT) BYTE buffer[sizeof(RAWINPUT)];
 
-				HRAWINPUT hInput = reinterpret_cast<HRAWINPUT>( lParam );
+				const auto hInput = reinterpret_cast<HRAWINPUT>( lParam );
 				if ( UINT_MAX != GetRawInputData(hInput, RID_INPUT, buffer, &bufferSize, sizeof(RAWINPUTHEADER)) )
 				{
-					RAWINPUT* raw = reinterpret_cast<RAWINPUT*>( buffer );
-					if (raw->header.dwType == RIM_TYPEMOUSE)
+					const auto* raw = reinterpret_cast<RAWINPUT*>( buffer );
+					if ( raw->header.dwType == RIM_TYPEMOUSE )
 					{
 						m_mouseRawAccumX += raw->data.mouse.lLastX;
 						m_mouseRawAccumY += raw->data.mouse.lLastY;
+
+						// dimhotepus: Handle mouse buttons by raw input for performance.
+						const unsigned short mouseButtonFlags{raw->data.mouse.usButtonFlags};
+						int nButtonMask = 0;
+
+						if ( mouseButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN )
+						{
+#if defined(ETW_MARKS_ENABLED) && defined(INPUT_ETW_MARKS_ENABLED)
+							POINT cursorPos = GetWindowCursorPos( m_hAttachedHWnd );
+							ETWMouseDown( 0, (int)cursorPos.x, (int)cursorPos.y );
+#endif
+							nButtonMask |= ButtonMaskFromMouseWParam( MK_LBUTTON, MOUSE_LEFT, true );
+
+							const unsigned long long tick64 = GetTickCount64();
+							if ( tick64 < ( m_dblClickTime[0] + m_dblCurrentClickTime ) )
+							{
+								UpdateMouseButtonState( nButtonMask, MOUSE_LEFT );
+							}
+							else
+							{
+								m_dblClickTime[0] = tick64;
+							}
+						}
+
+						if ( mouseButtonFlags & RI_MOUSE_LEFT_BUTTON_UP )
+						{
+#if defined(ETW_MARKS_ENABLED) && defined(INPUT_ETW_MARKS_ENABLED)
+							POINT cursorPos = GetWindowCursorPos( m_hAttachedHWnd );
+							ETWMouseUp( 0, (int)cursorPos.x, (int)cursorPos.y );
+#endif
+							nButtonMask |= ButtonMaskFromMouseWParam( 0, MOUSE_LEFT, false );
+						}
+
+						if ( mouseButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN )
+						{
+#if defined(ETW_MARKS_ENABLED) && defined(INPUT_ETW_MARKS_ENABLED)
+							POINT cursorPos = GetWindowCursorPos( m_hAttachedHWnd );
+							ETWMouseDown( 2, (int)cursorPos.x, (int)cursorPos.y );
+#endif
+							nButtonMask |= ButtonMaskFromMouseWParam( MK_RBUTTON, MOUSE_RIGHT, true );
+
+							const unsigned long long tick64 = GetTickCount64();
+							if ( tick64 < ( m_dblClickTime[2] + m_dblCurrentClickTime ) )
+							{
+								UpdateMouseButtonState( nButtonMask, MOUSE_RIGHT );
+							}
+							else
+							{
+								m_dblClickTime[2] = tick64;
+							}
+						}
+
+						if ( mouseButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP )
+						{
+#if defined(ETW_MARKS_ENABLED) && defined(INPUT_ETW_MARKS_ENABLED)
+							POINT cursorPos = GetWindowCursorPos( m_hAttachedHWnd );
+							ETWMouseUp( 2, (int)cursorPos.x, (int)cursorPos.y );
+#endif
+							nButtonMask |= ButtonMaskFromMouseWParam( 0, MOUSE_RIGHT, false );
+						}
+
+						if ( mouseButtonFlags & RI_MOUSE_MIDDLE_BUTTON_DOWN )
+						{
+#if defined(ETW_MARKS_ENABLED) && defined(INPUT_ETW_MARKS_ENABLED)
+							POINT cursorPos = GetWindowCursorPos( m_hAttachedHWnd );
+							ETWMouseDown( 1, (int)cursorPos.x, (int)cursorPos.y );
+#endif
+							nButtonMask |= ButtonMaskFromMouseWParam( MK_MBUTTON, MOUSE_MIDDLE, true );
+
+							const unsigned long long tick64 = GetTickCount64();
+							if ( tick64 < ( m_dblClickTime[1] + m_dblCurrentClickTime ) )
+							{
+								UpdateMouseButtonState( nButtonMask, MOUSE_MIDDLE );
+							}
+							else
+							{
+								m_dblClickTime[1] = tick64;
+							}
+						}
+
+						if ( mouseButtonFlags & RI_MOUSE_MIDDLE_BUTTON_UP )
+						{
+#if defined(ETW_MARKS_ENABLED) && defined(INPUT_ETW_MARKS_ENABLED)
+							POINT cursorPos = GetWindowCursorPos( m_hAttachedHWnd );
+							ETWMouseUp( 1, (int)cursorPos.x, (int)cursorPos.y );
+#endif
+							nButtonMask |= ButtonMaskFromMouseWParam( 0, MOUSE_MIDDLE, false );
+						}
+
+						if ( mouseButtonFlags & RI_MOUSE_BUTTON_4_DOWN )
+						{
+#if defined(ETW_MARKS_ENABLED) && defined(INPUT_ETW_MARKS_ENABLED)
+							POINT cursorPos = GetWindowCursorPos( m_hAttachedHWnd );
+							ETWMouseDown( 4, (int)cursorPos.x, (int)cursorPos.y );
+#endif
+							nButtonMask |= ButtonMaskFromMouseWParam( MS_MK_BUTTON4, MOUSE_4, true );
+
+							const unsigned long long tick64 = GetTickCount64();
+							if ( tick64 < ( m_dblClickTime[4] + m_dblCurrentClickTime ) )
+							{
+								UpdateMouseButtonState( nButtonMask, MOUSE_4 );
+							}
+							else
+							{
+								m_dblClickTime[4] = tick64;
+							}
+						}
+
+						if ( mouseButtonFlags & RI_MOUSE_BUTTON_4_UP )
+						{
+#if defined(ETW_MARKS_ENABLED) && defined(INPUT_ETW_MARKS_ENABLED)
+							POINT cursorPos = GetWindowCursorPos( m_hAttachedHWnd );
+							ETWMouseUp( 4, (int)cursorPos.x, (int)cursorPos.y );
+#endif
+							nButtonMask |= ButtonMaskFromMouseWParam( 0, MOUSE_4, false );
+						}
+
+						if ( mouseButtonFlags & RI_MOUSE_BUTTON_5_DOWN )
+						{
+#if defined(ETW_MARKS_ENABLED) && defined(INPUT_ETW_MARKS_ENABLED)
+							POINT cursorPos = GetWindowCursorPos( m_hAttachedHWnd );
+							ETWMouseDown( 5, (int)cursorPos.x, (int)cursorPos.y );
+#endif
+							nButtonMask |= ButtonMaskFromMouseWParam( MS_MK_BUTTON5, MOUSE_5, true );
+
+							const unsigned long long tick64 = GetTickCount64();
+							if ( tick64 < ( m_dblClickTime[5] + m_dblCurrentClickTime ) )
+							{
+								UpdateMouseButtonState( nButtonMask, MOUSE_5 );
+							}
+							else
+							{
+								m_dblClickTime[5] = tick64;
+							}
+						}
+
+						if ( mouseButtonFlags & RI_MOUSE_BUTTON_5_UP )
+						{
+#if defined(ETW_MARKS_ENABLED) && defined(INPUT_ETW_MARKS_ENABLED)
+							POINT cursorPos = GetWindowCursorPos( m_hAttachedHWnd );
+							ETWMouseUp( 5, (int)cursorPos.x, (int)cursorPos.y );
+#endif
+							nButtonMask |= ButtonMaskFromMouseWParam( 0, MOUSE_5, false );
+						}
+			
+						if ( mouseButtonFlags & RI_MOUSE_WHEEL )
+						{
+							// High precision touchpads / mouse wheels can have usButtonData in units
+							// less than WHEEL_DELTA.  The delta was set to 120 to allow Microsoft or
+							// other vendors to build finer-resolution wheels (a freely-rotating wheel
+							// with no notches) to send more messages per rotation, but with a smaller
+							// value in each message.  To use this feature, you can either add the
+							// incoming delta values until WHEEL_DELTA is reached (so for a
+							// delta-rotation you get the same response), or scroll partial lines in
+							// response to the more frequent messages.  You can also choose your
+							// scroll granularity and accumulate deltas until it is reached.
+							const short delta = static_cast<short>(raw->data.mouse.usButtonData);
+
+							ButtonCode_t code = delta > 0 ? MOUSE_WHEEL_UP : MOUSE_WHEEL_DOWN;
+							state.m_ButtonPressedTick[ to_underlying(code) ] = state.m_ButtonReleasedTick[ to_underlying(code) ] = m_nLastSampleTick;
+							PostEvent( to_underlying(IE_ButtonPressed), m_nLastSampleTick, to_underlying(code), to_underlying(code) );
+							PostEvent( to_underlying(IE_ButtonReleased), m_nLastSampleTick, to_underlying(code), to_underlying(code) );
+
+							state.m_pAnalogDelta[ MOUSE_WHEEL ] = delta / WHEEL_DELTA;
+							state.m_pAnalogValue[ MOUSE_WHEEL ] += state.m_pAnalogDelta[ MOUSE_WHEEL ];
+							PostEvent( IE_AnalogValueChanged, m_nLastSampleTick, MOUSE_WHEEL, state.m_pAnalogValue[ MOUSE_WHEEL ], state.m_pAnalogDelta[ MOUSE_WHEEL ] );
+						}
+
+						if ( mouseButtonFlags && ( mouseButtonFlags != RI_MOUSE_WHEEL ) )
+						{
+							UpdateMouseButtonState( nButtonMask );
+						}
 					}
 				}
 			}
@@ -1461,10 +1705,15 @@ LRESULT CInputSystem::WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
 
 	case WM_MOUSEMOVE:
 		{
-			UpdateMousePositionState( state, (short)LOWORD(lParam), (short)HIWORD(lParam) );
+			// dimhotepus: Raw mouse input support.
+			if ( !m_bRawInputSupported )
+			{
+				// dimhotepus: LOWORD -> GET_X_LPARAM, HIWORD -> GET_Y_LPARAM
+				UpdateMousePositionState( state, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) );
 
-			int nButtonMask = ButtonMaskFromMouseWParam( wParam );
-			UpdateMouseButtonState( nButtonMask );
+				int nButtonMask = ButtonMaskFromMouseWParam( wParam );
+				UpdateMouseButtonState( nButtonMask );
+			}
 		}
  		break;
 

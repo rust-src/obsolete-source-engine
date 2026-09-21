@@ -73,7 +73,7 @@ enum
 };
 
 
-class CPhysicsObject : public IPhysicsObject
+class CPhysicsObject final : public IPhysicsObject
 {
 public:
 	CPhysicsObject( void );
@@ -186,6 +186,8 @@ public:
 	void			DestroyFrictionSnapshot( IPhysicsFrictionSnapshot *pSnapshot ) override;
 
 	void			OutputDebugInfo() const override;
+	// dimhotepus: TF2 backport. Expose as public.
+	[[nodiscard]] float	GetBuoyancyRatio() const override { return m_buoyancyRatio; }
 
 	// local functions
 	[[nodiscard]] inline	IVP_Real_Object *GetObject( void ) const { return m_pObject; }
@@ -202,7 +204,6 @@ public:
 
 	[[nodiscard]] inline intp		GetActiveIndex( void ) const { return m_activeIndex; }
 	inline void		SetActiveIndex( intp index ) { m_activeIndex = index; }
-	[[nodiscard]] inline float	GetBuoyancyRatio( void ) const { return m_buoyancyRatio; }
 	// returns true if the mass center is set to the default for the collision model
 	[[nodiscard]] bool			IsMassCenterAtDefault() const;
 

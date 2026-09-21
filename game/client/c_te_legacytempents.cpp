@@ -563,7 +563,7 @@ bool C_LocalTempEntity::Frame( float frametime, int framenumber )
 				if ( damp != 1 )
 				{
 					VectorScale( m_vecTempEntVelocity, damp, m_vecTempEntVelocity );
-					SetLocalAngles( GetLocalAngles() * 0.9 );
+					SetLocalAngles( GetLocalAngles() * 0.9f );
 				}
 			}
 		}
@@ -2012,7 +2012,7 @@ C_LocalTempEntity *CTempEnts::TempEntAlloc( const Vector& org, const model_t *mo
 	pTemp->m_RenderGroup = RENDER_GROUP_OTHER;
 	pTemp->AddToLeafSystem( pTemp->m_RenderGroup );
 
-	if ( CommandLine()->CheckParm( "-tools" ) != NULL )
+	if ( CommandLine()->HasParm( "-tools" ) )
 	{
 #ifdef _DEBUG
 		static bool first = true;
@@ -2137,7 +2137,7 @@ C_LocalTempEntity *CTempEnts::TempEntAllocHigh( const Vector& org, const model_t
 	pTemp->m_RenderGroup = RENDER_GROUP_OTHER;
 	pTemp->AddToLeafSystem( pTemp->m_RenderGroup );
 
-	if ( CommandLine()->CheckParm( "-tools" ) != NULL )
+	if ( CommandLine()->HasParm( "-tools" ) )
 	{
 		ClientEntityList().AddNonNetworkableEntity(	pTemp );
 	}
@@ -3472,7 +3472,7 @@ void CTempEnts::CSEjectBrass( const Vector &vecPosition, const QAngle &angVeloci
 
 	pTemp->hitSound = hitsound;
 
-	pTemp->SetGravity( 0.4 );
+	pTemp->SetGravity( 0.4f );
 
 	pTemp->m_nBody	= 0;
 	pTemp->flags = FTENT_FADEOUT | FTENT_GRAVITY | FTENT_COLLIDEALL | FTENT_HITSOUND | FTENT_ROTATE | FTENT_CHANGERENDERONCOLLIDE;

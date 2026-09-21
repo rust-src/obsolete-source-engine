@@ -196,21 +196,6 @@ BOOL COPTTextures::OnApply()
 	return __super::OnApply();
 }
 
-static void GetDirectory(char *pDest, const char *pLongName)
-{
-	strcpy(pDest, pLongName);
-	size_t i = strlen(pDest);
-	while (pLongName[i] != '\\' && pLongName[i] != '/' && i > 0)
-		i--;
-
-	if (i <= 0)
-		i = 0;
-	
-	pDest[i] = 0;
-
-	return;
-}
-
 
 void COPTTextures::OnAddtexfile2() 
 {
@@ -242,10 +227,9 @@ void COPTTextures::OnAddtexfile2()
 			char szNewPath[MAX_PATH];
 			V_strcpy_safe(szNewPath, szPathName);
 			V_strcat_safe(szNewPath, "\\*.*");
-			WIN32_FIND_DATA FindData;
-			HANDLE hFile = FindFirstFile(szNewPath, &FindData);
 
-			if (hFile != INVALID_HANDLE_VALUE)
+			WIN32_FIND_DATA FindData;
+			if (HANDLE hFile = FindFirstFile(szNewPath, &FindData); hFile != INVALID_HANDLE_VALUE)
 			{
 				RunCodeAtScopeExit(FindClose(hFile));
 
@@ -255,7 +239,7 @@ void COPTTextures::OnAddtexfile2()
 							&&(FindData.cFileName[0] != '.'))
 					{
 						V_sprintf_safe(szNewPath, "%s\\%s", szPathName, FindData.cFileName);
-						strlwr(szNewPath);
+						V_strlower(szNewPath);
 						if (m_TextureFiles.FindStringExact(-1, szNewPath) == CB_ERR)
 							m_TextureFiles.AddString(szNewPath);
 					}
@@ -520,7 +504,7 @@ void COPTTextures::OnMaterialExcludeRemove( void )
 	//
 	for( int i = 0; i < m_pMaterialConfig->m_MaterialExcludeCount; i++ )
 	{
-		if( !strcmp( szTmp, m_pMaterialConfig->m_MaterialExclusions[i].szDirectory ) )
+		if( V_streq( szTmp, m_pMaterialConfig->m_MaterialExclusions[i].szDirectory ) )
 		{
 			// remove the directory
 			if( i != ( m_pMaterialConfig->m_MaterialExcludeCount - 1 ) )

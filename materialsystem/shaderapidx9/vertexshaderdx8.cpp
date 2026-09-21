@@ -878,7 +878,7 @@ void CShaderManager::DeinitRemoteShaderCompile()
 void CShaderManager::Init()
 {
 	// only used by PC to help tools reduce d3d footprint
-	m_bCreateShadersOnDemand = ShaderUtil()->InEditorMode() || CommandLine()->CheckParm( "-shadersondemand" );
+	m_bCreateShadersOnDemand = ShaderUtil()->InEditorMode() || CommandLine()->HasParm( "-shadersondemand" );
 
 #ifdef DYNAMIC_SHADER_COMPILE
 #ifdef REMOTE_DYNAMIC_SHADER_COMPILE
@@ -1116,7 +1116,7 @@ const CShaderManager::ShaderCombos_t *CShaderManager::FindOrCreateShaderCombos( 
 			if ( Q_strlen( pShaderName ) >= 3 )
 			{
 				char *pszEndFilename = filename + strlen( filename );
-				if ( !Q_stricmp( pszEndFilename - 6, "30.fxc" ) )
+				if ( V_strieq( pszEndFilename - 6, "30.fxc" ) )
 				{
 					// Total hack. Who knows what builds that 30 shader?
 					strcpy( pszEndFilename - 6, "20b.fxc" );
@@ -1134,16 +1134,16 @@ const CShaderManager::ShaderCombos_t *CShaderManager::FindOrCreateShaderCombos( 
 				}
 				else
 				{
-					if ( !stricmp( pszEndFilename - 6, "20.fxc" ) )
+					if ( V_strieq( pszEndFilename - 6, "20.fxc" ) )
 					{
 						pszEndFilename[ -5 ] = 'x';
 					}
-					else if ( !stricmp( pszEndFilename - 7, "20b.fxc" ) )
+					else if ( V_strieq( pszEndFilename - 7, "20b.fxc" ) )
 					{
 						strcpy( pszEndFilename - 7, "2x.fxc" );
 						--pszEndFilename;
 					}
-					else if ( !stricmp( pszEndFilename - 6, "11.fxc" ) )
+					else if ( V_strieq( pszEndFilename - 6, "11.fxc" ) )
 					{
 						strcpy( pszEndFilename - 6, "xx.fxc" );
 					}
@@ -1151,7 +1151,7 @@ const CShaderManager::ShaderCombos_t *CShaderManager::FindOrCreateShaderCombos( 
 					bOpenResult = g_pFullFileSystem->ReadFile( filename, NULL, bffr );
 					if ( !bOpenResult )
 					{
-						if ( !stricmp( pszEndFilename - 6, "2x.fxc" ) )
+						if ( V_strieq( pszEndFilename - 6, "2x.fxc" ) )
 						{
 							pszEndFilename[ -6 ] = 'x';
 							bOpenResult = g_pFullFileSystem->ReadFile( filename, NULL, bffr );
@@ -1307,12 +1307,14 @@ const CShaderManager::ShaderCombos_t *CShaderManager::FindOrCreateShaderCombos( 
 		pScan++;
 
 		// make sure that we have a number after the quote.
-		if( !isdigit( *pScan ) )
+		// dimhotepus: isdigit -> V_isdigit.
+		if( !V_isdigit( *pScan ) )
 		{
 			continue;
 		}
 
-		while( isdigit( *pScan ) )
+		// dimhotepus: isdigit -> V_isdigit.
+		while( V_isdigit( *pScan ) )
 		{
 			begin = begin * 10 + ( *pScan - '0' );
 			pScan++;
@@ -1325,12 +1327,14 @@ const CShaderManager::ShaderCombos_t *CShaderManager::FindOrCreateShaderCombos( 
 		pScan += 2;
 
 		// make sure that we have a number
-		if( !isdigit( *pScan ) )
+		// dimhotepus: isdigit -> V_isdigit.
+		if( !V_isdigit( *pScan ) )
 		{
 			continue;
 		}
-
-		while( isdigit( *pScan ) )
+		
+		// dimhotepus: isdigit -> V_isdigit.
+		while( V_isdigit( *pScan ) )
 		{
 			end = end * 10 + ( *pScan - '0' );
 			pScan++;
@@ -1638,7 +1642,7 @@ retry_compile:
 		if ( strlen( pShaderName ) >= 3 )
 		{
 			char *pszEndFilename = filename + strlen( filename );
-			if ( !Q_stricmp( pszEndFilename - 6, "30.fxc" ) )
+			if ( V_strieq( pszEndFilename - 6, "30.fxc" ) )
 			{
 				strcpy( pszEndFilename - 6, "20b.fxc" );
 				fp = g_pFullFileSystem->Open( filename, "r" );
@@ -1656,17 +1660,17 @@ retry_compile:
 			}
 			else
 			{
-				if ( !Q_stricmp( pszEndFilename - 6, "20.fxc" ) )
+				if ( V_strieq( pszEndFilename - 6, "20.fxc" ) )
 				{
 					pszEndFilename[ -5 ] = 'x';
 					fp = g_pFullFileSystem->Open( filename, "r" );
 				}
-				else if ( !Q_stricmp( pszEndFilename - 7, "20b.fxc" ) )
+				else if ( V_strieq( pszEndFilename - 7, "20b.fxc" ) )
 				{
 					strcpy( pszEndFilename - 7, "2x.fxc" );
 					fp = g_pFullFileSystem->Open( filename, "r" );
 				}
-				else if ( !stricmp( pszEndFilename - 6, "11.fxc" ) )
+				else if ( V_strieq( pszEndFilename - 6, "11.fxc" ) )
 				{
 					strcpy( pszEndFilename - 6, "xx.fxc" );
 					fp = g_pFullFileSystem->Open( filename, "r" );
@@ -1674,7 +1678,7 @@ retry_compile:
 
 				if ( fp == FILESYSTEM_INVALID_HANDLE )
 				{
-					if ( !stricmp( pszEndFilename - 6, "2x.fxc" ) )
+					if ( V_strieq( pszEndFilename - 6, "2x.fxc" ) )
 					{
 						pszEndFilename[ -6 ] = 'x';
 						fp = g_pFullFileSystem->Open( filename, "r" );
@@ -1782,11 +1786,11 @@ retry_compile:
 	se::win::com::com_ptr<ID3DBlob> pShader;
 	se::win::com::com_ptr<ID3DBlob> pErrorMessages;
 
-	const bool b30Shader = !Q_stricmp( pShaderProfile, "vs_3_0" ) || !Q_stricmp( pShaderProfile, "ps_3_0" );
+	const bool b30Shader = V_strieq( pShaderProfile, "vs_3_0" ) || V_strieq( pShaderProfile, "ps_3_0" );
 	// dimhotepus: Shader model 4, 4.1, 5 support.
-	const bool b40Shader = !Q_stricmp( pShaderProfile, "vs_4_0" ) || !Q_stricmp( pShaderProfile, "ps_4_0" );
-	const bool b41Shader = !Q_stricmp( pShaderProfile, "vs_4_1" ) || !Q_stricmp( pShaderProfile, "ps_4_1" );
-	const bool b50Shader = !Q_stricmp( pShaderProfile, "vs_5_0" ) || !Q_stricmp( pShaderProfile, "ps_5_0" );
+	const bool b40Shader = V_strieq( pShaderProfile, "vs_4_0" ) || V_strieq( pShaderProfile, "ps_4_0" );
+	const bool b41Shader = V_strieq( pShaderProfile, "vs_4_1" ) || V_strieq( pShaderProfile, "ps_4_1" );
+	const bool b50Shader = V_strieq( pShaderProfile, "vs_5_0" ) || V_strieq( pShaderProfile, "ps_5_0" );
 
 	wchar_t wfilename[MAX_PATH];
 	V_UTF8ToUnicode( filename, wfilename, sizeof(wfilename) );
@@ -2046,8 +2050,8 @@ bool CShaderManager::CreateDynamicCombos_Ver4( void *pContext, uint8 *pComboBuff
 	if ( nReferenceComboSizeForDiffs )
 	{
 		// reference combo is *always* the largest combo, so safe worst case size for uncompression buffer
-		pReferenceShader = (uint8 *)pFileCache->m_ReferenceCombo.Base();
-		pDiffOutputBuffer = (uint8 *)_alloca( nReferenceComboSizeForDiffs ); 
+		pReferenceShader = pFileCache->m_ReferenceCombo.Base<uint8>();
+		pDiffOutputBuffer = stackallocT( uint8, nReferenceComboSizeForDiffs ); 
 	}
 
 	// build this shader's dynamic combos
@@ -2421,7 +2425,7 @@ bool CShaderManager::LoadAndCreateShaders( ShaderLookup_t &lookup, bool bVertexS
 			{
 				// read static combo alias records
 				int nNumDups;
-				g_pFullFileSystem->Read( &nNumDups, sizeof( nNumDups ), hFile );
+				g_pFullFileSystem->Read( nNumDups, hFile );
 				if ( nNumDups )
 				{
 					pFileCache.m_StaticComboDupRecords.EnsureCount( nNumDups );
@@ -2661,7 +2665,7 @@ bool	CShaderManager::LoadShaderCache( char *cacheName )
 		{
 			char	temp[1024];
 				
-			V_snprintf( temp, sizeof(temp), "vs-file %s vs-index %d", pVertexShaderName, nVertexShaderStaticIndex );
+			V_sprintf_safe( temp, "vs-file %s vs-index %d", pVertexShaderName, nVertexShaderStaticIndex );
 			CreateVertexShader( pVertexShaderName, nVertexShaderStaticIndex, temp );
 			
 			// this one should not fail
@@ -2678,7 +2682,7 @@ bool	CShaderManager::LoadShaderCache( char *cacheName )
 		{
 			char	temp[1024];
 			
-			V_snprintf( temp, sizeof(temp), "ps-file %s ps-index %d", pPixelShaderName, nPixelShaderStaticIndex );
+			V_sprintf_safe( temp, "ps-file %s ps-index %d", pPixelShaderName, nPixelShaderStaticIndex );
 			CreatePixelShader( pPixelShaderName, nPixelShaderStaticIndex, temp );
 			
 			// this one should not fail

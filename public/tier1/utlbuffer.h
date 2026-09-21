@@ -79,9 +79,10 @@ protected:
 #define BEGIN_CUSTOM_CHAR_CONVERSION( _className, _name, _delimiter, _escapeChar ) \
 	static CUtlCharConversion::ConversionArray_t s_pConversionArray ## _name[] = {
 
+// dimhotepus: Add static.
 #define END_CUSTOM_CHAR_CONVERSION( _className, _name, _delimiter, _escapeChar ) \
 	}; \
-	_className _name( _escapeChar, _delimiter, sizeof( s_pConversionArray ## _name ) / sizeof( CUtlCharConversion::ConversionArray_t ), s_pConversionArray ## _name );
+	static _className _name( _escapeChar, _delimiter, sizeof( s_pConversionArray ## _name ) / sizeof( CUtlCharConversion::ConversionArray_t ), s_pConversionArray ## _name );
 
 //-----------------------------------------------------------------------------
 // Character conversions for C strings
@@ -261,7 +262,7 @@ public:
 	// (skipping whitespace that leads + trails both delimiters).
 	// If successful, the get index is advanced and the function returns true,
 	// otherwise the index is not advanced and the function returns false.
-	[[nodiscard]] bool			ParseToken( const char *pStartingDelim, const char *pEndingDelim, char* pString, intp nMaxLen );
+	[[nodiscard]] bool			ParseToken( const char *pStartingDelim, const char *pEndingDelim, OUT_Z_CAP(nMaxLen) char* pString, intp nMaxLen );
 
 	// (For text buffers only)
 	// Parse a token from the buffer:
@@ -270,7 +271,7 @@ public:
 	// If successful, the get index is advanced and the function returns true,
 	// otherwise the index is not advanced and the function returns false.
 	template<intp size>
-	[[nodiscard]] bool ParseToken( const char *pStartingDelim, const char *pEndingDelim, char (&pString)[size] )
+	[[nodiscard]] bool ParseToken( const char *pStartingDelim, const char *pEndingDelim, OUT_Z_ARRAY char (&pString)[size] )
 	{
 		return ParseToken( pStartingDelim, pEndingDelim, pString, size );
 	}
@@ -282,12 +283,12 @@ public:
 
 	// Parses the next token, given a set of character breaks to stop at
 	// Returns the length of the token parsed in bytes (-1 if none parsed)
-	[[nodiscard]] intp			ParseToken( const characterset_t *pBreaks, char *pTokenBuf, intp nMaxLen, bool bParseComments = true );
+	[[nodiscard]] intp			ParseToken( const characterset_t *pBreaks, OUT_Z_CAP(nMaxLen) char *pTokenBuf, intp nMaxLen, bool bParseComments = true );
 
 	// Parses the next token, given a set of character breaks to stop at
 	// Returns the length of the token parsed in bytes (-1 if none parsed)
 	template<intp size>
-	[[nodiscard]] intp ParseToken( const characterset_t *pBreaks, char (&pTokenBuf)[size], bool bParseComments = true )
+	[[nodiscard]] intp ParseToken( const characterset_t *pBreaks, OUT_Z_ARRAY char (&pTokenBuf)[size], bool bParseComments = true )
 	{
 		return ParseToken( pBreaks, pTokenBuf, size, bParseComments );
 	}
@@ -673,11 +674,11 @@ inline void CUtlBuffer::GetTypeBin( T &dest )
 	{
 		if ( !m_Byteswap.IsSwappingBytes() || ( sizeof( T ) == 1 ) )
 		{
-			dest = *(const T *)PeekGet();
+			dest = *static_cast<const T *>( PeekGet() );
 		}
 		else
 		{
-			m_Byteswap.SwapBufferToTargetEndian<T>( &dest, (const T*)PeekGet() );
+			m_Byteswap.SwapBufferToTargetEndian<T>( &dest, static_cast<const T*>( PeekGet() ) );
 		}
 		m_Get += sizeof(T);
 	}
@@ -897,11 +898,11 @@ inline void CUtlBuffer::PutTypeBin( T src )
 	{
 		if ( !m_Byteswap.IsSwappingBytes() || ( sizeof( T ) == 1 ) )
 		{
-			*(T *)PeekPut() = src;
+			*static_cast<T*>( PeekPut() ) = src;
 		}
 		else
 		{
-			m_Byteswap.SwapBufferToTargetEndian<T>( (T*)PeekPut(), &src );
+			m_Byteswap.SwapBufferToTargetEndian<T>( static_cast<T*>( PeekPut() ), &src );
 		}
 		m_Put += sizeof(T);
 		AddNullTermination();

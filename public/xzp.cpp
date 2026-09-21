@@ -639,7 +639,8 @@ unsigned xZipCRCFilename( const char* filename )
 		if( c == '/' )
 			c = '\\';
 		else
-			c = (char)tolower(c);
+			// dimhotepus: tolower -> V_tolower.
+			c = V_tolower(c);
 
 		hash = hash * 33 + c;
 	}
@@ -662,11 +663,13 @@ unsigned			     InputFileBytes = 0;
 char* CleanFilename( char* filename )
 {
 	// Trim leading white space:
-	while( isspace(*filename) )
+	// dimhotepus: isspace -> V_isspace.
+	while( V_isspace(*filename) )
 		filename++;
 
 	// Trim trailing white space:
-	while( isspace( filename[strlen(filename)-1] ) )
+	// dimhotepus: isspace -> V_isspace.
+	while( V_isspace( filename[strlen(filename)-1] ) )
 	{
 		filename[strlen(filename)-1] = '\0';
 	}
@@ -837,7 +840,7 @@ bool xZipAddFile( const char* zipname, bool bPrecacheEntireFile, bool bProcessPr
 {
 	// Clean up the filename:
 	char buffer[MAX_PATH];
-	strcpy(buffer, zipname);
+	V_strcpy_safe(buffer, zipname);
 
 	// Fix slashes and convert it to lower case:
 	char *filename;
@@ -847,12 +850,14 @@ bool xZipAddFile( const char* zipname, bool bPrecacheEntireFile, bool bProcessPr
 			*filename = '\\';
 		else
 		{
-			*filename = (char)tolower(*filename);
+			// dimhotepus: tolower -> V_tolower.
+			*filename = V_tolower(*filename);
 		}
 	}
 
 	// Skip leading white space:
-	for( filename = buffer; isspace(*filename); filename++ )
+	// dimhotepus: isspace -> V_isspace.
+	for( filename = buffer; V_isspace(*filename); filename++ )
 		;
 
 	// Obliterate trailing white space:
@@ -864,8 +869,8 @@ bool xZipAddFile( const char* zipname, bool bPrecacheEntireFile, bool bProcessPr
 			printf("!!!! BAD FILENAME: \"%s\"\n", filename );
 			return false;
 		}
-		
-		if( isspace( filename[len-1] ) )
+		// dimhotepus: isspace -> V_isspace.
+		if( V_isspace( filename[len-1] ) )
 			filename[len-1]='\0';
 		else
 			break;

@@ -466,7 +466,7 @@ void CServicesDlg::UpdateServicesFromNetMessages()
 		if ( len < 4 )
 			break;
 
-		bf_read buf( in, len );
+		bf_read buf( &in[0], len );
 		unsigned char protocolVersion = buf.ReadByte();
 		if ( protocolVersion == 4 || protocolVersion == VMPI_PROTOCOL_VERSION ) // Protocol version 4 is almost the same.
 		{
@@ -680,7 +680,7 @@ void CServicesDlg::SendToSelectedServices( const char *pData, int len )
 void UpdateItemText( CListCtrl &ctrl, int iItem, int iColumn, const char *pNewVal )
 {
 	CString str = ctrl.GetItemText( iItem, iColumn );
-	if ( V_stricmp( str, pNewVal ) != 0 )
+	if ( !V_strieq( str, pNewVal ) )
 		ctrl.SetItemText( iItem, iColumn, pNewVal );
 }
 
@@ -709,7 +709,7 @@ void CServicesDlg::UpdateServiceInListbox( CServiceInfo *pInfo )
 		UpdateItemText( m_ServicesList, iItem, COLUMN_MASTER_NAME, pInfo->m_MasterName );
 		
 		char str[512];
-		V_snprintf( str, sizeof( str ), "%d", pInfo->m_ProtocolVersion );
+		V_to_chars( str, pInfo->m_ProtocolVersion );
 		UpdateItemText( m_ServicesList, iItem, COLUMN_PROTOCOL_VERSION, str );
 
 		UpdateItemText( m_ServicesList, iItem, COLUMN_PASSWORD, pInfo->m_Password );
@@ -729,7 +729,7 @@ void CServicesDlg::UpdateServiceInListbox( CServiceInfo *pInfo )
 		if ( pInfo->m_MemUsageMB == -1 )
 			V_snprintf( str, sizeof( str ), "-" );
 		else
-			V_snprintf( str, sizeof( str ), "%d", pInfo->m_MemUsageMB );
+			V_to_chars( str, pInfo->m_MemUsageMB );
 		UpdateItemText( m_ServicesList, iItem, COLUMN_MEM_USAGE, str );
 
 		pInfo->m_pLastStatusText = pText;
@@ -764,7 +764,7 @@ void CServicesDlg::ResortItems()
 void CServicesDlg::UpdateServiceCountDisplay()
 {
 	char str[512];
-	Q_snprintf( str, sizeof( str ), "%d", m_Services.Count() );
+	V_to_chars( str, m_Services.Count() );
 	m_NumServicesControl.SetWindowText( str );
 
 	// Now count the various types.
@@ -789,16 +789,16 @@ void CServicesDlg::UpdateServiceCountDisplay()
 		}
 	}
 
-	Q_snprintf( str, sizeof( str ), "%d", nDisabled );
+	V_to_chars( str, nDisabled );
 	m_NumDisabledServicesControl.SetWindowText( str );
 
-	Q_snprintf( str, sizeof( str ), "%d", nWorking );
+	V_to_chars( str, nWorking );
 	m_NumWorkingServicesControl.SetWindowText( str );
 
-	Q_snprintf( str, sizeof( str ), "%d", nWaiting );
+	V_to_chars( str, nWaiting );
 	m_NumWaitingServicesControl.SetWindowText( str );
 
-	Q_snprintf( str, sizeof( str ), "%d", nOff );
+	V_to_chars( str, nOff );
 	m_NumOffServicesControl.SetWindowText( str );
 }
 
@@ -942,8 +942,8 @@ TryAgain:;
 			&si,
 			&pi ) )
 		{
-			CloseHandle( pi.hProcess );
-			CloseHandle( pi.hThread );
+			RunCodeAtScopeExit( CloseHandle( pi.hThread ) );
+			RunCodeAtScopeExit( CloseHandle( pi.hProcess ) );
 
 			V_AfxMessageBox( MB_OK, "Patch master successfully started.\nServices patching now.\nClose the patch master console app when finished." );
 		}

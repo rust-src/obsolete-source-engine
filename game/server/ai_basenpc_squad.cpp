@@ -119,7 +119,7 @@ bool CAI_BaseNPC::IsValidCover( const Vector &vecCoverLocation, CAI_Hint const *
 	Vector startPos = vecCoverLocation;
 	startPos.z -= GetHullMins().z;  // Move hull bottom up to node
 	Vector endPos	= startPos;
-	endPos.z += 0.01;
+	endPos.z += 0.01f;
 	trace_t tr;
 	AI_TraceEntity( this, vecCoverLocation, endPos, MASK_NPCSOLID, &tr );
 	if (tr.startsolid)

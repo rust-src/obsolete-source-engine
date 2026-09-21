@@ -213,59 +213,6 @@ int	gHostSpawnCount = 0;
 // If any quit handlers balk, then aborts quit sequence
 bool EngineTool_CheckQuitHandlers();
 
-#if defined( _X360 )
-CON_COMMAND( quit_x360, "" )
-{
-	int launchFlags = LF_EXITFROMGAME;
-
-	// allocate the full payload
-	int nPayloadSize = XboxLaunch()->MaxPayloadSize();
-	byte *pPayload = (byte *)stackalloc( nPayloadSize );
-	V_memset( pPayload, 0, sizeof( nPayloadSize ) );
-
-	// payload is at least the command line
-	// any user data needed must be placed AFTER the command line
-	const char *pCmdLine = CommandLine()->GetCmdLine();
-	intp nCmdLineLength = V_strlen( pCmdLine ) + 1;
-	V_memcpy( pPayload, pCmdLine, min( nPayloadSize, nCmdLineLength ) );
-
-	// add any other data here to payload, after the command line
-	// ...
-
-	// storage device may have changed since previous launch
-	XboxLaunch()->SetStorageID( XBX_GetStorageDeviceId() );
-
-	// Close the storage devices
-	g_pXboxSystem->CloseContainers();
-	// persist the user id
-	bool bInviteRestart = args.FindArg( "invite" );
-	DWORD nUserID = ( bInviteRestart ) ? XBX_GetInvitedUserId() : XBX_GetPrimaryUserId();
-	XboxLaunch()->SetUserID( nUserID );
-
-	if ( args.FindArg( "restart" ) )
-	{
-		launchFlags |= LF_GAMERESTART;
-	}
-	
-	// If we're relaunching due to invite
-	if ( bInviteRestart )
-	{
-		launchFlags |= LF_INVITERESTART;
-		XNKID nSessionID = XBX_GetInviteSessionId();
-		XboxLaunch()->SetInviteSessionID( &nSessionID );
-	}
-
-	bool bLaunch = XboxLaunch()->SetLaunchData( pPayload, nPayloadSize, launchFlags );
-	if ( bLaunch )
-	{
-		COM_TimestampedLog( "Launching: \"%s\" Flags: 0x%8.8x", pCmdLine, XboxLaunch()->GetLaunchFlags() );
-		g_pMaterialSystem->PersistDisplay();
-		XBX_DisconnectConsoleMonitor();
-		XboxLaunch()->Launch();
-	}
-}
-#endif
-
 /*
 ==================
 Host_Quit_f
@@ -481,6 +428,7 @@ CON_COMMAND( status, "Display map and connection status." )
 
 	if ( NET_IsMultiplayer() )
 	{
+		char buffer[32];
 		CUtlString sPublicIPInfo;
 		if ( !Steam3Server().BLanOnly() )
 		{
@@ -489,10 +437,10 @@ CON_COMMAND( status, "Display map and connection status." )
 			{
 				netadr_t addr;
 				addr.SetIP( unPublicIP );
-				sPublicIPInfo.Format("  (public ip: %s)", addr.ToString( true ) );
+				sPublicIPInfo.Format("  (public ip: %s)", addr.ToString_safe( buffer, true ) );
 			}
 		}
-		print( "udp/ip  : %s:%i%s\n", net_local_adr.ToString(true), sv.GetUDPPort(), sPublicIPInfo.String() );
+		print( "udp/ip  : %s:%i%s\n", net_local_adr.ToString_safe(buffer, true), sv.GetUDPPort(), sPublicIPInfo.String() );
 
 		if ( !Steam3Server().BLanOnly() )
 		{
@@ -561,7 +509,7 @@ CON_COMMAND( status, "Display map and connection status." )
 	// Early exit for this server.
 	if ( args.ArgC() == 2 )
 	{
-		if ( !Q_stricmp( args[1], "short" ) )
+		if ( V_strieq( args[1], "short" ) )
 		{
 			for ( j=0 ; j < sv.GetClientCount() ; j++ )
 			{
@@ -794,7 +742,7 @@ CON_COMMAND( restart, "Restart the game on the same level (add setpos to jump to
 	if ( cmd_source != src_command )
 		return;
 
-	bool bRememberLocation = ( args.ArgC() == 2 && !Q_stricmp( args[1], "setpos" ) );
+	bool bRememberLocation = ( args.ArgC() == 2 && V_strieq( args[1], "setpos" ) );
 
 	Host_Disconnect(false);	// stop old game
 
@@ -827,7 +775,7 @@ CON_COMMAND( reload, "Reload the most recent saved game (add setpos to jump to c
 
 	bool remember_location = false;
 	if ( args.ArgC() == 2 && 
-		!Q_stricmp( args[1], "setpos" ) )
+		V_strieq( args[1], "setpos" ) )
 	{
 		remember_location = true;
 	}
@@ -1164,7 +1112,7 @@ CON_COMMAND( kickid, "Kick a player by userid or uniqueid, with a message." )
 		// NOTE: assumed to be one argument
 		else
 		{
-			Q_snprintf( szSearchString, sizeof( szSearchString ), "%s", pszArg1 );
+			V_strcpy_safe( szSearchString, pszArg1 );
 		}
 	}
 	// this is a userid
@@ -1228,7 +1176,7 @@ CON_COMMAND( kickid, "Kick a player by userid or uniqueid, with a message." )
 		// searching by UniqueID
 		else	
 		{
-			if ( Q_stricmp( client->GetNetworkIDString(), szSearchString ) == 0 ) 
+			if ( V_strieq( client->GetNetworkIDString(), szSearchString ) ) 
 			{
 				// found!
 				break;
@@ -1323,7 +1271,7 @@ CON_COMMAND( kick, "Kick a player by name." )
 	pszName = name;
 
 	// safety check
-	if ( pszName && pszName[0] != 0 )
+	if ( !Q_isempty( pszName ) )
 	{
 		//HACK-HACK
 		// check for the name surrounded by quotes (comes in this way from rcon)
@@ -1351,7 +1299,7 @@ CON_COMMAND( kick, "Kick a player by name." )
 				continue;
 
 			// found!
-			if ( Q_strcasecmp( client->GetClientName(), pszName ) == 0 ) 
+			if ( V_strieq( client->GetClientName(), pszName ) ) 
 				break;
 		}
 
@@ -1813,7 +1761,7 @@ void Host_VoiceToggle_f( const CCommand &args )
 #if !defined( NO_VOICE )	
 		bool bToggle = false;
 
-		if ( args.ArgC() == 2 && V_strcasecmp( args[1], "on" ) == 0 )
+		if ( args.ArgC() == 2 && V_strieq( args[1], "on" ) )
 		{
 			bToggle = true;
 		}

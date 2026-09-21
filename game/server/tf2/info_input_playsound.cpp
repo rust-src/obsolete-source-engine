@@ -171,7 +171,7 @@ void CInfoInputPlaySound::InputSetSound( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 void CInfoInputPlaySound::PlaySoundToTeam( CTFTeam *pTeam )
 {
-	for ( int i = 0; i < pTeam->GetNumPlayers(); i++ )
+	for ( intp i = 0; i < pTeam->GetNumPlayers(); i++ )
 	{
 		PlaySoundToPlayer( (CBaseTFPlayer*)pTeam->GetPlayer(i) );
 	}

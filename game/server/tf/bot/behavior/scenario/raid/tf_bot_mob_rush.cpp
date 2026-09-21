@@ -87,7 +87,7 @@ ActionResult< CTFBot >	CTFBotMobRush::Update( CTFBot *me, float interval )
 
 	// avoid friends
 	CTeam *team = GetGlobalTeam( TF_TEAM_RED );
-	for( int t=0; t<team->GetNumPlayers(); ++t )
+	for( intp t=0; t<team->GetNumPlayers(); ++t )
 	{
 		CTFPlayer *teamMember = (CTFPlayer *)team->GetPlayer(t);
 

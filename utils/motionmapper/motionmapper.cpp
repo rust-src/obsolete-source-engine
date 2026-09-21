@@ -841,7 +841,8 @@ void Grab_Triangles(s_source_t *psource) {
     intp i;
     // strip off trailing smag
     V_strcpy_safe(texturename, g_szLine);
-    for (i = V_strlen(texturename) - 1; i >= 0 && !isgraph(texturename[i]);
+	// dimhotepus: isgraph -> V_isgraph.		
+    for (i = V_strlen(texturename) - 1; i >= 0 && !V_isgraph(texturename[i]);
          i--) {
     }
     texturename[i + 1] = '\0';
@@ -1648,7 +1649,7 @@ int checkCommand(char *str, char *cmd, int numOptions, int numSplit) {
     if (numOptions <= numSplit)
       return 1;
     else {
-      printf(
+      fprintf(stderr,
           "Error: Number or argument mismatch in template file cmd %s, "
           "requires %i, found %i\n",
           cmd, numOptions, numSplit);
@@ -2379,7 +2380,7 @@ s_source_t *MotionMap(s_source_t *pSource, s_source_t *pTarget,
         // printf("-- broken plane: %f\n",
         // thisJointGlobalMat[3][thisSolve->axis]);
         if (parentJointGlobalMat[3][thisSolve->axis] < thisSolve->floor) {
-          printf(
+          fprintf(stderr,
               "Error: Constraint parent has broken the plane, this frame's "
               "plane constraint unsolvable!\n");
         } else {
@@ -2817,7 +2818,7 @@ int main(int argc, char **argv) {
   constexpr char kEnUsUtf8Locale[]{"en_US.UTF-8"};
 
   const se::ScopedAppLocale scoped_app_locale{kEnUsUtf8Locale};
-  if (V_stricmp(se::ScopedAppLocale::GetCurrentLocale(), kEnUsUtf8Locale)) {
+  if (!V_strieq(se::ScopedAppLocale::GetCurrentLocale(), kEnUsUtf8Locale)) {
     fprintf(stderr, "setlocale('%s') failed, current locale is '%s'.\n",
             kEnUsUtf8Locale, se::ScopedAppLocale::GetCurrentLocale());
   }
@@ -2847,30 +2848,30 @@ int main(int argc, char **argv) {
   for (int i = 1; i < argc; i++) {
     // Switches
     if (argv[i][0] == '-') {
-      if (!stricmp(argv[i], "-allowdebug")) {
+      if (V_strieq(argv[i], "-allowdebug")) {
         // Ignore, used by interface system to catch debug builds checked into
         // release tree
         continue;
       }
 
-      if (!stricmp(argv[i], "-quiet")) {
+      if (V_strieq(argv[i], "-quiet")) {
         g_quiet = true;
         g_verbose = false;
         continue;
       }
 
-      if (!stricmp(argv[i], "-verbose")) {
+      if (V_strieq(argv[i], "-verbose")) {
         g_quiet = false;
         g_verbose = true;
         continue;
       }
 
-      if (!stricmp(argv[i], "-printTemplate")) {
+      if (V_strieq(argv[i], "-printTemplate")) {
         printf("%s\n", templates);
         exit(0);
       }
 
-      if (!stricmp(argv[i], "-templateFile")) {
+      if (V_strieq(argv[i], "-templateFile")) {
         if (i + 1 < argc) {
           V_strcpy_safe(templateFileName, argv[i + 1]);
           useTemplate = 1;

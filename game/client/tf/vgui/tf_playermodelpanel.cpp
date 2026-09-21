@@ -58,7 +58,7 @@ static bool IsTauntItem( GameItemDefinition_t *pItemDef, const int iTeam, const 
 	for ( int i=0; i<pItemDef->GetNumAnimations( iTeam ); ++i )
 	{
 		animation_on_wearable_t* pAnim = pItemDef->GetAnimationData( iTeam, i );
-		if ( pAnim && pAnim->pszActivity &&	!Q_stricmp( pAnim->pszActivity, "taunt_concept" ) )
+		if ( pAnim && pAnim->pszActivity &&	V_strieq( pAnim->pszActivity, "taunt_concept" ) )
 		{
 			// If we have a scene, use it first
 			const char *pszScene = pAnim->pszScene;
@@ -481,7 +481,7 @@ void CTFPlayerModelPanel::FireEvent( const char *pszEventName, const char *pszEv
 {
 	//Plat_DebugString( CFmtStr( "********* ANIM EVENT: %s\n", pszEventName ) );
 
-	if ( V_strcmp( pszEventName, "AE_WPN_HIDE" ) == 0 )
+	if ( V_streq( pszEventName, "AE_WPN_HIDE" ) )
 	{
 		int nWeaponIndex = GetMergeMDLIndex( static_cast<IClientRenderable*>(m_pHeldItem) );
 		if ( nWeaponIndex >= 0 )
@@ -489,7 +489,7 @@ void CTFPlayerModelPanel::FireEvent( const char *pszEventName, const char *pszEv
 			m_aMergeMDLs[nWeaponIndex].m_bDisabled = true;
 		}
 	}
-	else if ( V_strcmp( pszEventName, "AE_WPN_UNHIDE" ) == 0 )
+	else if ( V_streq( pszEventName, "AE_WPN_UNHIDE" ) )
 	{
 		int nWeaponIndex = GetMergeMDLIndex( static_cast<IClientRenderable*>(m_pHeldItem) );
 		if ( nWeaponIndex >= 0 )
@@ -585,7 +585,7 @@ void CTFPlayerModelPanel::SwitchHeldItemTo( CEconItemView *pItem )
 				const char *pszClassName = pItem->GetStaticData()->GetItemClass();
 				if ( pszClassName && *pszClassName )
 				{
-					bCanRunScene = V_stricmp( pszClassName, m_pszWeaponEntityRequired ) == 0;
+					bCanRunScene = V_strieq( pszClassName, m_pszWeaponEntityRequired );
 				}
 			}
 		}
@@ -1586,7 +1586,7 @@ bool CTFPlayerModelPanel::UpdateCosmeticParticles(
 	if ( m_aParticleSystems[ iSystem ] )
 	{
 		// Check if its a new particle system
-		if ( V_strcmp( m_aParticleSystems[ iSystem ]->m_pParticleSystem->GetName(), pszSystemName ) )
+		if ( !V_streq( m_aParticleSystems[ iSystem ]->m_pParticleSystem->GetName(), pszSystemName ) )
 		{
 			SafeDeleteParticleData( &m_aParticleSystems[ iSystem ] );
 			m_aParticleSystems[ iSystem ] = CreateParticleData( pszSystemName );
@@ -2296,7 +2296,7 @@ void CTFPlayerModelPanel::ProcessExpression( CChoreoScene *scene, CChoreoEvent *
 				if ( !pSetting )
 					continue;
 
-				if ( !V_stricmp( pSetting->pszName(), name ) )
+				if ( V_strieq( pSetting->pszName(), name ) )
 					break;
 			}
 
@@ -2371,7 +2371,7 @@ void CTFPlayerModelPanel::AddFlexSetting( const char *expr, float scale, const f
 
 		const char *name = pSetting->pszName();
 
-		if ( !V_stricmp( name, expr ) )
+		if ( V_strieq( name, expr ) )
 			break;
 	}
 
@@ -2826,7 +2826,7 @@ void CTFPlayerModelPanel::SetupMappings( char const *pchFileRoot )
 	memset( m_PhonemeClasses, 0, sizeof( m_PhonemeClasses ) );
 
 	Emphasized_Phoneme *normal = &m_PhonemeClasses[ PHONEME_CLASS_NORMAL ];
-	Q_snprintf( normal->classname, sizeof( normal->classname ), "%s", pchFileRoot );
+	V_strcpy_safe( normal->classname, pchFileRoot );
 	normal->required = true;
 
 	Emphasized_Phoneme *weak = &m_PhonemeClasses[ PHONEME_CLASS_WEAK ];

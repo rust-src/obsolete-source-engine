@@ -39,6 +39,7 @@ CMapView::CMapView(void)
 	m_dwTimeLastRender = 0;
 	m_nRenderedFrames = 0;
 	m_pToolManager = NULL;
+	m_nLastRaytracedBitmapRenderTimeStamp = -1;
 }
 
 bool CMapView::IsOrthographic()
@@ -146,7 +147,8 @@ bool CMapView::SelectAt(const Vector2D &ptClient, bool bMakeFirst, bool bFace)
 	{
 		if ( HitData[i].pObject )
 		{
-			CMapClass *pSelObject = HitData[i].pObject->PrepareSelection( eSelectMode );
+			auto *pMapClass = dynamic_cast<CMapClass *>(HitData[i].pObject);
+			CMapClass *pSelObject = pMapClass->PrepareSelection( eSelectMode );
 			if (pSelObject)
 			{
 				pSelection->AddHit(pSelObject);

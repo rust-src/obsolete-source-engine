@@ -632,7 +632,7 @@ CON_COMMAND_F( r_screenoverlay, "Draw specified material as an overlay", FCVAR_C
 	{
 		// dimhotepus: 0 is off. TF2 backport.
 		// This command is silly an undocumented, but, users are expecting r_screenoverlay 0 to function as 'off'.
-		if ( !Q_stricmp( "off", args[1] ) || !Q_stricmp( "0", args[1] ) )
+		if ( V_strieq( "off", args[1] ) || V_strieq( "0", args[1] ) )
 		{
 			view->SetScreenOverlayMaterial( NULL );
 		}
@@ -667,7 +667,7 @@ void CDebugViewRender::GenerateOverdrawForTesting()
 
 	for ( int i=0; i < 40; i++ )
 	{
-		g_SmokeFogOverlayAlpha = 20 / 255.0;
+		g_SmokeFogOverlayAlpha = 20 / 255.0f;
 		DrawSmokeFogOverlay();
 	}
 	g_SmokeFogOverlayAlpha = 0;

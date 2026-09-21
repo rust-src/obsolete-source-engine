@@ -9,6 +9,7 @@
 #define FILESYSTEM_H
 
 #include <climits>
+#include <type_traits>
 
 #include "appframework/IAppSystem.h"
 #include "tier0/threadtools.h"
@@ -501,7 +502,17 @@ abstract_class IBaseFileSystem
 {
 public:
 	virtual int				Read( OUT_BYTECAP(size) void* pOutput, int size, FileHandle_t file ) = 0;
+	template<typename T>
+	std::enable_if_t<!std::is_pointer_v<T>, int>		Read( T &out, FileHandle_t file )
+	{
+		return Read( &out, static_cast<int>( sizeof(out) ), file );
+	}
 	virtual int				Write( void const* pInput, int size, FileHandle_t file ) = 0;
+	template<typename T>
+	std::enable_if_t<!std::is_pointer_v<T>, int>		Write( const T &in, FileHandle_t file )
+	{
+		return Write( &in, static_cast<int>( sizeof(in) ), file );
+	}
 
 	// if pathID is nullptr, all paths will be searched for the file
 	virtual FileHandle_t	Open( const char *pFileName, const char *pOptions, const char *pathID = nullptr ) = 0;
@@ -527,6 +538,13 @@ public:
 	// Reads/writes files to utlbuffers. Use this for optimal read performance when doing open/read/close
 	//--------------------------------------------------------
 	virtual bool			ReadFile( const char *pFileName, const char *pPath, CUtlBuffer &buf, int nMaxBytes = 0, int nStartingByte = 0, FSAllocFunc_t pfnAlloc = nullptr ) = 0;
+	// dimhotepus: For automatic size deduction.
+	template<typename T>
+	bool					ReadFile( const char *pFileName, const char *pPath, CUtlBuffer &buf, int nStartingByte = 0, FSAllocFunc_t pfnAlloc = nullptr )
+	{
+		return ReadFile( pFileName, pPath, buf, sizeof(T), nStartingByte, pfnAlloc );
+	}
+	
 	virtual bool			WriteFile( const char *pFileName, const char *pPath, CUtlBuffer &buf ) = 0;
 	virtual bool			UnzipFile( const char *pFileName, const char *pPath, const char *pDestination ) = 0;
 };
@@ -965,7 +983,7 @@ public:
 	// (this free can't skip memdbg if paired malloc used memdbg)
 #include <tier0/memdbgon.h>
 	CMemoryFileBacking( IFileSystem* pFS ) : m_pFS( pFS ), m_nRegistered( 0 ), m_pFileName( nullptr ), m_pData( nullptr ), m_nLength( 0 ) { }
-	~CMemoryFileBacking() { free( (char*)m_pFileName ); if ( m_pData ) m_pFS->FreeOptimalReadBuffer( const_cast<char*>(m_pData) ); }
+	~CMemoryFileBacking() override { free( const_cast<char*>( m_pFileName ) ); if ( m_pData ) m_pFS->FreeOptimalReadBuffer( const_cast<char*>(m_pData) ); }
 #include <tier0/memdbgoff.h>
 
 	IFileSystem* m_pFS;

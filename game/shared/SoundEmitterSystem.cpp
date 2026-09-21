@@ -102,7 +102,7 @@ void Hack_FixEscapeChars( char *str )
 {
 	intp len = Q_strlen( str ) + 1;
 	char *i = str;
-	char *o = (char *)_alloca( len );
+	char *o = stackallocT( char, len );
 	char *osave = o;
 	while ( *i )
 	{
@@ -221,7 +221,7 @@ public:
 	{
 		Assert( soundemitterbase );
 #if !defined( CLIENT_DLL )
-		m_bLogPrecache = CommandLine()->CheckParm( "-makereslists" ) ? true : false;
+		m_bLogPrecache = CommandLine()->HasParm( "-makereslists" );
 #endif
 		g_pClosecaption = cvar->FindVar("closecaption");
 		Assert(g_pClosecaption);

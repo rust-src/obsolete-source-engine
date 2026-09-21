@@ -13,10 +13,12 @@
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class CLight : public CPointEntity
+// raphaelit7: Do not network as all is in stringtable.
+class CLight : public CServerOnlyPointEntity
 {
 public:
-	DECLARE_CLASS( CLight, CPointEntity );
+	// raphaelit7: Do not network as all is in stringtable.
+	DECLARE_CLASS( CLight, CServerOnlyPointEntity );
 
 	bool	KeyValue( const char *szKeyName, const char *szValue );
 	void	Spawn( void );

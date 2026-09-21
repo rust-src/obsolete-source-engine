@@ -424,7 +424,7 @@ void CSoundPicker::OnItemSelected( KeyValues *kv )
 		if ( pGameSoundName && bPlaySounds )
 		{
 			intp len = V_strlen( pGameSoundName );
-			char *soundname = ( char* )stackalloc( len + 2 );
+			char *soundname = stackallocT( char, len + 2 );
 			soundname[ 0 ] = '#'; // mark sound to bypass the dsp
 			V_strncpy( soundname + 1, pGameSoundName, len + 1 );
 
@@ -535,7 +535,7 @@ void CSoundPickerFrame::DoModal( CSoundPicker::PickType_t initialType, const cha
 void CSoundPickerFrame::OnCommand( const char *pCommand )
 {
 	CSoundPicker *pPicker = static_cast <CSoundPicker*>( GetAssetPicker() );
-	if ( !Q_stricmp( pCommand, "Open" ) )
+	if ( V_strieq( pCommand, "Open" ) )
 	{
 		CSoundPicker::PickType_t type = pPicker->GetSelectedSoundType( );
 		if (( type == CSoundPicker::PICK_GAMESOUNDS ) || ( type == CSoundPicker::PICK_WAVFILES ))
@@ -543,7 +543,7 @@ void CSoundPickerFrame::OnCommand( const char *pCommand )
 			const char *pSoundName = pPicker->GetSelectedSoundName();
 
 			intp len = V_strlen( pSoundName );
-			char *soundname = ( char* )stackalloc( len + 2 );
+			char *soundname = stackallocT( char, len + 2 );
 			soundname[ 0 ] = '#'; // mark sound to bypass the dsp
 			V_strncpy( soundname + 1, pSoundName, len + 1 );
 

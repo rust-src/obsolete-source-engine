@@ -414,9 +414,11 @@ void ThreadSetDebugName( ThreadId_t id, const char *pszName )
 	{
 		HANDLE handle = OpenThread( STANDARD_RIGHTS_READ | THREAD_SET_INFORMATION,
 			FALSE,
-			id != std::numeric_limits<ThreadId_t>::max() ? id : GetThreadId( GetCurrentThread() ) );
+			id != INVALID_THREAD_ID ? id : GetThreadId( GetCurrentThread() ) );
 		if ( handle )
 		{
+			RunCodeAtScopeExit( ::CloseHandle( handle ) );
+
 			const size_t wcharsNeeded = mbstowcs( nullptr, pszName, INT_MAX );
 			const size_t descriptionSize = (wcharsNeeded + 1) * sizeof(wchar_t);
 			auto *description = static_cast<wchar_t*>( stackalloc( descriptionSize ) );
@@ -426,13 +428,11 @@ void ThreadSetDebugName( ThreadId_t id, const char *pszName )
 			description[descriptionSize / sizeof(wchar_t) - 1] = L'\0';
 
 			::SetThreadDescription( handle, description );
-
-			::CloseHandle( handle );
 		}
 	}
 #elif defined( _LINUX )
 	// As of glibc v2.12, we can use pthread_setname_np.
-	if ( id == std::numeric_limits<ThreadId_t>::max() )
+	if ( id == INVALID_THREAD_ID )
 		id = pthread_self();
 
 	// The thread name is a meaningful C language string, whose length is
@@ -444,7 +444,7 @@ void ThreadSetDebugName( ThreadId_t id, const char *pszName )
 	pthread_setname_np( id, szThreadName );
 #elif defined( OSX )
 	// dimhotepus: MacOS only supports set name for current thread.
-	if ( id == ThreadGetCurrentId() || id == std::numeric_limits<ThreadId_t>::max() )
+	if ( id == ThreadGetCurrentId() || id == INVALID_THREAD_ID )
 	{
 		// The thread name is a meaningful C language string, whose length is
 		// restricted to 64 characters, including the terminating null byte ('\0').
@@ -465,7 +465,8 @@ ASSERT_INVARIANT( TW_FAILED == WAIT_FAILED );
 ASSERT_INVARIANT( TW_TIMEOUT  == WAIT_TIMEOUT );
 ASSERT_INVARIANT( WAIT_OBJECT_0 == 0 );
 
-int ThreadWaitForObjects( int nEvents, const HANDLE *pHandles, bool bWaitAll, unsigned timeout )
+// dimhotepus: int -> unsigned.
+[[nodiscard]] unsigned ThreadWaitForObjects( int nEvents, const HANDLE *pHandles, bool bWaitAll, unsigned timeout )
 {
 	return VCRHook_WaitForMultipleObjects( nEvents, pHandles, bWaitAll, timeout );
 }
@@ -1247,14 +1248,20 @@ MAP_THREAD_PROFILER_CALL( ThreadNotifySyncReleasing, __itt_notify_sync_releasing
 //-----------------------------------------------------------------------------
 
 #ifndef POSIX
-CThreadMutex::CThreadMutex()
+CThreadMutex::CThreadMutex() : CThreadMutex{4000}
+{
+}
+
+// dimhotepus: Ctor with spin count.
+CThreadMutex::CThreadMutex(unsigned int spinCount)
 {
 #ifdef THREAD_MUTEX_TRACING_ENABLED
-	memset( &m_CriticalSection, 0, sizeof(m_CriticalSection) );
+	BitwiseClear( m_CriticalSection );
 #endif
+	static_assert(sizeof(m_CriticalSection) == sizeof(CRITICAL_SECTION));
 	// This function always succeeds and returns a nonzero value on XP+.
 	// See https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-initializecriticalsectionandspincount
-	(void)InitializeCriticalSectionAndSpinCount((CRITICAL_SECTION *)&m_CriticalSection, 4000);
+	(void)InitializeCriticalSectionAndSpinCount((CRITICAL_SECTION *)&m_CriticalSection, spinCount);
 #ifdef THREAD_MUTEX_TRACING_SUPPORTED
 	// These need to be initialized unconditionally in case mixing release & debug object modules
 	// Lock and unlock may be emitted as COMDATs, in which case may get spurious output

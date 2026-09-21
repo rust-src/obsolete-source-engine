@@ -58,7 +58,7 @@ const objectparams_t g_PhysDefaultObjectParams =
 
 void CSolidSetDefaults::ParseKeyValue( void *pData, const char *pKey, const char *pValue )
 {
-	if ( !Q_stricmp( pKey, "contents" ) )
+	if ( V_strieq( pKey, "contents" ) )
 	{
 		m_contentsMask = atoi( pValue );
 	}
@@ -197,7 +197,7 @@ bool PhysModelParseSolidByIndex( solid_t &solid, CBaseEntity *pEntity, int model
 	while ( !pParse->Finished() )
 	{
 		const char *pBlock = pParse->GetCurrentBlockName();
-		if ( !strcmpi( pBlock, "solid" ) )
+		if ( V_strieq( pBlock, "solid" ) )
 		{
 			solid_t tmpSolid;
 			memset( &tmpSolid, 0, sizeof(tmpSolid) );
@@ -260,7 +260,7 @@ bool PhysModelParseSolidByIndex( solid_t &solid, CBaseEntity *pEntity, vcollide_
 	while ( !pParse->Finished() )
 	{
 		const char *pBlock = pParse->GetCurrentBlockName();
-		if ( !strcmpi( pBlock, "solid" ) )
+		if ( V_strieq( pBlock, "solid" ) )
 		{
 			solid_t tmpSolid;
 			memset( &tmpSolid, 0, sizeof(tmpSolid) );
@@ -522,7 +522,12 @@ static void AddSurfacepropFile( const char *pFileName, IPhysicsSurfaceProps *pPr
 		pFileSystem->ReadEx( buffer, nBufSize, len, file );
 		buffer[len] = 0;
 
-		pProps->ParseSurfaceData( pFileName, buffer );
+		// dimhotepus: Dump warning if no props in file.
+		const intp parsedPropsCount = pProps->ParseSurfaceData( pFileName, buffer );
+		if ( parsedPropsCount == 0 )
+		{
+			DevWarning( "No props in '%s', skipping...\n", pFileName );
+		}
 		// buffer is on the stack, no need to free
 	}
 	else
@@ -539,7 +544,7 @@ void PhysParseSurfaceData( IPhysicsSurfaceProps *pProps, IFileSystem *pFileSyste
 	{
 		for ( KeyValues *sub = manifest->GetFirstSubKey(); sub != NULL; sub = sub->GetNextKey() )
 		{
-			if ( !Q_stricmp( sub->GetName(), "file" ) )
+			if ( V_strieq( sub->GetName(), "file" ) )
 			{
 				// Add
 				AddSurfacepropFile( sub->GetString(), pProps, pFileSystem );
@@ -614,7 +619,7 @@ IPhysicsObject *PhysCreateWorld_Shared( CBaseEntity *pWorld, vcollide_t *pWorldC
 	{
 		const char *pBlock = pParse->GetCurrentBlockName();
 
-		if ( !strcmpi( pBlock, "solid" ) || !strcmpi( pBlock, "staticsolid" ) )
+		if ( V_strieq( pBlock, "solid" ) || V_strieq( pBlock, "staticsolid" ) )
 		{
 			solid.params = defaultParams;
 			pParse->ParseSolid( &solid, &g_SolidSetup );
@@ -651,7 +656,7 @@ IPhysicsObject *PhysCreateWorld_Shared( CBaseEntity *pWorld, vcollide_t *pWorldC
 				pWorldPhysics = pObject;
 			}
 		}
-		else if ( !strcmpi( pBlock, "fluid" ) )
+		else if ( V_strieq( pBlock, "fluid" ) )
 		{
 			pParse->ParseFluid( &fluid, NULL );
 
@@ -673,7 +678,7 @@ IPhysicsObject *PhysCreateWorld_Shared( CBaseEntity *pWorld, vcollide_t *pWorldC
 				physenv->CreateFluidController( pWater, &fluid.params );
 			}
 		}
-		else if ( !strcmpi( pBlock, "materialtable" ) )
+		else if ( V_strieq( pBlock, "materialtable" ) )
 		{
 			intp surfaceTable[128];
 			memset( surfaceTable, 0, sizeof(surfaceTable) );
@@ -681,7 +686,7 @@ IPhysicsObject *PhysCreateWorld_Shared( CBaseEntity *pWorld, vcollide_t *pWorldC
 			pParse->ParseSurfaceTable( surfaceTable, NULL );
 			physprops->SetWorldMaterialIndexTable( surfaceTable, 128 );
 		}
-		else if ( !strcmpi(pBlock, "virtualterrain" ) )
+		else if ( V_strieq(pBlock, "virtualterrain" ) )
 		{
 			bCreateVirtualTerrain = true;
 			pParse->SkipBlock();
@@ -706,7 +711,7 @@ IPhysicsObject *PhysCreateWorld_Shared( CBaseEntity *pWorld, vcollide_t *pWorldC
 //
 // Physics Game Trace
 //
-class CPhysicsGameTrace : public IPhysicsGameTrace
+class CPhysicsGameTrace final : public IPhysicsGameTrace
 {
 public:
 

@@ -76,7 +76,7 @@ TraceInfo_t *BeginTrace()
 #endif
 	if ( pTraceInfo->m_BrushCounters[0].Count() != GetCollisionBSPData()->numbrushes + 1 )
 	{
-		memset( pTraceInfo->m_Count, 0, sizeof( pTraceInfo->m_Count ) );
+		BitwiseClear( pTraceInfo->m_Count );
 		pTraceInfo->m_nCheckDepth = -1;
 
 		for ( int i = 0; i < MAX_CHECK_COUNT_DEPTH; i++ )
@@ -335,7 +335,7 @@ cmodel_t *CM_LoadMap( const char *name, bool allowReusePrevious, unsigned *check
 		return &pBSPData->map_cmodels[0];			// cinematic servers won't have anything at all
 	}
 
-	if( !strcmp( pBSPData->map_name, name ) && allowReusePrevious )
+	if( V_streq( pBSPData->map_name, name ) && allowReusePrevious )
 	{
 		*checksum = last_checksum;
 		return &pBSPData->map_cmodels[0];		// still have the right version

@@ -63,9 +63,9 @@ struct DecalClipState_t
 
 	DecalClipState_t() : m_VertCount{-1}, m_Pass{false}, m_ClipVertCount{-1}
 	{
-		memset( m_Indices, 0, sizeof(m_Indices) );
+		BitwiseClear( m_Indices );
 		memset( m_ClipVerts, 0, sizeof(m_ClipVerts) );
-		memset( m_ClipFlags, 0, sizeof(m_ClipFlags) );
+		BitwiseClear( m_ClipFlags );
 	}
 
 private:
@@ -1198,9 +1198,9 @@ void CStudioRender::AddDecal( StudioDecalHandle_t hDecal, const StudioRenderCont
 		return;
 	}
 
-	buildInfo.m_pMeshVertices = (MeshVertexInfo_t*)stackalloc( nMeshCount * sizeof(MeshVertexInfo_t) );	
+	buildInfo.m_pMeshVertices = stackallocT( MeshVertexInfo_t, nMeshCount );
 	int nVertexCount = ComputeVertexAllocation( iMaxLOD, body, list.m_pHardwareData, buildInfo.m_pMeshVertices );
-	buildInfo.m_pVertexBuffer = (DecalBuildVertexInfo_t*)stackalloc( nVertexCount * sizeof(DecalBuildVertexInfo_t) );
+	buildInfo.m_pVertexBuffer = stackallocT( DecalBuildVertexInfo_t, nVertexCount );
 
 	// Project all mesh vertices
 	ProjectDecalsOntoMeshes( buildInfo, nMeshCount );
@@ -1294,8 +1294,7 @@ void CStudioRender::AddDecal( StudioDecalHandle_t hDecal, const StudioRenderCont
 			decal.m_Flags = flags;
 
 			// Add this decal to the history...
-			auto h = list.m_pLod[i].m_DecalHistory.AddToTail();
-			auto &d = list.m_pLod[i].m_DecalHistory[h];
+			auto &d = list.m_pLod[i].m_DecalHistory[list.m_pLod[i].m_DecalHistory.AddToTail()];
 			d.m_Material = materialIdx;
 			d.m_Decal = decalIndex;
 			d.m_nId = m_nDecalId;
@@ -1312,12 +1311,6 @@ void CStudioRender::AddDecal( StudioDecalHandle_t hDecal, const StudioRenderCont
 
 		// Increment count.
 		++m_nDecalId;
-	}
-
-	if ( IsX360() )
-	{
-		free( buildInfo.m_pMeshVertices );
-		free( buildInfo.m_pVertexBuffer );
 	}
 
 	m_pStudioHdr = NULL;

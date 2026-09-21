@@ -86,9 +86,9 @@ void CBudgetHistoryPanel::Paint()
 			int left = i - startID + xOffset;
 			int right = left + 1;
 			float &curHeight = s_CurrentHeight[i - startID];
-			int bottom = ( curHeight - m_fRangeMin ) * ooRangeMaxMinusMin * height;
-			curHeight += m_pData[sampleOffset + m_nSamplesPerGroup * j];
-			int top = ( curHeight - m_fRangeMin ) * ooRangeMaxMinusMin * height;
+			int bottom = static_cast<int>( ( curHeight - m_fRangeMin ) * ooRangeMaxMinusMin * height );
+			curHeight += static_cast<float>( m_pData[sampleOffset + m_nSamplesPerGroup * j] );
+			int top = static_cast<int>( ( curHeight - m_fRangeMin ) * ooRangeMaxMinusMin * height );
 			bottom = height - bottom - 1;
 			top = height - top - 1;
 			vgui::IntRect& rect = s_Rects[( i - startID )];

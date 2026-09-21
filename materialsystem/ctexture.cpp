@@ -771,13 +771,8 @@ void CReferenceToHandleTexture::SetName( char const *szName )
 	m_Name = NormalizeTextureName( szName, szCleanName, sizeof( szCleanName ) );
 
 #ifdef _DEBUG
-	if ( m_pDebugName )
-	{
-		delete [] m_pDebugName;
-	}
-	intp nLen = V_strlen( szCleanName ) + 1;
-	m_pDebugName = new char[nLen];
-	V_memcpy( m_pDebugName, szCleanName, nLen );
+	delete [] m_pDebugName;
+	m_pDebugName = V_strdup( szCleanName );
 #endif
 }
 
@@ -1976,15 +1971,13 @@ void CTexture::MigrateShaderAPITextures()
 {
 	TM_ZONE_DEFAULT( TELEMETRY_LEVEL0 );
 
-	const int cBytes = m_nFrameCount * sizeof ( ShaderAPITextureHandle_t );
-
-	ShaderAPITextureHandle_t *pTextureHandles =	( ShaderAPITextureHandle_t * ) stackalloc( cBytes );
+	ShaderAPITextureHandle_t *pTextureHandles =	stackallocT( ShaderAPITextureHandle_t, m_nFrameCount );
 
 	Assert( pTextureHandles );
 	if ( !pTextureHandles )
 		return;
 
-	V_memcpy( pTextureHandles, m_pTextureHandles, cBytes );
+	V_memcpy( pTextureHandles, m_pTextureHandles, m_nFrameCount * sizeof(ShaderAPITextureHandle_t) );
 
 	// Pretend we haven't been allocated yet.
 	m_nInternalFlags &= ~TEXTUREFLAGSINTERNAL_ALLOCATED;
@@ -2581,13 +2574,8 @@ void CTexture::SetName( const char* pName )
 	m_Name = NormalizeTextureName( pName, szCleanName, sizeof( szCleanName ) );
 
 #ifdef _DEBUG
-	if ( m_pDebugName )
-	{
-		delete [] m_pDebugName;
-	}
-	intp nLen = V_strlen( szCleanName ) + 1;
-	m_pDebugName = new char[nLen];
-	V_memcpy( m_pDebugName, szCleanName, nLen );
+	delete [] m_pDebugName;
+	m_pDebugName = V_strdup( szCleanName );
 #endif
 }
 
@@ -2765,7 +2753,7 @@ void CTexture::Precache()
 	Q_snprintf( pCacheFileName, sizeof( pCacheFileName ), "materials/%s" TEXTURE_FNAME_EXTENSION, m_Name.String() );
 
 	constexpr unsigned short nHeaderSize = VTFFileHeaderSize( VTF_MAJOR_VERSION );
-	unsigned char *pMem = (unsigned char *)stackalloc( nHeaderSize );
+	unsigned char *pMem = stackallocT( unsigned char, nHeaderSize );
 	CUtlBuffer buf( pMem, nHeaderSize );
 	if ( !g_pFullFileSystem->ReadFile( pCacheFileName, NULL, buf, nHeaderSize ) )	
 	{
@@ -3262,7 +3250,7 @@ IVTFTexture *CTexture::LoadTextureBitsFromFile( char *pCacheFileName, char **ppR
 	// Load the resources
 	if ( uintp uiRsrcCount = pVTFTexture->GetResourceTypes( NULL, 0 ) )
 	{
-		uint32 *arrRsrcTypes = ( uint32 * )_alloca( uiRsrcCount * sizeof( unsigned int ) );
+		uint32 *arrRsrcTypes = stackallocT( uint32, uiRsrcCount );
 		pVTFTexture->GetResourceTypes( arrRsrcTypes, uiRsrcCount );
 
 		m_arrDataChunks.EnsureCapacity( uiRsrcCount );
@@ -4002,15 +3990,15 @@ void CTexture::SwapContents( ITexture *pOther )
 
 	CTexture *pOtherAsCTexture = (CTexture *)pOther;
 
-	CTexture *pTemp = (CTexture *)stackalloc( sizeof( CTexture ) );
+	CTexture *pTemp = stackallocT( CTexture, 1 );
 	
 	//swap everything. Note that this copies the entire object including the
 	// vtable pointer, thus ruining polymorphism. Use with care.
 	// The unnecessary casts to (void*) hint to clang that we know what we
 	// are doing.
-	memcpy( (void*)pTemp, (const void*)this, sizeof( CTexture ) );
-	memcpy( (void*)this, (const void*)pOtherAsCTexture, sizeof( CTexture ) );
-	memcpy( (void*)pOtherAsCTexture, (const void*)pTemp, sizeof( CTexture ) );
+	memcpy( pTemp, this, sizeof( CTexture ) );
+	memcpy( this, pOtherAsCTexture, sizeof( CTexture ) );
+	memcpy( pOtherAsCTexture, pTemp, sizeof( CTexture ) );
 
 	//we have the other's name, give it back
 	memcpy( &pOtherAsCTexture->m_Name, &m_Name, sizeof( m_Name ) );
@@ -4716,7 +4704,7 @@ CON_COMMAND_F( mat_texture_list_txlod_sync, "'reset' - resets all run-time chang
 	szCmd = args.Arg( 1 );
 	Msg( "mat_texture_list_txlod_sync %s...\n", szCmd );
 
-	if ( !stricmp( szCmd, "reset" ) )
+	if ( V_strieq( szCmd, "reset" ) )
 	{
 		for ( unsigned short k = 0; k < s_OverrideMap.GetNumStrings(); ++ k )
 		{
@@ -4735,7 +4723,7 @@ CON_COMMAND_F( mat_texture_list_txlod_sync, "'reset' - resets all run-time chang
 		return;
 	}
 	
-	if ( !stricmp( szCmd, "save" ) )
+	if ( V_strieq( szCmd, "save" ) )
 	{
 		CP4Requirement p4req;
 		if ( !p4 )

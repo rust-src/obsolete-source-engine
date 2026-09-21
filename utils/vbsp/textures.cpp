@@ -37,11 +37,11 @@ dtexdata_t *GetTexData( int index )
 
 static qboolean StringIsTrue( const char *str )
 {
-	if( Q_strcasecmp( str, "true" ) == 0 )
+	if( V_strieq( str, "true" ) )
 	{
 		return true;
 	}
-	if( Q_strcasecmp( str, "1" ) == 0 )
+	if( V_strieq( str, "1" ) )
 	{
 		return true;
 	}
@@ -58,7 +58,7 @@ int	FindMiptex (const char *name)
 		
 	for (i=0 ; i<nummiptex ; i++)
 	{
-		if (!strcmp (name, textureref[i].name))
+		if (V_streq (name, textureref[i].name))
 		{
 			return i;
 		}
@@ -411,7 +411,7 @@ int FindAliasedTexData( const char *pName_, dtexdata_t *sourceTexture )
 
 	for ( i = 0; i < numtexdata; i++ )
 	{
-		if ( !strcmp( pName, TexDataStringTable_GetString( GetTexData( i )->nameStringTableID ) ) )
+		if ( V_streq( pName, TexDataStringTable_GetString( GetTexData( i )->nameStringTableID ) ) )
 			return i;
 	}
 
@@ -455,7 +455,7 @@ int FindTexData( const char *pName )
 	for( int i = 0; i < numtexdata; i++ )
 	{
 		char const *pTexDataName = TexDataStringTable_GetString( GetTexData( i )->nameStringTableID );
-		if ( !Q_stricmp( pTexDataName, pName ) )
+		if ( V_strieq( pTexDataName, pName ) )
 			return i;
 	}
 	return -1;
@@ -720,7 +720,7 @@ void LoadSurfaceProperties( void )
 	{
 		for ( auto *sub = manifest->GetFirstSubKey(); sub != nullptr; sub = sub->GetNextKey() )
 		{
-			if ( !Q_stricmp( sub->GetName(), "file" ) )
+			if ( V_strieq( sub->GetName(), "file" ) )
 			{
 				// Add
 				LoadSurfacePropFile( sub->GetString() );

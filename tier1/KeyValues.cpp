@@ -8,7 +8,6 @@
 
 #if defined(POSIX)
 #include <wchar.h> // wcslen()
-#define _alloca alloca
 #define _wtoi(arg) wcstol(arg, NULL, 10)
 #define _wtoi64(arg) wcstoll(arg, NULL, 10)
 #endif
@@ -16,6 +15,7 @@
 #include "tier1/KeyValues.h"
 
 #include <cstdlib>
+#include <cinttypes>
 
 #include "filesystem.h"
 #include "vstdlib/IKeyValuesSystem.h"
@@ -53,8 +53,9 @@ constexpr inline int MAX_ERROR_STACK = 64;
 class CKeyValuesErrorStack
 {
 public:
-	CKeyValuesErrorStack() {
-		memset( m_errorStack, 0, sizeof(m_errorStack) );
+	CKeyValuesErrorStack()
+	{
+		BitwiseClear( m_errorStack );
 	}
 
 	void SetFilename( const char *pFilename )
@@ -124,8 +125,9 @@ private:
 	const char *m_pFilename{"NULL"};
 	int		m_errorIndex{0};
 	int		m_maxErrorIndex{0};
-} g_KeyValuesErrorStack;
+};
 
+static CKeyValuesErrorStack g_KeyValuesErrorStack;
 
 // a simple helper that creates stack entries as it goes in & out of scope
 class CKeyErrorContext
@@ -299,7 +301,7 @@ private:
 			const char *pchLhs = nLhs > 0 ? m_pchCurBase + nLhs : m_pchCurString;
 			const char *pchRhs = nRhs > 0 ? m_pchCurBase + nRhs : m_pchCurString;
 			
-			return ( 0 == V_stricmp( pchLhs, pchRhs ) );
+			return V_strieq( pchLhs, pchRhs );
 		}
 
 		// The hash function.
@@ -525,7 +527,7 @@ void KeyValues::Init()
 	m_bEvaluateConditionals = true;
 
 	// for future proof
-	memset( unused, 0, sizeof(unused) );
+	BitwiseClear( unused );
 }
 
 //-----------------------------------------------------------------------------
@@ -543,16 +545,14 @@ KeyValues::~KeyValues()
 //-----------------------------------------------------------------------------
 void KeyValues::RemoveEverything()
 {
-	KeyValues *dat;
-	KeyValues *datNext = nullptr;
-	for ( dat = m_pSub; dat != nullptr; dat = datNext )
+	for ( KeyValues *dat = m_pSub, *datNext = nullptr; dat != nullptr; dat = datNext )
 	{
 		datNext = dat->m_pPeer;
 		dat->m_pPeer = nullptr;
 		delete dat;
 	}
 
-	for ( dat = m_pPeer; dat && dat != this; dat = datNext )
+	for ( KeyValues *dat = m_pPeer, *datNext = nullptr; dat && dat != this; dat = datNext )
 	{
 		datNext = dat->m_pPeer;
 		dat->m_pPeer = nullptr;
@@ -713,7 +713,7 @@ bool KeyValues::LoadFromFile( IBaseFileSystem *filesystem, const char *resourceN
 #endif
 
 #ifdef STAGING_ONLY
-	static bool s_bCacheEnabled = !!CommandLine()->FindParm( "-enable_keyvalues_cache" );
+	static bool s_bCacheEnabled = CommandLine()->HasParm( "-enable_keyvalues_cache" );
 	const bool bUseCache = s_bCacheEnabled && ( s_pfGetSymbolForString == KeyValues::GetSymbolForStringClassic );
 #else
 	/*
@@ -766,7 +766,7 @@ bool KeyValues::LoadFromFile( IBaseFileSystem *filesystem, const char *resourceN
 	
 	RunCodeAtScopeExit(fs->Close( f ));
 
-	s_LastFileLoadingFrom = (char*)resourceName;
+	s_LastFileLoadingFrom = (const char*)resourceName;
 
 	// load file into a null-terminated buffer
 	int fileSize = fs->Size( f );
@@ -991,11 +991,7 @@ void KeyValues::SaveKeyToFile( KeyValues *dat, IBaseFileSystem *filesystem, File
 
 				char buf[32];
 				// write "0x" + 16 char 0-padded hex encoded 64 bit value
-#ifdef WIN32
-				Q_snprintf( buf, sizeof( buf ), "0x%016I64X", *( (uint64 *)dat->m_sValue ) );
-#else
-				Q_snprintf( buf, sizeof( buf ), "0x%016llX", *( (uint64 *)dat->m_sValue ) );
-#endif
+				V_sprintf_safe( buf, "0x%016" PRIx64, *( (uint64 *)dat->m_sValue ) );
 
 				INTERNALWRITE(buf, Q_strlen(buf));
 				INTERNALWRITE("\"\n", 2);
@@ -1150,7 +1146,8 @@ KeyValues *KeyValues::CreateNewKey()
 	for (KeyValues *dat = m_pSub; dat != nullptr; dat = dat->m_pPeer)
 	{
 		// case-insensitive string compare
-		int val = atoi(dat->GetName());
+		// dimhotepus: atoi -> V_atoi
+		int val = V_atoi(dat->GetName());
 		if (newID <= val)
 		{
 			newID = val + 1;
@@ -1360,7 +1357,8 @@ int KeyValues::GetInt( const char *keyName, int defaultValue )
 		switch ( dat->m_iDataType )
 		{
 		case TYPE_STRING:
-			return atoi(dat->m_sValue);
+			// dimhotepus: atoi -> V_atoi.
+			return V_atoi(dat->m_sValue);
 		case TYPE_WSTRING:
 			return _wtoi(dat->m_wsValue);
 		case TYPE_FLOAT:
@@ -1369,8 +1367,10 @@ int KeyValues::GetInt( const char *keyName, int defaultValue )
 			// can't convert, since it would lose data
 			Assert(0);
 			return 0;
-		case TYPE_INT:
+		// dimhotepus: Correctly read int from pointer.
 		case TYPE_PTR:
+			return static_cast<int>(reinterpret_cast<intp>(dat->m_pValue));
+		case TYPE_INT:
 		default:
 			return dat->m_iValue;
 		}
@@ -1402,8 +1402,10 @@ uint64 KeyValues::GetUint64( const char *keyName, uint64 defaultValue )
 			V_memcpy( &value, dat->m_sValue, sizeof(uint64) );
 			return value;
 		}
-		case TYPE_INT:
+		// dimhotepus: Correctly read uint64 from pointer.
 		case TYPE_PTR:
+			return static_cast<uint64>(reinterpret_cast<uintp>(dat->m_pValue));
+		case TYPE_INT:
 		default:
 			return dat->m_iValue;
 		}
@@ -1855,7 +1857,7 @@ void KeyValues::CopyKeyValuesFromRecursive( const KeyValues& rootSrc )
 			Assert( (cs.src != nullptr) == (cs.dst != nullptr) );
 
 			// Copy the node contents
-			cs.dst->CopyKeyValue( *cs.src, sizeof(tmp), tmp );
+			cs.dst->CopyKeyValue( *cs.src, tmp );
 
 			// Add children to the queue to process later. 
 			if (cs.src->m_pSub) {
@@ -1882,7 +1884,7 @@ void KeyValues::CopyKeyValuesFromRecursive( const KeyValues& rootSrc )
 // Purpose: Copies a single KeyValue from src to this, using the provided temporary
 // buffer if the keytype requires it. Does NOT recurse.
 //-----------------------------------------------------------------------------
-void KeyValues::CopyKeyValue( const KeyValues& src, size_t tmpBufferSizeB, char* tmpBuffer )
+void KeyValues::CopyKeyValue( const KeyValues& src, size_t tmpBufferSizeB, OUT_Z_CAP_OPT(tmpBufferSizeB) char* tmpBuffer )
 {
 	m_iKeyName = src.GetNameSymbol();
 
@@ -1898,27 +1900,21 @@ void KeyValues::CopyKeyValue( const KeyValues& src, size_t tmpBufferSizeB, char*
 	case TYPE_STRING:
 		if( src.m_sValue )
 		{
-			intp len = Q_strlen(src.m_sValue) + 1;
-			m_sValue = new char[len];
-			Q_strncpy( m_sValue, src.m_sValue, len );
+			m_sValue = V_strdup( src.m_sValue );
 		}
 		break;
 	case TYPE_INT:
 		{
 			m_iValue = src.m_iValue;
 			Q_snprintf( tmpBuffer, tmpBufferSizeB, "%d", m_iValue );
-			intp len = Q_strlen(tmpBuffer) + 1;
-			m_sValue = new char[len];
-			Q_strncpy( m_sValue, tmpBuffer, len  );
+			m_sValue = V_strdup( tmpBuffer );
 		}
 		break;
 	case TYPE_FLOAT:
 		{
 			m_flValue = src.m_flValue;
 			Q_snprintf( tmpBuffer, tmpBufferSizeB, "%f", m_flValue );
-			intp len = Q_strlen(tmpBuffer) + 1;
-			m_sValue = new char[len];
-			Q_strncpy( m_sValue, tmpBuffer, len );
+			m_sValue = V_strdup( tmpBuffer );
 		}
 		break;
 	case TYPE_PTR:
@@ -1940,6 +1936,13 @@ void KeyValues::CopyKeyValue( const KeyValues& src, size_t tmpBufferSizeB, char*
 			m_Color[3] = src.m_Color[3];
 		}
 		break;
+	// dimhotepus: Add wstring copy support.
+	case TYPE_WSTRING:
+		if( src.m_wsValue )
+		{
+			m_wsValue = V_wcsdup( src.m_wsValue );
+		}
+		break;
 			
 	default:
 		{
@@ -1958,6 +1961,27 @@ KeyValues& KeyValues::operator=( const KeyValues& src )
 	return *this;
 }
 
+
+KeyValues& KeyValues::operator=( KeyValues&& src ) noexcept
+{
+	using std::swap;
+
+	swap( m_iKeyName, src.m_iKeyName );
+
+	swap( m_sValue, src.m_sValue );
+	swap( m_wsValue, src.m_wsValue );
+
+	swap( m_pValue, src.m_pValue );
+
+	swap( m_iDataType, src.m_iDataType );
+	swap( m_bHasEscapeSequences, src.m_bHasEscapeSequences );
+	swap( m_bEvaluateConditionals, src.m_bEvaluateConditionals );
+
+	swap( m_pPeer, src.m_pPeer );
+	swap( m_pSub, src.m_pSub );
+	swap( m_pChain, src.m_pChain );
+	return *this;
+}
 
 //-----------------------------------------------------------------------------
 // Make a new copy of all subkeys, add them all to the passed-in keyvalues
@@ -2242,7 +2266,7 @@ void KeyValues::RecursiveMergeKeyValues( KeyValues *baseKV )
 		// If we have a child by the same name, merge those keys
 		for ( KeyValues *newChild = m_pSub; newChild != nullptr; newChild = newChild->m_pPeer )
 		{
-			if ( !Q_strcmp( baseChild->GetName(), newChild->GetName() ) )
+			if ( V_streq( baseChild->GetName(), newChild->GetName() ) )
 			{
 				newChild->RecursiveMergeKeyValues( baseChild );
 				bFoundMatch = true;
@@ -2260,35 +2284,45 @@ void KeyValues::RecursiveMergeKeyValues( KeyValues *baseKV )
 	}
 }
 
-static int s_nSteamDeckCached = -1;
+enum class SteamDeckStatus
+{
+	Unknown,
+	Not,
+	Yes
+};
+
+static SteamDeckStatus s_nSteamDeckCached = SteamDeckStatus::Unknown;
 
 // dimhotepus: Try add basic SteamDeck support.
 [[nodiscard]] bool IsSteamDeck()
 {
-	if (s_nSteamDeckCached == -1)
+	if (s_nSteamDeckCached != SteamDeckStatus::Unknown)
 	{
-		if ( CommandLine()->CheckParm( "-nogamepadui" ) != nullptr )
-		{
-			s_nSteamDeckCached = 0;
-		}
-		else
-		{
-			if ( CommandLine()->CheckParm( "-gamepadui" ) != nullptr )
-			{
-				s_nSteamDeckCached = 1;
-			}
-			else
-			{
-				char *deck = getenv("SteamDeck");
-
-				if ( deck == nullptr || *deck == 0 )
-					s_nSteamDeckCached = 0;
-				else
-					s_nSteamDeckCached = atoi(deck) != 0;
-			}
-		}
+		return s_nSteamDeckCached == SteamDeckStatus::Yes;
 	}
-	return s_nSteamDeckCached;
+
+	if ( CommandLine()->HasParm( "-gamepadui" ) )
+	{
+		s_nSteamDeckCached = SteamDeckStatus::Yes;
+		return true;
+	}
+
+	if ( CommandLine()->HasParm( "-nogamepadui" ) )
+	{
+		s_nSteamDeckCached = SteamDeckStatus::Not;
+		return false;
+	}
+
+	if ( const char *deck = getenv("SteamDeck"); Q_isempty( deck ) )
+	{
+		s_nSteamDeckCached = SteamDeckStatus::Not;
+	}
+	else
+	{
+		s_nSteamDeckCached = atoi(deck) != 0 ? SteamDeckStatus::Yes : SteamDeckStatus::Not;
+	}
+
+	return s_nSteamDeckCached == SteamDeckStatus::Yes;
 }
 
 //-----------------------------------------------------------------------------
@@ -2354,7 +2388,7 @@ bool KeyValues::LoadFromBuffer( char const *resourceName, CUtlBuffer &buf, IBase
 		if ( !buf.IsValid() || !s || *s == 0 )
 			break;
 
-		if ( !Q_stricmp( s, "#include" ) )	// special include macro (not a key name)
+		if ( V_strieq( s, "#include" ) )	// special include macro (not a key name)
 		{
 			s = ReadToken( buf, wasQuoted, wasConditional );
 			// Name of subfile to load is now in s
@@ -2370,7 +2404,7 @@ bool KeyValues::LoadFromBuffer( char const *resourceName, CUtlBuffer &buf, IBase
 
 			continue;
 		}
-		else if ( !Q_stricmp( s, "#base" ) )
+		else if ( V_strieq( s, "#base" ) )
 		{
 			s = ReadToken( buf, wasQuoted, wasConditional );
 			// Name of subfile to load is now in s
@@ -2483,9 +2517,9 @@ bool KeyValues::LoadFromBuffer( char const *resourceName, const char *pBuffer, I
 	// Translate Unicode files into UTF-8 before proceeding
 	if ( nLen > 2 && (uint8)pBuffer[0] == 0xFF && (uint8)pBuffer[1] == 0xFE )
 	{
-		intp nUTF8Len = V_UnicodeToUTF8( (wchar_t*)(pBuffer+2), nullptr, 0 );
+		intp nUTF8Len = V_UnicodeToUTF8( (const wchar_t*)(pBuffer+2), nullptr, 0 );
 		char *pUTF8Buf = new char[nUTF8Len];
-		V_UnicodeToUTF8( (wchar_t*)(pBuffer+2), pUTF8Buf, nUTF8Len );
+		V_UnicodeToUTF8( (const wchar_t*)(pBuffer+2), pUTF8Buf, nUTF8Len );
 		buf.AssumeMemory( pUTF8Buf, nUTF8Len, nUTF8Len, CUtlBuffer::READ_ONLY | CUtlBuffer::TEXT_BUFFER );
 	}
 
@@ -2605,7 +2639,8 @@ void KeyValues::RecursiveLoadFromBuffer( char const *resourceName, CUtlBuffer &b
 #ifdef POSIX
 			// strtod supports hex representation in strings under posix but we DON'T
 			// want that support in keyvalues, so undo it here if needed
-			if ( len > 1 &&  tolower(value[1]) == 'x' )
+			// dimhotepus: tolower -> V_tolower.
+			if ( len > 1 && V_tolower(value[1]) == 'x' )
 			{
 				fval = 0.0f;
 				pFEnd = (char *)value;
@@ -3103,7 +3138,7 @@ bool KeyValues::ProcessResolutionKeys( const char *pResString )
 
 			// substring must match exactly, otherwise keys like "_lodef" and "_lodef_wide" would clash.
 			char *pString = Q_stristr( normalKeyName, pResString );
-			if ( pString && !Q_stricmp( pString, pResString ) )
+			if ( pString && V_strieq( pString, pResString ) )
 			{
 				*pString = '\0';
 
@@ -3278,7 +3313,7 @@ bool IKeyValuesDumpContextAsText::KvWriteValue( KeyValues *val, int nIndentLevel
 		{
 			uint64 n = val->GetUint64();
 			char *chBuffer = stackallocT( char, 32 );
-			V_snprintf( chBuffer, 32, "u64( %lld = 0x%llX )", n, n );
+			V_snprintf( chBuffer, 32, "u64( %" PRIu64 " = 0x%" PRIX64 " )", n, n );
 			if ( !KvWriteText( chBuffer ) )
 				return false;
 		}
@@ -3289,7 +3324,7 @@ bool IKeyValuesDumpContextAsText::KvWriteValue( KeyValues *val, int nIndentLevel
 		/*break;
 		{
 			int n = val->GetDataType();
-			char *chBuffer = ( char * ) stackalloc( 128 );
+			char *chBuffer = stackallocT( char, 128 );
 			V_snprintf( chBuffer, 128, "??kvtype[%d]", n );
 			if ( !KvWriteText( chBuffer ) )
 				return false;
@@ -3318,7 +3353,7 @@ bool IKeyValuesDumpContextAsText::KvWriteIndent( int nIndentLevel )
 {
 	int numIndentBytes = ( nIndentLevel * 2 + 1 );
 	char *pchIndent = stackallocT( char, numIndentBytes );
-	memset( pchIndent, ' ', numIndentBytes - 1 );
+	memset( pchIndent, ' ', sizeof(char) * ( numIndentBytes - 1 ) );
 	pchIndent[ numIndentBytes - 1 ] = '\0';
 	return KvWriteText( pchIndent );
 }

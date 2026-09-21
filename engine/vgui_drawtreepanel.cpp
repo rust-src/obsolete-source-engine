@@ -223,7 +223,7 @@ public:
 
 	void OnCommand( const char *command ) override
 	{
-		if ( !Q_stricmp( command, "performlayout" ) )
+		if ( V_strieq( command, "performlayout" ) )
 		{
 			if ( g_DrawTreeSelectedPanel )
 			{
@@ -231,7 +231,7 @@ public:
 				vgui::ipanel()->SendMessage( g_DrawTreeSelectedPanel, KeyValuesAD( new KeyValues("Command", "command", "performlayout") ), GetVPanel() );
 			}
 		}
-		else if ( !Q_stricmp( command, "reloadscheme" ) )
+		else if ( V_strieq( command, "reloadscheme" ) )
 		{
 			if ( g_DrawTreeSelectedPanel )
 			{
@@ -350,10 +350,7 @@ void VGui_RecursivePrintTree(
 	// Bind data to pVal.
 	char name[1024];
 	const char *pInputName = ipanel->GetName( current );
-	if ( pInputName && pInputName[0] != 0 )
-		V_sprintf_safe( name, "%s", pInputName );
-	else
-		V_sprintf_safe( name, "%s", "(no name)" );
+	V_strcpy_safe( name, !Q_isempty( pInputName ) ? pInputName : "(no name)" );
 
 	if ( ipanel->IsMouseInputEnabled( current ) )
 	{
@@ -387,7 +384,7 @@ void VGui_RecursivePrintTree(
 		V_sprintf_safe( str, "%s - [%d]", name, kv->GetInt("alpha") );
 	}
 	else
-		V_sprintf_safe( str, "%s", name );
+		V_strcpy_safe( str, name );
 
 	pVal->SetString( "Text", str );
 	// dimhotepus: SetInt -> SetPtr
@@ -422,7 +419,7 @@ bool UpdateItemState(
 	KeyValues *pItemData = pTree->GetItemData( iChildItemId );
 	// dimhotepus: GetInt -> GetPtr
 	if ( pItemData->GetPtr( "PanelPtr" ) != pSub->GetPtr( "PanelPtr" ) ||
-		Q_stricmp( pItemData->GetString( "Text" ), pSub->GetString( "Text" ) ) != 0 )
+		 !V_strieq( pItemData->GetString( "Text" ), pSub->GetString( "Text" ) ) )
 	{
 		pTree->ModifyItem( iChildItemId, pSub );
 		bRet = true;
@@ -573,6 +570,14 @@ void VGui_CreateDrawTreePanel( vgui::Panel *parent )
 	g_pDrawTreeFrame->MakePopup( false, false );
 	g_pDrawTreeFrame->SetKeyBoardInputEnabled( true );
 	g_pDrawTreeFrame->SetMouseInputEnabled( true );
+}
+
+
+// dimhotepus: Pair with create.
+void VGui_DestroyDrawTreePanel()
+{
+	g_pDrawTreeFrame->MarkForDeletion();
+	g_pDrawTreeFrame = nullptr;
 }
 
 

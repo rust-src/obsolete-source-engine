@@ -258,7 +258,7 @@ public:
 			MenuItem *menuItem = dynamic_cast<MenuItem *>(GetChild(i));
 			if (menuItem)
 			{
-				if ( Q_strcmp( menuItem->GetCommand()->GetString("command", ""), itemName ) == 0 )
+				if ( V_streq( menuItem->GetCommand()->GetString("command", ""), itemName ) )
 				{
 					menuItem->SetBlink( state );
 				}
@@ -285,7 +285,7 @@ public:
 	{
 		m_KeyRepeat.Reset();
 
-		if (!stricmp(command, "Open"))
+		if (V_strieq(command, "Open"))
 		{
 			if ( m_hMainMenuOverridePanel )
 			{
@@ -415,7 +415,7 @@ public:
 
 	void UpdateMenuItemState( bool isInGame, bool isMultiplayer, bool isInReplay, bool isVREnabled, bool isVRActive )
 	{
-		bool isSteam = CommandLine()->FindParm("-steam") != 0;
+		bool isSteam = CommandLine()->HasParm("-steam");
 
 		// disabled save button if we're not in a game
 		for (int i = 0; i < GetChildCount(); i++)
@@ -574,12 +574,9 @@ CBasePanel::CBasePanel() : Panel(NULL, "BaseGameUIPanel")
 	m_bXUIVisible = false;
 	m_bUseMatchmaking = false;
 	m_bRestartFromInvite = false;
-	m_bUserRefusedSignIn = false;
-	m_bUserRefusedStorageDevice = false;
 	m_bWaitingForUserSignIn = false;
 	m_bWaitingForStorageDeviceHandle = false;
 	m_bNeedStorageDeviceHandle = false;
-	m_bStorageBladeShown = false;
 	m_iStorageID = XBX_INVALID_STORAGE_ID;
 	m_pAsyncJob = NULL;
 	m_pStorageDeviceValidatedNotify = NULL;
@@ -1150,7 +1147,7 @@ CGameMenu *CBasePanel::RecursiveLoadGameMenu(KeyValues *datafile)
 		const char *cmd = dat->GetString("command", nullptr);
 		const char *name = dat->GetString("name", label);
 
-		if ( cmd && !Q_stricmp( cmd, "OpenFriendsDialog" ) && bSteamCommunityFriendsVersion )
+		if ( cmd && V_strieq( cmd, "OpenFriendsDialog" ) && bSteamCommunityFriendsVersion )
 			continue;
 
 		menu->AddMenuItem(name, label, cmd, this, dat);
@@ -1325,7 +1322,7 @@ void CBasePanel::ApplySchemeSettings(IScheme *pScheme)
 	if ( m_iLoadingImageID == -1 )
 	{
 		// dimhotepus: Better SteamDeck support. HL2:DM before Anniversary Update has no gamepadui.
-		const bool isHl2Dm = Q_stricmp( COM_GetModDirectory(), "hl2mp" ) == 0;
+		const bool isHl2Dm = V_strieq( COM_GetModDirectory(), "hl2mp" );
 		const char* loadingVtf = !IsSteamDeck() || isHl2Dm
 			? "console/startup_loading"
 			: "gamepadui/game_logo";
@@ -1387,78 +1384,78 @@ void CBasePanel::OnGameUIActivated()
 //-----------------------------------------------------------------------------
 void CBasePanel::RunMenuCommand(const char *command)
 {
-	if ( !Q_stricmp( command, "OpenGameMenu" ) )
+	if ( V_strieq( command, "OpenGameMenu" ) )
 	{
 		if ( m_pGameMenu )
 		{
 			PostMessage( m_pGameMenu, new KeyValues("Command", "command", "Open") );
 		}
 	}
-	else if ( !Q_stricmp( command, "OpenPlayerListDialog" ) )
+	else if ( V_strieq( command, "OpenPlayerListDialog" ) )
 	{
 		OnOpenPlayerListDialog();
 	}
-	else if ( !Q_stricmp( command, "OpenNewGameDialog" ) )
+	else if ( V_strieq( command, "OpenNewGameDialog" ) )
 	{
 		OnOpenNewGameDialog();
 	}
-	else if ( !Q_stricmp( command, "OpenLoadGameDialog" ) )
+	else if ( V_strieq( command, "OpenLoadGameDialog" ) )
 	{
 		OnOpenLoadGameDialog();
 	}
-	else if ( !Q_stricmp( command, "OpenSaveGameDialog" ) )
+	else if ( V_strieq( command, "OpenSaveGameDialog" ) )
 	{
 		OnOpenSaveGameDialog();
 	}
-	else if ( !Q_stricmp( command, "OpenBonusMapsDialog" ) )
+	else if ( V_strieq( command, "OpenBonusMapsDialog" ) )
 	{
 		OnOpenBonusMapsDialog();
 	}
-	else if ( !Q_stricmp( command, "OpenOptionsDialog" ) )
+	else if ( V_strieq( command, "OpenOptionsDialog" ) )
 	{
 		OnOpenOptionsDialog();
 	}
-	else if ( !Q_stricmp( command, "OpenControllerDialog" ) )
+	else if ( V_strieq( command, "OpenControllerDialog" ) )
 	{
 		// XBOX only.
 	}
-	else if ( !Q_stricmp( command, "OpenBenchmarkDialog" ) )
+	else if ( V_strieq( command, "OpenBenchmarkDialog" ) )
 	{
 		OnOpenBenchmarkDialog();
 	}
-	else if ( !Q_stricmp( command, "OpenServerBrowser" ) )
+	else if ( V_strieq( command, "OpenServerBrowser" ) )
 	{
 		OnOpenServerBrowser();
 	}
-	else if ( !Q_stricmp( command, "OpenFriendsDialog" ) )
+	else if ( V_strieq( command, "OpenFriendsDialog" ) )
 	{
 		OnOpenFriendsDialog();
 	}
-	else if ( !Q_stricmp( command, "OpenLoadDemoDialog" ) )
+	else if ( V_strieq( command, "OpenLoadDemoDialog" ) )
 	{
 		// dimhotepus: Drop empty function.
 	}
-	else if ( !Q_stricmp( command, "OpenCreateMultiplayerGameDialog" ) )
+	else if ( V_strieq( command, "OpenCreateMultiplayerGameDialog" ) )
 	{
 		OnOpenCreateMultiplayerGameDialog();
 	}
-	else if ( !Q_stricmp( command, "OpenChangeGameDialog" ) )
+	else if ( V_strieq( command, "OpenChangeGameDialog" ) )
 	{
 		OnOpenChangeGameDialog();
 	}
-	else if ( !Q_stricmp( command, "OpenLoadCommentaryDialog" ) )
+	else if ( V_strieq( command, "OpenLoadCommentaryDialog" ) )
 	{
 		OnOpenLoadCommentaryDialog();
 	}
-	else if ( !Q_stricmp( command, "OpenLoadSingleplayerCommentaryDialog" ) )
+	else if ( V_strieq( command, "OpenLoadSingleplayerCommentaryDialog" ) )
 	{
 		OpenLoadSingleplayerCommentaryDialog();	
 	}
-	else if ( !Q_stricmp( command, "OpenMatchmakingBasePanel" ) )
+	else if ( V_strieq( command, "OpenMatchmakingBasePanel" ) )
 	{
 		OnOpenMatchmakingBasePanel();
 	}
-	else if ( !Q_stricmp( command, "OpenAchievementsDialog" ) )
+	else if ( V_strieq( command, "OpenAchievementsDialog" ) )
 	{
 #ifndef NO_STEAM
 		if ( !steamapicontext->SteamUser() || !steamapicontext->SteamUser()->BLoggedOn() )
@@ -1476,7 +1473,7 @@ void CBasePanel::RunMenuCommand(const char *command)
     // [dwenger] Use cs-specific achievements dialog
     //=============================================================================
 
-    else if ( !Q_stricmp( command, "OpenCSAchievementsDialog" ) )
+    else if ( V_strieq( command, "OpenCSAchievementsDialog" ) )
     {
         if ( !steamapicontext->SteamUser() || !steamapicontext->SteamUser()->BLoggedOn() )
         {
@@ -1491,15 +1488,15 @@ void CBasePanel::RunMenuCommand(const char *command)
     // HPE_END
     //=============================================================================
 
-	else if ( !Q_stricmp( command, "AchievementsDialogClosing" ) )
+	else if ( V_strieq( command, "AchievementsDialogClosing" ) )
 	{
 		// XBOX-only.
 	}
-	else if ( !Q_stricmp( command, "Quit" ) )
+	else if ( V_strieq( command, "Quit" ) )
 	{
 		OnOpenQuitConfirmationDialog();
 	}
-	else if ( !Q_stricmp( command, "QuitNoConfirm" ) )
+	else if ( V_strieq( command, "QuitNoConfirm" ) )
 	{
         //=============================================================================
         // HPE_BEGIN:
@@ -1520,19 +1517,19 @@ void CBasePanel::RunMenuCommand(const char *command)
 		vgui::surface()->RestrictPaintToSinglePanel( GetVPanel() );
 		engine->ClientCmd_Unrestricted( "quit\n" );
 	}
-	else if ( !Q_stricmp( command, "QuitRestartNoConfirm" ) )
+	else if ( V_strieq( command, "QuitRestartNoConfirm" ) )
 	{
 		// XBOX only.
 	}
-	else if ( !Q_stricmp( command, "ResumeGame" ) )
+	else if ( V_strieq( command, "ResumeGame" ) )
 	{
 		GameUI().HideGameUI();
 	}
-	else if ( !Q_stricmp( command, "Disconnect" ) )
+	else if ( V_strieq( command, "Disconnect" ) )
 	{
 		engine->ClientCmd_Unrestricted( "disconnect" );
 	}
-	else if ( !Q_stricmp( command, "DisconnectNoConfirm" ) )
+	else if ( V_strieq( command, "DisconnectNoConfirm" ) )
 	{
 		ConVarRef commentary( "commentary" );
 		if ( commentary.IsValid() && commentary.GetBool() )
@@ -1552,48 +1549,47 @@ void CBasePanel::RunMenuCommand(const char *command)
 			matchmaking->KickPlayerFromSession( 0 );
 		}
 	}
-	else if ( !Q_stricmp( command, "ReleaseModalWindow" ) )
+	else if ( V_strieq( command, "ReleaseModalWindow" ) )
 	{
 		vgui::surface()->RestrictPaintToSinglePanel(NULL);
 	}
-	else if ( Q_stristr( command, "engine " ) )
+	else if ( const char *pszEngineCmd = V_stristr( command, "engine " ) )
 	{
-		const char *engineCMD = strstr( command, "engine " ) + std::size( "engine " ) - 1;
+		// dimhotepus: Correctly handle case-insensitive engine command.
+		const char *engineCMD = pszEngineCmd + std::size( "engine " ) - 1;
 		if ( engineCMD && engineCMD[0] )
 		{
 			engine->ClientCmd_Unrestricted( const_cast<char *>( engineCMD ) );
 		}
 	}
-	else if ( !Q_stricmp( command, "ShowSigninUI" ) )
+	else if ( V_strieq( command, "ShowSigninUI" ) )
 	{
 		m_bWaitingForUserSignIn = true;
 		xboxsystem->ShowSigninUI( 1, 0 ); // One user, no special flags
 	}
-	else if ( !Q_stricmp( command, "ShowDeviceSelector" ) )
+	else if ( V_strieq( command, "ShowDeviceSelector" ) )
 	{
 		OnChangeStorageDevice();
 	}
-	else if ( !Q_stricmp( command, "SignInDenied" ) )
+	else if ( V_strieq( command, "SignInDenied" ) )
 	{
 		// The user doesn't care, so re-send the command they wanted and mark that we want to skip checking
-		m_bUserRefusedSignIn = true;
 		if ( m_strPostPromptCommand.IsEmpty() == false )
 		{
 			OnCommand( m_strPostPromptCommand );		
 		}
 	}
-	else if ( !Q_stricmp( command, "RequiredSignInDenied" ) )
+	else if ( V_strieq( command, "RequiredSignInDenied" ) )
 	{
 		m_strPostPromptCommand = "";
 	}
-	else if ( !Q_stricmp( command, "RequiredStorageDenied" ) )
+	else if ( V_strieq( command, "RequiredStorageDenied" ) )
 	{
 		m_strPostPromptCommand = "";
 	}
-	else if ( !Q_stricmp( command, "StorageDeviceDenied" ) )
+	else if ( V_strieq( command, "StorageDeviceDenied" ) )
 	{
 		// The user doesn't care, so re-send the command they wanted and mark that we want to skip checking
-		m_bUserRefusedStorageDevice = true;
 		IssuePostPromptCommand();
 
 		// Set us as declined
@@ -1606,11 +1602,11 @@ void CBasePanel::RunMenuCommand(const char *command)
 			m_pStorageDeviceValidatedNotify = NULL;
 		}
 	}
-	else if ( !Q_stricmp( command, "clear_storage_deviceID" ) )
+	else if ( V_strieq( command, "clear_storage_deviceID" ) )
 	{
 		XBX_SetStorageDeviceId( XBX_STORAGE_DECLINED );
 	}
-	else if ( !Q_stricmp( command, "RestartWithNewLanguage" ) )
+	else if ( V_strieq( command, "RestartWithNewLanguage" ) )
 	{
 		// hide everything while we quit
 		SetVisible( false );
@@ -1683,40 +1679,6 @@ void CBasePanel::ClearQueuedCommands()
 	m_CommandQueue.Purge();
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: Whether this command should cause us to prompt the user if they're not signed in and do not have a storage device
-//-----------------------------------------------------------------------------
-bool CBasePanel::IsPromptableCommand( const char *command )
-{
-	// Blech!
-	if ( !Q_stricmp( command, "OpenNewGameDialog" ) ||
-		 !Q_stricmp( command, "OpenLoadGameDialog" ) ||
-		 !Q_stricmp( command, "OpenSaveGameDialog" ) ||
-		 !Q_stricmp( command, "OpenBonusMapsDialog" ) ||
-		 !Q_stricmp( command, "OpenOptionsDialog" ) ||
-		 !Q_stricmp( command, "OpenControllerDialog" ) ||
-		 !Q_stricmp( command, "OpenLoadCommentaryDialog" ) ||
-         !Q_stricmp( command, "OpenLoadSingleplayerCommentaryDialog" ) ||
-         !Q_stricmp( command, "OpenAchievementsDialog" ) ||
-
-         //=============================================================================
-         // HPE_BEGIN:
-         // [dwenger] Use cs-specific achievements dialog
-         //=============================================================================
-
-		 !Q_stricmp( command, "OpenCSAchievementsDialog" ) )
-
-         //=============================================================================
-         // HPE_END
-         //=============================================================================
-
-	{
-		 return true;
-	}
-
-	return false;
-}
-
 #ifdef _WIN32
 //-------------------------
 // Purpose: Job wrapper
@@ -1763,60 +1725,6 @@ void CBasePanel::ExecuteAsync( CAsyncJobContext *pAsync )
 #endif
 }
 
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Whether this command requires the user be signed in
-//-----------------------------------------------------------------------------
-bool CBasePanel::CommandRequiresSignIn( const char *command )
-{
-	// Blech again!
-	if ( !Q_stricmp( command, "OpenAchievementsDialog" ) ||
-
-        //=============================================================================
-        // HPE_BEGIN:
-        // [dwenger] Use cs-specific achievements dialog
-        //=============================================================================
-
-         !Q_stricmp( command, "OpenCSAchievementsDialog" ) ||
-
-         //=============================================================================
-         // HPE_END
-         //=============================================================================
-
-         !Q_stricmp( command, "OpenLoadGameDialog" ) ||
-		 !Q_stricmp( command, "OpenSaveGameDialog" ) ||
-		 !Q_stricmp( command, "OpenRankingsDialog" ) )
-		return true;
-
-	return false;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Whether the command requires the user to have a valid storage device
-//-----------------------------------------------------------------------------
-bool CBasePanel::CommandRequiresStorageDevice( const char *command )
-{
-	// Anything which touches the storage device must prompt
-	if ( !Q_stricmp( command, "OpenSaveGameDialog" ) ||
-		 !Q_stricmp( command, "OpenLoadGameDialog" ) )
-		return true;
-
-	return false;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Whether the command requires the user to have a valid profile selected
-//-----------------------------------------------------------------------------
-bool CBasePanel::CommandRespectsSignInDenied( const char *command )
-{
-	// Anything which touches the user profile must prompt
-	if ( !Q_stricmp( command, "OpenOptionsDialog" ) ||
-		 !Q_stricmp( command, "OpenControllerDialog" ) )
-		return true;
-
-	return false;
-}
 
 //-----------------------------------------------------------------------------
 // Purpose: A storage device has been connected, update our settings and anything else
@@ -1925,11 +1833,7 @@ bool CBasePanel::ValidateStorageDevice( int *pStorageDeviceValidated )
 
 	if ( pStorageDeviceValidated )
 	{
-		if ( HandleStorageDeviceRequest( "" ) )
-			return true;
-
-		m_pStorageDeviceValidatedNotify = pStorageDeviceValidated;
-		return false;
+		return true;
 	}
 
 	return false;
@@ -1945,65 +1849,11 @@ bool CBasePanel::HandleSignInRequest( const char *command )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *command - 
-//-----------------------------------------------------------------------------
-bool CBasePanel::HandleStorageDeviceRequest( const char *command )
-{
-	// If we don't have a valid sign-in, then we do nothing!
-	if ( m_bUserRefusedSignIn )
-		return true;
-
-	// If we have a valid storage device, there's nothing to prompt for
-	if ( XBX_GetStorageDeviceId() != XBX_INVALID_STORAGE_ID && XBX_GetStorageDeviceId() != XBX_STORAGE_DECLINED )
-		return true;
-
-	// If we have a post-prompt command, we're coming back into the call from that prompt
-	bool bQueuedCall = ( m_strPostPromptCommand.IsEmpty() == false );
-	
-	// Are we returning from a prompt?
-	if ( bQueuedCall && m_bStorageBladeShown )
-	{
-		// User has declined
-		if ( m_bUserRefusedStorageDevice )
-			return true;
-
-		// Prompt them
-		ShowMessageDialog( MD_PROMPT_STORAGE_DEVICE );
-		m_strPostPromptCommand = command;
-		
-		// Do not run the command
-		return false;
-	}
-	else
-	{
-		// If the user refused the sign-in and we respect that on this command, we're done
-		if ( m_bUserRefusedStorageDevice && CommandRespectsSignInDenied( command ) )
-			return true;
-
-		// If the message is required first, then do that instead
-		if ( CommandRequiresStorageDevice( command ) )
-		{
-			ShowMessageDialog( MD_PROMPT_STORAGE_DEVICE_REQUIRED );
-			m_strPostPromptCommand = command;
-			return false;
-		}
-
-		// This is a misnomer of the first order!
-		OnChangeStorageDevice();
-		m_strPostPromptCommand = command;
-		m_bStorageBladeShown = true;
-		m_bUserRefusedStorageDevice = false;
-		return false;
-	}
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: Clear the command we've queued once it has succeeded in being called
 //-----------------------------------------------------------------------------
 void CBasePanel::ClearPostPromptCommand( const char *pCompletedCommand )
 {
-	if ( !Q_stricmp( m_strPostPromptCommand, pCompletedCommand ) )
+	if ( V_strieq( m_strPostPromptCommand, pCompletedCommand ) )
 	{
 		// All commands are executed, so stop holding this
 		m_strPostPromptCommand = "";
@@ -2111,11 +1961,11 @@ public:
 
 	void OnCommand(const char *command) override
 	{
-		if (!Q_stricmp(command, "Quit"))
+		if (V_strieq(command, "Quit"))
 		{
 			PostMessage(GetVParent(), new KeyValues("Command", "command", "QuitNoConfirm"));
 		}
-		else if (!Q_stricmp(command, "SaveAndQuit"))
+		else if (V_strieq(command, "SaveAndQuit"))
 		{
 			// find a new name to save
 			char saveName[128];
@@ -2131,7 +1981,7 @@ public:
 			// quit
 			PostMessage(GetVParent(), new KeyValues("Command", "command", "QuitNoConfirm"));
 		}
-		else if (!Q_stricmp(command, "Cancel"))
+		else if (V_strieq(command, "Cancel"))
 		{
 			Close();
 		}
@@ -2642,7 +2492,6 @@ void CBasePanel::SystemNotification( const int notification )
 					if ( xboxsystem->DeviceCapacityAdequate( m_iStorageID, COM_GetModDirectory() ) == false )
 					{
 						ShowMessageDialog( MD_STORAGE_DEVICES_TOO_FULL, this );
-						m_bStorageBladeShown = false; // Show the blade again next time
 						m_strPostPromptCommand = ""; // Clear the buffer, we can't return
 					}
 					else
@@ -2681,7 +2530,6 @@ void CBasePanel::SystemNotification( const int notification )
 		{
 			// Done waiting
 			m_bWaitingForUserSignIn = false;
-			m_bUserRefusedSignIn = false;
 
 			// The UI has closed, so go off and revalidate the state
 			if ( m_strPostPromptCommand.IsEmpty() == false )
@@ -2949,7 +2797,7 @@ void CFooterPanel::ApplySettings( KeyValues *inResourceData )
 	{
 		const char *pName = pButton->GetName();
 
-		if ( !Q_stricmp( pName, "button" ) )
+		if ( V_strieq( pName, "button" ) )
 		{
 			// Add a button to the footer
 			const char *pText = pButton->GetString( "text", "NULL" );
@@ -3066,7 +2914,7 @@ void CFooterPanel::ShowButtonLabel( const char *name, bool show )
 {
 	for ( intp i = 0; i < m_ButtonLabels.Count(); ++i )
 	{
-		if ( !Q_stricmp( m_ButtonLabels[ i ]->name, name ) )
+		if ( V_strieq( m_ButtonLabels[ i ]->name, name ) )
 		{
 			m_ButtonLabels[ i ]->bVisible = show;
 			break;
@@ -3081,7 +2929,7 @@ void CFooterPanel::SetButtonText( const char *buttonName, const char *text )
 {
 	for ( intp i = 0; i < m_ButtonLabels.Count(); ++i )
 	{
-		if ( !Q_stricmp( m_ButtonLabels[ i ]->name, buttonName ) )
+		if ( V_strieq( m_ButtonLabels[ i ]->name, buttonName ) )
 		{
 			wchar_t *wtext = g_pVGuiLocalize->Find( text );
 			if ( text )

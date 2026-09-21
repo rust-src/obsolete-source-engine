@@ -111,8 +111,9 @@ void SendProxy_AnimTime( const SendProp *pProp, const void *pStruct, const void 
 		Assert( !pAnimating->IsUsingClientSideAnimation() );
 	}
 #endif
-	
-	int ticknumber = TIME_TO_TICKS( pEntity->m_flAnimTime );
+
+	// dimhotepus: Use .Get as we need float.
+	int ticknumber = TIME_TO_TICKS( pEntity->m_flAnimTime.Get() );
 	// Tickbase is current tick rounded down to closes 100 ticks
 	int tickbase = gpGlobals->GetNetworkBase( gpGlobals->tickcount, pEntity->entindex() );
 	int addt = 0;
@@ -130,7 +131,8 @@ void SendProxy_SimulationTime( const SendProp *pProp, const void *pStruct, const
 {
 	CBaseEntity *pEntity = (CBaseEntity *)pStruct;
 
-	int ticknumber = TIME_TO_TICKS( pEntity->m_flSimulationTime );
+	// dimhotepus: Use .Get as we need float.
+	int ticknumber = TIME_TO_TICKS( pEntity->m_flSimulationTime.Get() );
 	// tickbase is current tick rounded down to closest 100 ticks
 	int tickbase = gpGlobals->GetNetworkBase( gpGlobals->tickcount, pEntity->entindex() );
 	int addt = 0;
@@ -572,7 +574,7 @@ void CBaseEntity::ValidateDataDescription(void)
 		for (intp j = i - 1; --j >= 0; )
 		{
 			// dimhotepus: Case-sensitive compare as we have fields which differ by case only.
-			if (!Q_strcmp(names[i], names[j]))
+			if (V_streq(names[i], names[j]))
 			{
 				DevMsg( "%s has multiple data description entries for \"%s\"\n", STRING(m_iClassname), names[i]);
 				break;
@@ -984,18 +986,18 @@ void CBaseEntity::DrawDebugGeometryOverlays(void)
 			radius *= sv_vehicle_autoaim_scale.GetFloat();
 		}
 
-		NDebugOverlay::Line( vecCenter, vecCenter + vecRight * radius, r, g, b, true, 0.1 );
-		NDebugOverlay::Line( vecCenter, vecCenter - vecRight * radius, r, g, b, true, 0.1 );
-		NDebugOverlay::Line( vecCenter, vecCenter + vecUp * radius, r, g, b, true, 0.1 );
-		NDebugOverlay::Line( vecCenter, vecCenter - vecUp * radius, r, g, b, true, 0.1 );
+		NDebugOverlay::Line( vecCenter, vecCenter + vecRight * radius, r, g, b, true, 0.1f );
+		NDebugOverlay::Line( vecCenter, vecCenter - vecRight * radius, r, g, b, true, 0.1f );
+		NDebugOverlay::Line( vecCenter, vecCenter + vecUp * radius, r, g, b, true, 0.1f );
+		NDebugOverlay::Line( vecCenter, vecCenter - vecUp * radius, r, g, b, true, 0.1f );
 
 		vecDiag = vecRight + vecUp;
 		VectorNormalize( vecDiag );
-		NDebugOverlay::Line( vecCenter - vecDiag * radius, vecCenter + vecDiag * radius, r, g, b, true, 0.1 );
+		NDebugOverlay::Line( vecCenter - vecDiag * radius, vecCenter + vecDiag * radius, r, g, b, true, 0.1f );
 
 		vecDiag = vecRight - vecUp;
 		VectorNormalize( vecDiag );
-		NDebugOverlay::Line( vecCenter - vecDiag * radius, vecCenter + vecDiag * radius, r, g, b, true, 0.1 );
+		NDebugOverlay::Line( vecCenter - vecDiag * radius, vecCenter + vecDiag * radius, r, g, b, true, 0.1f );
 	}
 }
 
@@ -1302,7 +1304,7 @@ void CBaseEntity::FireNamedOutput( const char *pszOutput, variant_t variant, CBa
 			if ( ( dataDesc->fieldType == FIELD_CUSTOM ) && ( dataDesc->flags & FTYPEDESC_OUTPUT ) )
 			{
 				CBaseEntityOutput *pOutput = ( CBaseEntityOutput * )( ( intp )this + ( intp )dataDesc->fieldOffset[0] );
-				if ( !Q_stricmp( dataDesc->externalName, pszOutput ) )
+				if ( V_strieq( dataDesc->externalName, pszOutput ) )
 				{
 					pOutput->FireOutput( variant, pActivator, pCaller, flDelay );
 					return;
@@ -3105,7 +3107,7 @@ static FORCEINLINE bool NamesMatch( const char *pszQuery, string_t nameToMatch )
 
 bool CBaseEntity::NameMatchesComplex( const char *pszNameOrWildcard )
 {
-	if ( !Q_stricmp( "!player", pszNameOrWildcard) )
+	if ( V_strieq( "!player", pszNameOrWildcard) )
 		return IsPlayer();
 
 	return NamesMatch( pszNameOrWildcard, m_iName );
@@ -3346,7 +3348,7 @@ void CBaseEntity::OnRestore()
 	if ( GetFlags() & FL_FAKECLIENT )
 	{
 		char szMsg[256];
-		V_snprintf( szMsg, sizeof(szMsg), "\nInvalid save, unable to load. Please run \"map %s\" to restart this level manually\n\n", gpGlobals->mapname.ToCStr() );
+		V_sprintf_safe( szMsg, "\nInvalid save, unable to load. Please run \"map %s\" to restart this level manually\n\n", gpGlobals->mapname.ToCStr() );
 		Msg( "%s", szMsg );
 		
 		engine->ServerCommand("wait;wait;disconnect;showconsole\n");
@@ -3982,7 +3984,7 @@ bool CBaseEntity::AcceptInput( const char *szInputName, CBaseEntity *pActivator,
 		{
 			if ( dmap->dataDesc[i].flags & FTYPEDESC_INPUT )
 			{
-				if ( !Q_stricmp(dmap->dataDesc[i].externalName, szInputName) )
+				if ( V_strieq(dmap->dataDesc[i].externalName, szInputName) )
 				{
 					// found a match
 
@@ -4121,7 +4123,7 @@ bool CBaseEntity::ReadKeyField( const char *varName, variant_t *var )
 		{
 			if ( dmap->dataDesc[i].flags & (FTYPEDESC_OUTPUT | FTYPEDESC_KEY) )
 			{
-				if ( !Q_stricmp(dmap->dataDesc[i].externalName, varName) )
+				if ( V_strieq(dmap->dataDesc[i].externalName, varName) )
 				{
 					var->Set( dmap->dataDesc[i].fieldType, ((char*)this) + dmap->dataDesc[i].fieldOffset[ TD_OFFSET_NORMAL ] );
 					return true;
@@ -5378,14 +5380,14 @@ void CC_Ent_Dump( const CCommand& args )
 								// get the entities name
 								if ( var.Entity() )
 								{
-									Q_snprintf( buf,sizeof(buf), "%s", STRING(var.Entity()->GetEntityName()) );
+									V_strcpy_safe( buf, STRING(var.Entity()->GetEntityName()) );
 								}
 							}
 							break;
 						}
 
 						// don't print out the duplicate keys
-						if ( !Q_stricmp("parentname",dmap->dataDesc[i].externalName) || !Q_stricmp("targetname",dmap->dataDesc[i].externalName) )
+						if ( V_strieq("parentname",dmap->dataDesc[i].externalName) || V_strieq("targetname",dmap->dataDesc[i].externalName) )
 							continue;
 
 						// don't print out empty keys
@@ -7406,7 +7408,7 @@ void CC_Ent_Create( const CCommand& args )
 	}
 
 	// Don't allow regular users to create point_servercommand entities for the same reason as blocking ent_fire
-	if ( !Q_stricmp( args[1], "point_servercommand" ) )
+	if ( V_strieq( args[1], "point_servercommand" ) )
 	{
 		if ( engine->IsDedicatedServer() )
 		{

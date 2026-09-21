@@ -459,16 +459,16 @@ void CInputSystem::InitInputContext( InputContext_t *pContext )
 	pContext->m_bSetCursorExplicitly = false;
 
 	// zero mouse and keys
-	memset(pContext->_mousePressed, 0, sizeof(pContext->_mousePressed));
-	memset(pContext->_mouseDoublePressed, 0, sizeof(pContext->_mouseDoublePressed));
-	memset(pContext->_mouseDown, 0, sizeof(pContext->_mouseDown));
-	memset(pContext->_mouseReleased, 0, sizeof(pContext->_mouseReleased));
-	memset(pContext->_keyPressed, 0, sizeof(pContext->_keyPressed));
-	memset(pContext->_keyTyped, 0, sizeof(pContext->_keyTyped));
-	memset(pContext->_keyDown, 0, sizeof(pContext->_keyDown));
-	memset(pContext->_keyReleased, 0, sizeof(pContext->_keyReleased));
+	BitwiseClear(pContext->_mousePressed);
+	BitwiseClear(pContext->_mouseDoublePressed);
+	BitwiseClear(pContext->_mouseDown);
+	BitwiseClear(pContext->_mouseReleased);
+	BitwiseClear(pContext->_keyPressed);
+	BitwiseClear(pContext->_keyTyped);
+	BitwiseClear(pContext->_keyDown);
+	BitwiseClear(pContext->_keyReleased);
 
-	pContext->m_MouseCaptureStartCode = (MouseCode)-1;
+	pContext->m_MouseCaptureStartCode = BUTTON_CODE_INVALID;
 
 	pContext->m_KeyCodeUnhandledListeners.RemoveAll();
 
@@ -552,7 +552,7 @@ void CInputSystem::RunFrame()
 {
 	if ( m_nDebugMessages == -1 )
 	{
-		m_nDebugMessages = CommandLine()->FindParm( "-vguifocus" ) ? 1 : 0;
+		m_nDebugMessages = CommandLine()->HasParm( "-vguifocus" ) ? 1 : 0;
 	}
 
 	InputContext_t *pContext = GetInputContext(m_hContext);
@@ -1375,7 +1375,6 @@ void CInputSystem::SurfaceSetCursorPos(int x, int y)
 
 void CInputSystem::SurfaceGetCursorPos( int &x, int &y )
 {
-#ifndef _X360 // X360TBD
 	if ( g_pSurface->HasCursorPosFunctions() ) // does the surface export cursor functions for us to use?
 	{
 		g_pSurface->SurfaceGetCursorPos( x,y );
@@ -1403,10 +1402,6 @@ void CInputSystem::SurfaceGetCursorPos( int &x, int &y )
 		y = 0;
 #endif
 	}
-#else
-	x = 0;
-	y = 0;
-#endif
 }
 
 void CInputSystem::SetCursorOveride(HCursor cursor)
@@ -2107,21 +2102,20 @@ void CInputSystem::OnChangeIME( bool forward )
 	ASSERT_IF_IME_NYI();
 
 #ifdef DO_IME
-	HKL currentKb = GetKeyboardLayout( 0 );
+	HKL currentKb = ::GetKeyboardLayout( 0 );
 
-	int numKBs = GetKeyboardLayoutList( 0, NULL );
+	int numKBs = ::GetKeyboardLayoutList( 0, NULL );
 	if ( numKBs > 0 )
 	{
-		HKL *list = new HKL[ numKBs ];
-
-		GetKeyboardLayoutList( numKBs, list );
+		std::unique_ptr<HKL[]> list = std::make_unique<HKL[]>( numKBs );
+		::GetKeyboardLayoutList( numKBs, list.get() );
 
 		intp oldKb = 0;
-		CUtlVector< HKL >	selections;
+		CUtlVector< HKL > selections;
 
 		for ( int i = 0; i < numKBs; ++i )
 		{
-			bool first = !IsIDInList( LOWORD( list[ i ] ), i, list );
+			bool first = !IsIDInList( LOWORD( list[ i ] ), i, list.get() );
 			if ( !first )
 				continue;
 
@@ -2146,8 +2140,6 @@ void CInputSystem::OnChangeIME( bool forward )
 
 		unsigned short langid = LOWORD( selections[ oldKb ] );
 		SpewIMEInfo( langid );
-
-		delete[] list;
 	}
 #endif
 }
@@ -2227,18 +2219,17 @@ int CInputSystem::GetIMELanguageList( LanguageItem *dest, int destcount )
 #ifdef DO_IME
 	int iret = 0;
 
-	int numKBs = GetKeyboardLayoutList( 0, NULL );
+	int numKBs = ::GetKeyboardLayoutList( 0, NULL );
 	if ( numKBs > 0 )
 	{
-		HKL *list = new HKL[ numKBs ];
-
-		GetKeyboardLayoutList( numKBs, list );
+		std::unique_ptr<HKL[]> list = std::make_unique<HKL[]>( numKBs );
+		::GetKeyboardLayoutList( numKBs, list.get() );
 
 		CUtlVector< HKL >	selections;
 
 		for ( int i = 0; i < numKBs; ++i )
 		{
-			bool first = !IsIDInList( LOWORD( list[ i ] ), i, list );
+			bool first = !IsIDInList( LOWORD( list[ i ] ), i, list.get() );
 			if ( !first )
 				continue;
 
@@ -2256,20 +2247,15 @@ int CInputSystem::GetIMELanguageList( LanguageItem *dest, int destcount )
 
 				LanguageIds *info = GetLanguageInfo( LOWORD( hkl ) );
 
-				memset( p, 0, sizeof( IInput::LanguageItem ) );
+				BitwiseClear( *p );
 
-				wcsncpy( p->shortname, info->shortcode, std::size( p->shortname ) );
-				p->shortname[ std::size( p->shortname ) - 1 ] = L'\0';
-
-				wcsncpy( p->menuname, info->displayname, std::size( p->menuname ) );
-				p->menuname[ std::size( p->menuname ) - 1 ] = L'\0';
+				V_wcscpy_safe( p->shortname, info->shortcode );
+				V_wcscpy_safe( p->menuname, info->displayname );
 
 				p->handleValue = (intp)hkl;
 				p->active = hkl == GetKeyboardLayout( 0 );
 			}
 		}
-
-		delete[] list;
 	}
 	return iret;
 #else

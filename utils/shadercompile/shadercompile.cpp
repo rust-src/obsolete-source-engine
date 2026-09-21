@@ -322,7 +322,7 @@ struct CGlobalMutexAutoLock {
 #define GLOBAL_DATA_MTX_UNLOCK() threading::g_mtxGlobal.Unlock()
 #define GLOBAL_DATA_MTX_LOCK_AUTO threading::CGlobalMutexAutoLock UNIQUE_ID;
 
-// Consume all characters for which (isspace) is true
+// Consume all characters for which (V_isspace) is true
 template <typename T>
 char *ConsumeCharacters(char *szString, T pred) {
   if (szString) {
@@ -416,14 +416,16 @@ void ErrMsgDispatchInt(
     char *szMessage, char const *szShaderName,
     CUtlStringMap<CompilerMsgInfo> &shader_message_info_map) {
   // First line is the command number "szCommand"
-  char *szCommand = ConsumeCharacters(szMessage, isspace);
+  // dimhotepus: isspace -> V_isspace. 
+  char *szCommand = ConsumeCharacters(szMessage, V_isspace);
   char *szMessageListing = FindNext(szCommand, "\r\n");
   char chTerminator = *szMessageListing;
   *(szMessageListing++) = '\0';
 
   // Now come the command lines actually
   while (chTerminator) {
-    char *szMsgText = ConsumeCharacters(szMessageListing, isspace);
+    // dimhotepus: isspace -> V_isspace. 
+    char *szMsgText = ConsumeCharacters(szMessageListing, V_isspace);
     szMessageListing = FindNext(szMsgText, "\r\n");
     chTerminator = *szMessageListing;
     *(szMessageListing++) = 0;
@@ -643,7 +645,7 @@ void WriteShaderFiles(
   ShaderInfo_t &shaderInfo = shader_info_map[shader_name];
   if (!shaderInfo.m_pShaderName) {
     for (const auto *pAnalyze = configs.get(); pAnalyze->m_szName; ++pAnalyze) {
-      if (!strcmp(pAnalyze->m_szName, shader_name)) {
+      if (V_streq(pAnalyze->m_szName, shader_name)) {
         ParseShaderInfoFromCompileCommands(pAnalyze, shaderInfo);
         shader_info_map[shader_name] = shaderInfo;
         break;
@@ -890,6 +892,10 @@ std::unique_ptr<se::shader_compile::command_sink::IResponse> MySystem(
     Error("Unable to create console process '%s/%s' (%lu: %s)!\n", temp_path,
           temp_file_name, rc, std::system_category().message(rc).c_str());
   }
+  
+  // Close process and thread handles.
+  RunCodeAtScopeExit(CloseHandle(pi.hThread));
+  RunCodeAtScopeExit(CloseHandle(pi.hProcess));
 
   // Wait until child process exits.
   WaitForSingleObject(pi.hProcess, INFINITE);
@@ -898,10 +904,6 @@ std::unique_ptr<se::shader_compile::command_sink::IResponse> MySystem(
   if (GetExitCodeProcess(pi.hProcess, &rc) && rc != 0) {
     Warning("'%s' command failed w/e %lu.\n", pCommand, rc);
   }
-
-  // Close process and thread handles.
-  CloseHandle(pi.hThread);
-  CloseHandle(pi.hProcess);
 
   if (unlink(temp_file_name) && errno != ENOENT) {
     Warning("Unable to remove '%s' (%d: %s).\n", pCommand, errno,
@@ -1640,10 +1642,10 @@ void CompileShaders(
       V_sprintf_safe(
           chCommands, "%s",
           PrettyPrintNumber(pEntry->m_iCommandEnd - pEntry->m_iCommandStart));
-      V_sprintf_safe(chStaticCombos, "%s",
-                     PrettyPrintNumber(pEntry->m_numStaticCombos));
-      V_sprintf_safe(chDynamicCombos, "%s",
-                     PrettyPrintNumber(pEntry->m_numDynamicCombos));
+      V_strcpy_safe(chStaticCombos,
+                    PrettyPrintNumber(pEntry->m_numStaticCombos));
+      V_strcpy_safe(chDynamicCombos,
+                    PrettyPrintNumber(pEntry->m_numDynamicCombos));
 
       Msg("Compiling %s commands in %s static, %s dynamic combos in %s...\n",
           chCommands, chStaticCombos, chDynamicCombos, pEntry->m_szName);
@@ -1806,7 +1808,7 @@ int ShaderCompileMain(int argc, char *argv[]) {
   if (rc) return rc;
 
   const char *shader_path{cmd_line->ParmValue("-shaderpath", "")};
-  const bool is_verbose{cmd_line->FindParm("-verbose") != 0};
+  const bool is_verbose{cmd_line->HasParm("-verbose")};
   const bool has_game_arg{cmd_line->HasParm("-game")};
 
   if (!FileSystem_Init(
@@ -1846,12 +1848,12 @@ int ShaderCompileMain(int argc, char *argv[]) {
   {
     char commands_no[32], static_combos_no[32], dynamic_combos_no[32];
 
-    V_sprintf_safe(commands_no, "%s",
-                   PrettyPrintNumber(parseResult.compile_commands_num));
-    V_sprintf_safe(static_combos_no, "%s",
-                   PrettyPrintNumber(parseResult.static_combos_num));
-    V_sprintf_safe(dynamic_combos_no, "%s",
-                   PrettyPrintNumber(parseResult.dynamic_combos_num));
+    V_strcpy_safe(commands_no,
+                  PrettyPrintNumber(parseResult.compile_commands_num));
+    V_strcpy_safe(static_combos_no,
+                  PrettyPrintNumber(parseResult.static_combos_num));
+    V_strcpy_safe(dynamic_combos_no,
+                  PrettyPrintNumber(parseResult.dynamic_combos_num));
 
     Msg("Compiling %s commands in %s static, %s dynamic combos...\n",
         commands_no, static_combos_no, dynamic_combos_no);

@@ -27,8 +27,8 @@
 #include "tier0/threadtools.h"
 #include "datacache/idatacache.h"
 
-#define LIPSYNC_POSEPARAM_NAME "mouth"
-#define NUM_HITBOX_FIRES	10
+constexpr inline char LIPSYNC_POSEPARAM_NAME[]{"mouth"};
+constexpr inline int NUM_HITBOX_FIRES{10};
 
 /*
 class C_BaseClientShader
@@ -814,6 +814,6 @@ void SetColumn( Vector &src, int column, matrix3x4_t& dest );
 EXTERN_RECV_TABLE(DT_BaseAnimating);
 
 
-extern void DevMsgRT( PRINTF_FORMAT_STRING char const* pMsg, ... );
+void DevMsgRT( PRINTF_FORMAT_STRING char const* pMsg, ... );
 
 #endif // C_BASEANIMATING_H

@@ -80,7 +80,7 @@ char *CmdLib_FGets(char *pOut, int outSize, FileHandle_t hFile) {
   int it = 0;
   for (; it < (outSize - 1); it++) {
     char c;
-    if (!g_pFileSystem->Read(&c, 1, hFile)) {
+    if (!g_pFileSystem->Read(c, hFile)) {
       if (it == 0) return nullptr;
 
       break;
@@ -185,7 +185,7 @@ static const char *PrefixMessageGroup(
   if (length > 1 && message[length - 1] == '\n') {
     V_sprintf_safe(out, "[%.3f][%s] %s", Plat_FloatTime(), out_group, message);
   } else {
-    V_sprintf_safe(out, "%s", message);
+    V_strcpy_safe(out, message);
   }
 
   return out;
@@ -369,6 +369,8 @@ void ExpandWildcards(int *argc, char ***argv) {
     intptr_t handle = _findfirst(path, &fileinfo);
     if (handle == -1) return;
 
+    RunCodeAtScopeExit(_findclose(handle));
+
     V_ExtractFilePath(path, filebase);
 
     do {
@@ -376,8 +378,6 @@ void ExpandWildcards(int *argc, char ***argv) {
 
       ex_argv[ex_argc++] = copystring(filename);
     } while (_findnext(handle, &fileinfo) != -1);
-
-    _findclose(handle);
   }
 
   *argc = ex_argc;
@@ -541,7 +541,7 @@ Returns the argument number (1 to argc-1) or 0 if not present
 */
 int CheckParm(char *check) {
   for (int i = 1; i < myargc; i++) {
-    if (!Q_strcasecmp(check, myargv[i])) return i;
+    if (V_strieq(check, myargv[i])) return i;
   }
 
   return 0;

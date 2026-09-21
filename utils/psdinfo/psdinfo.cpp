@@ -18,14 +18,14 @@
 
 int Usage()
 {
-	printf( "psdinfo ver. " __DATE__ " " __TIME__ "\n" );
-	printf( "Usage: \n" );
-	printf( "      psdinfo [OPTIONS] psdfile.psd \n" );
-	printf( "Options: \n" );
-	printf( "      -read         read and print the info record (default) \n" );
-	printf( "      -write        update the info record with data from pipe \n" );
-	printf( "psdfile.psd         the PSD file to process. \n" );
-	printf( "\n" );
+	fprintf( stderr, "psdinfo ver. " __DATE__ " " __TIME__ "\n" );
+	fprintf( stderr, "Usage: \n" );
+	fprintf( stderr, "      psdinfo [OPTIONS] psdfile.psd \n" );
+	fprintf( stderr, "Options: \n" );
+	fprintf( stderr, "      -read         read and print the info record (default) \n" );
+	fprintf( stderr, "      -write        update the info record with data from pipe \n" );
+	fprintf( stderr, "psdfile.psd         the PSD file to process. \n" );
+	fprintf( stderr, "\n" );
 
 	return 1;
 }
@@ -255,17 +255,17 @@ int main( int argc, char **argv )
 	// Read out all the options
 	for ( int iArg = 1; iArg < argc - 1; ++ iArg )
 	{
-		if ( !stricmp( argv[iArg], "-read" ) )
+		if ( V_strieq( argv[iArg], "-read" ) )
 		{
 			s_opts.bWriteInfo = false;
 		}
-		else if ( !stricmp( argv[iArg], "-write" ) )
+		else if ( V_strieq( argv[iArg], "-write" ) )
 		{
 			s_opts.bWriteInfo = true;
 		}
 		else
 		{
-			printf( "Unknown option \"%s\"!\n", argv[iArg] );
+			fprintf( stderr, "Unknown option \"%s\"!\n", argv[iArg] );
 			return Usage();
 		}
 	}

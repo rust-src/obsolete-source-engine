@@ -2655,7 +2655,7 @@ void CDmeTypedCurveInfo< T >::OnConstruction()
 	for ( int i = 0; i < 2; ++i )
 	{
 		char edgename[ 32 ];
-		Q_snprintf( edgename, sizeof( edgename ), "%s", i == 0 ? "left" : "right" );
+		V_strcpy_safe( edgename, i == 0 ? "left" : "right" );
 		char name[ 32 ];
 		Q_snprintf( name, sizeof( name ), "%sEdgeActive", edgename );
 		m_bEdgeActive[ i ].Init( this, name );
@@ -5943,9 +5943,10 @@ void CDmeTypedLog< float >::BuildNormalizedLayer( CDmeTypedLogLayer< float > *ta
 	for ( intp i = 0; i < kc; ++i )
 	{
 		DmeTime_t keyTime = baseLayer->GetKeyTime( i );
-		int keyValue = baseLayer->GetKeyValue( i );
+		// dimhotepus: int -> float.
+		float keyValue = baseLayer->GetKeyValue( i );
 
-		float len = (float)keyValue;
+		float len = keyValue;
 
 		if ( len < flMin )
 		{

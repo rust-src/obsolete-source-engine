@@ -165,12 +165,12 @@ const char * GetTranslatedWeaponAlias( const char *szAlias )
 //
 const char * GetWeaponAliasFromTranslated(const char *translatedAlias)
 {
-	int i = 0;
+	intp i = 0;
 	const WeaponAliasTranslationInfoStruct *info = &(s_WeaponAliasTranslationInfo[i]);
 
-	while (info->alias[0] != 0)
+	while (!Q_isempty(info->alias))
 	{
-		if (Q_stricmp(translatedAlias, info->translatedAlias) == 0)
+		if (V_strieq(translatedAlias, info->translatedAlias))
 		{
 			return info->alias;
 		}
@@ -244,19 +244,19 @@ bool IsSecondaryWeapon( CSWeaponID id )
 #ifdef CLIENT_DLL
 int GetShellForAmmoType( const char *ammoname )
 {
-	if ( !Q_strcmp( BULLET_PLAYER_762MM, ammoname ) )
+	if ( V_streq( BULLET_PLAYER_762MM, ammoname ) )
 		return CS_SHELL_762NATO;
 
-	if ( !Q_strcmp( BULLET_PLAYER_556MM, ammoname ) )
+	if ( V_streq( BULLET_PLAYER_556MM, ammoname ) )
 		return CS_SHELL_556;
 
-	if ( !Q_strcmp( BULLET_PLAYER_338MAG, ammoname ) )
+	if ( V_streq( BULLET_PLAYER_338MAG, ammoname ) )
 		return CS_SHELL_338MAG;
 
-	if ( !Q_strcmp( BULLET_PLAYER_BUCKSHOT, ammoname ) )
+	if ( V_streq( BULLET_PLAYER_BUCKSHOT, ammoname ) )
 		return CS_SHELL_12GAUGE;
 
-	if ( !Q_strcmp( BULLET_PLAYER_57MM, ammoname ) )
+	if ( V_streq( BULLET_PLAYER_57MM, ammoname ) )
 		return CS_SHELL_57;
 
 	// default 9 mm

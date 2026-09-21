@@ -203,7 +203,7 @@ void PlayLockSounds(CBaseEntity *pEdict, locksound_t *pls, int flocked, int fbut
 			int iprev = pls->iUnlockedSentence;
 			
 			pls->iUnlockedSentence = SENTENCEG_PlaySequentialSz(pEdict->edict(), STRING(pls->sUnlockedSentence), 
-					  0.85, SNDLVL_NORM, 0, 100, pls->iUnlockedSentence, FALSE);
+					  0.85f, SNDLVL_NORM, 0, 100, pls->iUnlockedSentence, FALSE);
 			pls->iLockedSentence = 0;
 
 			// make sure we don't keep calling last sentence in list

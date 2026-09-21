@@ -152,8 +152,8 @@ void ModelPoseDebugInfo::AddInfoText( InfoText *x, ModelPoseDebugInfo *pOld )
 			{
 				InfoText &txt = o.m_arrTxt[k];
 				if ( ( txt.m_uiFlags & F_SEEN_THIS_FRAME ) &&
-					!stricmp( x->m_chActivity, txt.m_chActivity ) &&
-					!stricmp( x->m_chLabel, txt.m_chLabel ) &&
+					V_strieq( x->m_chActivity, txt.m_chActivity ) &&
+					V_strieq( x->m_chLabel, txt.m_chLabel ) &&
 					( x->m_iActivity == txt.m_iActivity ) )
 				{
 					x->m_flTimeAlive = txt.m_flTimeAlive;
@@ -227,8 +227,8 @@ ModelPoseDebugInfo::InfoText * ModelPoseDebugInfo::LookupInfoText( InfoText *x )
 		{
 			InfoText &txt = m_arrTxt[k];
 			if ( ( txt.m_uiFlags & F_SEEN_THIS_FRAME ) &&
-				!stricmp( x->m_chActivity, txt.m_chActivity ) &&
-				!stricmp( x->m_chLabel, txt.m_chLabel ) &&
+				V_strieq( x->m_chActivity, txt.m_chActivity ) &&
+				V_strieq( x->m_chLabel, txt.m_chLabel ) &&
 				( x->m_iActivity == txt.m_iActivity ) )
 			{
 				return &txt;
@@ -513,8 +513,8 @@ void CPoseDebuggerImpl::AccumulatePose( const CStudioHdr *pStudioHdr, CIKContext
 	int numLines = 0;
 	
 	txt.m_iActivity = seqdesc.activity;
-	V_sprintf_safe( txt.m_chActivity, "%s", seqdesc.pszActivityName() );
-	V_sprintf_safe( txt.m_chLabel, "%s", seqdesc.pszLabel() );
+	V_strcpy_safe( txt.m_chActivity, seqdesc.pszActivityName() );
+	V_strcpy_safe( txt.m_chLabel, seqdesc.pszLabel() );
 
 	if ( !txt.m_chActivity[0] )
 	{
@@ -525,7 +525,7 @@ void CPoseDebuggerImpl::AccumulatePose( const CStudioHdr *pStudioHdr, CIKContext
 			if ( lastSeenTxt.m_uiFlags & ModelPoseDebugInfo::F_SEEN_THIS_FRAME &&
 				 lastSeenTxt.m_chActivity[0] )
 			{
-				V_sprintf_safe( txt.m_chActivity, "%s", lastSeenTxt.m_chActivity );
+				V_strcpy_safe( txt.m_chActivity, lastSeenTxt.m_chActivity );
 				break;
 			}
 		}

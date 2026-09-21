@@ -23,19 +23,19 @@
 //-----------------------------------------------------------------------------
 void PrintHelp( )
 {
-	printf( "Usage: rpt -i <in .csv file> -m <.mdl relative path> -o <output dir>\n" );
-	printf( "				[-f <fac output dir>] [-p] [-w] [-r <sample rate in hz>] [-s <sample filter size>]\n" );
-	printf( "				[-nop4] [-vproject <path to gameinfo.txt>]\n" );
-	printf( "\t-h,-help,-?\t:Displays this help message.\n" );
-	printf( "\t-m\t: Indicates the path of the .mdl file under game/mod/models/ to use in the sfm files.\n" );
-	printf( "\t-o\t: Indicates output directory to place generated files in.\n" );
-	printf( "\t-f\t: [Optional] Indicates that facial files should be created in the specified fac output dir.\n" );
-	printf( "\t-p\t: [Optional] Indicates the extracted phonemes should be written into the wav file.\n" );
-	printf( "\t-w\t: [Optional] Indicates the phonemes should be read from the wav file. Cannot also have -p specified.\n" );
-	printf( "\t-r\t: [Optional] Specifies the phoneme extraction sample rate (default = 20)\n" );
-	printf( "\t-s\t: [Optional] Specifies the phoneme extraction sample filter size (default = 0.08)\n" );
-	printf( "\t-nop4\t: Disables auto perforce checkout/add.\n" );
-	printf( "\t-vproject\t: Specifies path to a gameinfo.txt file (which mod to build for).\n" );
+	fprintf( stderr, "Usage: rpt -i <in .csv file> -m <.mdl relative path> -o <output dir>\n" );
+	fprintf( stderr, "				[-f <fac output dir>] [-p] [-w] [-r <sample rate in hz>] [-s <sample filter size>]\n" );
+	fprintf( stderr, "				[-nop4] [-vproject <path to gameinfo.txt>]\n" );
+	fprintf( stderr, "\t-h,-help,-?\t:Displays this help message.\n" );
+	fprintf( stderr, "\t-m\t: Indicates the path of the .mdl file under game/mod/models/ to use in the sfm files.\n" );
+	fprintf( stderr, "\t-o\t: Indicates output directory to place generated files in.\n" );
+	fprintf( stderr, "\t-f\t: [Optional] Indicates that facial files should be created in the specified fac output dir.\n" );
+	fprintf( stderr, "\t-p\t: [Optional] Indicates the extracted phonemes should be written into the wav file.\n" );
+	fprintf( stderr, "\t-w\t: [Optional] Indicates the phonemes should be read from the wav file. Cannot also have -p specified.\n" );
+	fprintf( stderr, "\t-r\t: [Optional] Specifies the phoneme extraction sample rate (default = 20)\n" );
+	fprintf( stderr, "\t-s\t: [Optional] Specifies the phoneme extraction sample filter size (default = 0.08)\n" );
+	fprintf( stderr, "\t-nop4\t: Disables auto perforce checkout/add.\n" );
+	fprintf( stderr, "\t-vproject\t: Specifies path to a gameinfo.txt file (which mod to build for).\n" );
 }
 
 
@@ -47,7 +47,7 @@ static int FindParm( const char *pParam, int argc, char **argv )
 	// Start at 1 so as to not search the exe name
 	for ( int i = 1; i < argc; ++i )
 	{
-		if ( !strcmp( pParam, argv[i] ) )
+		if ( V_streq( pParam, argv[i] ) )
 			return i;
 	}
 	return 0;
@@ -164,7 +164,7 @@ static void DisplayWindowsError( const char *pMessage )
 	char pErrorMessage[2048];
 	FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM, NULL, dw, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 		pErrorMessage, sizeof(pErrorMessage), NULL );
-	printf( "%s\n%s\n", pMessage, pErrorMessage );
+	fprintf( stderr, "%s\n%s\n", pMessage, pErrorMessage );
 }
 
 
@@ -204,9 +204,11 @@ static bool IsSteamProcessActive( DWORD nProcessID )
 		return false;
 
 	HANDLE hProcess = OpenProcess( PROCESS_TERMINATE | PROCESS_QUERY_INFORMATION, FALSE, nProcessID );
-	bool bProcessActive = ( hProcess != 0 );
+	bool bProcessActive = hProcess != nullptr;
 	if ( bProcessActive )
 	{
+		RunCodeAtScopeExit(CloseHandle( hProcess ));
+
 		DWORD nExitCode;
 		BOOL bOk = GetExitCodeProcess( hProcess, &nExitCode );
 		if ( !bOk || ( nExitCode != STILL_ACTIVE ) )
@@ -215,7 +217,6 @@ static bool IsSteamProcessActive( DWORD nProcessID )
 		}
 	}
 
-	CloseHandle( hProcess );
 	return bProcessActive;
 }
 
@@ -226,10 +227,11 @@ static void TerminateSteamProcess( DWORD nProcessID )
 		return;
 
 	HANDLE hProcess = OpenProcess( PROCESS_TERMINATE, FALSE, nProcessID );
-	if ( hProcess != 0 )
+	if ( hProcess )
 	{
-		TerminateProcess( hProcess, 0 );
-		CloseHandle( hProcess );
+		RunCodeAtScopeExit( CloseHandle( hProcess ) );
+
+		TerminateProcess( hProcess, -1 );
 	}
 }
 
@@ -292,12 +294,14 @@ bool CopyFilesRecursively( const char *pSrcPath, const char *pDestPath )
 	if( INVALID_HANDLE_VALUE == hFind )
 		return true;
 
+	RunCodeAtScopeExit(FindClose( hFind ));
+
 	// Make sure the dest path exists
 	if ( ( GetFileAttributes( pDestPath ) & FILE_ATTRIBUTE_DIRECTORY ) == 0 )
 	{
 		if ( !CreateDirectory( pDestPath, NULL ) )
 		{
-			printf( "Unable to create directory %s\n", pDestPath );
+			fprintf( stderr, "Unable to create directory %s\n", pDestPath );
 			return false;
 		}
 	}
@@ -306,7 +310,7 @@ bool CopyFilesRecursively( const char *pSrcPath, const char *pDestPath )
 	do
 	{
 		// Skip . and ..
-		if ( !strcmp( find.cFileName, "." ) || !strcmp( find.cFileName, ".." ) )
+		if ( V_streq( find.cFileName, "." ) || V_streq( find.cFileName, ".." ) )
 			continue;
 
 		char pSrcChildPath[MAX_PATH];
@@ -331,20 +335,18 @@ bool CopyFilesRecursively( const char *pSrcPath, const char *pDestPath )
 
 		if ( CopyFile( pSrcChildPath, pDestChildPath, FALSE ) == 0 )
 		{
-			printf( "Unable to copy file %s to %s\n", pSrcChildPath, pDestChildPath );
+			fprintf( stderr, "Unable to copy file %s to %s\n", pSrcChildPath, pDestChildPath );
 			return false;
 		}
 
 		if ( !SetFileAttributes( pDestChildPath, FILE_ATTRIBUTE_READONLY ) )
 		{
-			printf( "Unable to make file %s read only.\n", pDestChildPath );
+			fprintf( stderr, "Unable to make file %s read only.\n", pDestChildPath );
 			return false;
 		}
 
 	} while( FindNextFile( hFind, &find ) );
 
-	// Close the find handle.
-	FindClose( hFind );
 	return true;
 }
 
@@ -362,7 +364,7 @@ static bool CopyFilesIntoPosition( const char *pSteamPath )
 	char pSrcRoot[MAX_PATH];
 	if ( !::GetModuleFileName( ( HINSTANCE )GetModuleHandle( NULL ), pSrcRoot, sizeof(pSrcRoot) ) )
 	{
-		printf( "Unable to find rpt launch path!\n" );
+		fprintf( stderr, "Unable to find rpt launch path!\n" );
 		return false;
 	}
 	StripFileName( pSrcRoot );
@@ -385,7 +387,7 @@ static bool LaunchNewSteamProcess( const char *pSteamPath )
 	FILE* fp = fopen( pCfgPath, "wt" );
 	if ( !fp )
 	{
-		printf( "rpt: Unable to relaunch steam! Aborting...\n" );
+		fprintf( stderr, "rpt: Unable to relaunch steam! Aborting...\n" );
 		return false;
 	}
 
@@ -409,7 +411,7 @@ static bool LaunchNewSteamProcess( const char *pSteamPath )
 
 		TerminateSteamProcess( nNewPID );
 		DeleteCfgFile( pCfgPath );
-		printf( "rpt: Unable to launch new steam process!" );
+		fprintf( stderr, "rpt: Unable to launch new steam process!" );
 		return false;
 	}
 
@@ -434,7 +436,7 @@ int main( int argc, char **argv )
 	char pSteamPath[MAX_PATH];
 	if ( !DetectSteamPath( pSteamPath, sizeof(pSteamPath) ) )
 	{
-		printf( "rpt: Unable to detect steam installation path! Aborting...\n" );
+		fprintf( stderr, "rpt: Unable to detect steam installation path! Aborting...\n" );
 		return 0;
 	}
 

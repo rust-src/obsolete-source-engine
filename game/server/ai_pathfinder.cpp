@@ -122,7 +122,7 @@ Navigation_t CAI_Pathfinder::ComputeWaypointType( CAI_Node **ppNodes, int parent
 			if ( !moveTypeBits && linkMoveTypeBits == bits_CAP_MOVE_JUMP )
 			{
 				Assert( pNode->GetHint() && pNode->GetHint()->HintType() == HINT_JUMP_OVERRIDE );
-				ppNodes[destID]->Lock(0.3);
+				ppNodes[destID]->Lock(0.3f);
 				moveTypeBits = linkMoveTypeBits;
 			}
 			Navigation_t linkType = MoveBitsToNavType( moveTypeBits );
@@ -294,10 +294,10 @@ AI_Waypoint_t *CAI_Pathfinder::FindBestPath(int startID, int endID)
 	CVarBitVec	closeBS(nNodes);
 
 	// ------------- INITIALIZE ------------------------
-	float* nodeG = (float *)stackalloc( nNodes * sizeof(float) );
-	float* nodeH = (float *)stackalloc( nNodes * sizeof(float) );
-	float* nodeF = (float *)stackalloc( nNodes * sizeof(float) );
-	int*   nodeP = (int *)stackalloc( nNodes * sizeof(int) );		// Node parent 
+	float* nodeG = stackallocT( float, nNodes );
+	float* nodeH = stackallocT( float, nNodes );
+	float* nodeF = stackallocT( float, nNodes );
+	int*   nodeP = stackallocT( int, nNodes );		// Node parent 
 
 	for (int node=0;node<nNodes;node++)
 	{
@@ -391,7 +391,7 @@ AI_Waypoint_t* CAI_Pathfinder::FindShortRandomPath(int startID, float minPathLen
 	
 	MARK_TASK_EXPENSIVE();
 
-	int *nodeParent	= (int *)stackalloc( sizeof(int) * nNodes );
+	int *nodeParent	= stackallocT( int, nNodes );
 	CVarBitVec closeBS(nNodes);
 	Vector vDirection = directionIn;
 

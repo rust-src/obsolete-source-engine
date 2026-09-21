@@ -46,6 +46,13 @@ void CFogUIPanel::InstallFogUI( vgui::Panel *parent )
 	Assert( g_pFogUI );
 }
 
+// dimhotepus: Pair with install.
+void CFogUIPanel::UninstallFogUI()
+{
+	g_pFogUI->MarkForDeletion();
+	g_pFogUI = nullptr;
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
@@ -243,7 +250,7 @@ void CFogUIPanel::OnTick()
 //-----------------------------------------------------------------------------
 void CFogUIPanel::OnCommand( const char *command )
 {
-	if ( !Q_strcasecmp( command, "FogOverride" ) )
+	if ( V_strieq( command, "FogOverride" ) )
 	{
 		if ( m_pFogOverride->IsSelected() == true )
 		{
@@ -254,7 +261,7 @@ void CFogUIPanel::OnCommand( const char *command )
 			Cbuf_AddText( "fog_override 0\n" );
 		}
 	}
-	else if ( !Q_strcasecmp( command, "FogEnable" ) )
+	else if ( V_strieq( command, "FogEnable" ) )
 	{
 		if ( m_pFogEnable->IsSelected() == true )
 		{
@@ -265,7 +272,7 @@ void CFogUIPanel::OnCommand( const char *command )
 			Cbuf_AddText( "fog_enable 0\n" );
 		}
 	}
-	else if ( !Q_strcasecmp( command, "FogEnableSky" ) )
+	else if ( V_strieq( command, "FogEnableSky" ) )
 	{
 		if ( m_pFogEnableSky->IsSelected() == true )
 		{
@@ -276,7 +283,7 @@ void CFogUIPanel::OnCommand( const char *command )
 			Cbuf_AddText( "fog_enableskybox 0\n" );
 		}
 	}
-	else if ( !Q_strcasecmp( command, "FarZOverride" ) )
+	else if ( V_strieq( command, "FarZOverride" ) )
 	{
 		if ( m_pFarZOverride->IsSelected() == true )
 		{
@@ -398,10 +405,8 @@ void CFogUIPanel::OnTextKillFocus( KeyValues *data )
 // Purpose: Messages
 //-----------------------------------------------------------------------------
 void CFogUIPanel::OnMessage( const KeyValues *params, VPANEL fromPanel )
-{
-	BaseClass::OnMessage( params, fromPanel );
-	
-	if ( !Q_strcmp( "SliderMoved", params->GetName() ) )
+{	
+	if ( V_streq( "SliderMoved", params->GetName() ) )
 	{
 		// World
 		if ( fromPanel == m_pFogStart->GetVPanel() )
@@ -462,6 +467,9 @@ void CFogUIPanel::OnMessage( const KeyValues *params, VPANEL fromPanel )
 			m_pFarZText->SetText( va( "%i", m_pFarZ->GetValue() ) );
 		}
 	}
+
+	// dimhotepus: Delete destroys memory, need to postpone.
+	BaseClass::OnMessage( params, fromPanel );
 }
 
 //-----------------------------------------------------------------------------

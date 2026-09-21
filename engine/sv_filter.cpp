@@ -151,7 +151,7 @@ static void Filter_Add_f( const CCommand& args )
 	char		szDuration[256];
 	CGameClient *client = NULL;
 
-	if ( !Q_stricmp( args[0], "banip" ) )
+	if ( V_strieq( args[0], "banip" ) )
 	{
 		ConWarning( "Please use \"addip\" instead of \"banip\".\n" );
 	}
@@ -578,7 +578,7 @@ CON_COMMAND( removeid, "Remove a user ID from the ban list." )
 			{
 				bValid = id->steamid.IsValid();
 				if ( bValid )
-					V_sprintf_safe( szSearchString, "%s", id->steamid.Render() );
+					V_strcpy_safe( szSearchString, id->steamid.Render() );
 			}
 		}
 		else
@@ -590,7 +590,7 @@ CON_COMMAND( removeid, "Remove a user ID from the ban list." )
 
 				bValid = cSteamIDCheck.IsValid();
 				if ( bValid )
-					V_sprintf_safe( szSearchString, "%s", cSteamIDCheck.Render() );
+					V_strcpy_safe( szSearchString, cSteamIDCheck.Render() );
 			}
 		}
 
@@ -727,7 +727,7 @@ CON_COMMAND( banid, "Add a user ID to the ban list." )
 		return;
 	}
 
-	const bool bKick = args.ArgC() >= 3 && Q_strcasecmp( args[ args.ArgC() - 1 ], "kick" ) == 0;
+	const bool bKick = args.ArgC() >= 3 && V_strieq( args[ args.ArgC() - 1 ], "kick" );
 	
 	char szSearchString[64];
 	szSearchString[0] = '\0';
@@ -758,7 +758,7 @@ CON_COMMAND( banid, "Add a user ID to the ban list." )
 
 				bValid = cSteamIDCheck.IsValid();
 				if ( bValid )
-					V_sprintf_safe( szSearchString, "%s", cSteamIDCheck.Render() );
+					V_strcpy_safe( szSearchString, cSteamIDCheck.Render() );
 			}
 		}
 
@@ -810,7 +810,7 @@ CON_COMMAND( banid, "Add a user ID to the ban list." )
 		else
 		{
 			// searching by UniqueID
-			if ( Q_stricmp( client->GetNetworkIDString(), szSearchString ) == 0 ) 
+			if ( V_strieq( client->GetNetworkIDString(), szSearchString ) ) 
 			{
 				// found!
 				localId = client->GetNetworkID();
@@ -881,7 +881,8 @@ CON_COMMAND( banid, "Add a user ID to the ban list." )
 	IGameEvent *event = g_GameEventManager.CreateEvent( "server_addban" );
 	if ( event )
 	{
-		if ( bPlaying )
+		// dimhotepus: Check client before dereference.
+		if ( bPlaying && client )
 		{
 			event->SetString( "name", client->m_Name );
 			event->SetInt( "userid", client->GetUserID() );

@@ -282,11 +282,11 @@ void CL_FlushEntityPacket( CClientFrame *packet, char const *errorString, ... )
 	ConMsg("%s", str);
 
 	np.fixed_width_font = false;
-	np.time_to_live = 1.0;
+	np.time_to_live = 1.0f;
 	np.index = 0;
-	np.color[ 0 ] = 1.0;
-	np.color[ 1 ] = 0.2;
-	np.color[ 2 ] = 0.0;
+	np.color[ 0 ] = 1.0f;
+	np.color[ 1 ] = 0.2f;
+	np.color[ 2 ] = 0.0f;
 	Con_NXPrintf( &np, "WARNING:  CL_FlushEntityPacket, %s", str );
 
 	// Free packet memory.
@@ -384,8 +384,8 @@ void CL_CopyNewEntity(
 	if ( u.m_bUpdateBaselines )
 	{
 		// store this baseline in u.m_pUpdateBaselines
-		ALIGN4 char packedData[MAX_PACKEDENTITY_DATA] ALIGN4_POST;
-		bf_write writeBuf( "CL_CopyNewEntity->newBuf", packedData, sizeof(packedData) );
+		alignas(4) char packedData[MAX_PACKEDENTITY_DATA];
+		bf_write writeBuf( "CL_CopyNewEntity->newBuf", packedData );
 
 		RecvTable_MergeDeltas( pRecvTable, &fromBuf, u.m_pBuf, &writeBuf, -1, NULL, true );
 

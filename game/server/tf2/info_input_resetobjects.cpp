@@ -91,7 +91,7 @@ void CInfoInputResetObjects::InputResetPlayer( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 void CInfoInputResetObjects::ResetTeamsObjects( CTFTeam *pTeam )
 {
-	for ( int i = 0; i < pTeam->GetNumPlayers(); i++ )
+	for ( intp i = 0; i < pTeam->GetNumPlayers(); i++ )
 	{
 		ResetPlayersObjects( (CBaseTFPlayer*)pTeam->GetPlayer(i) );
 	}

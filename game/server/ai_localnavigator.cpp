@@ -18,7 +18,7 @@
 
 ConVar ai_debug_directnavprobe("ai_debug_directnavprobe", "0");
 
-constexpr inline float TIME_DELAY_FULL_DIRECT_PROBE[2] = { 0.25, 0.35 };
+constexpr inline float TIME_DELAY_FULL_DIRECT_PROBE[2] = { 0.25f, 0.35f };
 
 //-----------------------------------------------------------------------------
 
@@ -112,8 +112,8 @@ bool CAI_LocalNavigator::MoveCalcDirect( AILocalMoveGoal_t *pMoveGoal, bool bOnl
 		if ( !m_FullDirectTimer.Expired() )
 		{
 			if ( !m_fLastWasClear || 
-				 ( !VectorsAreEqual(pMoveGoal->target, m_LastMoveGoal.target, 0.1) || 
-				   !VectorsAreEqual(pMoveGoal->dir, m_LastMoveGoal.dir, 0.1) ) ||
+				 ( !VectorsAreEqual(pMoveGoal->target, m_LastMoveGoal.target, 0.1f) || 
+				   !VectorsAreEqual(pMoveGoal->dir, m_LastMoveGoal.dir, 0.1f) ) ||
 				 bExpectingArrival )
 			{
 				m_FullDirectTimer.Force();
@@ -150,14 +150,14 @@ bool CAI_LocalNavigator::MoveCalcDirect( AILocalMoveGoal_t *pMoveGoal, bool bOnl
 				if ( !bTraceClear )
 				{
 					DevMsg( GetOuter(), "Close obstruction %f\n", checkDist - pMoveGoal->directTrace.flDistObstructed );
-					NDebugOverlay::Line( WorldSpaceCenter(), Vector( testPos.x, testPos.y, WorldSpaceCenter().z ), 255, 0, 0, false, 0.1 );
+					NDebugOverlay::Line( WorldSpaceCenter(), Vector( testPos.x, testPos.y, WorldSpaceCenter().z ), 255, 0, 0, false, 0.1f );
 					if ( pMoveGoal->directTrace.pObstruction )
 						NDebugOverlay::Line( WorldSpaceCenter(), pMoveGoal->directTrace.pObstruction->WorldSpaceCenter(), 255, 0, 255, false, 0.1 );
 
 				}
 				else
 				{
-					NDebugOverlay::Line( WorldSpaceCenter(), Vector( testPos.x, testPos.y, WorldSpaceCenter().z ), 0, 255, 0, false, 0.1 );
+					NDebugOverlay::Line( WorldSpaceCenter(), Vector( testPos.x, testPos.y, WorldSpaceCenter().z ), 0, 255, 0, false, 0.1f );
 				}
 			}
 
@@ -186,12 +186,12 @@ bool CAI_LocalNavigator::MoveCalcDirect( AILocalMoveGoal_t *pMoveGoal, bool bOnl
 				{
 					if ( !bTraceClear )
 					{
-						NDebugOverlay::Line( GetOuter()->EyePosition(), Vector( testPos.x, testPos.y, GetOuter()->EyePosition().z ), 255, 0, 0, false, 0.1 );
+						NDebugOverlay::Line( GetOuter()->EyePosition(), Vector( testPos.x, testPos.y, GetOuter()->EyePosition().z ), 255, 0, 0, false, 0.1f );
 						DevMsg( GetOuter(), "Obstruction %f\n", checkDist - pMoveGoal->directTrace.flDistObstructed );
 					}
 					else
 					{
-						NDebugOverlay::Line( GetOuter()->EyePosition(), Vector( testPos.x, testPos.y, GetOuter()->EyePosition().z ), 0, 255, 0, false, 0.1 );
+						NDebugOverlay::Line( GetOuter()->EyePosition(), Vector( testPos.x, testPos.y, GetOuter()->EyePosition().z ), 0, 255, 0, false, 0.1f );
 						DevMsg( GetOuter(), "No obstruction\n" );
 					}
 				}
@@ -265,11 +265,11 @@ bool CAI_LocalNavigator::MoveCalcSteer( AILocalMoveGoal_t *pMoveGoal, float dist
 		{
 			float dot = moveSolution.AsVector2D().Dot( pMoveGoal->dir.AsVector2D() );
 
-			constexpr float COS_HALF_30 = 0.966;
+			constexpr float COS_HALF_30 = 0.966f;
 			if ( dot > COS_HALF_30 )
 			{
 				float probeDist = m_pPlaneSolver->CalcProbeDist( pMoveGoal->speed );
-				if ( pMoveGoal->maxDist < probeDist * 0.33333 && distClear > probeDist * 0.6666)
+				if ( pMoveGoal->maxDist < probeDist * 0.33333f && distClear > probeDist * 0.6666f)
 				{
 					// A waypoint is coming up, but there's probably time to steer
 					// away after hitting it

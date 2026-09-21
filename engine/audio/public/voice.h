@@ -11,6 +11,7 @@
 
 
 #include "ivoicetweak.h"
+#include "tier1/strtools.h"
 
 
 /*! @defgroup Voice Voice
@@ -39,11 +40,12 @@ void Voice_ForceInit();
 inline int Voice_GetDefaultSampleRate( const char *pCodec ) // Inline for DEDICATED builds
 {
 	// Use legacy lower rate for speex
-	if ( Q_stricmp( pCodec, "vaudio_speex" ) == 0 )
+	if ( V_strieq( pCodec, "vaudio_speex" ) )
 	{
 		return VOICE_OUTPUT_SAMPLE_RATE_LOW;
 	}
-	else if ( Q_stricmp( pCodec, "steam" ) == 0 )
+
+	if ( V_strieq( pCodec, "steam" ) )
 	{
 		return 0; // For the steam codec, 0 passed to voice_init means "use optimal steam voice rate"
 	}

@@ -91,7 +91,7 @@ char const *IFacePoserToolWindow::GetToolName( void ) const
 //-----------------------------------------------------------------------------
 void IFacePoserToolWindow::SetDisplayNameRoot( char const *name )
 {
-	Q_snprintf( m_szDisplayRoot, sizeof( m_szDisplayRoot ), "%s", name );
+	V_strcpy_safe( m_szDisplayRoot, name );
 	ComputeNewTitle();
 }
 
@@ -110,7 +110,7 @@ char const *IFacePoserToolWindow::GetDisplayNameRoot( void  ) const
 //-----------------------------------------------------------------------------
 void IFacePoserToolWindow::SetSuffix( char const *suffix )
 {
-	Q_snprintf( m_szSuffix, sizeof( m_szSuffix ), "%s", suffix );
+	V_strcpy_safe( m_szSuffix, suffix );
 	ComputeNewTitle();
 }
 
@@ -120,7 +120,7 @@ void IFacePoserToolWindow::SetSuffix( char const *suffix )
 //-----------------------------------------------------------------------------
 void IFacePoserToolWindow::SetPrefix( char const *prefix )
 {
-	Q_snprintf( m_szPrefix, sizeof( m_szPrefix ), "%s", prefix );
+	V_strcpy_safe( m_szPrefix, prefix );
 	ComputeNewTitle();
 }
 
@@ -195,7 +195,7 @@ static bool TranslateToolPos( char const *toolname, int workspacew, int workspac
 	{
 		ToolTranslate& tt = s_ToolTranslate[ i ];
 
-		if ( !Q_stricmp( toolname, tt.toolname ) )
+		if ( V_strieq( toolname, tt.toolname ) )
 		{
 			x = (int)((float)workspacew * tt.xfrac + 0.5f );
 			y = (int)((float)workspaceh * tt.yfrac + 0.5f );

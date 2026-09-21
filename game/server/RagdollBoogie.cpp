@@ -241,7 +241,7 @@ void CRagdollBoogie::BoogieThink( void )
 
 		if ( dt < 0 )
 		{
-			SetNextThink( gpGlobals->curtime + random->RandomFloat( 0.1, 0.2f ) );
+			SetNextThink( gpGlobals->curtime + random->RandomFloat( 0.1f, 0.2f ) );
 			return;
 		}
 
@@ -264,5 +264,5 @@ void CRagdollBoogie::BoogieThink( void )
 	}
 #endif // !_XBOX
 
-	SetNextThink( gpGlobals->curtime + random->RandomFloat( 0.1, 0.2f ) );
+	SetNextThink( gpGlobals->curtime + random->RandomFloat( 0.1f, 0.2f ) );
 }

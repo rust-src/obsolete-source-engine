@@ -44,7 +44,7 @@ void printusage( void )
 void ProcessDirectory( const char *game, const char *sourcetreebase, const char *subdir, const char *dsp, const char *config )
 {
 	char rootdirectory[ 256 ];
-	sprintf( rootdirectory, "%s\\%s", sourcetreebase, subdir );
+	V_sprintf_safe( rootdirectory, "%s\\%s", sourcetreebase, subdir );
 
 	// check for existence
 	if ( COM_DirectoryExists( rootdirectory ) )
@@ -110,7 +110,7 @@ int main( int argc, char* argv[] )
 	vprint( 0, "    Looking for unneeded header includes...\n" );
 
 	char sourcetreebase[ 256 ];
-	strcpy( sourcetreebase, argv[i-2] );
+	V_strcpy_safe( sourcetreebase, argv[i-2] );
 
 	Q_StripTrailingSlash( sourcetreebase );
 

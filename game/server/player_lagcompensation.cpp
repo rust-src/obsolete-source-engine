@@ -142,7 +142,7 @@ public:
 
 ConVar sv_unlag_debug( "sv_unlag_debug", "0", FCVAR_GAMEDLL | FCVAR_DEVELOPMENTONLY );
 
-float g_flFractionScale = 0.95;
+constexpr float g_flFractionScale = 0.95f;
 static void RestorePlayerTo( CBasePlayer *pPlayer, const Vector &vWantedPos )
 {
 	// Try to move to the wanted position from our current position.

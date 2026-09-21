@@ -35,7 +35,8 @@ bool SaveResourceListing(IFileSystem *file_system,
 
     for (int i = list.FirstInorder(); i != list.InvalidIndex();
          i = list.NextInorder(i)) {
-      file_system->Write(list[i].String(), V_strlen(list[i].String()), fh);
+      file_system->Write(list[i].String(),
+                         static_cast<int>(V_strlen(list[i].String())), fh);
       file_system->Write("\n", 1, fh);
     }
 
@@ -203,8 +204,8 @@ bool ResourceListing::IsActive() { return is_initialized_ && is_active_; }
 
 void ResourceListing::Collate() {
   char szDir[MAX_PATH];
-  V_snprintf(szDir, sizeof(szDir), "%s\\%s", full_game_path_.String(),
-             final_dir_.String());
+  V_sprintf_safe(szDir, "%s\\%s", full_game_path_.String(),
+                 final_dir_.String());
   file_system_->CreateDirHierarchy(szDir, "GAME");
 
   // Now create the collated/merged data
@@ -226,12 +227,12 @@ void ResourceListing::SetupCommandLine() {
 
       // Clean the working dir
       char szWorkingDir[512];
-      Q_snprintf(szWorkingDir, sizeof(szWorkingDir), "%s\\%s",
-                 working_dir_.String(), work.m_sSubDir.String());
+      V_sprintf_safe(szWorkingDir, "%s\\%s", working_dir_.String(),
+                     work.m_sSubDir.String());
 
       char szFullWorkingDir[MAX_PATH];
-      V_snprintf(szFullWorkingDir, sizeof(szFullWorkingDir), "%s\\%s",
-                 full_game_path_.String(), szWorkingDir);
+      V_sprintf_safe(szFullWorkingDir, "%s\\%s", full_game_path_.String(),
+                     szWorkingDir);
       file_system_->CreateDirHierarchy(szFullWorkingDir, "GAME");
 
       // Preserve startmap
@@ -245,9 +246,10 @@ void ResourceListing::SetupCommandLine() {
       // Prepare stuff
       // Reset command line based on current state
       char szCmd[512];
-      Q_snprintf(szCmd, sizeof(szCmd), "%s %s %s -reslistdir %s",
-                 original_command_line_.String(), base_command_line_.String(),
-                 work.m_sAddCommands.String(), szWorkingDir);
+      V_sprintf_safe(szCmd, "%s %s %s -reslistdir %s",
+                     original_command_line_.String(),
+                     base_command_line_.String(), work.m_sAddCommands.String(),
+                     szWorkingDir);
 
       Warning("Reslists:  Setting command line:\n'%s'\n", szCmd);
 
@@ -427,7 +429,7 @@ bool ResourceListing::InitCommandFile(const char *pchGameDir,
 
   current_wi_ = Clamp(current_wi_, (intp)0, work_items_.Count() - 1);
 
-  bool bCollate = command_line_->CheckParm("-collate") ? true : false;
+  bool bCollate = command_line_->HasParm("-collate");
   if (bCollate) {
     Collate();
     is_active_ = false;

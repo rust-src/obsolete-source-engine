@@ -117,12 +117,12 @@ public:
 	virtual void OnCommand( const char *command ) OVERRIDE
 	{
 		int nSecondsVisible = gpGlobals->curtime - m_flCreationTime;
-		if ( V_strcmp( command, "add_stamp_to_cart" ) == 0 )
+		if ( V_streq( command, "add_stamp_to_cart" ) )
 		{
 			FinishUp();
 			CStorePanel::ConfirmUpsellStamps( true, hItemDef, nSecondsVisible );
 		}
-		else if ( V_strcmp( command, "nope" ) == 0 )
+		else if ( V_streq( command, "nope" ) )
 		{
 			FinishUp();
 			CStorePanel::ConfirmUpsellStamps( false, hItemDef, nSecondsVisible );
@@ -487,7 +487,7 @@ void CStorePanel::OnCommand( const char *command )
 		InitiateCheckout( false );
 		return;
 	}
-	else if ( !Q_stricmp( command, "close" ) )
+	else if ( V_strieq( command, "close" ) )
 	{
 		ShowPanel( false );
 
@@ -504,7 +504,7 @@ void CStorePanel::OnCommand( const char *command )
 		}
 #endif
 	}
-	else if ( !Q_stricmp( command, "back" ) )
+	else if ( V_strieq( command, "back" ) )
 	{
 		ShowPanel( true );
 	}
@@ -905,7 +905,7 @@ void CStorePanel::UpsellStamps( void )
 	wchar_t *pwchMapName = g_pVGuiLocalize->Find( pUpsellMap->pszMapNameLocKey );
 
 	char szMapHours[ 8 ];
-	V_snprintf( szMapHours, sizeof( szMapHours ), "%i", nUpsellNumHours );
+	V_to_chars( szMapHours, nUpsellNumHours );
 
 	wchar_t wszMapHours[ 8 ];
 	g_pVGuiLocalize->ConvertANSIToUnicode( szMapHours, wszMapHours, sizeof( wszMapHours ) );
@@ -1617,7 +1617,8 @@ void CStoreCart::AddToCart( const econ_store_entry_t *pEntry, const char* pszPag
 			g_pVGuiLocalize->ConvertUnicodeToANSI( g_pVGuiLocalize->Find( pItemDef->GetItemBaseName() ), pszItemName, sizeof( pszItemName ) );
 
 			char szURL[512];
-			V_snprintf( szURL, sizeof( szURL ), "http://%ssteamcommunity.com/market/listings/%d/%s", pszPrefix, engine->GetAppID(), pszItemName );
+			// dimhotepus: http:// -> https://
+			V_snprintf( szURL, sizeof( szURL ), "https://%ssteamcommunity.com/market/listings/%d/%s", pszPrefix, engine->GetAppID(), pszItemName );
 			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( szURL );
 		}
 		return;
@@ -1850,7 +1851,7 @@ void CStoreStatusDialog::OnCommand( const char *command )
 {
 	bool bClose = false;
 
-	if ( !Q_stricmp( command, "close" ) )
+	if ( V_strieq( command, "close" ) )
 	{
 		bClose = true;
 
@@ -1859,7 +1860,7 @@ void CStoreStatusDialog::OnCommand( const char *command )
 			InventoryManager()->ShowItemsPickedUp( true );
 		}
 	}
-	else if ( !Q_stricmp( command, "forceclose" ) )
+	else if ( V_strieq( command, "forceclose" ) )
 	{
 		bClose = true;
 	}

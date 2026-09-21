@@ -83,7 +83,7 @@ CGamePanelInfo::CGamePanelInfo(vgui::Panel *parent, const char *name, const char
 	m_pGraphsPanel = new CGraphPanel(this,"GraphsPanel");
 	m_pServerInfoPanel = new CServerInfoPanel(this, "ServerInfo");
 	
-	if ( CommandLine()->CheckParm( "-BudgetPanel" ) )
+	if ( CommandLine()->HasParm( "-BudgetPanel" ) )
 		m_pBudgetPanel = new CBudgetPanelContainer( this, "BudgetPanel" );
 	else
 		m_pBudgetPanel = NULL;
@@ -189,7 +189,7 @@ void CGamePanelInfo::OnTick()
 //-----------------------------------------------------------------------------
 void CGamePanelInfo::OnCommand(const char *command)
 {
-	if (!stricmp(command, "stop2")) 
+	if (V_strieq(command, "stop2")) 
 	{
 		RemoteServer().SendCommand("quit");
 		m_bShuttingDown = true;

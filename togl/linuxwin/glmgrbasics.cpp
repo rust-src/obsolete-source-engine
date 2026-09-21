@@ -3064,7 +3064,7 @@ void GLMPrintText( const char *str, EGLMDebugFlavor flavor, uint options )
 		}
 		if (options & GLMPRINTTEXT_NUMBEREDLINES)
 		{
-			sprintf( lineout, "%-5d| %s", linenum, printfrom );
+			V_sprintf_safe( lineout, "%-5d| %s", linenum, printfrom );
 			GLMPrintStr( lineout, flavor );
 			linenum++;
 		}
@@ -3824,19 +3824,19 @@ float	GLMKnob( char *knobname, float *setvalue )
 	uint mods = 0;
 #endif
 	// is it a special key name ?
-	if (!strcmp(knobname,"caps-key"))
+	if (V_streq(knobname,"caps-key"))
 	{
 		return (mods & (EalphaLock)) ? 1.0 : 0.0;
 	}
-	else if (!strcmp(knobname,"control-key"))
+	else if (V_streq(knobname,"control-key"))
 	{
 		return (mods & (EcontrolKey)) ? 1.0 : 0.0;
 	}
-	else if (!strcmp(knobname,"shift-key"))
+	else if (V_streq(knobname,"shift-key"))
 	{
 		return (mods & (EshiftKey)) ? 1.0 : 0.0;
 	}
-	else if (!strcmp(knobname,"option-key"))
+	else if (V_streq(knobname,"option-key"))
 	{
 		return (mods & (EoptionKey)) ? 1.0 : 0.0;
 	}
@@ -4144,7 +4144,7 @@ void	CGLMFileMirror::OpenInEditor( bool foreground )
 	char temp[64000];
 	
 	// pass -b if no desire to bring editor to foreground
-	sprintf(temp,"/usr/bin/bbedit %s %s", foreground ? "" : "-b", m_path );
+	V_sprintf_safe(temp,"/usr/bin/bbedit %s '%s'", foreground ? "" : "-b", m_path );
 	system( temp );
 }
 
@@ -4170,7 +4170,7 @@ CGLMEditableTextItem::CGLMEditableTextItem( char *text, uint size, bool forceOve
 	GenMungedText( false );
 	GenBaseNameAndFullPath( prefix, suffix );	// figure out where the mirror will go
 	
-	if (!strcmp(m_mirrorBaseName, "96c7e9d2faf76b1148f7274afd684d4b.fsh"))
+	if (V_streq(m_mirrorBaseName, "96c7e9d2faf76b1148f7274afd684d4b.fsh"))
 	{
 		printf("\nhello there\n");
 	}
@@ -4290,12 +4290,12 @@ void	CGLMEditableTextItem::GenBaseNameAndFullPath(  char *prefix, char *suffix  
 	Q_binarytohex( m_origDigest, sizeof(m_origDigest), temp, sizeof( temp ) );
 	if (suffix)
 	{
-		strcat( temp, suffix );
+		V_strcat_safe( temp, suffix );
 	}
 	if (m_mirrorBaseName)	free(m_mirrorBaseName);
 	m_mirrorBaseName = strdup( temp );
 
-	sprintf( temp, "%s%s", prefix, m_mirrorBaseName );
+	V_sprintf_safe( temp, "%s%s", prefix, m_mirrorBaseName );
 	if (m_mirrorFullPath)	free(m_mirrorFullPath);
 	m_mirrorFullPath = strdup( temp );
 }

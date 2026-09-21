@@ -263,8 +263,10 @@ private:
 		unsigned int	m_FirstElement;
 		unsigned int	m_FirstShadow;
 
-		unsigned short	m_FirstDetailProp;
-		unsigned short	m_DetailPropCount;
+		// dimhotepus: unsigned short -> int.
+		int				m_FirstDetailProp;
+		// dimhotepus: unsigned short -> int.
+		int				m_DetailPropCount;
 		int				m_DetailPropRenderFrame;
 		CClientLeafSubSystemData *m_pSubSystemData[N_CLSUBSYSTEMS];
 
@@ -486,10 +488,10 @@ void CClientLeafSystem::LevelInitPreEntity()
 	ClientLeaf_t newLeaf;
 	newLeaf.m_FirstElement = m_RenderablesInLeaf.InvalidIndex();
 	newLeaf.m_FirstShadow = m_ShadowsInLeaf.InvalidIndex();
-	memset( newLeaf.m_pSubSystemData, 0, sizeof( newLeaf.m_pSubSystemData ) );
 	newLeaf.m_FirstDetailProp = 0;
 	newLeaf.m_DetailPropCount = 0;
 	newLeaf.m_DetailPropRenderFrame = -1;
+	BitwiseClear( newLeaf.m_pSubSystemData );
 	while ( --leafCount >= 0 )
 	{
 		m_Leaf.AddToTail( newLeaf );
@@ -1322,7 +1324,7 @@ void CClientLeafSystem::AddToViewModelList( ClientRenderHandle_t handle )
 
 void CClientLeafSystem::RemoveFromViewModelList( ClientRenderHandle_t handle )
 {
-	int i = m_ViewModels.Find( handle );
+	intp i = m_ViewModels.Find( handle );
 	Assert( i != m_ViewModels.InvalidIndex() );
 	m_ViewModels.FastRemove( i );
 }
@@ -1530,7 +1532,7 @@ inline void AddRenderableToRenderList( CClientRenderablesList &renderList, IClie
 //-----------------------------------------------------------------------------
 void CClientLeafSystem::CollateViewModelRenderables( CUtlVector< IClientRenderable * >& opaque, CUtlVector< IClientRenderable * >& translucent )
 {
-	for ( int i = m_ViewModels.Count()-1; i >= 0; --i )
+	for ( intp i = m_ViewModels.Count()-1; i >= 0; --i )
 	{
 		ClientRenderHandle_t handle = m_ViewModels[i];
 		RenderableInfo_t& renderable = m_Renderables[handle];
@@ -1552,12 +1554,12 @@ void CClientLeafSystem::CollateViewModelRenderables( CUtlVector< IClientRenderab
 
 static RenderGroup_t DetectBucketedRenderGroup( RenderGroup_t group, float fDimension )
 {
-	float const arrThresholds[ 3 ] = {
+	constexpr float arrThresholds[ 3 ] = {
 		200.f,	// tree size
 		80.f,	// player size
 		30.f,	// crate size
 	};
-	Assert( ARRAYSIZE( arrThresholds ) + 1 >= RENDER_GROUP_CFG_NUM_OPAQUE_ENT_BUCKETS );
+	static_assert( ARRAYSIZE( arrThresholds ) + 1 >= RENDER_GROUP_CFG_NUM_OPAQUE_ENT_BUCKETS );
 	Assert( group >= RENDER_GROUP_OPAQUE_STATIC && group <= RENDER_GROUP_OPAQUE_ENTITY );
 
 	int bucketedGroupIndex;
@@ -1734,7 +1736,7 @@ void CClientLeafSystem::CollateRenderablesInLeaf( LeafIndex_t leaf, int worldLis
 	// These don't have render handles!
 	if ( info.m_bDrawDetailObjects && ShouldDrawDetailObjectsInLeaf( leaf, info.m_nDetailBuildFrame ) )
 	{
-		idx = m_Leaf[leaf].m_FirstDetailProp;
+		int idx = m_Leaf[leaf].m_FirstDetailProp;
 		int count = m_Leaf[leaf].m_DetailPropCount;
 		while( --count >= 0 )
 		{

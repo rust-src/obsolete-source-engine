@@ -155,7 +155,7 @@ bool WriteDummyFileNoAlloc( const char *fileName, int width, int height, enum Im
 		return false;
 	}
 
-    memset( &tgaHeader, 0, sizeof(tgaHeader) );
+    BitwiseClear( tgaHeader );
     tgaHeader.id_length  = 0;
     tgaHeader.image_type = (unsigned char) nImageType;
     tgaHeader.width      = (unsigned short) width;
@@ -215,7 +215,7 @@ bool WriteTGAFile( const char *fileName, int width, int height, enum ImageFormat
 		return false;
 	}
 
-    memset( &tgaHeader, 0, sizeof(tgaHeader) );
+    BitwiseClear( tgaHeader );
     tgaHeader.id_length  = 0;
     tgaHeader.image_type = (unsigned char) nImageType;
     tgaHeader.width      = (unsigned short) width;
@@ -267,7 +267,7 @@ bool WriteRectNoAlloc( unsigned char *pImageData, const char *fileName, int nXOr
 	// Read in the targa header
 	//
 	TGAHeader_t tgaHeader;
-	int read = g_pFullFileSystem->Read( &tgaHeader, sizeof(tgaHeader), fp );
+	int read = g_pFullFileSystem->Read( tgaHeader, fp );
 	if ( read != sizeof(tgaHeader) )
 	{
 		Warning( "TGA '%s' is not TGA file.\n", fileName );

@@ -44,7 +44,7 @@ CUtlString s_sPublicKeyFile;
 [[noreturn]] void PrintArgSummaryAndExit(int rc = 1) {
   fflush(stderr);
 
-  printf(
+  fprintf(stderr,
       "Usage: vpk [options] <command> <command arguments ...>\n"
       "       vpk [options] <directory>\n"
       "       vpk [options] <vpkfile>\n"
@@ -125,7 +125,7 @@ CUtlString s_sPublicKeyFile;
       "         Align files within chunk on n-byte boundary.  Default is %d.\n",
       k_nVPKDefaultChunkAlign);
 #ifdef VPK_ENABLE_SIGNING
-  printf(
+  fprintf(stderr,
       "  -K <private keyfile>\n"
       "         With commands 'a' or 'k': Sign VPK with specified private "
       "key.\n"
@@ -234,7 +234,7 @@ static void LoadKeyFile(const char *pszFilename, const char *pszTag,
   const char *pszType = kv->GetString("type", nullptr);
   if (!pszType) Error("Key file %s is missing 'type'", pszFilename);
 
-  if (V_stricmp(pszType, "rsa") != 0)
+  if (!V_strieq(pszType, "rsa"))
     Error("Key type '%s' is not supported", pszType);
 
   const char *pszEncodedBytes = kv->GetString(pszTag, nullptr);
@@ -888,7 +888,7 @@ void VPKBuilder::BuildSteamPipeFriendlyFromInputKeys() {
       Assert(s_iChunkAlign > 0);
       while (iOffsetInChunk % s_iChunkAlign) {
         unsigned char zero = 0;
-        g_pFullFileSystem->Write(&zero, 1, fChunkWrite);
+        g_pFullFileSystem->Write(zero, fChunkWrite);
         ++iOffsetInChunk;
       }
 
@@ -1613,19 +1613,19 @@ static void CheckSignature(const char *pszFilename) {
     case CPackedStore::eSignatureCheckResult_Failed:
       fprintf(stderr, "ERROR: FAILED\n");
       fflush(stderr);
-      printf("IO error or other generic failure.");
+      fprintf(stderr, "IO error or other generic failure.");
       exit(-1);
 
     case CPackedStore::eSignatureCheckResult_NotSigned:
       fprintf(stderr, "ERROR: NOT SIGNED\n");
       fflush(stderr);
-      printf("The VPK does not contain a signature.");
+      fprintf(stderr, "The VPK does not contain a signature.");
       exit(1);
 
     case CPackedStore::eSignatureCheckResult_WrongKey:
       fprintf(stderr, "ERROR: KEY MISMATCH\n");
       fflush(stderr);
-      printf(
+      fprintf(stderr,
           "The public key provided does not match the public\n"
           "key contained in the VPK file.  The VPK was not\n"
           "signed using the private key corresponding to your\n"
@@ -1635,7 +1635,7 @@ static void CheckSignature(const char *pszFilename) {
     case CPackedStore::eSignatureCheckResult_InvalidSignature:
       fprintf(stderr, "ERROR: INVALID SIGNATURE\n");
       fflush(stderr);
-      printf("The VPK contains a signature, but it isn't valid.");
+      fprintf(stderr, "The VPK contains a signature, but it isn't valid.");
       exit(3);
 
     case CPackedStore::eSignatureCheckResult_ValidSignature:
@@ -1764,11 +1764,10 @@ static void DumpSignatureInfo(const char *pszFilename) {
 
 void BuildRecursiveFileList(const char *pcDirName, CUtlStringList &fileList) {
   char szDirWildcard[MAX_PATH];
-  FileFindHandle_t findHandle;
-
   V_sprintf_safe(szDirWildcard, "%s%c%s", pcDirName, CORRECT_PATH_SEPARATOR,
                  "*.*");
 
+  FileFindHandle_t findHandle;
   char const *pcResult =
       g_pFullFileSystem->FindFirst(szDirWildcard, &findHandle);
   RunCodeAtScopeExit(g_pFullFileSystem->FindClose(findHandle));
@@ -1986,7 +1985,7 @@ int main(int argc, char **argv) {
   }
 
   const char *pszCommand = argv[1];
-  if (V_stricmp(pszCommand, "l") == 0) {
+  if (V_strieq(pszCommand, "l")) {
     if (argc != 3) {
       fprintf(stderr, "Incorrect number of arguments for '%s' command.\n",
               pszCommand);
@@ -2001,7 +2000,7 @@ int main(int argc, char **argv) {
     mypack.GetFileList(fileNames, pszCommand[0] == 'L', true);
 
     for (auto *name : fileNames) printf("%s\n", name);
-  } else if (V_strcmp(pszCommand, "a") == 0) {
+  } else if (V_streq(pszCommand, "a")) {
     if (argc < 3) {
       fprintf(stderr, "Not enough arguments for '%s' command.\n", pszCommand);
       exit(EINVAL);
@@ -2026,7 +2025,7 @@ int main(int argc, char **argv) {
     }
     mypack.HashEverything();
     mypack.Write();
-  } else if (V_strcmp(pszCommand, "k") == 0) {
+  } else if (V_streq(pszCommand, "k")) {
     if (argc != 4) {
       fprintf(stderr, "Incorrect number of arguments for '%s' command.\n",
               pszCommand);
@@ -2041,7 +2040,7 @@ int main(int argc, char **argv) {
     VPKBuilder builder(mypack);
     builder.LoadInputKeys(argv[3]);
     builder.BuildFromInputKeys();
-  } else if (V_strcmp(pszCommand, "x") == 0) {
+  } else if (V_streq(pszCommand, "x")) {
     if (argc < 3) {
       fprintf(stderr, "Incorrect number of arguments for '%s' command.\n",
               pszCommand);
@@ -2075,7 +2074,7 @@ int main(int argc, char **argv) {
         break;
       }
     }
-  } else if (V_strcmp(pszCommand, "B") == 0) {
+  } else if (V_streq(pszCommand, "B")) {
     if (argc != 4) {
       fprintf(stderr, "Incorrect number of arguments for '%s' command.\n",
               pszCommand);
@@ -2094,7 +2093,7 @@ int main(int argc, char **argv) {
     // stime = Plat_FloatTime();
     // BenchMark( files );
     // printf( " time pack = %f\n", Plat_FloatTime() - stime );
-  } else if (V_strcmp(pszCommand, "rehash") == 0) {
+  } else if (V_streq(pszCommand, "rehash")) {
     if (argc != 3) {
       fprintf(stderr, "Incorrect number of arguments for '%s' command.\n",
               pszCommand);
@@ -2107,7 +2106,7 @@ int main(int argc, char **argv) {
     CheckLoadKeyFilesForSigning(mypack);
     mypack.HashEverything();
     mypack.Write();
-  } else if (V_strcmp(pszCommand, "checkhash") == 0) {
+  } else if (V_streq(pszCommand, "checkhash")) {
     if (argc != 3) {
       fprintf(stderr, "Incorrect number of arguments for '%s' command.\n",
               pszCommand);
@@ -2117,7 +2116,7 @@ int main(int argc, char **argv) {
     CheckHashes(argv[2]);
   }
 #ifdef VPK_ENABLE_SIGNING
-  else if (V_strcmp(pszCommand, "generate_keypair") == 0) {
+  else if (V_streq(pszCommand, "generate_keypair")) {
     if (argc != 3) {
       fprintf(stderr, "Incorrect number of arguments for '%s' command.\n",
               pszCommand);
@@ -2125,7 +2124,7 @@ int main(int argc, char **argv) {
     }
 
     GenerateKeyPair(argv[2]);
-  } else if (V_strcmp(pszCommand, "checksig") == 0) {
+  } else if (V_streq(pszCommand, "checksig")) {
     if (argc != 3) {
       fprintf(stderr, "Incorrect number of arguments for '%s' command.\n",
               pszCommand);
@@ -2133,7 +2132,7 @@ int main(int argc, char **argv) {
     }
 
     CheckSignature(argv[2]);
-  } else if (V_strcmp(pszCommand, "dumpsig") == 0) {
+  } else if (V_streq(pszCommand, "dumpsig")) {
     if (argc != 3) {
       fprintf(stderr, "Incorrect number of arguments for '%s' command.\n",
               pszCommand);

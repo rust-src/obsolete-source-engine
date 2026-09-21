@@ -133,7 +133,7 @@ CCommentaryPropertiesPanel::CCommentaryPropertiesPanel( CCommEditDoc *pDoc, vgui
 void CCommentaryPropertiesPanel::TextEntryToAttribute( vgui::TextEntry *pEntry, const char *pAttributeName )
 {
 	intp nLen = pEntry->GetTextLength();
-	char *pBuf = (char*)_alloca( nLen+1 );
+	char *pBuf = stackallocT( char, nLen+1 );
 	pEntry->GetText( pBuf, nLen+1 );
 	m_hEntity->SetValue( pAttributeName, pBuf );
 }
@@ -260,7 +260,7 @@ void CCommentaryPropertiesPanel::SetObject( CDmeCommentaryNodeEntity *pEntity )
 
 	if ( pEntity )
 	{
-		if ( !Q_stricmp( pEntity->GetClassName(), "info_target" ) )
+		if ( V_strieq( pEntity->GetClassName(), "info_target" ) )
 		{
 			PopulateInfoTargetFields();
 			m_pInfoTargetScroll->SetVisible( true );
@@ -268,7 +268,7 @@ void CCommentaryPropertiesPanel::SetObject( CDmeCommentaryNodeEntity *pEntity )
 			return;
 		}
 
-		if ( !Q_stricmp( pEntity->GetClassName(), "point_commentary_node" ) )
+		if ( V_strieq( pEntity->GetClassName(), "point_commentary_node" ) )
 		{
 			PopulateCommentaryNodeFields();
 			m_pCommentaryNodeScroll->SetVisible( true );
@@ -352,7 +352,7 @@ void CCommentaryPropertiesPanel::PickInfoTarget( vgui::TextEntry *pControl )
 		if ( !pTargetName || !pTargetName[0] )
 			continue;
 
-		if ( !Q_stricmp( pNode->GetClassName(), "info_target" ) )
+		if ( V_strieq( pNode->GetClassName(), "info_target" ) )
 		{
 			j = vec.AddToTail( ); 
 			vec[j].m_pChoiceString = pTargetName;
@@ -423,31 +423,31 @@ void CCommentaryPropertiesPanel::RecordSound( )
 //-----------------------------------------------------------------------------
 void CCommentaryPropertiesPanel::OnCommand( const char *pCommand )
 {
-	if ( !Q_stricmp( pCommand, "PickSound" ) )
+	if ( V_strieq( pCommand, "PickSound" ) )
 	{
 		PickSound();
 		return;
 	}
 
-	if ( !Q_stricmp( pCommand, "Record" ) )
+	if ( V_strieq( pCommand, "Record" ) )
 	{
 		RecordSound();
 		return;
 	}
 
-	if ( !Q_stricmp( pCommand, "PickViewPosition" ) )
+	if ( V_strieq( pCommand, "PickViewPosition" ) )
 	{
 		PickInfoTarget( m_pViewPosition );
 		return;
 	}
 
-	if ( !Q_stricmp( pCommand, "PickViewTarget" ) )
+	if ( V_strieq( pCommand, "PickViewTarget" ) )
 	{
 		PickInfoTarget( m_pViewTarget );
 		return;
 	}
 
-	if ( !Q_stricmp( pCommand, "PreventMovementClicked" ) )
+	if ( V_strieq( pCommand, "PreventMovementClicked" ) )
 	{
 		UpdateCommentaryNode();
 		return;

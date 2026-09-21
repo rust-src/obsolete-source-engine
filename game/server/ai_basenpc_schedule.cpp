@@ -1044,7 +1044,7 @@ float CAI_BaseNPC::CalcReasonableFacing( bool bIgnoreOriginalFacing )
 
 		// Otherwise, scan out back and forth until something better is found
 		constexpr float SLICES = 8.0f;
-		constexpr float SIZE_SLICE = 360.0 / SLICES;
+		constexpr float SIZE_SLICE = 360.0f / SLICES;
 		constexpr int SEARCH_MAX = (int)SLICES / 2;
 
 		float zEye = GetAbsOrigin().z + m_vDefaultEyeOffset.z; // always use standing eye so as to not screw with crouch cover
@@ -1085,7 +1085,7 @@ float CAI_BaseNPC::GetReasonableFacingDist( void )
 {
 	if ( GetTask() && GetTask()->iTask == TASK_FACE_ENEMY )
 	{
-		constexpr float dist = 3.5*12;
+		constexpr float dist = 3.5f*12;
 		if ( GetEnemy() )
 		{
 			float distEnemy = ( GetEnemy()->GetAbsOrigin().AsVector2D() - GetAbsOrigin().AsVector2D() ).Length() - 1.0f; 
@@ -4107,11 +4107,11 @@ void CAI_BaseNPC::RunTask( const Task_t *pTask )
 			{
 				// After 4 seconds of trying to fall to ground, Assume that we're in a bad case where the NPC
 				// isn't actually falling, and make an attempt to slam the ground entity to whatever's under the NPC.
-				Vector maxs = WorldAlignMaxs() - Vector( .1, .1, .2 );
-				Vector mins = WorldAlignMins() + Vector( .1, .1, 0 );
-				Vector vecStart	= GetAbsOrigin() + Vector( 0, 0, .1 );
+				Vector maxs = WorldAlignMaxs() - Vector( .1f, .1f, .2f );
+				Vector mins = WorldAlignMins() + Vector( .1f, .1f, 0 );
+				Vector vecStart	= GetAbsOrigin() + Vector( 0, 0, .1f );
 				Vector vecDown	= GetAbsOrigin();
-				vecDown.z -= 0.2;
+				vecDown.z -= 0.2f;
 
 				trace_t trace;
 				m_pMoveProbe->TraceHull( vecStart, vecDown, mins, maxs, MASK_NPCSOLID, &trace );

@@ -191,9 +191,15 @@ public:
 
 	// dimhotepus: Make clear timer writes stats.
 	explicit CFrameTimer( CEngineStats &engineStats )
-		: m_engineStats{engineStats}, swaptime(0)
+		: m_engineStats{engineStats},
+		swaptime(0), frametime(0),
+		m_flFPSVariability(0), m_flFPSStdDeviationSeconds(0),
+		m_nFrameTimeHistoryIndex(0)
 	{
 		ResetDeltas();
+
+		BitwiseClear( starttime );
+		BitwiseClear( m_pFrameTimeHistory );
 	}
 
 	void MarkFrame();
@@ -232,7 +238,6 @@ private:
 	// dimhotepus: Make clear timer writes stats.
 	CEngineStats &m_engineStats;
 
-	double times[9];
 	double swaptime;
 	double frametime;
 	double m_flFPSVariability;
@@ -408,7 +413,7 @@ static void OnChangeTelemetryFrameCount ( IConVar *var, const char *pOldValue, f
 	const char *pFrameCount = (( ConVar* )var)->GetString();
 
 	g_Telemetry.FrameCount = strtoul( pFrameCount, &pIEnd, 0 );
-	Msg( " TELEMETRY: Setting Telemetry FrameCount: '%d'\n", g_Telemetry.FrameCount );
+	Msg( " TELEMETRY: Setting Telemetry FrameCount: '%u'\n", g_Telemetry.FrameCount );
 }
 
 static void OnChangeTelemetryServer ( IConVar *var, const char *pOldValue, float flOldValue )
@@ -430,7 +435,7 @@ static void OnChangeTelemetryDemoStart ( IConVar *var, const char *pOldValue, fl
 		char cmd[ 256 ]; 
 
 		// If we're far away from the start of the demo file, then jump to ~1000 ticks before.
-		Q_snprintf( cmd, sizeof( cmd ), "demo_gototick %d", g_Telemetry.DemoTickStart - 1000 ); 
+		V_sprintf_safe( cmd, "demo_gototick %d", g_Telemetry.DemoTickStart - 1000 ); 
 		Cbuf_AddText( cmd ); 
 	}
 	Msg( " TELEMETRY: Setting Telemetry DemoTickStart: '%d'\n", g_Telemetry.DemoTickStart );
@@ -442,7 +447,7 @@ static void OnChangeTelemetryDemoEnd ( IConVar *var, const char *pOldValue, floa
 	const char *pVal = (( ConVar* )var)->GetString();
 
 	g_Telemetry.DemoTickEnd = strtoul( pVal, &pIEnd, 0 );
-	Msg( " TELEMETRY: Setting Telemetry DemoTickEnd: '%d'\n", g_Telemetry.DemoTickEnd );
+	Msg( " TELEMETRY: Setting Telemetry DemoTickEnd: '%u'\n", g_Telemetry.DemoTickEnd );
 }
 
 ConVar telemetry_pause( "telemetry_pause", "0", 0, "Pause Telemetry", OnChangeTelemetryPause );
@@ -454,7 +459,23 @@ ConVar telemetry_demostart( "telemetry_demostart", "0", 0, "When playing demo, s
 ConVar telemetry_demoend( "telemetry_demoend", "0", 0, "When playing demo, stop telemetry on tick #", OnChangeTelemetryDemoEnd );
 #endif
 
+#ifdef _WIN32
 static bool host_checkheap = false;
+
+// dimhotepus: Pack into a function for reuse.
+static inline void CheckHeap( bool bEnabled, const char *pszFunction )
+{
+	if ( !bEnabled )
+	{
+		return;
+	}
+
+	if ( _heapchk() != _HEAPOK )
+	{
+		Sys_Error( "%s:  _heapchk() != _HEAPOK\n", pszFunction );
+	}
+}
+#endif
 
 CCommonHostState host_state;
 
@@ -535,7 +556,7 @@ void HostTimerSpinMsChangedCallback( IConVar *var, const char *pOldString, float
 	const char *pForcedValue = CommandLine()->ParmValue( "+host_timer_spin_ms" );
 	if ( pForcedValue != NULL )
 	{
-		if ( V_strcmp( host_timer_spin_ms.GetString(), pForcedValue ) )
+		if ( !V_streq( host_timer_spin_ms.GetString(), pForcedValue ) )
 		{
 			Msg( "Value for host_timer_spin_ms is locked to %s by command line parameter.\n", pForcedValue );
 			host_timer_spin_ms.SetValue( pForcedValue );
@@ -628,7 +649,7 @@ void CCommonHostState::SetWorldModel( model_t *pModel )
 	}
 }
 
-void Host_DefaultMapFileName( const char *pFullMapName, /* out */ char *pDiskName, unsigned int nDiskNameSize )
+void Host_DefaultMapFileName( const char *pFullMapName, OUT_Z_CAP(nDiskNameSize) char *pDiskName, size_t nDiskNameSize )
 {
 	// pc names are as is
 	Q_snprintf( pDiskName, nDiskNameSize, "maps/%s.bsp", pFullMapName );
@@ -825,7 +846,7 @@ static void SetupNewBindings()
 	char szBindCmd[ 256 ];
 
 	// Load the file
-	constexpr char pFilename[]{ "scripts\\newbindings.txt" };
+	constexpr char pFilename[]{ "scripts" CORRECT_PATH_SEPARATOR_S "newbindings.txt" };
 	KeyValuesAD pNewBindingsData( pFilename );
 	if ( !pNewBindingsData->LoadFromFile( g_pFileSystem, pFilename ) )
 	{
@@ -850,7 +871,7 @@ static void SetupNewBindings()
 		if ( pOverrideIfCmd )
 		{
 			const char *pCurrentBindingForKey = ::Key_BindingForKey( g_pInputSystem->StringToButtonCode( pIdealKey ) );
-			if ( !pCurrentBindingForKey  || !V_stricmp( pOverrideIfCmd, pCurrentBindingForKey ) )
+			if ( !pCurrentBindingForKey  || V_strieq( pOverrideIfCmd, pCurrentBindingForKey ) )
 			{
 				V_sprintf_safe( szBindCmd, "bind \"%s\" \"%s\"", pIdealKey, pBinding );
 				Cbuf_AddText( szBindCmd );
@@ -933,14 +954,20 @@ static void UseDefaultBindings()
 	FileHandle_t f = g_pFileSystem->Open( szFileName, "r");
 	if ( !f )
 	{
-		ConMsg( "Couldn't open kb_def.lst\n" );
+		ConMsg( "Couldn't open %s\n", szFileName );
 		return;
 	}
 
 	RunCodeAtScopeExit(g_pFileSystem->Close(f));
 
 	// read file into memory
-	int size = g_pFileSystem->Size(f);
+	const unsigned size{ g_pFileSystem->Size(f) };
+	if ( size == std::numeric_limits<unsigned>::max() )
+	{
+		// dimhotepus: File is too large or unable to get size.
+		ConWarning( "%s is too large or has unknown size\n", szFileName );
+		return;
+	}
 
 	// dimhotepus: ASAN catch. Missed space for '\0'.
 	std::unique_ptr<char[]> startbuf = std::make_unique<char[]>( static_cast<intp>( size ) + 1 );
@@ -989,7 +1016,7 @@ void Host_WriteConfiguration( const char *filename, bool bAllVars )
 
 	// Don't write config when in default--most of the values are defaults which is not what the player wants.
 	// If bAllVars is set, go ahead and write out the file anyways, since it was requested explicitly.
-	if ( !cbIsUserRequested && ( CommandLine()->CheckParm( "-default" ) || host_competitive_ever_enabled.GetBool() ) )
+	if ( !cbIsUserRequested && ( CommandLine()->HasParm( "-default" ) || host_competitive_ever_enabled.GetBool() ) )
 		return;
 	
 	// If in map editing mode don't save configuration
@@ -1070,7 +1097,7 @@ void Host_WriteConfiguration( const char *filename, bool bAllVars )
 
 						// write the current logo file
 						char szLogoFileName[MAX_PATH]; 
-						Q_strncpy( szLogoFileName, cl_logofile.GetString(), sizeof(szLogoFileName) ); // .vtf file
+						V_strcpy_safe( szLogoFileName, cl_logofile.GetString() ); // .vtf file
 
 						if ( g_pFileSystem->FileExists( szLogoFileName, "MOD" ) )
 						{
@@ -1265,7 +1292,7 @@ CON_COMMAND( host_writeconfig, "Store current settings to config.cfg (or specifi
 
 	if ( args.ArgC() >= 2 )
 	{
-		bool bWriteAll = ( args.ArgC() == 3 && V_stricmp( args[ 2 ], "full" ) == 0 );
+		bool bWriteAll = ( args.ArgC() == 3 && V_strieq( args[ 2 ], "full" ) );
 
 		char const *filename = args[ 1 ];
 		if ( Q_isempty( filename ) )
@@ -1467,7 +1494,7 @@ static void Host_AccumulateTime( float dt )
 		host_frametime_unbounded = host_frametime;
 
 #ifndef NO_TOOLFRAMEWORK
-		if ( CommandLine()->CheckParm( "-tools" ) == NULL )
+		if ( !CommandLine()->HasParm( "-tools" ) )
 		{
 #endif
 			host_frametime = min( host_frametime, MAX_FRAMETIME * fullscale);
@@ -1477,7 +1504,7 @@ static void Host_AccumulateTime( float dt )
 	}
 	else
 #ifndef NO_TOOLFRAMEWORK
-		if ( CommandLine()->CheckParm( "-tools" ) != NULL )
+		if ( CommandLine()->HasParm( "-tools" ) )
 		{
 			host_frametime_unbounded = host_frametime;
 		}
@@ -1545,7 +1572,7 @@ static bool AppearsNumeric( char const *in )
 {
 	char const *p = in;
 	int special[ 3 ];
-	Q_memset( special, 0, sizeof( special ) );
+	BitwiseClear( special );
 
 	for ( ; *p; p++ )
 	{
@@ -1598,7 +1625,7 @@ char const * Host_CleanupConVarStringValue( char const *invalue )
 {
 	static char clean[ 256 ];
 
-	Q_snprintf( clean, sizeof( clean ), "%s", invalue );
+	V_strcpy_safe( clean, invalue );
 
 	// Don't mess with empty string
 	// Otherwise, if it appears numeric and has a decimal, try to strip all zeroes after decimal
@@ -1648,7 +1675,7 @@ static int Host_CountVariablesWithFlags( int flags, bool nonDefault )
 			continue;
 
 		// It's == to the default value, don't count
-		if ( nonDefault && !Q_strcasecmp( pCvar->GetDefault(), pCvar->GetString() ) )
+		if ( nonDefault && V_strieq( pCvar->GetDefault(), pCvar->GetString() ) )
 			continue;
 
 		i++;
@@ -1689,7 +1716,7 @@ void Host_BuildConVarUpdateMessage( NET_SetConVar *cvarMsg, int flags, bool nonD
 			continue;
 
 		// It's == to the default value, don't count
-		if ( nonDefault && !Q_strcasecmp( pCvar->GetDefault(), pCvar->GetString() ) )
+		if ( nonDefault && V_strieq( pCvar->GetDefault(), pCvar->GetString() ) )
 			continue;
 
 		NET_SetConVar::cvar_t acvar;
@@ -1799,10 +1826,7 @@ Host_Speeds
 */
 void CFrameTimer::ResetDeltas()
 {
-	for ( auto &d : deltas )
-	{
-		d = 0.0f;
-	}
+	BitwiseClear( deltas );
 }
 
 void CFrameTimer::MarkFrame()
@@ -1877,12 +1901,12 @@ void CFrameTimer::MarkFrame()
 
 }
 
-#define FRAME_TIME_FILTER_TIME 0.5f
+#define FRAME_TIME_FILTER_TIME 0.5
 
 void CFrameTimer::ComputeFrameVariability()
 {
 	m_pFrameTimeHistory[m_nFrameTimeHistoryIndex] = frametime;
-	if ( ++m_nFrameTimeHistoryIndex >= FRAME_HISTORY_COUNT )
+	if ( ++m_nFrameTimeHistoryIndex >= ssize( m_pFrameTimeHistory ) )
 	{
 		m_nFrameTimeHistoryIndex = 0;
 	}
@@ -2584,15 +2608,9 @@ static void _Host_RunFrame (float time)
 		// Profile scope specific to the top of this function, protect from setjmp() problems
 		VPROF( "_Host_RunFrame_Upto_MarkFrame" );
 
-		if ( host_checkheap )
-		{
 #if defined(_WIN32)
-			if ( _heapchk() != _HEAPOK )
-			{
-				Sys_Error( "_Host_RunFrame (top):  _heapchk() != _HEAPOK\n" );
-			}
+		CheckHeap( host_checkheap, __FUNCTION__ " (top)" );
 #endif
-		}
 
 		// When playing back a VCR file, don't do host_sleep. That way, if it was recorded with
 		// host_sleep on, it'll play back way Faster.
@@ -3079,16 +3097,10 @@ static void _Host_RunFrame (float time)
 		}
 
 		Host_PostFrameRate( host_frametime );
-
-		if ( host_checkheap )
-		{
-#ifdef _WIN32
-			if ( _heapchk() != _HEAPOK )
-			{
-				Sys_Error( "_Host_RunFrame (bottom):  _heapchk() != _HEAPOK\n" );
-			}
+		
+#if defined(_WIN32)
+		CheckHeap( host_checkheap, __FUNCTION__ " (bottom)" );
 #endif
-		}
 
 		Host_CheckDumpMemoryStats();
 
@@ -3188,7 +3200,7 @@ static bool IsLowViolence_Registry()
 	char szBuffer[128];
 	bool bReducedGore = false;
 
-	memset( szBuffer, 0, 128 );
+	BitwiseClear( szBuffer );
 
 	char const *appname = "Source";
 	V_sprintf_safe(szSubKey, "Software\\Valve\\%s\\Settings", appname );
@@ -3249,7 +3261,7 @@ void Host_CheckGore( void )
 	// Next check the new method of enabling low violence based on country of purchase
 	// and other means that are inaccessible by the user.
 	//
-	if ( GetCurrentMod() && Q_stricmp( GetCurrentMod(), "cstrike" ) != 0 )
+	if ( GetCurrentMod() && !V_strieq( GetCurrentMod(), "cstrike" ) )
 		bLowViolenceSecure = IsLowViolence_Secure();
 
 	//
@@ -3506,7 +3518,7 @@ bool DLL_LOCAL Host_AllowLoadModule( const char *pFilename, const char *pPathID,
 
 bool DLL_LOCAL Host_IsSecureServerAllowed()
 {
-	if ( CommandLine()->FindParm( "-insecure" ) || CommandLine()->FindParm( "-textmode" ) )
+	if ( CommandLine()->HasParm( "-insecure" ) || CommandLine()->HasParm( "-textmode" ) )
 		g_bAllowSecureServers = false;
 
 	return g_bAllowSecureServers;
@@ -3521,7 +3533,7 @@ void Host_Init( bool bDedicated )
 	host_idealtime = 0;
 
 #if defined(_WIN32)
-	if ( CommandLine()->FindParm( "-pme" ) )
+	if ( CommandLine()->HasParm( "-pme" ) )
 	{
 		s_bInitPME = true;
 	}
@@ -3575,7 +3587,7 @@ void Host_Init( bool bDedicated )
 #endif
 
 	// Check for special -dev flag
-	if ( CommandLine()->FindParm( "-dev" ) || ( CommandLine()->FindParm( "-allowdebug" ) && !CommandLine()->FindParm( "-nodev" ) ) )
+	if ( CommandLine()->HasParm( "-dev" ) || ( CommandLine()->HasParm( "-allowdebug" ) && !CommandLine()->HasParm( "-nodev" ) ) )
 	{
 		sv_cheats.SetValue( 1 );
 		developer.SetValue( 1 );
@@ -3600,7 +3612,7 @@ void Host_Init( bool bDedicated )
 	}
 #endif
 
-	if ( !CommandLine()->FindParm( "-nogamedll" ) )
+	if ( !CommandLine()->HasParm( "-nogamedll" ) )
 	{
 		SV_InitGameDLL();
 	}
@@ -3665,7 +3677,7 @@ void Host_Init( bool bDedicated )
 
 #if defined( REPLAY_ENABLED )
 	// Execute replay.cfg if this is TF and they want to use the replay system
-	if ( Replay_IsSupportedModAndPlatform() && CommandLine()->CheckParm( "-replay" ) )
+	if ( Replay_IsSupportedModAndPlatform() && CommandLine()->HasParm( "-replay" ) )
 	{
 		const char *pConfigName = CommandLine()->ParmValue( "-replay", "replay.cfg" );
 		Cbuf_AddText( va( "exec %s\n", pConfigName ) );
@@ -3706,7 +3718,7 @@ void Host_Init( bool bDedicated )
 	host_hunklevel = Hunk_LowMark();
 
 #ifdef SOURCE_MT
-	if ( CommandLine()->FindParm( "-swapcores" ) )
+	if ( CommandLine()->HasParm( "-swapcores" ) )
 	{
 		g_nMaterialSystemThread = 1;
 		g_nServerThread = 0;
@@ -3718,29 +3730,22 @@ void Host_Init( bool bDedicated )
 	// Finished initializing
 	host_initialized = true;
 
-	host_checkheap = CommandLine()->FindParm( "-heapcheck" ) ? true : false;
-
-	if ( host_checkheap )
-	{
-#if defined( _WIN32 )
-		if ( _heapchk() != _HEAPOK )
-		{
-			Sys_Error( "Host_Init:  _heapchk() != _HEAPOK\n" );
-		}
+#if defined(_WIN32)
+	host_checkheap = CommandLine()->HasParm( "-heapcheck" );
+	CheckHeap( host_checkheap, __FUNCTION__ );
 #endif
-	}
 
 	// go directly to run state with no active game
 	HostState_Init();
 
 	// check for reslist generation
-	if ( CommandLine()->FindParm( "-makereslists" ) )
+	if ( CommandLine()->HasParm( "-makereslists" ) )
 	{
 		MapReslistGenerator().StartReslistGeneration();
 	}
 
 	// check for devshot generation
-	if ( CommandLine()->FindParm( "-makedevshots" ) )
+	if ( CommandLine()->HasParm( "-makedevshots" ) )
 	{
 		DevShotGenerator().StartDevShotGeneration();
 	}
@@ -3810,7 +3815,7 @@ bool Host_Changelevel( bool loadfromsavedgame, const char *mapname, const char *
 	char szMapFile[MAX_PATH];
 	szMapFile[0] = '\0';
 	
-	Host_DefaultMapFileName( szMapName, szMapFile, sizeof( szMapFile ) );
+	Host_DefaultMapFileName( szMapName, szMapFile );
 
 	// Ask serverDLL to prepare this load
 	if ( g_iServerGameDLLVersion >= 10 )
@@ -3832,22 +3837,8 @@ bool Host_Changelevel( bool loadfromsavedgame, const char *mapname, const char *
 		return false;
 	}
 
-	// If changing from the same map to the same map, optimize by not closing and reopening
-	// the packfile which is embedded in the .bsp; we do this by incrementing the packfile's
-	// refcount via BeginMapAccess()/EndMapAccess() through the base filesystem API.
-	struct LocalMapAccessScope
-	{
-		LocalMapAccessScope() : bEnabled( false ) { }
-		~LocalMapAccessScope() { if ( bEnabled ) g_pFileSystem->EndMapAccess(); }
-		bool bEnabled;
-	};
-
-	LocalMapAccessScope mapscope;
-	if ( V_strcmp( sv.GetMapName(), szMapName ) == 0 )
-	{
-		g_pFileSystem->BeginMapAccess();
-		mapscope.bEnabled = true;
-	}
+	const bool bEnableMapAccess = V_streq(sv.GetMapName(), szMapName);
+	const LocalMapAccessScope mapscope{ bEnableMapAccess, g_pFileSystem };
 
 	g_pFileSystem->AsyncFinishAll();
 
@@ -3999,9 +3990,6 @@ bool Host_NewGame( char *mapName, bool loadGame, bool bBackgroundLevel, const ch
 	VPROF( "Host_NewGame" );
 	COM_TimestampedLog( "Host_NewGame" );
 
-	char previousMapName[MAX_PATH];
-	V_strcpy_safe( previousMapName, host_map.GetString() );
-
 #ifndef SWDS
 	SCR_BeginLoadingPlaque();
 #endif
@@ -4013,7 +4001,7 @@ bool Host_NewGame( char *mapName, bool loadGame, bool bBackgroundLevel, const ch
 	// The file to load the map from.
 	char szMapFile[MAX_PATH];
 	szMapFile[0] = '\0';
-	Host_DefaultMapFileName( szMapName, szMapFile, sizeof( szMapFile ) );
+	Host_DefaultMapFileName( szMapName, szMapFile );
 
 	// Steam may not have been started yet, ensure it is available to the game DLL before we ask it to prepare level
 	// resources
@@ -4209,15 +4197,9 @@ void Host_FreeToLowMark( bool server )
 //-----------------------------------------------------------------------------
 void Host_Shutdown(void)
 {
-	if ( host_checkheap )
-	{
-#ifdef _WIN32
-		if ( _heapchk() != _HEAPOK )
-		{
-			Sys_Error( "Host_Shutdown (top):  _heapchk() != _HEAPOK\n" );
-		}
+#if defined(_WIN32)
+	CheckHeap( host_checkheap, __FUNCTION__  " (top)");
 #endif
-	}
 
 	// Check for recursive shutdown, should never happen
 	static bool shutting_down = false;
@@ -4360,16 +4342,10 @@ void Host_Shutdown(void)
 		ShutdownPME();
 	}
 #endif
-
-	if ( host_checkheap )
-	{
-#ifdef _WIN32
-		if ( _heapchk() != _HEAPOK )
-		{
-			Sys_Error( "Host_Shutdown (bottom):  _heapchk() != _HEAPOK\n" );
-		}
+	
+#if defined(_WIN32)
+	CheckHeap( host_checkheap, __FUNCTION__ " (bottom)");
 #endif
-	}
 }
 
 //-----------------------------------------------------------------------------

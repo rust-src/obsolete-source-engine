@@ -100,7 +100,7 @@ CProject *CWorkspace::FindProjectFile( char const *filename ) const
 	{
 		CProject *p = GetProject( i );
 		Assert( p );
-		if ( !Q_stricmp( p->GetFileName(), filename ) )
+		if ( V_strieq( p->GetFileName(), filename ) )
 			return p;
 	}
 	return NULL;
@@ -114,7 +114,7 @@ void CWorkspace::LoadFromFile()
 		for ( KeyValues *proj = kv->GetFirstSubKey(); proj; proj = proj->GetNextKey() )
 		{
 			// Add named projects
-			if ( !Q_stricmp( proj->GetName(), "project" ) )
+			if ( V_strieq( proj->GetName(), "project" ) )
 			{
 				bool expanded = false;
 				char filename[ 256 ];
@@ -122,12 +122,12 @@ void CWorkspace::LoadFromFile()
 
 				for ( KeyValues *sub = proj->GetFirstSubKey(); sub; sub = sub->GetNextKey() )
 				{
-					if ( !Q_stricmp( sub->GetName(), "file" ) )
+					if ( V_strieq( sub->GetName(), "file" ) )
 					{
 						Q_strcpy( filename, sub->GetString() );
 						continue;
 					}
-					else if ( !Q_stricmp( sub->GetName(), "expanded" ) )
+					else if ( V_strieq( sub->GetName(), "expanded" ) )
 					{
 						expanded = sub->GetInt() ? true : false;
 						continue;
@@ -145,41 +145,41 @@ void CWorkspace::LoadFromFile()
 
 				continue;
 			}
-			else if ( !Q_stricmp( proj->GetName(), "vss_username" ) )
+			else if ( V_strieq( proj->GetName(), "vss_username" ) )
 			{
 				SetVSSUserName( proj->GetString() );
 
 				Con_Printf( "VSS User: '%s'\n", GetVSSUserName() );
 				continue;
 			}
-			else if ( !Q_stricmp( proj->GetName(), "vss_project" ) )
+			else if ( V_strieq( proj->GetName(), "vss_project" ) )
 			{
 				SetVSSProject( proj->GetString() );
 
 				Con_Printf( "VSS Project:  '%s'\n", GetVSSProject() );
 				continue;
 			}
-			else if ( !Q_stricmp( proj->GetName(), "window" ) )
+			else if ( V_strieq( proj->GetName(), "window" ) )
 			{
 				SetDirty( true );
 
 				char const *windowname = proj->GetString( "windowname", "" );
-				if ( !Q_stricmp( windowname, "workspace" ) )
+				if ( V_strieq( windowname, "workspace" ) )
 				{
 					SceneManager_LoadWindowPositions( proj, GetWorkspaceManager()->GetBrowser() );
 					continue;
 				}
-				else if ( !Q_stricmp( windowname, "soundbrowser" ) )
+				else if ( V_strieq( windowname, "soundbrowser" ) )
 				{
 					SceneManager_LoadWindowPositions( proj, GetWorkspaceManager()->GetSoundBrowser() );
 					continue;
 				}
-				else if ( !Q_stricmp( windowname, "wavebrowser" ) )
+				else if ( V_strieq( windowname, "wavebrowser" ) )
 				{
 					SceneManager_LoadWindowPositions( proj, GetWorkspaceManager()->GetWaveBrowser() );
 					continue;
 				}
-				else if ( !Q_stricmp( windowname, "main" ) )
+				else if ( V_strieq( windowname, "main" ) )
 				{
 					SceneManager_LoadWindowPositions( proj, GetWorkspaceManager() );
 					continue;
@@ -262,8 +262,8 @@ void CWorkspace::SaveToFile()
 	FileHandle_t fh = filesystem->Open( m_szFile, "wt" );
 	if (fh)
 	{
+		RunCodeAtScopeExit(g_pFullFileSystem->Close(fh));
 		filesystem->Write( buf.Base(), buf.TellPut(), fh );
-		filesystem->Close(fh);
 	}
 	else
 	{
@@ -373,12 +373,14 @@ void CWorkspace::SetVSSUserName( char const *username )
 void CWorkspace::SetVSSProject( char const *projectname )
 {
 	Q_strncpy( m_szVSSProject, projectname, sizeof( m_szVSSProject ) );
-	while ( Q_strlen( m_szVSSProject ) > 0 )
+	while ( !Q_isempty( m_szVSSProject ) )
 	{
-		if ( m_szVSSProject[ Q_strlen( m_szVSSProject ) - 1 ] == '/' ||
-			 m_szVSSProject[ Q_strlen( m_szVSSProject ) - 1 ] == '\\' )
+		// dimhotepus: Cache length.
+		const intp len = Q_strlen( m_szVSSProject );
+		if ( m_szVSSProject[ len - 1 ] == '/' ||
+			 m_szVSSProject[ len - 1 ] == '\\' )
 		{
-			m_szVSSProject[ Q_strlen( m_szVSSProject ) - 1 ] = 0;
+			m_szVSSProject[ len - 1 ] = 0;
 		}
 		else
 		{

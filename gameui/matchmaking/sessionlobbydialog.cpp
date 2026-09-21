@@ -259,7 +259,7 @@ void CSessionLobbyDialog::PositionTeamInfos()
 	m_pTeamInfos[0]->GetPos( x, y );
 	m_Menus[0].GetPos( menux, menuy );
 
-	for ( int i = 1; i < TOTAL_LOBBY_TEAMS; ++i )
+	for ( int i = 1; i < TOTAL_LOBBY_TEAMS; ++i ) //-V1008
 	{
 		y += m_pTeamInfos[i - 1]->GetTall() + m_nTeamspacing;
 		m_pTeamInfos[i]->SetPos( x, y );
@@ -691,11 +691,11 @@ void CSessionLobbyDialog::SetStartGame( bool bStartGame )
 //---------------------------------------------------------------------
 void CSessionLobbyDialog::OnCommand( const char *pCommand )
 {
-	if ( !Q_stricmp( pCommand, "ReturnToMainMenu" ) )
+	if ( V_strieq( pCommand, "ReturnToMainMenu" ) )
 	{
 		matchmaking->KickPlayerFromSession( 0 );
 	}
-	else if ( !Q_stricmp( pCommand, "KickPlayer" ) )
+	else if ( V_strieq( pCommand, "KickPlayer" ) )
 	{
 		CDialogMenu *pMenu = &m_Menus[m_iActiveMenu];
 		CPlayerItem *pItem = (CPlayerItem*)pMenu->GetItem( pMenu->GetActiveItemIndex() );

@@ -1946,7 +1946,8 @@ bool ComparePath( const char *a, const char *b )
 		{
 			continue;
 		}
-		if ( tolower( *a ) == tolower( *b ) )
+		// dimhotepus: tolower -> V_tolower.
+		if ( V_tolower( *a ) == V_tolower( *b ) )
 		{
 			continue;
 		}
@@ -3110,7 +3111,7 @@ void COptimizedModel::DebugCrap( studiohdr_t *phdr )
 				FILE *fp = fopen( tmp, "w" );
 				if( !fp )
 				{
-					printf( "can't write crap file %s\n", tmp );
+					fprintf( stderr, "can't write crap file %s\n", tmp );
 					return;
 				}
 				
@@ -3176,7 +3177,7 @@ void COptimizedModel::WriteGLViewFile( studiohdr_t *phdr, const char *pFileName,
 				FILE *fp = fopen( tmp, "w" );
 				if( !fp )
 				{
-					printf( "can't write glview file %s\n", tmp );
+					fprintf( stderr, "can't write glview file %s\n", tmp );
 					return;
 				}
 

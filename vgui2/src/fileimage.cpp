@@ -81,11 +81,8 @@ bool FileImageStream_Memory::ErrorStatus()
 // ---------------------------------------------------------------------------------------- //
 static void WriteRun(unsigned char *pColor, FileHandle_t fp, int runLength)
 {
-	unsigned char runCount;
-
-	runCount = runLength - 1;
-	runCount |= (1 << 7);
-	g_pFullFileSystem->Write( &runCount, 1, fp );
+	unsigned char runCount = (runLength - 1) | (1 << 7);
+	g_pFullFileSystem->Write( runCount, fp );
 	g_pFullFileSystem->Write( pColor, 4, fp );
 }
 
@@ -172,13 +169,13 @@ void Save32BitTGA(
 	unsigned char *pLine;
 
 
-	memset(&hdr, 0, sizeof(hdr));
+	BitwiseClear(hdr);
 	hdr.m_PixelDepth = 32;
 	hdr.m_ImageType = 10;	// Run-length encoded RGB.
 	hdr.m_Width = pImage->m_Width;
 	hdr.m_Height = pImage->m_Height;
 
-	g_pFullFileSystem->Write(&hdr, sizeof(hdr), fp );
+	g_pFullFileSystem->Write( hdr, fp );
 	
 	// Lines are written bottom-up.
 	for(y=pImage->m_Height-1; y >= 0; y--)

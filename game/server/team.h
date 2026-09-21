@@ -58,7 +58,7 @@ public:
 	virtual void InitializePlayers( void );
 	virtual void AddPlayer( CBasePlayer *pPlayer );
 	virtual void RemovePlayer( CBasePlayer *pPlayer );
-	virtual int  GetNumPlayers( void ) const;
+	virtual intp GetNumPlayers( void ) const;
 	virtual CBasePlayer *GetPlayer( int iIndex ) const ;
 
 	//-----------------------------------------------------------------------------

@@ -362,7 +362,7 @@ void DrawMeasuredSections(void)
 	while ( p )
 	{
 		char str[256];
-		Q_snprintf(str,sizeof(str),"%s",p->GetName());
+		V_strcpy_safe(str,p->GetName());
 		NDebugOverlay::ScreenText( 0.01,0.51+(row*rowheight),str, 255,255,255,255, 0.0 );
 		
 		Q_snprintf(str,sizeof(str),"%5.2f\n",p->GetTime().GetMillisecondsF());
@@ -626,7 +626,7 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	if ( (scenefilecache = (ISceneFileCache *)appSystemFactory( SCENE_FILE_CACHE_INTERFACE_VERSION, NULL )) == NULL )
 		return false;
 
-	if ( !CommandLine()->CheckParm( "-noscripting") )
+	if ( !CommandLine()->HasParm( "-noscripting") )
 	{
 		if ( (scriptmanager = (IScriptManager *)appSystemFactory( VSCRIPT_INTERFACE_VERSION, NULL )) == NULL )
 			return false;
@@ -846,9 +846,9 @@ float CServerGameDLL::GetTickInterval( void ) const
 // HPE_END
 //=============================================================================
 	// override if tick rate specified in command line
-	if ( CommandLine()->CheckParm( "-tickrate" ) )
+	if ( const char *tickRate; CommandLine()->CheckParm( "-tickrate", &tickRate ) )
 	{
-		float tickrate = CommandLine()->ParmValue( "-tickrate", 0 );
+		float tickrate = V_atof( tickRate );
 		if ( tickrate > 10 )
 			tickinterval = 1.0f / tickrate;
 	}
@@ -1026,8 +1026,8 @@ bool CServerGameDLL::LevelInit( const char *pMapName, char const *pMapEntities, 
 			CBaseEntity *pAutosave = CBaseEntity::Create( "logic_autosave", vec3_origin, vec3_angle, NULL );
 			if ( pAutosave )
 			{
-				g_EventQueue.AddEvent( pAutosave, "Save", 1.0, NULL, NULL );
-				g_EventQueue.AddEvent( pAutosave, "Kill", 1.1, NULL, NULL );
+				g_EventQueue.AddEvent( pAutosave, "Save", 1.0f, NULL, NULL );
+				g_EventQueue.AddEvent( pAutosave, "Kill", 1.1f, NULL, NULL );
 			}
 		}
 	}
@@ -2062,7 +2062,7 @@ void CServerGameDLL::LoadSpecificMOTDMsg( const ConVar &convar, const char *pszS
 	}
 
 	// Still not found?  See if we can try the default.
-	if ( !bFound && !V_stricmp( convar.GetString(), convar.GetDefault() ) )
+	if ( !bFound && V_strieq( convar.GetString(), convar.GetDefault() ) )
 	{
 		V_strcpy_safe( szResolvedFilename, szPreferredFilename );
 		char *dotTxt = V_stristr( szResolvedFilename, ".txt" );
@@ -2084,7 +2084,7 @@ void CServerGameDLL::LoadSpecificMOTDMsg( const ConVar &convar, const char *pszS
 	}
 	buf.PutChar( '\0' );
 
-	if ( V_stricmp( szPreferredFilename, szResolvedFilename ) == 0)
+	if ( V_strieq( szPreferredFilename, szResolvedFilename ) )
 	{
 		Msg( "Set %s from file '%s'\n", pszStringName, szResolvedFilename );
 	}
@@ -2161,9 +2161,9 @@ void UpdateChapterRestrictions( const char *mapname )
 
 		// HACK: HL2 added a zany chapter "9a" which wreaks
 		//       havoc in this stupid atoi-based chapter code.
-		if ( !Q_stricmp( modDir, "hl2" ) )
+		if ( V_strieq( modDir, "hl2" ) )
 		{
-			if ( !Q_stricmp( newChapter, "9a" ) )
+			if ( V_strieq( newChapter, "9a" ) )
 			{
 				nNewChapter = 10;
 			}
@@ -2461,7 +2461,8 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 		{
 			// FIXME: Hey! Shouldn't this be using SetTransmit so as 
 			// to also force network down dependent entities?
-			while ( true )
+			// RaphaelIt7: Fix a crash when a networked entity is parented to a server-only entity
+			while ( pEdict )
 			{
 				// mark entity for sending
 				pInfo->m_pTransmitEdict->Set( iEdict );

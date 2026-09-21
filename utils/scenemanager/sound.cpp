@@ -1046,7 +1046,7 @@ CAudioSource *CSceneManagerSound::FindOrAddSound( const char *filename )
 	{
 		s = &m_ActiveSounds[ i ];
 		Assert( s );
-		if ( !stricmp( s->filename, filename ) )
+		if ( V_strieq( s->filename, filename ) )
 		{
 			long filetime = filesystem->GetFileTime( filename );
 			if ( filetime != s->filetime )
@@ -1062,7 +1062,7 @@ CAudioSource *CSceneManagerSound::FindOrAddSound( const char *filename )
 
 	i = m_ActiveSounds.AddToTail();
 	s = &m_ActiveSounds[ i ];
-	strcpy( s->filename, filename );
+	V_strcpy_safe( s->filename, filename );
 	s->source = LoadSound( filename );
 	s->filetime = filesystem->GetFileTime( filename );
 

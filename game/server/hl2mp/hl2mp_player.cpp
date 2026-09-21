@@ -345,7 +345,7 @@ bool CHL2MP_Player::ValidatePlayerModel( const char *pModel )
 
 	for ( i = 0; i < iModels; ++i )
 	{
-		if ( !Q_stricmp( g_ppszRandomCitizenModels[i], pModel ) )
+		if ( V_strieq( g_ppszRandomCitizenModels[i], pModel ) )
 		{
 			return true;
 		}
@@ -355,7 +355,7 @@ bool CHL2MP_Player::ValidatePlayerModel( const char *pModel )
 
 	for ( i = 0; i < iModels; ++i )
 	{
-	   	if ( !Q_stricmp( g_ppszRandomCombineModels[i], pModel ) )
+	   	if ( V_strieq( g_ppszRandomCombineModels[i], pModel ) )
 		{
 			return true;
 		}
@@ -455,7 +455,7 @@ void CHL2MP_Player::SetPlayerModel( void )
 	}
 	else
 	{
-		if ( Q_strlen( szModelName ) == 0 ) 
+		if ( Q_isempty( szModelName ) ) 
 		{
 			szModelName = g_ppszRandomCitizenModels[0];
 		}

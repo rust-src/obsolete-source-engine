@@ -33,7 +33,6 @@ class CBoneSetup
 {
 public:
 	CBoneSetup( const CStudioHdr *pStudioHdr, int boneMask, const float poseParameter[], IPoseDebugger *pPoseDebugger = NULL );
-	void InitPose( Vector pos[], Quaternion q[] );
 	void AccumulatePose( Vector pos[], Quaternion q[], int sequence, float cycle, float flWeight, float flTime, CIKContext *pIKContext );
 	void CalcAutoplaySequences(	Vector pos[], Quaternion q[], float flRealTime, CIKContext *pIKContext );
 private:
@@ -1438,7 +1437,7 @@ void SlerpBones(
 
 	// Build weightlist for all bones
 	int nBoneCount = pStudioHdr->numbones();
-	float *pS2 = (float*)stackalloc( nBoneCount * sizeof(float) );
+	float *pS2 = stackallocT( float, nBoneCount );
 	for (i = 0; i < nBoneCount; i++)
 	{
 		// skip unused bones
@@ -2399,6 +2398,14 @@ void CBoneSetup::AccumulatePose(
 {
 	Vector		pos2[MAXSTUDIOBONES];
 	QuaternionAligned	q2[MAXSTUDIOBONES];
+
+// dimhotepus: Catch uninit vars.
+#if defined(FP_EXCEPTIONS_ENABLED) || defined(DBGFLAG_ASSERT)
+	// Having these uninitialized means that some bugs are very hard
+	// to reproduce. A memset of 0xFF is a simple way of getting NaNs.
+	memset( pos2, 0xFF, sizeof(pos2) );
+	memset( q2, 0xFF, sizeof(q2) );
+#endif
 
 	Assert( flWeight >= 0.0f && flWeight <= 1.0f );
 	// This shouldn't be necessary, but the Assert should help us catch whoever is screwing this up
@@ -4199,8 +4206,8 @@ void CIKContext::SolveDependencies( Vector pos[], Quaternion q[], matrix3x4_t bo
 				if (pChainResult->target != -1)
 				{
 					CIKTarget *pTarget = &m_target[pChainResult->target];
-					VectorScale( pTarget->latched.deltaPos, 0.8, pTarget->latched.deltaPos );
-					QuaternionScale( pTarget->latched.deltaQ, 0.8, pTarget->latched.deltaQ );
+					VectorScale( pTarget->latched.deltaPos, 0.8f, pTarget->latched.deltaPos );
+					QuaternionScale( pTarget->latched.deltaQ, 0.8f, pTarget->latched.deltaQ );
 				}
 			}
 		}
@@ -5042,13 +5049,14 @@ void Studio_CalcDefaultPoseParameters( const CStudioHdr *pStudioHdr, float flPos
 
 	for ( int i = 0; i < nNumParams; ++i )
 	{
-		// Default to middle of the pose parameter range
-		flPoseParameter[ i ] = 0.5f;
+		// dimhotepus: Change default to the start of pose.
+		// Default to start of the pose parameter range
+		flPoseParameter[ i ] = 0.f;
 		if ( i < nPoseCount )
 		{
 			const mstudioposeparamdesc_t &Pose = pStudioHdr->pPoseParameter( i );
 
-			// Want to try for a zero state.  If one doesn't exist set it to .5 by default.
+			// Want to try for a zero state.  If one doesn't exist set it to .0 by default.
 			if ( Pose.start < 0.0f && Pose.end > 0.0f )
 			{
 				float flPoseDelta = Pose.end - Pose.start;
@@ -5810,7 +5818,7 @@ int Studio_FindAttachment( const CStudioHdr *pStudioHdr, const char *pAttachment
 		// Extract the bone index from the name
 		for (int i = 0; i < pStudioHdr->GetNumAttachments(); i++)
 		{
-			if (!V_stricmp(pAttachmentName,pStudioHdr->pAttachment(i).pszName( ))) 
+			if (V_strieq(pAttachmentName,pStudioHdr->pAttachment(i).pszName( ))) 
 			{
 				return i;
 			}

@@ -363,7 +363,7 @@ const char * CHL1MPRules::SetDefaultPlayerTeam( CBasePlayer *pPlayer )
 const char * CHL1MPRules::TeamWithFewestPlayers( void )
 {
 	const char * szName = "";
-	int iNumPlayers = 0xFFFF;
+	intp iNumPlayers = 0xFFFF;
 	for (int i = TEAM_SPECTATOR+1; i < GetNumberOfTeams(); i++)
 	{
 		if ( GetGlobalTeam(i)->GetNumPlayers() < iNumPlayers )
@@ -407,7 +407,7 @@ void CHL1MPRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 	const char *szModelName = szTempModelName;
 
 	//If we're different.
-	if ( strlen( szModelName ) > 0 && stricmp( szModelName, pCurrentModel ) )
+	if ( !Q_isempty( szModelName ) && stricmp( szModelName, pCurrentModel ) )
 	{
 		//Too soon, set the cvar back to what it was.
 		//Note: this will make this function be called again

@@ -70,7 +70,7 @@ END_SEND_TABLE()
 
 CShadowControl::CShadowControl()
 {
-	m_shadowDirection.Init( 0.2, 0.2, -2 );
+	m_shadowDirection.Init( 0.2f, 0.2f, -2 );
 	m_flShadowMaxDist = 50.0f;
 	m_shadowColor.Init( 64, 64, 64, 0 );
 	m_bDisableShadows = false;

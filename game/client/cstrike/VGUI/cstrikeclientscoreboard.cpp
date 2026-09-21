@@ -830,7 +830,7 @@ void CCSClientScoreBoardDialog::UpdateTeamPlayerDisplay( TeamDisplayInfo& teamDi
 // 			char *newName = (char *)_alloca( bufsize );
 // 			UTIL_MakeSafeName( oldName, newName, bufsize );
 
-			if ( pUTF8Name != NULL && V_strlen( pUTF8Name ) > 0 )
+			if ( !Q_isempty( pUTF8Name ) )
 			{
 				bool isAlive = cs_PR->IsAlive( playerIndex );
 				Color fgColor = ( isAlive ? teamDisplay.playerDataColor : m_DeadPlayerDataColor );
@@ -869,7 +869,7 @@ void CCSClientScoreBoardDialog::UpdateTeamPlayerDisplay( TeamDisplayInfo& teamDi
 
 				if ( playerDisplay.pScoreLabel != NULL )
 				{
-					Q_snprintf( tmpbuf, sizeof( tmpbuf ), "%d", pPlayerScore->frags);
+					V_to_chars( tmpbuf, pPlayerScore->frags);
 					playerDisplay.pScoreLabel->SetVisible( true );
 					playerDisplay.pScoreLabel->SetText( tmpbuf );
 					playerDisplay.pScoreLabel->SetBgColor( m_PlayerDataBgColor );
@@ -880,7 +880,7 @@ void CCSClientScoreBoardDialog::UpdateTeamPlayerDisplay( TeamDisplayInfo& teamDi
 
 				if ( playerDisplay.pDeathsLabel != NULL )
 				{
-					Q_snprintf( tmpbuf, sizeof( tmpbuf ), "%d", pPlayerScore->deaths);
+					V_to_chars( tmpbuf, pPlayerScore->deaths);
 					playerDisplay.pDeathsLabel->SetVisible( true );
 					playerDisplay.pDeathsLabel->SetText( tmpbuf );
 					playerDisplay.pDeathsLabel->SetBgColor( m_PlayerDataBgColor );
@@ -893,7 +893,7 @@ void CCSClientScoreBoardDialog::UpdateTeamPlayerDisplay( TeamDisplayInfo& teamDi
 				if ( playerDisplay.pPingLabel != NULL )
 				{
 					if ( pPlayerScore->ping >= 0 )
-						Q_snprintf( tmpbuf, sizeof( tmpbuf ), "%d", pPlayerScore->ping);
+						V_to_chars( tmpbuf, pPlayerScore->ping);
 					else
 						Q_strcpy( tmpbuf, "BOT");
 

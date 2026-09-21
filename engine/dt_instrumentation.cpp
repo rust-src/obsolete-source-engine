@@ -67,7 +67,7 @@ void DTI_Init()
 {
 #if ( defined( IS_WINDOWS_PC ) && (! defined( SWDS ) ) )
 	extern IVEngineClient *engineClient;
-	if ( CommandLine()->FindParm( "-dti" ) && !g_bDTIEnabled )
+	if ( CommandLine()->HasParm( "-dti" ) && !g_bDTIEnabled )
 	{
 		g_bDTIEnabled = true;
 
@@ -184,7 +184,7 @@ void DTI_HookRecvDecoder( CRecvDecoder *pDecoder )
 	if ( !g_bDTIEnabled )
 		return;
 
-	bool dtiEnabled = CommandLine()->FindParm("-dti" ) > 0;
+	bool dtiEnabled = CommandLine()->HasParm("-dti" );
 
 	CDTIRecvTable *pTable = new CDTIRecvTable;
 	pTable->m_Name.Set( pDecoder->GetName() );
@@ -203,7 +203,7 @@ void DTI_HookRecvDecoder( CRecvDecoder *pDecoder )
 			if ( parentArrayPropName )
 			{
 				char temp[256];
-				V_snprintf( temp, sizeof( temp ), "%s:%s", parentArrayPropName, pSendProp->GetName() );
+				V_sprintf_safe( temp, "%s:%s", parentArrayPropName, pSendProp->GetName() );
 				pTable->m_Props[i].m_Name.Set( temp );
 			}
 			else

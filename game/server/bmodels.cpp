@@ -945,7 +945,7 @@ void CFuncRotating::UpdateSpeed( float flNewSpeed )
 		EmitSound_t ep;
 		ep.m_nChannel = CHAN_STATIC;
 		ep.m_pSoundName = STRING(m_NoiseRunning);
-		ep.m_flVolume = 0.01;
+		ep.m_flVolume = 0.01f;
 		ep.m_SoundLevel = ATTN_TO_SNDLVL( m_flAttenuation );
 		ep.m_nPitch = FANPITCHMIN;
 

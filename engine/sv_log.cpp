@@ -95,7 +95,7 @@ CON_COMMAND( log, "Enables logging to file, console, and udp < on | off >." )
 		return;
 	}
 
-	if ( !Q_stricmp( args[1], "off" ) || !Q_stricmp( args[1], "0" ) )
+	if ( V_strieq( args[1], "off" ) || V_strieq( args[1], "0" ) )
 	{
 		if ( g_Log.IsActive() )
 		{
@@ -104,7 +104,7 @@ CON_COMMAND( log, "Enables logging to file, console, and udp < on | off >." )
 			ConMsg( "Server logging disabled.\n" );
 		}
 	}
-	else if ( !Q_stricmp( args[1], "on" ) || !Q_stricmp( args[1], "1" ) )
+	else if ( V_strieq( args[1], "on" ) || V_strieq( args[1], "1" ) )
 	{
 		g_Log.SetLoggingState( true );
 		ConMsg( "Server logging enabled.\n" );
@@ -168,13 +168,14 @@ CON_COMMAND( logaddress_add, "Set address and port for remote host <ip:port>." )
 
 	if ( NET_StringToAdr( szAdr, &adr ) )
 	{
+		char buffer[32];
 		if ( g_Log.AddLogAddress( adr ) )
 		{
-			ConMsg( "logaddress_add:  %s\n", adr.ToString() );
+			ConMsg( "logaddress_add:  %s\n", adr.ToString_safe(buffer) );
 		}
 		else
 		{
-			ConMsg( "logaddress_add:  %s is already in the list\n", adr.ToString() );
+			ConMsg( "logaddress_add:  %s is already in the list\n", adr.ToString_safe(buffer) );
 		}
 	}
 	else
@@ -239,13 +240,14 @@ CON_COMMAND( logaddress_del, "Remove address and port for remote host <ip:port>.
 
 	if ( NET_StringToAdr( szAdr, &adr ) )
 	{
+		char buffer[32];
 		if ( g_Log.DelLogAddress( adr ) )
 		{
-			ConMsg( "logaddress_del:  %s\n", adr.ToString() );
+			ConMsg( "logaddress_del:  %s\n", adr.ToString_safe(buffer) );
 		}
 		else
 		{
-			ConMsg( "logaddress_del:  address %s not found in the list\n", adr.ToString() );
+			ConMsg( "logaddress_del:  address %s not found in the list\n", adr.ToString_safe(buffer) );
 		}
 	}
 	else
@@ -280,7 +282,7 @@ void CLog::Reset( void )	// reset all logging streams
 	m_flLastLogFlush = realtime;
 	m_bFlushLog = false;
 #ifndef _XBOX
-	if ( CommandLine()->CheckParm( "-flushlog" ) )
+	if ( CommandLine()->HasParm( "-flushlog" ) )
 	{
 		m_bFlushLog = true;
 	}
@@ -384,10 +386,11 @@ void CLog::ListLogAddress( void )
 		{
 			ConMsg( "logaddress_list: %zi entries\n", count );
 		}
-
+		
+		char buffer[32];
 		for ( auto &address : m_LogAddresses )
 		{
-			ConMsg( "%s\n", address.ToString() );
+			ConMsg( "%s\n", address.ToString_safe(buffer) );
 		}
 	}
 }
@@ -533,27 +536,27 @@ void CLog::FireGameEvent( IGameEvent *event )
 	if ( !name || !name[0])
 		return;
 
-	if ( Q_strcmp(name, "server_spawn") == 0 )
+	if ( V_streq(name, "server_spawn") )
 	{
 		Printf( "Started map \"%s\" (CRC \"%s\")\n", sv.GetMapName(), MD5_Print( sv.worldmapMD5.bits ) );
 	}
 
-	else if ( Q_strcmp(name, "server_shutdown") == 0 )
+	else if ( V_streq(name, "server_shutdown") )
 	{
 		Printf( "server_message: \"%s\"\n", event->GetString("reason") );
 	}
 
-	else if ( Q_strcmp(name, "server_cvar") == 0 )
+	else if ( V_streq(name, "server_cvar") )
 	{
 		Printf( "server_cvar: \"%s\" \"%s\"\n", event->GetString("cvarname"), event->GetString("cvarvalue")  );
 	}
 
-	else if ( Q_strcmp(name, "server_message") == 0 )
+	else if ( V_streq(name, "server_message") )
 	{
 		Printf( "server_message: \"%s\"\n", event->GetString("text") );
 	}
 	
-	else if ( Q_strcmp(name, "server_addban") == 0 )
+	else if ( V_streq(name, "server_addban") )
 	{
 		if ( sv_logbans.GetInt() > 0 )
 		{
@@ -615,7 +618,7 @@ void CLog::FireGameEvent( IGameEvent *event )
 		}
 	}
 
-	else if ( Q_strcmp(name, "server_removeban") == 0 )
+	else if ( V_streq(name, "server_removeban") )
 	{
 		if ( sv_logbans.GetInt() > 0 )
 		{
@@ -656,7 +659,7 @@ static bool CreateTempFilename( TempFilename_t &info, const char *filenameBase, 
 {
 	// Check if a logfilename format has been specified - if it has, kick in new behavior.
 	const char *logfilename_format = sv_logfilename_format.GetString();
-	bool bHaveLogfilenameFormat = logfilename_format && logfilename_format[ 0 ];
+	bool bHaveLogfilenameFormat = !Q_isempty( logfilename_format );
 
 	info.fh.file = NULL;
 	info.fh.gzfile = 0;
@@ -856,7 +859,7 @@ void CLog::Open( void )
 	szLogFilename[ 0 ] = 0;
 
 	const char *logfilename_format = sv_logfilename_format.GetString();
-	if ( logfilename_format && logfilename_format[ 0 ] )
+	if ( !Q_isempty( logfilename_format ) )
 	{
 		// Call strftime with the logfilename format.
 		strftime( szLogFilename, sizeof( szLogFilename ), logfilename_format, &today );

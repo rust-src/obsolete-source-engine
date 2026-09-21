@@ -216,11 +216,11 @@ int CGameServer::PrecacheModel( char const *name, int flags, model_t *model /*=N
 
 	bool bLoadNow;
 	bLoadNow = ( !slot->GetModel() && ( ( flags & RES_PRELOAD ) || IsX360() ) );
-	if ( CommandLine()->FindParm( "-nopreload" ) ||	CommandLine()->FindParm( "-nopreloadmodels" ))
+	if ( CommandLine()->HasParm( "-nopreload" ) || CommandLine()->HasParm( "-nopreloadmodels" ))
 	{
 		bLoadNow = false;
 	}
-	else if ( sv_forcepreload.GetInt() || CommandLine()->FindParm( "-preload" ) )
+	else if ( sv_forcepreload.GetInt() || CommandLine()->HasParm( "-preload" ) )
 	{
 		bLoadNow = true;
 	}
@@ -585,7 +585,7 @@ void CGameServer::DumpPrecacheStats( INetworkStringTable *table )
 			("CGameServer::DumpPrecacheStats: invalid CPrecacheUserData length (%zd)", testLength)
 		);
 
-		if ( !name || !slot || !p )
+		if ( !name || !p )
 			continue;
 
 		ConMsg( "%03i:  %s (%s):   ",
@@ -620,19 +620,19 @@ CON_COMMAND( sv_precacheinfo, "Show precache info." )
 		char const *table = args[ 1 ];
 
 		bool dumped = true;
-		if ( !Q_strcasecmp( table, "generic" ) )
+		if ( V_strieq( table, "generic" ) )
 		{
 			sv.DumpPrecacheStats( sv.GetGenericPrecacheTable() );
 		}
-		else if ( !Q_strcasecmp( table, "sound" ) )
+		else if ( V_strieq( table, "sound" ) )
 		{
 			sv.DumpPrecacheStats( sv.GetSoundPrecacheTable() );
 		}
-		else if ( !Q_strcasecmp( table, "decal" ) )
+		else if ( V_strieq( table, "decal" ) )
 		{
 			sv.DumpPrecacheStats( sv.GetDecalPrecacheTable() );
 		}
-		else if ( !Q_strcasecmp( table, "model" ) )
+		else if ( V_strieq( table, "model" ) )
 		{
 			sv.DumpPrecacheStats( sv.GetModelPrecacheTable() );
 		}

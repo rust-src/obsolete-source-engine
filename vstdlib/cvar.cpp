@@ -40,7 +40,7 @@ class CDefaultCvarQuery final : public CBaseAppSystem< ICvarQuery >
 public:
 	void *QueryInterface( const char *pInterfaceName ) override
 	{
-		if ( !Q_stricmp( pInterfaceName, CVAR_QUERY_INTERFACE_VERSION ) )
+		if ( V_strieq( pInterfaceName, CVAR_QUERY_INTERFACE_VERSION ) )
 			return (ICvarQuery*)this;
 		return nullptr;
 	
@@ -279,7 +279,7 @@ void CCvar::Shutdown()
 void *CCvar::QueryInterface( const char *pInterfaceName )
 {
 	// We implement the ICvar interface
-	if ( !V_strcmp( pInterfaceName, CVAR_INTERFACE_VERSION ) )
+	if ( V_streq( pInterfaceName, CVAR_INTERFACE_VERSION ) )
 		return (ICvar*)this;
 
 	return nullptr;
@@ -345,7 +345,7 @@ void CCvar::RegisterConCommand( ConCommandBase *variable )
 				if(  pChildVar->m_pszDefaultValue && pParentVar->m_pszDefaultValue &&
 					 pChildVar->IsFlagSet( FCVAR_REPLICATED ) && pParentVar->IsFlagSet( FCVAR_REPLICATED ) )
 				{
-					if( Q_stricmp( pChildVar->m_pszDefaultValue, pParentVar->m_pszDefaultValue ) != 0 )
+					if( !V_strieq( pChildVar->m_pszDefaultValue, pParentVar->m_pszDefaultValue ) )
 					{
 						Warning( "Parent and child ConVars with different default values! %s child: %s parent: %s (parent wins)\n", 
 							variable->GetName(), pChildVar->m_pszDefaultValue, pParentVar->m_pszDefaultValue );
@@ -376,7 +376,7 @@ void CCvar::RegisterConCommand( ConCommandBase *variable )
 				{
 					if ( pParentVar->m_pszHelpString && !Q_isempty( pParentVar->m_pszHelpString ) )
 					{
-						if ( Q_stricmp( pParentVar->m_pszHelpString, pChildVar->m_pszHelpString ) != 0 )
+						if ( !V_strieq( pParentVar->m_pszHelpString, pChildVar->m_pszHelpString ) )
 						{
 							Warning( "Convar %s has multiple help strings:\n\tparent (wins): \"%s\"\n\tchild: \"%s\"\n", 
 								variable->GetName(), pParentVar->m_pszHelpString, pChildVar->m_pszHelpString );
@@ -564,7 +564,7 @@ ConCommand *CCvar::FindCommand( const char *pCommandName )
 const char* CCvar::GetCommandLineValue( const char *pVariableName )
 {
 	intp nLen = Q_strlen(pVariableName);
-	char *pSearch = (char*)stackalloc( nLen + 2 );
+	char *pSearch = stackallocT( char, nLen + 2 );
 	pSearch[0] = '+';
 	memcpy( &pSearch[1], pVariableName, nLen + 1 );
 	return CommandLine()->ParmValue( pSearch );
@@ -633,7 +633,7 @@ void CCvar::RevertFlaggedConVars( int nFlag )
 			continue;
 
 		// It's == to the default value, don't count
-		if ( !Q_stricmp( pCvar->GetDefault(), pCvar->GetString() ) )
+		if ( V_strieq( pCvar->GetDefault(), pCvar->GetString() ) )
 			continue;
 
 		pCvar->Revert();
@@ -892,7 +892,7 @@ void CCvar::Find( const CCommand &args )
 }
 
 #ifdef _DEBUG
-void CCvar::HashReport( const CCommand &args )
+void CCvar::HashReport( const CCommand & )
 {
 	m_CommandHash.Report();
 }
@@ -1023,7 +1023,7 @@ CConCommandHash::CCommandHashHandle_t CConCommandHash::Find( const char *name, H
 	{
 		const HashEntry_t &element = m_aDataPool[iElement];
 		if ( element.m_uiKey == hashkey && // if hashes of strings match,
-			 Q_stricmp( name, element.m_Data->GetName() ) == 0) // then test the actual strings
+			 V_strieq( name, element.m_Data->GetName() ) ) // then test the actual strings
 		{
 			return iElement;
 		}

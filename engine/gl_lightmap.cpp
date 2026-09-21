@@ -291,8 +291,8 @@ static void AddSingleDynamicLightToBumpLighting( dlight_t& dl, SurfaceHandle_t s
 				}
 				
 				float lDotN = DotProduct( lightDirection, MSurf_Plane( surfID ).normal );
-				if (lDotN < 1e-3)
-					lDotN = 1e-3;
+				if (lDotN < 1e-3f)
+					lDotN = 1e-3f;
 				scale /= lDotN;
 
 				int i;
@@ -984,7 +984,8 @@ void R_RedownloadAllLightmaps()
 	static bool initializedBlockLights = false;
 	if (!initializedBlockLights)
 	{
-		memset( &blocklights[0][0][0], 0, MAX_LIGHTMAP_DIM_INCLUDING_BORDER * MAX_LIGHTMAP_DIM_INCLUDING_BORDER * (NUM_BUMP_VECTS + 1) * sizeof( Vector ) );
+		// !!!
+		memset( &blocklights[0][0][0], 0, sizeof(blocklights) );
 		initializedBlockLights = true;
 	}
 #endif

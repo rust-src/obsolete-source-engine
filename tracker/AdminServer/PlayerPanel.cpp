@@ -157,12 +157,12 @@ static const char *FormatSeconds( int seconds )
 //-----------------------------------------------------------------------------
 void CPlayerPanel::OnServerDataResponse(const char *value, const char *response)
 {
-	if (!stricmp(value, "UpdatePlayers"))
+	if (V_strieq(value, "UpdatePlayers"))
 	{
 		// server has indicated a change, force an update
 		m_flUpdateTime = 0.0;
 	}
-	else if (!stricmp(value, "playerlist"))
+	else if (V_strieq(value, "playerlist"))
 	{
 		// new list of players
 		m_pPlayerListPanel->DeleteAllItems();
@@ -291,7 +291,7 @@ void CPlayerPanel::OnBanButtonPressed()
 	const char *netAdr = kv->GetString("netAdr");
 
 	char buf[64];
-	if ( !strcmp( authid, "UNKNOWN" ) )
+	if ( V_streq( authid, "UNKNOWN" ) )
 	{
 		int s1, s2, s3, s4;
 		if (4 == sscanf(netAdr, "%d.%d.%d.%d", &s1, &s2, &s3, &s4)) //-V112

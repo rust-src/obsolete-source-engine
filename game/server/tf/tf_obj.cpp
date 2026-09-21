@@ -1684,7 +1684,7 @@ void Cmd_DamageDump_f(void)
 					// Fine to reuse idx since we are going to break anyways.
 					for( idx = g_DamageMap.First(); idx != g_DamageMap.InvalidIndex(); idx = g_DamageMap.Next(idx) )
 					{
-						if( !stricmp( g_DamageMap.GetElementName(idx), szRowNameCommaColumn ) )
+						if( V_strieq( g_DamageMap.GetElementName(idx), szRowNameCommaColumn ) )
 						{
 							nDamageAmount = g_DamageMap[idx];
 							break;
@@ -2187,7 +2187,7 @@ void CBaseObject::Explode( void )
 {
 	const char *pExplodeSound = GetObjectInfo( ObjectType() )->m_pExplodeSound;
 
-	if ( pExplodeSound && Q_strlen(pExplodeSound) > 0 )
+	if ( !Q_isempty(pExplodeSound) )
 	{
 		EmitSound( pExplodeSound );
 	}
@@ -3477,7 +3477,7 @@ void CBaseObject::ReattachChildren( void )
 void CBaseObject::SetModel( const char *pModel )
 {
 	// Skip if we're already the proper model
-	if ( V_strcmp( GetModelName().ToCStr(), pModel ) == 0 )
+	if ( V_streq( GetModelName().ToCStr(), pModel ) )
 		return;
 
 	BaseClass::SetModel( pModel );

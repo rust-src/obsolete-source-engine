@@ -1217,11 +1217,11 @@ static NavErrorType CheckNavFile( const char *bspFilename )
 		return NAV_CANT_ACCESS_FILE;
 
 	char baseName[256];
-	Q_StripExtension(bspFilename,baseName,sizeof(baseName));
+	V_StripExtension(bspFilename,baseName);
 	char bspPathname[256];
-	Q_snprintf(bspPathname,sizeof(bspPathname), FORMAT_BSPFILE, baseName);
+	V_sprintf_safe(bspPathname, FORMAT_BSPFILE, baseName);
 	char filename[256];
-	Q_snprintf(filename,sizeof(filename), FORMAT_NAVFILE, baseName);
+	V_sprintf_safe(filename, FORMAT_NAVFILE, baseName);
 
 	bool navIsInBsp = false;
 	FileHandle_t file = filesystem->Open( filename, "rb", "MOD" );	// this ignores .nav files embedded in the .bsp ...
@@ -1236,28 +1236,27 @@ static NavErrorType CheckNavFile( const char *bspFilename )
 		return NAV_CANT_ACCESS_FILE;
 	}
 
+	RunCodeAtScopeExit(filesystem->Close( file ));
+
 	// check magic number
-	int result;
 	unsigned int magic;
-	result = filesystem->Read( &magic, sizeof(unsigned int), file );
+	int result = filesystem->Read( magic, file );
 	if (!result || magic != NAV_MAGIC_NUMBER)
 	{
-		filesystem->Close( file );
 		return NAV_INVALID_FILE;
 	}
 
 	// read file version number
 	unsigned int version;
-	result = filesystem->Read( &version, sizeof(unsigned int), file );
+	result = filesystem->Read( version, file );
 	if (!result || version > NavCurrentVersion || version < 4)
 	{
-		filesystem->Close( file );
 		return NAV_BAD_FILE_VERSION;
 	}
 
 	// get size of source bsp file and verify that the bsp hasn't changed
 	unsigned int saveBspSize;
-	filesystem->Read( &saveBspSize, sizeof(unsigned int), file );
+	filesystem->Read( saveBspSize, file );
 
 	// verify size
 	unsigned int bspSize = filesystem->Size( bspPathname );
@@ -1279,6 +1278,7 @@ void CommandNavCheckFileConsistency( void )
 
 	FileFindHandle_t findHandle;
 	const char *bspFilename = filesystem->FindFirstEx( "maps/*.bsp", "MOD", &findHandle );
+	RunCodeAtScopeExit( filesystem->FindClose( findHandle ) );
 	while ( bspFilename )
 	{
 		switch ( CheckNavFile( bspFilename ) )
@@ -1302,7 +1302,6 @@ void CommandNavCheckFileConsistency( void )
 
 		bspFilename = filesystem->FindNext( findHandle );
 	}
-	filesystem->FindClose( findHandle );
 }
 static ConCommand nav_check_file_consistency( "nav_check_file_consistency", CommandNavCheckFileConsistency, "Scans the maps directory and reports any missing/out-of-date navigation files.", FCVAR_GAMEDLL | FCVAR_CHEAT );
 

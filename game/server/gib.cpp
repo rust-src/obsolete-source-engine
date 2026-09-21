@@ -90,9 +90,9 @@ void CGib::SpawnStickyGibs( CBaseEntity *pVictim, Vector vecOrigin, int cGibs )
 			Vector vecNewVelocity = g_vecAttackDir * -1;
 
 			// mix in some noise
-			vecNewVelocity.x += random->RandomFloat ( -0.15, 0.15 );
-			vecNewVelocity.y += random->RandomFloat ( -0.15, 0.15 );
-			vecNewVelocity.z += random->RandomFloat ( -0.15, 0.15 );
+			vecNewVelocity.x += random->RandomFloat ( -0.15f, 0.15f );
+			vecNewVelocity.y += random->RandomFloat ( -0.15f, 0.15f );
+			vecNewVelocity.z += random->RandomFloat ( -0.15f, 0.15f );
 
 			vecNewVelocity *= 900;
 
@@ -185,7 +185,7 @@ void CGib::AdjustVelocityBasedOnHealth( int nHealth, Vector &vecVelocity )
 {
 	if ( nHealth > -50)
 	{
-		vecVelocity *= 0.7;
+		vecVelocity *= 0.7f;
 	}
 	else if ( nHealth > -200)
 	{
@@ -512,7 +512,7 @@ void CGib::BounceGibTouch ( CBaseEntity *pOther )
 	//	return;// don't bleed everytime
 	if (GetFlags() & FL_ONGROUND)
 	{
-		SetAbsVelocity( GetAbsVelocity() * 0.9 );
+		SetAbsVelocity( GetAbsVelocity() * 0.9f );
 		QAngle angles = GetLocalAngles();
 		angles.x = 0;
 		angles.z = 0;
@@ -582,7 +582,7 @@ void CGib::StickyGibTouch ( CBaseEntity *pOther )
 void CGib::Spawn( const char *szGibModel )
 {
 	SetMoveType( MOVETYPE_FLYGRAVITY, MOVECOLLIDE_FLY_BOUNCE );
-	SetFriction(0.55); // deading the bounce a bit
+	SetFriction(0.55f); // deading the bounce a bit
 	
 	// sometimes an entity inherits the edict from a former piece of glass,
 	// and will spawn using the same render FX or m_nRenderMode! bad!
@@ -599,7 +599,7 @@ void CGib::Spawn( const char *szGibModel )
 	SetModel( szGibModel );
 
 #ifdef HL1_DLL
-	SetElasticity( 1.0 );
+	SetElasticity( 1.0f );
 	UTIL_SetSize( this, vec3_origin, vec3_origin );
 #endif//HL1_DLL
 
@@ -648,7 +648,7 @@ CBaseEntity *CreateRagGib( const char *szModel, const Vector &vecOrigin, const Q
 		CBaseAnimating *pAnimating = pGib->GetBaseAnimating();
 		if (pAnimating != NULL )
 		{
-			pAnimating->Ignite( random->RandomFloat( 8.0, 12.0 ), false );
+			pAnimating->Ignite( random->RandomFloat( 8.0f, 12.0f ), false );
 		}
 	}
 
@@ -668,7 +668,7 @@ void CRagGib::Spawn( const char *szModel, const Vector &vecOrigin, const Vector 
 	{
 		AddSolidFlags( FSOLID_NOT_STANDABLE );
 		RemoveSolidFlags( FSOLID_NOT_SOLID );
-		if( flFadeTime > 0.0 )
+		if( flFadeTime > 0.0f )
 		{
 			SUB_StartFadeOut( flFadeTime );
 		}

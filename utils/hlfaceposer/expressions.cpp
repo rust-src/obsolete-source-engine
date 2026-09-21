@@ -336,7 +336,7 @@ CExpClass *CExpressionManager::FindClass( const char *classname, bool bMatchBase
 	{
 		CExpClass *cl = m_Classes[ i ];
 
-		if ( !Q_stricmp( search, bMatchBaseNameOnly ? cl->GetBaseName() : cl->GetName() ) )
+		if ( V_strieq( search, bMatchBaseNameOnly ? cl->GetBaseName() : cl->GetName() ) )
 		{
 			return cl;
 		}
@@ -483,11 +483,11 @@ void CExpressionManager::LoadClass( const char *inpath )
 				numflexmaps++;
 			}
 		}
-		else if ( !stricmp( token, "$hasweighting" ) )
+		else if ( V_strieq( token, "$hasweighting" ) )
 		{
 			bHasWeighting = true;
 		}
-		else if ( !stricmp( token, "$normalized" ) )
+		else if ( V_strieq( token, "$normalized" ) )
 		{
 			bNormalized = true;
 		}

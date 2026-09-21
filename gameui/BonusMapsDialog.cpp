@@ -50,7 +50,7 @@ static bool ConstructFullImagePath(
 	{
 		// Use the specified image
 		if ( pchImageName[ 0 ] != '.' )
-			V_sprintf_safe( pchImageFileName, "%s", pchImageName );
+			V_strcpy_safe( pchImageFileName, pchImageName );
 		else
 			V_sprintf_safe( pchImageFileName, "%s/%s", pCurrentPath, pchImageName );
 
@@ -330,7 +330,7 @@ void CBonusMapsDialog::BuildMapsList( void )
 	BonusMapsDatabase()->ScanBonusMaps();
 
 	// Enable back button if we're in a sub folder
-	bool bIsRoot = ( Q_strcmp( BonusMapsDatabase()->GetPath(), "." ) == 0 );
+	bool bIsRoot = V_streq( BonusMapsDatabase()->GetPath(), "." );
 	SetControlEnabled( "Back", !bIsRoot );
 	SetControlVisible( "Back", !bIsRoot );
 	SetControlEnabled( "ImportBonusMaps", bIsRoot );
@@ -489,6 +489,7 @@ void CBonusMapsDialog::RefreshMedalDisplay( BonusMapDescription_t *pMap )
 	}
 
 	char szBuff[ 512 ];
+	szBuff[0] = '\0';
 
 	int iChallenge = GetSelectedChallenge();
 
@@ -684,7 +685,7 @@ void CBonusMapsDialog::ApplySchemeSettings( IScheme *pScheme )
 //-----------------------------------------------------------------------------
 void CBonusMapsDialog::OnCommand( const char *command )
 {
-	if ( !stricmp( command, "loadbonusmap" ) )
+	if ( V_strieq( command, "loadbonusmap" ) )
 	{
 		intp mapIndex = GetSelectedItemBonusMapIndex();
 		if ( BonusMapsDatabase()->IsValidIndex( mapIndex ) )
@@ -756,7 +757,7 @@ void CBonusMapsDialog::OnCommand( const char *command )
 			}
 		}
 	}
-	else if ( !stricmp( command, "back" ) )
+	else if ( V_strieq( command, "back" ) )
 	{
 		BonusMapsDatabase()->BackPath();
 
@@ -770,7 +771,7 @@ void CBonusMapsDialog::OnCommand( const char *command )
 
 		m_pGameList->MoveScrollBarToTop();
 	}
-	else if ( !stricmp( command, "ImportBonusMaps" ) )
+	else if ( V_strieq( command, "ImportBonusMaps" ) )
 	{
 		if ( m_hImportBonusMapsDialog == NULL )
 		{

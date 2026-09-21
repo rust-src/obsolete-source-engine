@@ -57,19 +57,21 @@ extern IVideoServices *g_pVideo;
 extern ConVar snd_refdb;
 extern ConVar snd_refdist;
 
-inline float SNDLVL_TO_DIST_MULT( soundlevel_t sndlvl )
+[[nodiscard]]
+static inline float SNDLVL_TO_DIST_MULT( soundlevel_t sndlvl )
 {
   return sndlvl != SNDLVL_NONE
 		? powf( 10.0f, ( snd_refdb.GetFloat() - static_cast<float>( sndlvl ) ) / 20 ) / snd_refdist.GetFloat()
 		: 0;
 }
 
-inline soundlevel_t DIST_MULT_TO_SNDLVL( float dist_mult )
+[[nodiscard]]
+static inline soundlevel_t DIST_MULT_TO_SNDLVL( float dist_mult )
 {
 	// dimhotepus: Rewrite and simplify to match SNDLVL_TO_DIST_MULT.
-	return (soundlevel_t)(int)( dist_mult
+	return static_cast<soundlevel_t>( static_cast<int>( dist_mult
 		? snd_refdb.GetFloat() - log10f( dist_mult * snd_refdist.GetFloat() ) * 20
-		: 0 );
+		: 0 ) );
 }
 
 extern ConVar dsp_spatial;
@@ -145,14 +147,7 @@ int g_cgroupclass	= 0;
 // this is used to enable/disable music playback on x360 when the user selects his own soundtrack to play
 void S_EnableMusic( bool bEnable )
 {
-	if ( bEnable )
-	{
-		g_DashboardMusicMixTarget = 1.0f;
-	}
-	else
-	{
-		g_DashboardMusicMixTarget = 0.0f;
-	}
+	g_DashboardMusicMixTarget = bEnable ? 1.0f : 0.0f;
 }
 
 static bool IsSoundSourceLocalPlayer( SoundSource soundsource )
@@ -195,7 +190,7 @@ void CActiveChannels::Remove( channel_t *pChannel )
 }
 
 
-void CActiveChannels::GetActiveChannels( CChannelList &list )
+void CActiveChannels::GetActiveChannels( CChannelList &list ) const
 {
 	list.m_count = m_count;
 	if ( m_count )
@@ -344,7 +339,7 @@ CSfxTable::CSfxTable()
 	m_bMixGroupsCached = false;
 	m_pDebugName = NULL;
 	m_mixGroupCount = 0;
-	memset(m_mixGroupList, 0, sizeof(m_mixGroupList));
+	BitwiseClear(m_mixGroupList);
 }
 
 
@@ -392,7 +387,7 @@ const char *CSfxTable::getname()
 	return NULL;
 }
 
-FileNameHandle_t CSfxTable::GetFileNameHandle()
+FileNameHandle_t CSfxTable::GetFileNameHandle() const
 {
 	if ( s_Sounds.InvalidIndex() != m_namePoolIndex )
 	{
@@ -403,13 +398,6 @@ FileNameHandle_t CSfxTable::GetFileNameHandle()
 
 const char *CSfxTable::GetFileName()
 {
-	if ( IsX360() && m_bUseErrorFilename )
-	{
-		// Redirecting error sounds to a valid empty wave, prevents a bad loading retry pattern during gameplay
-		// which may event sounds skipped by preload, because they don't exist.
-		return "common/null.wav";
-	}
-
 	const char *pName = getname();
 	return pName ? PSkipSoundChars( pName ) : NULL;	
 }
@@ -687,7 +675,10 @@ S_Init
 */
 void S_Init( void )
 {
-	if ( sv.IsDedicated() && !CommandLine()->CheckParm( "-forcesound" ) )
+	// dimhotepus: Device can be restarted in runtime by different thread.
+	THREAD_LOCK_SOUND();
+
+	if ( sv.IsDedicated() && !CommandLine()->HasParm( "-forcesound" ) )
 		return;
 
 	DevMsg( "Sound Initialization: Start\n" );
@@ -697,7 +688,7 @@ void S_Init( void )
 
 	VAudioInit();
 
-	if ( CommandLine()->CheckParm( "-nosound" ) )
+	if ( CommandLine()->HasParm( "-nosound" ) )
 	{
 		g_AudioDevice = Audio_GetNullDevice();
 		TRACEINIT( audiosourcecache->Init( host_parms.memsize >> 2 ), audiosourcecache->Shutdown() );
@@ -730,6 +721,9 @@ void S_Init( void )
 // =======================================================================
 void S_Shutdown(void)
 {
+	// dimhotepus: Device can be restarted in runtime by different thread.
+	THREAD_LOCK_SOUND();
+
 	if ( VoiceTweak_IsStillTweaking() )
 	{
 		VoiceTweak_EndVoiceTweakMode();
@@ -968,7 +962,7 @@ void S_InternalReloadSound( CSfxTable *sfx )
 
 	char pExt[10];
 	V_ExtractFileExtension( sfx->getname(), pExt );
-	CAudioSource::AudioSource nSource = !Q_stricmp( pExt, "mp3" )
+	CAudioSource::AudioSource nSource = V_strieq( pExt, "mp3" )
 		? CAudioSource::AUDIO_SOURCE_MP3
 		: CAudioSource::AUDIO_SOURCE_WAV;
 	audiosourcecache->GetInfo( nSource, sfx->IsPrecachedSound(), sfx ); // Do a size/date check and rebuild the cache entry if necessary.
@@ -990,7 +984,7 @@ void S_ReloadSound( const char *name )
 #ifdef _DEBUG
 	if ( sfx )
 	{
-		Assert( Q_stricmp( sfx->getname(), name ) == 0 );
+		Assert( V_strieq( sfx->getname(), name ) );
 	}
 #endif
 	
@@ -1456,7 +1450,7 @@ bool S_IsMusic( channel_t *pChannel )
 		if ( pChannel->mixgroups[i] != -1 )
 		{
 			char *pGroupName = MXR_GetGroupnameFromId( pChannel->mixgroups[i] );
-			if ( !Q_strcmp( pGroupName, "Music" ) )
+			if ( V_streq( pGroupName, "Music" ) )
 			{
 				return true;
 			}
@@ -1836,32 +1830,6 @@ ConVar snd_showstart( "snd_showstart", "0", FCVAR_CHEAT );	// showstart always s
 #define SND_DB_MIN				60.0F	// min db of any sound source
 
 #define SND_GAIN_PLAYER_WEAPON_DB 2.0F	// increase player weapon gain by N dB
-
-// dB = 20 log (amplitude/32768)		0 to -90.3dB
-// amplitude = 32768 * 10 ^ (dB/20)		0 to +/- 32768
-// gain = amplitude/32768				0 to 1.0
-
-float Gain_To_dB ( float gain )
-{
-	float dB = 20 * logf ( gain );
-	return dB;
-}
-
-float dB_To_Gain ( float dB )
-{
-	float gain = powf (10, dB / 20.0F);
-	return gain;
-}
-
-float Gain_To_Amplitude ( float gain )
-{
-	return gain * 32768;
-}
-
-float Amplitude_To_Gain ( float amplitude )
-{
-	return amplitude / 32768;
-}
 
 soundlevel_t SND_GetSndlvl ( channel_t *pchannel )
 {
@@ -2331,7 +2299,7 @@ void SND_SetSpatialDelays()
 
 	if ( !g_ssp_init )
 	{
-		Q_memset(&g_ssp, 0, sizeof(snd_spatial_t));
+		BitwiseClear(g_ssp);
 		g_ssp_init = true;
 	}
 
@@ -2389,15 +2357,15 @@ void SND_SetSpatialDelays()
 		if ( g_AudioDevice->IsSurround() )
 		{
 			// 4-5 speaker case - front left
-			v_dir = (-listener_right + listener_forward2d) / 2.0;
-			v_dir = g_ssp.cycle ? (g_ssp.cycle == 1 ? -listener_right * 0.5: listener_forward2d * 0.5) : v_dir;
+			v_dir = (-listener_right + listener_forward2d) / 2.0f;
+			v_dir = g_ssp.cycle ? (g_ssp.cycle == 1 ? -listener_right * 0.5f: listener_forward2d * 0.5f) : v_dir;
 		}
 		else
 		{
 			// 2 speaker case - left
-			v_dir = listener_right * -1.0;
-			v_dir2 = g_ssp.cycle ? (g_ssp.cycle == 1 ? listener_forward2d * 0.5 : -listener_forward2d * 0.5) : v_dir;
-			v_dir = (v_dir + v_dir2) / 2.0;
+			v_dir = listener_right * -1.0f;
+			v_dir2 = g_ssp.cycle ? (g_ssp.cycle == 1 ? listener_forward2d * 0.5f : -listener_forward2d * 0.5f) : v_dir;
+			v_dir = (v_dir + v_dir2) / 2.0f;
 		}
 		break;
 
@@ -2405,31 +2373,31 @@ void SND_SetSpatialDelays()
 		if ( g_AudioDevice->IsSurround() )
 		{
 			// 4-5 speaker case - front right
-			v_dir = (listener_right + listener_forward2d) / 2.0;
-			v_dir = g_ssp.cycle ? (g_ssp.cycle == 1 ? listener_right * 0.5: listener_forward2d * 0.5) : v_dir;
+			v_dir = (listener_right + listener_forward2d) / 2.0f;
+			v_dir = g_ssp.cycle ? (g_ssp.cycle == 1 ? listener_right * 0.5f: listener_forward2d * 0.5f) : v_dir;
 		}
 		else
 		{
 			// 2 speaker case - right
 			v_dir = listener_right;
-			v_dir2 = g_ssp.cycle ? (g_ssp.cycle == 1 ? listener_forward2d * 0.5 : -listener_forward2d * 0.5) : v_dir;
-			v_dir = (v_dir + v_dir2) / 2.0;
+			v_dir2 = g_ssp.cycle ? (g_ssp.cycle == 1 ? listener_forward2d * 0.5f : -listener_forward2d * 0.5f) : v_dir;
+			v_dir = (v_dir + v_dir2) / 2.0f;
 		}
 		break;
 
 	case 2: // rear left: trace max 100' 'cone' to player's rear left
-		v_dir = (listener_right + listener_forward2d) / -2.0;
-		v_dir = g_ssp.cycle ? (g_ssp.cycle == 1 ? -listener_right * 0.5 : -listener_forward2d * 0.5) : v_dir;
+		v_dir = (listener_right + listener_forward2d) / -2.0f;
+		v_dir = g_ssp.cycle ? (g_ssp.cycle == 1 ? -listener_right * 0.5f : -listener_forward2d * 0.5f) : v_dir;
 		break;
 
 	case 3: // rear right: trace max 100' 'cone' to player's rear right
-		v_dir = (listener_right - listener_forward2d) / 2.0;
-		v_dir = g_ssp.cycle ? (g_ssp.cycle == 1 ? listener_right * 0.5: -listener_forward2d * 0.5) : v_dir;
+		v_dir = (listener_right - listener_forward2d) / 2.0f;
+		v_dir = g_ssp.cycle ? (g_ssp.cycle == 1 ? listener_right * 0.5f: -listener_forward2d * 0.5f) : v_dir;
 		break;
 		
 	case 4: // front center: trace max 100' 'cone' to player's front
 		v_dir = listener_forward2d;
-		v_dir2 = g_ssp.cycle ? (g_ssp.cycle == 1 ? listener_right * 0.15 : -listener_right * 0.15) : v_dir;
+		v_dir2 = g_ssp.cycle ? (g_ssp.cycle == 1 ? listener_right * 0.15f : -listener_right * 0.15f) : v_dir;
 		v_dir = (v_dir + v_dir2);
 		break;
 	}
@@ -2638,7 +2606,7 @@ Vector g_das_vec3[DAS_CWALLS];	// trace vectors to walls, ceiling, floor
 
 void DAS_InitNodes( void )
 {
-	Q_memset(g_das_nodes, 0, sizeof(das_node_t) * DAS_CNODES);
+	BitwiseClear(g_das_nodes);
 	g_das_check_next = 0;
 	g_das_store_next = 0;
 	g_das_all_checked = 0;
@@ -2651,9 +2619,9 @@ void DAS_InitNodes( void )
 
 	// init trace vectors
 	// set up trace vectors for max, min width
-	float vl = DAS_ROOM_TRACE_LEN;
-	float vlu = DAS_ROOM_TRACE_LEN * 0.52;
-	float vlu2 = DAS_ROOM_TRACE_LEN * 0.48;	// don't use 'perfect' diagonals
+	constexpr float vl = DAS_ROOM_TRACE_LEN;
+	constexpr float vlu = DAS_ROOM_TRACE_LEN * 0.52f;
+	constexpr float vlu2 = DAS_ROOM_TRACE_LEN * 0.48f;	// don't use 'perfect' diagonals
 
 	g_das_vec3[0].Init(vl, 0.0, 0.0);				// x left
 	g_das_vec3[1].Init(-vl, 0.0, 0.0);				// x right
@@ -2691,7 +2659,7 @@ void DAS_InitNodes( void )
 
 void DAS_InitAutoRoom( das_room_t *proom)
 {
-		Q_memset(proom, 0, sizeof (das_room_t));
+	BitwiseClear(*proom);
 }
 
 // reset all nodes for next round of visibility checks between player & nodes
@@ -4135,13 +4103,13 @@ void RemapPlayerOrMusicVols(  channel_t *ch, int volumes[CCHANVOLUMES/2], bool f
 		//float vol_dist5[]   = {0.29, 0.29, 0.09, 0.09, 0.63};	// FL, FR, RL, RR, FC - 5 channel (mono source) volume distribution		
 		//float vol_dist5st[] = {0.29, 0.29, 0.09, 0.09, 0.63};	// FL, FR, RL, RR, FC - 5 channel (stereo source) volume distribution
 		
-		float vol_dist5[]   = {0.30, 0.30, 0.09, 0.09, 0.59};	// FL, FR, RL, RR, FC - 5 channel (mono source) volume distribution		
-		float vol_dist5st[] = {0.30, 0.30, 0.09, 0.09, 0.59};	// FL, FR, RL, RR, FC - 5 channel (stereo source) volume distribution
+		constexpr float vol_dist5[]   = {0.30f, 0.30f, 0.09f, 0.09f, 0.59f};	// FL, FR, RL, RR, FC - 5 channel (mono source) volume distribution		
+		constexpr float vol_dist5st[] = {0.30f, 0.30f, 0.09f, 0.09f, 0.59f};	// FL, FR, RL, RR, FC - 5 channel (stereo source) volume distribution
 		
-		float vol_dist4[]   = {0.50, 0.50, 0.15, 0.15, 0.00};	// FL, FR, RL, RR, 0  - 4 channel (mono source) volume distribution
-		float vol_dist4st[] = {0.50, 0.50, 0.15, 0.15, 0.00};	// FL, FR, RL, RR, 0  - 4 channel (stereo source)volume distribution
+		constexpr float vol_dist4[]   = {0.50f, 0.50f, 0.15f, 0.15f, 0.00f};	// FL, FR, RL, RR, 0  - 4 channel (mono source) volume distribution
+		constexpr float vol_dist4st[] = {0.50f, 0.50f, 0.15f, 0.15f, 0.00f};	// FL, FR, RL, RR, 0  - 4 channel (stereo source)volume distribution
 
-		float *pvol_dist;
+		const float *pvol_dist;
 		
 		if ( ch->flags.bstereowav && (ch->wavtype == CHAR_OMNI || ch->wavtype == CHAR_SPATIALSTEREO || ch->wavtype == 0))
 		{
@@ -5775,7 +5743,7 @@ void S_StopAllSounds( bool bClear )
 		++i;
 	}
 
-	Q_memset( channels, 0, sizeof(channels) );
+	BitwiseClear( channels );
 
 	if ( bClear )
 	{
@@ -5783,7 +5751,7 @@ void S_StopAllSounds( bool bClear )
 	}
 
 	// Clear any remaining soundfade
-	memset( &soundfade, 0, sizeof( soundfade ) );
+	BitwiseClear( soundfade );
 
 	g_AudioDevice->StopAllSounds();
 	Assert( g_ActiveChannels.GetActiveCount() == 0 );
@@ -6086,15 +6054,15 @@ void S_Update( const AudioState_t *pAudioState )
 				np.index = total + 2;
 				if ( channel.flags.fromserver )
 				{
-					np.color[0] = 1.0;
-					np.color[1] = 0.8;
-					np.color[2] = 0.1;
+					np.color[0] = 1.0f;
+					np.color[1] = 0.8f;
+					np.color[2] = 0.1f;
 				}
 				else
 				{
-					np.color[0] = 0.1;
-					np.color[1] = 0.9;
-					np.color[2] = 1.0;
+					np.color[0] = 0.1f;
+					np.color[1] = 0.9f;
+					np.color[2] = 1.0f;
 				}
 
 				unsigned int sampleCount = RemainingSamples( &channel );
@@ -6480,7 +6448,7 @@ void S_DspParms( const CCommand &args )
 	int cparam = min( args.ArgC() - 4, 16);
 
 	float params[16];
-	Q_memset( params, 0, sizeof(float) * 16 );
+	BitwiseClear( params );
 
 	// get preset & proc
 	// dimhotepus: Q_atof -> Q_atoi
@@ -6533,7 +6501,7 @@ void S_Play( const char *pszName, bool flush = false )
 
 static void S_Play( const CCommand &args )
 {
-	bool bFlush = !Q_stricmp( args[0], "playflush" );
+	bool bFlush = V_strieq( args[0], "playflush" );
 	for ( int i = 1; i < args.ArgC(); ++i )
 	{
 		S_Play( args[i], bFlush );
@@ -6747,7 +6715,7 @@ static void S_Say( const CCommand &args )
 	V_strcpy_safe( sound, args[1] );
 	
 	// DEBUG - test performance of dsp code
-	if ( !Q_stricmp( sound, "dsp" ) )
+	if ( V_strieq( sound, "dsp" ) )
 	{
 		constexpr intp count = 1000000;
 
@@ -6779,7 +6747,7 @@ static void S_Say( const CCommand &args )
 		return;
 	}
 	
-	if ( !Q_stricmp( sound, "paint" ) )
+	if ( V_strieq( sound, "paint" ) )
 	{
 		constexpr intp count = 100000;
 
@@ -6976,14 +6944,14 @@ void MXR_SetCurrentSoundMixer( const char *szsoundmixer )
 {
 	// if soundmixer name is not different from current name, return
 
-	if ( !Q_stricmp(szsoundmixer, g_szsoundmixer_cur) )
+	if ( V_strieq(szsoundmixer, g_szsoundmixer_cur) )
 	{
 		return;
 	}
 
 	for (int i = 0; i < g_csoundmixers; i++)
 	{
-		if ( !Q_stricmp(g_soundmixers[i].szsoundmixer, szsoundmixer) )
+		if ( V_strieq(g_soundmixers[i].szsoundmixer, szsoundmixer) )
 		{
 			g_isoundmixer = i;
 
@@ -7245,7 +7213,7 @@ void MXR_DebugGraphMixVolumes( debug_showvols_t *groupvols, int cgroups)
 	char text[128];
 	char bartext[MXR_DEBUG_VOLSCALE*3];
 
-	duration = 0.01;
+	duration = 0.01f;
 
 	g_debug_mxr_displaycount++;
 
@@ -7297,7 +7265,7 @@ void MXR_DebugGraphMixVolumes( debug_showvols_t *groupvols, int cgroups)
 			//flXposBar = flXpos + MXR_DEBUG_GREENSTART;
 
 			rb = 0; gb= 255; bb = 0;		// green bar
-			Q_memset(bartext, 0, sizeof(bartext));
+			BitwiseClear(bartext);
 
 			cbars = (int)((float)vol1 * (float)MXR_DEBUG_VOLSCALE);
 			cbars = clamp(cbars, 0, MXR_DEBUG_VOLSCALE*3-1);
@@ -7311,7 +7279,7 @@ void MXR_DebugGraphMixVolumes( debug_showvols_t *groupvols, int cgroups)
 		if (vol2 > MXR_DEBUG_YELLOWLIMIT)	
 		{
 			rb = 255; gb = 255; bb = 0;	
-			Q_memset(bartext, 0, sizeof(bartext));
+			BitwiseClear(bartext);
 
 			cbars = (int)((float)vol2 * (float)MXR_DEBUG_VOLSCALE);
 			cbars = clamp(cbars, 0, MXR_DEBUG_VOLSCALE*3-1);
@@ -7325,7 +7293,7 @@ void MXR_DebugGraphMixVolumes( debug_showvols_t *groupvols, int cgroups)
 		{
 			//flXposBar = flXpos + MXR_DEBUG_REDSTART;
 			rb = 255; gb = 0; bb = 0;
-			Q_memset(bartext, 0, sizeof(bartext));
+			BitwiseClear(bartext);
 
 			cbars = (int)((float)vol3 * (float)MXR_DEBUG_VOLSCALE);
 			cbars = clamp(cbars, 0, MXR_DEBUG_VOLSCALE*3-1);
@@ -7690,7 +7658,7 @@ int MXR_GetMixgroupFromName( const char *pszgroupname )
 
 	for (int i = 0; i < g_cgrouprules; i++)
 	{
-		if ( !Q_stricmp(g_grouprules[i].szmixgroup, pszgroupname ) )
+		if ( V_strieq(g_grouprules[i].szmixgroup, pszgroupname ) )
 			return g_grouprules[i].mixgroupid;
 	}	
 
@@ -7746,7 +7714,7 @@ int MXR_AddClassname( const char *pName )
 	Q_strncpy( szclassname, pName, CMXRNAMEMAX );
 	for ( int i = 0; i < g_cgroupclass; i++ )
 	{
-		if ( !Q_stricmp( szclassname, g_groupclasslist[i].szclassname ) )
+		if ( V_strieq( szclassname, g_groupclasslist[i].szclassname ) )
 			return i;
 	}
 	if ( g_cgroupclass >= CMXRCLASSMAX )
@@ -7774,8 +7742,8 @@ bool MXR_LoadAllSoundMixers( void )
 	g_csoundmixers	= 0;					// total number of soundmixers found
 	g_cgrouprules	= 0;					// total number of group rules found
 
-	Q_memset(g_soundmixers, 0, sizeof(g_soundmixers));
-	Q_memset(g_grouprules, 0, sizeof(g_grouprules));
+	BitwiseClear(g_soundmixers);
+	BitwiseClear(g_grouprules);
 
 	// load file
 
@@ -7857,17 +7825,17 @@ bool MXR_LoadAllSoundMixers( void )
 		pstart = COM_Parse( pstart, token );
 		if (token[0])
 		{
-			if (!Q_stricmp(token, "CHAN_STATIC"))
+			if (V_strieq(token, "CHAN_STATIC"))
 				pgroup->chantype = CHAN_STATIC;
-			else if (!Q_stricmp(token, "CHAN_WEAPON"))
+			else if (V_strieq(token, "CHAN_WEAPON"))
 				pgroup->chantype = CHAN_WEAPON;
-			else if (!Q_stricmp(token, "CHAN_VOICE"))
+			else if (V_strieq(token, "CHAN_VOICE"))
 				pgroup->chantype = CHAN_VOICE;
-			else if (!Q_stricmp(token, "CHAN_VOICE2"))
+			else if (V_strieq(token, "CHAN_VOICE2"))
 				pgroup->chantype = CHAN_VOICE2;
-			else if (!Q_stricmp(token, "CHAN_BODY"))
+			else if (V_strieq(token, "CHAN_BODY"))
 				pgroup->chantype = CHAN_BODY;
-			else if (!Q_stricmp(token, "CHAN_ITEM"))
+			else if (V_strieq(token, "CHAN_ITEM"))
 				pgroup->chantype = CHAN_ITEM;
 		}
 		else

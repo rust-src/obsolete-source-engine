@@ -194,7 +194,7 @@ static bool UsesMouthShader( IMaterial *pMaterial )
 	static unsigned int clientShaderCache = 0;
 	IMaterialVar *clientShaderVar = pMaterial->FindVarFast( "$clientShader", &clientShaderCache );
 	if ( clientShaderVar )
-		return ( Q_stricmp( clientShaderVar->GetStringValue(), "MouthShader" ) == 0 );
+		return V_strieq( clientShaderVar->GetStringValue(), "MouthShader" );
 	return false;
 }
 
@@ -379,7 +379,7 @@ int CStudioRenderContext::CountFlexedVertices( mstudiomesh_t* pMesh, OptimizedMo
 		return 0;
 
 	// an inverse mapping from mesh index to strip group index
-	unsigned short *pMeshIndexToGroupIndex = (unsigned short*)_alloca( pMesh->pModel()->numvertices * sizeof(unsigned short) );
+	unsigned short *pMeshIndexToGroupIndex = stackallocT( unsigned short, pMesh->pModel()->numvertices );
 	memset( pMeshIndexToGroupIndex, 0xFF, pMesh->pModel()->numvertices * sizeof(unsigned short) );
 	for ( int i = 0; i < pStripGroup->numVerts; ++i )
 	{
@@ -818,7 +818,7 @@ void CStudioRenderContext::R_StudioBuildMorph( studiohdr_t *pStudioHdr,
 	}
 
 	// Build an inverse mapping from mesh index to strip group index
-	unsigned short *pMeshIndexToGroupIndex = (unsigned short*)_alloca( pMesh->pModel()->numvertices * sizeof(unsigned short) );
+	unsigned short *pMeshIndexToGroupIndex = stackallocT( unsigned short, pMesh->pModel()->numvertices );
 	memset( pMeshIndexToGroupIndex, 0xFF, pMesh->pModel()->numvertices * sizeof(unsigned short) );
 	for ( int i = 0; i < pStripGroup->numVerts; ++i )
 	{
@@ -2115,7 +2115,7 @@ void CStudioRenderContext::GenerateRandomFlexWeights( int nWeightCount, float* p
 		nRandomFlex = nWeightCount;
 	}
 
-	int *pIndices = (int*)_alloca( nWeightCount * sizeof(int) );
+	int *pIndices = stackallocT( int, nWeightCount );
 	for ( int i = 0; i < nWeightCount; ++i )
 	{
 		pIndices[i] = i;
@@ -2205,9 +2205,8 @@ void CStudioRenderContext::InvokeBindProxies( const DrawModelInfo_t &info )
 	}
 
 	// This is used to ensure proxies are only called once
-	int nBufSize = info.m_pStudioHdr->numtextures * sizeof(bool);
-	bool *pProxyCalled = (bool*)stackalloc( nBufSize );
-	memset( pProxyCalled, 0, nBufSize );
+	bool *pProxyCalled = stackallocT( bool, info.m_pStudioHdr->numtextures );
+	memset( pProxyCalled, 0, info.m_pStudioHdr->numtextures * sizeof(bool) );
 
 	IMaterial **ppMaterials = info.m_pHardwareData->m_pLODs[ info.m_Lod ].ppMaterials;
 	mstudiomodel_t *pModel;

@@ -281,7 +281,7 @@ CDmeVertexDeltaData *CVertexData::AddDelta( CDmeMesh *pMesh, bool bAbsolute, con
 					m_normals[ i ] -= bindNormalData[ i ];
 				}
 
-				intp *pNormalIndices = reinterpret_cast< intp * >( stackalloc( nNormalCount * sizeof( intp ) ) );
+				intp *pNormalIndices = stackallocT( intp, nNormalCount );
 				intp nNormalDeltaCount = 0;
 				constexpr float coeff = 1 / 4096.0f;
 				for ( intp i = 0; i < nNormalCount; ++i )
@@ -391,10 +391,12 @@ CDmElement *CDmObjSerializer::ReadOBJ(
 
 		FileFindHandle_t hFind = FILESYSTEM_INVALID_FIND_HANDLE;
 
-		char deltaFile[ MAX_PATH ];
-		char deltaPath[ MAX_PATH ];
+		char deltaFile[ MAX_PATH ], deltaPath[ MAX_PATH ];
 
-		for ( const char *pFindFile( g_pFullFileSystem->FindFirst( findPath, &hFind ) ); pFindFile && *pFindFile; pFindFile = g_pFullFileSystem->FindNext( hFind ) )
+		const char *pFindFile( g_pFullFileSystem->FindFirst( findPath, &hFind ) );
+		RunCodeAtScopeExit( g_pFullFileSystem->FindClose( hFind ) );
+
+		for ( ; pFindFile && *pFindFile; pFindFile = g_pFullFileSystem->FindNext( hFind ) )
 		{
 			V_FileBase( pFindFile, deltaFile );
 
@@ -436,8 +438,6 @@ CDmElement *CDmObjSerializer::ReadOBJ(
 				}
 			}
 		}
-
-		g_pFullFileSystem->FindClose( hFind );
 
 		if ( pCombo )
 		{
@@ -556,7 +556,7 @@ CDmElement *CDmObjSerializer::ReadOBJ( CUtlBuffer &buf,
 			{
 				// Remove any 'SG' suffix from the material
 				const size_t sLen = Q_strlen( tmpBuf1 );
-				if ( sLen && !Q_strcmp( tmpBuf1 + sLen - 2, "SG" ) )
+				if ( sLen && V_streq( tmpBuf1 + sLen - 2, "SG" ) )
 				{
 					tmpBuf1[ sLen - 2 ] = '\0';
 				}
@@ -1091,7 +1091,7 @@ bool CDmObjSerializer::WriteOBJ( const char *pFilename, CDmElement *pRoot, bool 
 			{
 				CDmeVertexDeltaData *pDelta( pDeltaMesh->GetDeltaState( j ) );
 
-				if ( !pDeltaName || !Q_strcmp( pDeltaName, pDelta->GetName() ) )
+				if ( !pDeltaName || V_streq( pDeltaName, pDelta->GetName() ) )
 				{
 					CUtlBuffer b( (intp)0, 0, CUtlBuffer::TEXT_BUFFER );
 
@@ -1156,7 +1156,7 @@ void CDmObjSerializer::ParseMtlLib( CUtlBuffer &buf )
 
 				// Remove any 'SG' suffix from the material
 				const size_t sLen = Q_strlen( mtlName );
-				if ( sLen > 2 && !Q_strcmp( mtlName + sLen - 2, "SG" ) )
+				if ( sLen > 2 && V_streq( mtlName + sLen - 2, "SG" ) )
 				{
 					mtlName[ sLen - 2 ] = '\0';
 				}
@@ -1209,7 +1209,7 @@ const char *CDmObjSerializer::FindMtlEntry( const char *pTgaName )
 	intp nCount = m_mtlLib.Count();
 	for ( intp i = 0; i < nCount; ++i )
 	{
-		if ( !Q_stricmp( m_mtlLib[i].m_MtlName, pTgaName ) )
+		if ( V_strieq( m_mtlLib[i].m_MtlName, pTgaName ) )
 			return m_mtlLib[i].m_TgaName;
 	}
 	return pTgaName;

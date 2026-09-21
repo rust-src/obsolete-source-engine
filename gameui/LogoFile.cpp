@@ -78,7 +78,7 @@ filename MIP x y width height
 must be multiples of sixteen
 ==============
 */
-int GrabMip ( HANDLE hdib, unsigned char *lump_p, char *lumpname, COLORREF crf, int *width, int *height)
+static int GrabMip ( HANDLE hdib, unsigned char *lump_p, const char *lumpname, COLORREF crf, int *width, int *height)
 {
 	int             i,x,y,xl,yl,xh,yh,w,h;
 	unsigned char   *screen_p, *source;
@@ -197,18 +197,18 @@ int GrabMip ( HANDLE hdib, unsigned char *lump_p, char *lumpname, COLORREF crf, 
 void UpdateLogoWAD( void *phdib, int r, int g, int b )
 {
 	char logoname[ 32 ];
-	char *pszName;
-	Q_strncpy( logoname, "LOGO", sizeof( logoname ) );
-	pszName = &logoname[ 0 ];
+	V_strcpy_safe( logoname, "LOGO" );
+
+	char *pszName = &logoname[ 0 ];
 
 	HANDLE hdib = (HANDLE)phdib;
 	COLORREF crf = RGB( r, g, b );
 
-	if ((!pszName) || (pszName[0] == 0) || (hdib == NULL))
+	if ( Q_isempty(pszName) || hdib == NULL )
 		return;
 	// Generate lump
 
-	unsigned char *buf = (unsigned char *)_alloca( 16384 );
+	unsigned char *buf = stackallocT( unsigned char, 16384 );
 
 	CUtlBuffer buffer( (intp)0, 16384 );
 
@@ -239,7 +239,7 @@ void UpdateLogoWAD( void *phdib, int r, int g, int b )
 		length++;
 
 	// Write Header
-	wadinfo_t	header;
+	wadinfo_t	header = {};
 	header.identification[0] = 'W';
 	header.identification[1] = 'A';
 	header.identification[2] = 'D';
@@ -251,8 +251,8 @@ void UpdateLogoWAD( void *phdib, int r, int g, int b )
 
 	// Fill Ino info table
 	lumpinfo_t	info;
-	Q_memset (&info, 0, sizeof(info));
-	Q_strncpy(info.name, pszName, sizeof( info.name ) );
+	BitwiseClear (info);
+	V_strcpy_safe( info.name, pszName );
 	info.filepos = (int)sizeof(wadinfo_t);
 	info.size = info.disksize = length;
 	info.type = TYP_LUMPY;
@@ -264,7 +264,7 @@ void UpdateLogoWAD( void *phdib, int r, int g, int b )
 	// Write info table
 	buffer.Put( &info, sizeof( lumpinfo_t ) );
 
-	int savepos = buffer.TellPut();
+	intp savepos = buffer.TellPut();
 
 	buffer.SeekPut( CUtlBuffer::SEEK_HEAD, 0 );
 

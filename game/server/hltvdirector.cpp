@@ -1007,7 +1007,8 @@ void CHLTVDirector::AnalyzeCameras()
 
 		float	flRank = 0.0f;
 		int		iClosestPlayer = 0;
-		float	flClosestPlayerDist = 100000.0f;
+		// dimhotepus: Use float max.
+		float	flClosestPlayerDist = std::numeric_limits<vec_t>::max();
 		int		nCount = 0; // Number of visible targets
 		Vector	vDistribution; vDistribution.Init(); // distribution of targets
 

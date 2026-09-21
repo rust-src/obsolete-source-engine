@@ -18,11 +18,10 @@
 
 #include "tier0/vcrmode.h"
 
-class CBlockingUDPSocket::Impl
+struct CBlockingUDPSocket::Impl
 {
-public:
-	struct sockaddr_in	m_SocketIP;
-	fd_set				m_FDSet;
+	sockaddr_in	m_SocketIP;
+	fd_set		m_FDSet;
 };
 
 CBlockingUDPSocket::CBlockingUDPSocket() :
@@ -45,14 +44,14 @@ CBlockingUDPSocket::~CBlockingUDPSocket()
 
 bool CBlockingUDPSocket::CreateSocket()
 {
-	m_Socket = socket( PF_INET, SOCK_DGRAM, IPPROTO_UDP );
+	m_Socket = ::socket( PF_INET, SOCK_DGRAM, IPPROTO_UDP );
 	if ( m_Socket == kInvalidSocketHandle )
 	{
 		return false;
 	}
 
 	sockaddr_in address = m_pImpl->m_SocketIP;
-	if ( SOCKET_ERROR == bind( m_Socket, reinterpret_cast<sockaddr * >(&address), sizeof( address ) ) )
+	if ( SOCKET_ERROR == ::bind( m_Socket, reinterpret_cast<sockaddr * >(&address), sizeof( address ) ) )
 	{
 		return false;
 	}
@@ -67,6 +66,8 @@ bool CBlockingUDPSocket::CreateSocket()
 	{
 		m_pImpl->m_SocketIP.sin_addr.s_addr = 0L;
 	}
+#else
+#error Please specify your platform for sockets.
 #endif
 
 	return true;
@@ -77,12 +78,14 @@ bool CBlockingUDPSocket::WaitForMessage( float timeOutInSeconds )
 	FD_ZERO( &m_pImpl->m_FDSet );
 	FD_SET( m_Socket, &m_pImpl->m_FDSet );//lint !e717
 
-	timeval tv;
-	tv.tv_sec = (int)timeOutInSeconds;
-	float remainder = timeOutInSeconds - (int)timeOutInSeconds;
-	tv.tv_usec = (int)( remainder * 1000000 + 0.5f );         /* micro seconds */
+	const int wholeTimeOutInSeconds = (int)timeOutInSeconds;
+	const float remainder = timeOutInSeconds - wholeTimeOutInSeconds;
+
+	timeval tv = {};
+	tv.tv_sec = wholeTimeOutInSeconds;
+	tv.tv_usec = (int)( remainder * 1000000 + 0.5f );  // micro seconds
 	
-	if ( SOCKET_ERROR == select( size_cast<int>( ( intp )m_Socket + 1 ), &m_pImpl->m_FDSet, NULL, NULL, &tv ) )
+	if ( SOCKET_ERROR == ::select( size_cast<int>( ( intp )m_Socket + 1 ), &m_pImpl->m_FDSet, NULL, NULL, &tv ) )
 	{
 		return false;
 	}
@@ -96,14 +99,14 @@ bool CBlockingUDPSocket::WaitForMessage( float timeOutInSeconds )
 	return false;
 }
 
-unsigned int CBlockingUDPSocket::ReceiveSocketMessage( sockaddr_in *packet_from, unsigned char *buf, size_t bufsize )
+unsigned int CBlockingUDPSocket::ReceiveSocketMessage( sockaddr_in *packet_from, unsigned char *buf, size_t bufsize ) const
 {
-	memset( packet_from, 0, sizeof( *packet_from ) );
+	BitwiseClear( *packet_from );
 
 	sockaddr fromaddress;
 	int	fromlen = sizeof( fromaddress );
 
-	int packet_length = VCRHook_recvfrom
+	const auto packet_length = VCRHook_recvfrom
 		(
 		m_Socket, 
 		(char *)buf, 
@@ -127,7 +130,7 @@ unsigned int CBlockingUDPSocket::ReceiveSocketMessage( sockaddr_in *packet_from,
 	return ( unsigned int )packet_length;
 }
 
-bool CBlockingUDPSocket::SendSocketMessage( const sockaddr_in & rRecipient, const unsigned char *buf, size_t bufsize )
+bool CBlockingUDPSocket::SendSocketMessage( const sockaddr_in & rRecipient, const unsigned char *buf, size_t bufsize ) const
 {
 	// Send data
 	const auto bytesSent = sendto

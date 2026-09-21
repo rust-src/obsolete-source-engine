@@ -68,8 +68,25 @@ public:
 #else
 	Vector() = default;
 #endif
-	Vector(vec_t X, vec_t Y, vec_t Z);
-	explicit Vector(vec_t XYZ); ///< broadcast initialize
+#ifndef VECTOR_PARANOIA
+	constexpr
+#endif
+	Vector(vec_t X, vec_t Y, vec_t Z)
+		: x{X}, y{Y}, z{Z}
+	{ 
+		CHECK_VALID(*this);
+	}
+
+#ifndef VECTOR_PARANOIA
+	constexpr
+#endif
+	///< broadcast initialize
+	explicit Vector(vec_t XYZ)
+		: x{XYZ}, y{XYZ}, z{XYZ}
+	{
+		CHECK_VALID(*this);
+	}
+
 	// dimhotepus: Dummy unsafe ctor, do not use directly!
 	constexpr Vector(vec_t X, vec_t Y, vec_t Z, vec_t) : x{X}, y{Y}, z{Z} {}
 
@@ -247,8 +264,8 @@ public:
 
 
 #ifdef USE_M64S
-	[[nodiscard]] __m64 &AsM64() { return *reinterpret_cast<__m64*>(&x); }
-	[[nodiscard]] const __m64 &AsM64() const { return *reinterpret_cast<const __m64*>(&x); } 
+	[[nodiscard]][[deprecated("Unsafe, UB")]] __m64 &AsM64() { return *reinterpret_cast<__m64*>(&x); }
+	[[nodiscard]][[deprecated("Unsafe, UB")]] const __m64 &AsM64() const { return *reinterpret_cast<const __m64*>(&x); } 
 #endif
 
 	// Setter
@@ -579,21 +596,6 @@ Vector XM_CALLCONV RandomVector( vec_t minVal, vec_t maxVal );
 //
 //-----------------------------------------------------------------------------
 
-
-//-----------------------------------------------------------------------------
-// constructors
-//-----------------------------------------------------------------------------
-inline Vector::Vector(vec_t X, vec_t Y, vec_t Z)
-	: x{X}, y{Y}, z{Z}
-{ 
-	CHECK_VALID(*this);
-}
-
-inline Vector::Vector(vec_t XYZ)
-	: x{XYZ}, y{XYZ}, z{XYZ}
-{
-	CHECK_VALID(*this);
-}
 
 //inline Vector::Vector(const float *pFloat)
 //{

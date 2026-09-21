@@ -483,8 +483,8 @@ class CEventsSaveDataOps : public ISaveRestoreOps
 		AssertMsg( fieldInfo.pTypeDesc->fieldSize == 1, "CEventsSaveDataOps does not support arrays");
 
 		CBaseEntityOutput *ev = (CBaseEntityOutput*)fieldInfo.pField;
-		const int fieldSize = fieldInfo.pTypeDesc->fieldSize;
- 		for ( int i = 0; i < fieldSize; i++, ev++ )
+		const unsigned short fieldSize{fieldInfo.pTypeDesc->fieldSize};
+ 		for ( unsigned short i = 0; i < fieldSize; i++, ev++ )
 		{
 			// save out the number of fields
 			int numElements = ev->NumberOfElements();
@@ -500,8 +500,8 @@ class CEventsSaveDataOps : public ISaveRestoreOps
 		AssertMsg( fieldInfo.pTypeDesc->fieldSize == 1, "CEventsSaveDataOps does not support arrays");
 
 		CBaseEntityOutput *ev = (CBaseEntityOutput*)fieldInfo.pField;
-		const int fieldSize = fieldInfo.pTypeDesc->fieldSize;
-		for ( int i = 0; i < fieldSize; i++, ev++ )
+		const unsigned short fieldSize{fieldInfo.pTypeDesc->fieldSize};
+		for ( unsigned short i = 0; i < fieldSize; i++, ev++ )
 		{
 			int nElements = pRestore->ReadInt();
 			
@@ -517,8 +517,8 @@ class CEventsSaveDataOps : public ISaveRestoreOps
 		
 		// check all the elements of the array (usually only 1)
 		CBaseEntityOutput *ev = (CBaseEntityOutput*)fieldInfo.pField;
-		const int fieldSize = fieldInfo.pTypeDesc->fieldSize;
-		for ( int i = 0; i < fieldSize; i++, ev++ )
+		const unsigned short fieldSize{fieldInfo.pTypeDesc->fieldSize};
+		for ( unsigned short i = 0; i < fieldSize; i++, ev++ )
 		{
 			// It's not empty if it has events or if it has a non-void variant value
 			if (( ev->NumberOfElements() != 0 ) || ( ev->ValueFieldType() != FIELD_VOID ))
@@ -1030,8 +1030,8 @@ void CEventQueue::CancelEvents( CBaseEntity *pCaller )
 		if (pCur->m_pCaller == pCaller)
 		{
 			// Pointers match; make sure everything else matches.
-			if (!stricmp(STRING(pCur->m_pCaller->GetEntityName()), STRING(pCaller->GetEntityName())) &&
-				!stricmp(pCur->m_pCaller->GetClassname(), pCaller->GetClassname()))
+			if (V_strieq(STRING(pCur->m_pCaller->GetEntityName()), STRING(pCaller->GetEntityName())) &&
+				V_strieq(pCur->m_pCaller->GetClassname(), pCaller->GetClassname()))
 			{
 				// Found a matching event; delete it from the queue.
 				bDelete = true;
@@ -1746,7 +1746,7 @@ class CVariantSaveDataOps : public CDefSaveRestoreOps
 	{
 		// check all the elements of the array (usually only 1)
 		variant_t *var = (variant_t*)fieldInfo.pField;
-		for ( int i = 0; i < fieldInfo.pTypeDesc->fieldSize; i++, var++ )
+		for ( unsigned short i = 0; i < fieldInfo.pTypeDesc->fieldSize; i++, var++ )
 		{
 			if ( var->FieldType() != FIELD_VOID )
 				return 0;

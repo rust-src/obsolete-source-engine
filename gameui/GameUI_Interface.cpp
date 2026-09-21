@@ -192,7 +192,7 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 	xboxsystem = (IXboxSystem *)factory( XBOXSYSTEM_INTERFACE_VERSION, NULL );
 	g_pEngineClientReplay = (IEngineClientReplay *)factory( ENGINE_REPLAY_CLIENT_INTERFACE_VERSION, NULL );
 
-	if ( ModInfo().SupportsVR() && CommandLine()->CheckParm( "-vr" ) )
+	if ( ModInfo().SupportsVR() && CommandLine()->HasParm( "-vr" ) )
 	{
 		g_pSourceVR = (ISourceVirtualReality *)factory( SOURCE_VIRTUAL_REALITY_INTERFACE_VERSION, NULL );
 	}
@@ -378,7 +378,7 @@ int __stdcall SendShutdownMsgFunc(WHANDLE hwnd, int lparam)
 //-----------------------------------------------------------------------------
 void CGameUI::PlayGameStartupSound()
 {
-	if ( CommandLine()->FindParm( "-nostartupsound" ) )
+	if ( CommandLine()->HasParm( "-nostartupsound" ) )
 		return;
 
 	FileFindHandle_t fh = FILESYSTEM_INVALID_FIND_HANDLE;
@@ -390,7 +390,7 @@ void CGameUI::PlayGameStartupSound()
 
 	// only want to run the holiday check for TF2
 	const char *pGameName = CommandLine()->ParmValue( "-game", "hl2" );
-	if ( ( Q_stricmp( pGameName, "tf" ) == 0 ) || ( Q_stricmp( pGameName, "tf_beta" ) == 0 ) )
+	if ( ( V_strieq( pGameName, "tf" ) ) || ( V_strieq( pGameName, "tf_beta" ) ) )
 	{
 		// check for a holiday sound file
 		const char *pszHoliday = NULL;
@@ -422,6 +422,8 @@ void CGameUI::PlayGameStartupSound()
 	}
 
 	char const *fn = g_pFullFileSystem->FindFirstEx( path, "MOD", &fh );
+	RunCodeAtScopeExit( g_pFullFileSystem->FindClose( fh ) );
+
 	if ( fn )
 	{
 		do
@@ -429,7 +431,7 @@ void CGameUI::PlayGameStartupSound()
 			char ext[ 10 ];
 			V_ExtractFileExtension( fn, ext );
 
-			if ( !Q_stricmp( ext, "mp3" ) )
+			if ( V_strieq( ext, "mp3" ) )
 			{
 				char temp[ 512 ];
 				if ( bHolidayFound )
@@ -450,8 +452,6 @@ void CGameUI::PlayGameStartupSound()
 			fn = g_pFullFileSystem->FindNext( fh );
 
 		} while ( fn );
-
-		g_pFullFileSystem->FindClose( fh );
 	}
 
 	// did we find any?
@@ -495,7 +495,8 @@ void CGameUI::PlayGameStartupSound()
 			engine->ClientCmd_Unrestricted( found );
 		}
 
-		fileNames.PurgeAndDeleteElements();
+		// dimhotepus: Do not leak char array.
+		fileNames.PurgeAndDeleteElementsArray();
 	}
 }
 
@@ -625,8 +626,6 @@ bool CGameUI::FindPlatformDirectory(char *platformDir, int bufferSize)
 		Error( "Unable to determine platform directory.\n" );
 		return false;
 	}
-
-	return !Q_isempty( platformDir );
 }
 
 //-----------------------------------------------------------------------------
@@ -655,6 +654,11 @@ void CGameUI::Shutdown()
 	
 	BonusMapsDatabase()->WriteSaveData();
 
+	// dimhotepus: Unbind from parent Game UI panel as we binded manually in Initialize.
+	staticPanel->SetParent(nullptr);
+	staticPanel->MarkForDeletion();
+	staticPanel = nullptr;
+
 	g_pSourceVR = nullptr;
 	
 	g_pEngineClientReplay = nullptr;
@@ -664,7 +668,14 @@ void CGameUI::Shutdown()
 	enginesurfacefuncs = nullptr;
 	enginevguifuncs = nullptr;
 
+	// Give panels a chance to settle so things
+	//  Marked for deletion will actually get deleted
+	vgui::ivgui()->RunFrame();
+
 	ModInfo().FreeModInfo();
+	
+	vgui::VGui_ShutdownMatSysInterfacesList( "gameui" );
+	vgui::VGui_ShutdownInterfacesList( "gameui" );
 	
 	steamapicontext->Clear();
 	
@@ -734,7 +745,7 @@ void CGameUI::OnGameUIActivated()
 	{
 		const char *pGameName = CommandLine()->ParmValue( "-game", "hl2" );
 		// only want to run this for TF2
-		if ( ( Q_stricmp( pGameName, "tf" ) == 0 ) || ( Q_stricmp( pGameName, "tf_beta" ) == 0 ) )
+		if ( ( V_strieq( pGameName, "tf" ) ) || ( V_strieq( pGameName, "tf_beta" ) ) )
 		{
 			GameClientExports()->OnGameUIActivated();
 		}
@@ -750,7 +761,7 @@ void CGameUI::OnGameUIHidden()
 	{
 		const char *pGameName = CommandLine()->ParmValue( "-game", "hl2" );
 		// only want to run this for TF2
-		if ( ( Q_stricmp( pGameName, "tf" ) == 0 ) || ( Q_stricmp( pGameName, "tf_beta" ) == 0 ) )
+		if ( ( V_strieq( pGameName, "tf" ) ) || ( V_strieq( pGameName, "tf_beta" ) ) )
 		{
 			GameClientExports()->OnGameUIHidden();
 		}
@@ -1026,7 +1037,7 @@ bool CGameUI::SetProgressBarStatusText(const char *statusText)
 	if (!statusText)
 		return false;
 
-	if (!stricmp(statusText, m_szPreviousStatusText))
+	if (V_strieq(statusText, m_szPreviousStatusText))
 		return false;
 
 	g_hLoadingDialog->SetStatusText(statusText);

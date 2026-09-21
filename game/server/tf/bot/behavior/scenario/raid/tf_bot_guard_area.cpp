@@ -95,7 +95,7 @@ public:
 		CTFNavArea *area = (CTFNavArea *)baseArea;
 
 		CTeam *raidingTeam = GetGlobalTeam( TF_TEAM_BLUE );
-		for( int i=0; i<raidingTeam->GetNumPlayers(); ++i )
+		for( intp i=0; i<raidingTeam->GetNumPlayers(); ++i )
 		{
 			CTFPlayer *player = (CTFPlayer *)raidingTeam->GetPlayer(i);
 

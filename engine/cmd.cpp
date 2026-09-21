@@ -91,6 +91,13 @@ void Cmd_AddClientCmdCanExecuteVar( const char *pName )
 		g_ExtraClientCmdCanExecuteCvars.Insert( pName );
 }
 
+// dimhotepus: Pair add.
+void Cmd_RemoveClientCmdCanExecuteVar( const char *pName )
+{
+	const auto index = g_ExtraClientCmdCanExecuteCvars.Find( pName );
+	Assert( index != g_ExtraClientCmdCanExecuteCvars.InvalidIndex() );
+	g_ExtraClientCmdCanExecuteCvars.RemoveAt( index );
+}
 
 //=============================================================================
 // These functions manage a list of execution markers that we use to verify
@@ -443,7 +450,7 @@ static char const *Cmd_TranslateFileAssociation(char const *param )
 	for ( const auto &info : g_FileAssociations )
 	{
 		if ( ! Q_strcmp( extension, info.extension+1 ) && 
-			 ! CommandLine()->FindParm(va( "+%s", info.command_to_issue ) ) )
+			 ! CommandLine()->HasParm(va( "+%s", info.command_to_issue ) ) )
 		{
 			// Translate if haven't already got one of these commands
 			V_strcpy_safe( sz, temp );
@@ -581,7 +588,9 @@ void Cmd_Exec_f( const CCommand &args )
 		return;
 	}
 	
-	const char *pPathID = "MOD";
+	// dimhotepus: MOD -> *. We need to lookup not only in MOD, but in platform, too.
+	// dimhotepus: * allows to find valve.rc in platform vpks.
+	const char *pPathID = "*";
 	const char *szFile = args[1];
 
 	V_sprintf_safe( fileName, "//%s/cfg/%s", pPathID, szFile );
@@ -627,7 +636,7 @@ void Cmd_Exec_f( const CCommand &args )
 
 	char buf[16384] = { 0 };
 	int len = 0;
-	char *f = (char *)COM_LoadStackFile( fileName, buf, sizeof( buf ), len );
+	char *f = (char *)COM_LoadStackFile( fileName, buf, len );
 	if ( !f )
 	{
 		ConMsg( "exec: couldn't exec %s\n", szFile );
@@ -750,7 +759,7 @@ CON_COMMAND( alias, "Alias a command." )
 
 	for ( const auto *blacklistedCommand : g_pBlacklistedCommands )
 	{
-		if ( !V_stricmp( blacklistedCommand, s) )
+		if ( V_strieq( blacklistedCommand, s) )
 		{
 			ConMsg("Can't alias %s\n", blacklistedCommand );
 			return;
@@ -772,9 +781,9 @@ CON_COMMAND( alias, "Alias a command." )
 	// if the alias already exists, reuse it
 	for (a = cmd_alias ; a ; a=a->next)
 	{
-		if (!Q_strcmp(s, a->name))
+		if (V_streq(s, a->name))
 		{
-			if ( !Q_strcmp( a->value, cmd ) )		// Re-alias the same thing
+			if ( V_streq( a->value, cmd ) )		// Re-alias the same thing
 				return;
 
 			delete[] a->value;
@@ -952,7 +961,7 @@ const ConCommandBase *Cmd_ExecuteCommand( const CCommand &command, cmd_source_t 
 	cmdalias_t *a;
 	for ( a=cmd_alias; a; a=a->next )
 	{
-		if ( !Q_strcasecmp( command[0], a->name ) )
+		if ( V_strieq( command[0], a->name ) )
 		{
 			Cbuf_InsertText( a->value );
 			return NULL;
@@ -1048,7 +1057,7 @@ const ConCommandBase *Cmd_ExecuteCommand( const CCommand &command, cmd_source_t 
 	}
 
 	// Bail out before we update convars if we're runnign in default mode.
-	if ( pCommand && src == src_command && CommandLine()->CheckParm( "-default" ) && !pCommand->IsFlagSet( FCVAR_EXEC_DESPITE_DEFAULT ) )
+	if ( pCommand && src == src_command && CommandLine()->HasParm( "-default" ) && !pCommand->IsFlagSet( FCVAR_EXEC_DESPITE_DEFAULT ) )
 	{
 		Msg( "Ignoring cvar \"%s\" due to -default on command line\n", pCommand->GetName() );
 		return NULL;
@@ -1089,7 +1098,7 @@ void Cmd_ForwardToServer( const CCommand &args, bool bReliable )
 #endif
 
 	str[0] = 0;
-	if ( Q_strcasecmp( args[0], "cmd") != 0 )
+	if ( !V_strieq( args[0], "cmd" ) )
 	{
 		Q_strncat( str, args[0], sizeof( str ), COPY_ALL_CHARACTERS );
 		Q_strncat( str, " ", sizeof( str ), COPY_ALL_CHARACTERS );

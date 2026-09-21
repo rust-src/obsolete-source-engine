@@ -69,7 +69,7 @@ void CCMDList::RunFrame()
 void CCMDList::ServerResponded()
 {
 	char store[2048];
-	strcpy(store, m_pRcon->RconResponse());
+	V_strcpy_safe(store, m_pRcon->RconResponse());
 	char *cur=store;
 	char *next=NULL;
 	char *cmd=NULL;
@@ -100,16 +100,16 @@ void CCMDList::ServerResponded()
 			&& strncmp(cur,"Total Commands",14) && strncmp(cur,"CmdList ? for syntax",20)  )
 		{
 			char *removeWhiteSpace=cur;
-			while(!isspace(*removeWhiteSpace) && removeWhiteSpace<next)
+			// dimhtepus: isspace -> V_isspace.
+			while(!V_isspace(*removeWhiteSpace) && removeWhiteSpace<next)
 			{
 				removeWhiteSpace++;
 			}
 			*removeWhiteSpace='\0';
 
-			cmd = new char[strlen(cur)];
+			cmd = V_strdup(cur);
 			if(cmd)
 			{
-				strcpy(cmd,cur);
 				m_CMDList.AddToTail(cmd);
 			}
 		} 
@@ -150,7 +150,7 @@ bool CCMDList::QueryCommand(char *cmd)
 	for(int i=0;i<m_CMDList.Count();i++)
 	{
 		char *cmd_in = m_CMDList[i];
-		if(!stricmp(cmd,m_CMDList[i]))
+		if(V_strieq(cmd,m_CMDList[i]))
 			break;
 	}
 	if(i!=m_CMDList.Count())

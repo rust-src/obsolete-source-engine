@@ -151,8 +151,8 @@ private:
 CRotationManipulator::CRotationManipulator( matrix3x4_t *pTransform ) : CTransformManipulator( pTransform )
 {
 	m_lastx = m_lasty = 0;
-	m_altitude = M_PI/6;
-	m_azimuth = -3*M_PI/4;
+	m_altitude = M_PI_F/6;
+	m_azimuth = -3*M_PI_F/4;
 	m_roll = 0.0f;
 	m_bDoRoll = false;
 	UpdateTransform();
@@ -315,12 +315,12 @@ CPotteryWheelPanel::~CPotteryWheelPanel()
 
 void CPotteryWheelPanel::CreateDefaultLights()
 {
-	for ( int i = 0; i < 6; ++i )
+	for ( auto &v : m_vecAmbientCube )
 	{
-		m_vecAmbientCube[i].Init( 0.4f, 0.4f, 0.4f, 1.0f );
+		v.Init( 0.4f, 0.4f, 0.4f, 1.0f );
 	}
 
-	memset( &m_Lights[0].m_Desc, 0, sizeof(LightDesc_t) );
+	BitwiseClear( m_Lights[0].m_Desc );
 	SetIdentityMatrix( m_Lights[0].m_LightToWorld );
 	m_Lights[0].m_Desc.m_Type = MATERIAL_LIGHT_DIRECTIONAL;
 	m_Lights[0].m_Desc.m_Color.Init( 1.0f, 1.0f, 1.0f );
@@ -404,7 +404,7 @@ void CPotteryWheelPanel::ParseLightsFromKV( KeyValues *pLightsKV )
 		Vector vecColor;
 		StringToVector( vecColor.Base(), pLocalLight->GetString( "color" ) );
 
-		if ( !Q_stricmp( pType, "directional" ) )
+		if ( V_strieq( pType, "directional" ) )
 		{
 			Vector vecDirection;
 			StringToVector( vecDirection.Base(), pLocalLight->GetString( "direction" ) );
@@ -413,7 +413,7 @@ void CPotteryWheelPanel::ParseLightsFromKV( KeyValues *pLightsKV )
 			continue;
 		}
 
-		if ( !Q_stricmp( pType, "point" ) )
+		if ( V_strieq( pType, "point" ) )
 		{
 			Vector vecAtten;
 			StringToVector( vecAtten.Base(), pLocalLight->GetString( "attenuation" ) );
@@ -429,7 +429,7 @@ void CPotteryWheelPanel::ParseLightsFromKV( KeyValues *pLightsKV )
 			continue;
 		}
 
-		if ( !Q_stricmp( pType, "spot" ) )
+		if ( V_strieq( pType, "spot" ) )
 		{
 			Vector vecAtten;
 			StringToVector( vecAtten.Base(), pLocalLight->GetString( "attenuation" ) );
@@ -542,14 +542,14 @@ void CPotteryWheelPanel::SetLightProbe( CDmxElement *pLightProbe )
 		const char *pType = pLocalLight->GetValueString( "name" );
 		const Vector& vecColor = pLocalLight->GetValue<Vector>( "color" );
 
-		if ( !Q_stricmp( pType, "directional" ) )
+		if ( V_strieq( pType, "directional" ) )
 		{
 			pDesc->InitDirectional( pLocalLight->GetValue<Vector>( "direction" ), vecColor ); 
 			++m_nLightCount;
 			continue;
 		}
 
-		if ( !Q_stricmp( pType, "point" ) )
+		if ( V_strieq( pType, "point" ) )
 		{
 			const Vector& vecAtten = pLocalLight->GetValue<Vector>( "attenuation" );
 			pDesc->InitPoint( pLocalLight->GetValue<Vector>( "origin" ), vecColor );
@@ -562,7 +562,7 @@ void CPotteryWheelPanel::SetLightProbe( CDmxElement *pLightProbe )
 			continue;
 		}
 
-		if ( !Q_stricmp( pType, "spot" ) )
+		if ( V_strieq( pType, "spot" ) )
 		{
 			const Vector& vecAtten = pLocalLight->GetValue<Vector>( "attenuation" );
 			pDesc->InitSpot( pLocalLight->GetValue<Vector>( "origin" ), vecColor, vec3_origin,
@@ -678,7 +678,7 @@ void CPotteryWheelPanel::LookAt( float flRadius )
 	float flFOVx = m_Camera.m_flFOV;
 
 	// Compute fov/2 in radians
-	flFOVx *= M_PI / 360.0f;
+	flFOVx *= M_PI_F / 360.0f;
 
 	// Compute an effective fov	based on the aspect ratio 
 	// if the height is smaller than the width
@@ -721,7 +721,7 @@ void CPotteryWheelPanel::SetupRenderState( int nDisplayWidth, int nDisplayHeight
 	pRenderContext->MatrixMode( MATERIAL_PROJECTION );
 	pRenderContext->LoadMatrix( projection );
 
-	LightDesc_t *pDesc = (LightDesc_t*)stackalloc( m_nLightCount * sizeof(LightDesc_t) );
+	LightDesc_t *pDesc = stackallocT( LightDesc_t, m_nLightCount );
 	for ( int i = 0; i < m_nLightCount; ++i )
 	{
 		pDesc[i] = m_Lights[i].m_Desc;
@@ -878,6 +878,7 @@ void CPotteryWheelPanel::Paint()
 	int w, h;
 	GetSize( w, h );
 	vgui::MatSystemSurface()->Begin3DPaint( 0, 0, w, h, m_bRenderToTexture );
+	RunCodeAtScopeExit(vgui::MatSystemSurface()->End3DPaint( ));
 
 	if ( m_pCurrentManip )
 	{
@@ -915,8 +916,6 @@ void CPotteryWheelPanel::Paint()
 	OnPaint3D();
 
 	pRenderContext->CullMode( MATERIAL_CULLMODE_CW );
-
-	vgui::MatSystemSurface()->End3DPaint( );
 }
 
 

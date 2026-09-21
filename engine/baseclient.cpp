@@ -28,6 +28,7 @@
 #include "iregistry.h"
 #include "sv_main.h"
 #include "hltvserver.h"
+#include <memory>
 
 #ifdef REPLAY_ENABLED
 #include "replay_internal.h"
@@ -184,7 +185,7 @@ void CBaseClient::SetUserCVar( const char *pchCvar, const char *value)
 		return;
 
 	// Name is handled differently
-	if ( !Q_stricmp( pchCvar, "name") )
+	if ( V_strieq( pchCvar, "name") )
 	{
 		//Msg("CBaseClient::SetUserCVar[index=%d]('name', '%s')\n", m_nClientSlot, value );
 		ClientRequestNameChange( value );
@@ -374,7 +375,8 @@ void ValidateName( char *pszName, int nBuffSize )
 		const unsigned char *pChar = (unsigned char *)pszName;
 
 		// also skip characters we're going to ignore
-		while ( *pChar && ( isspace(*pChar) || BIgnoreCharInName( *pChar, true ) ) )
+		// dimhotepus: isspace -> V_isspace.
+		while ( *pChar && ( V_isspace(*pChar) || BIgnoreCharInName( *pChar, true ) ) )
 		{
 			++pChar;
 		}
@@ -449,7 +451,7 @@ void CBaseClient::SetName(const char * playerName)
 					continue;
 				
 				// If it's 2 bots they're allowed to have matching names, otherwise there's a conflict
-				if( !Q_stricmp( client->GetClientName(), val ) && !( IsFakeClient() && client->IsFakeClient() ) )
+				if( V_strieq( client->GetClientName(), val ) && !( IsFakeClient() && client->IsFakeClient() ) )
 				{
 					CBaseClient *pClient = dynamic_cast< CBaseClient* >( client );
 					if ( IsFakeClient() && pClient )
@@ -542,7 +544,7 @@ bool CBaseClient::SendSignonData( void )
 
 	if ( m_Server->m_Signon.IsOverflowed() )
 	{
-		Host_Error( "Signon buffer overflowed %i bytes!!!\n", m_Server->m_Signon.GetNumBytesWritten() );
+		Host_Error( "Signon buffer overflowed %zd bytes!!!\n", m_Server->m_Signon.GetNumBytesWritten() );
 		return false;
 	}
 
@@ -671,6 +673,7 @@ bool CBaseClient::SendServerInfo( void )
 
 	// supporting smaller stack
 	byte *buffer = (byte *)MemAllocScratch( NET_MAX_PAYLOAD );
+	RunCodeAtScopeExit( MemFreeScratch() );
 
 	bf_write msg( "SV_SendServerinfo->msg", buffer, NET_MAX_PAYLOAD );
 
@@ -731,14 +734,11 @@ bool CBaseClient::SendServerInfo( void )
 	// send server info as one data block
 	if ( !m_NetChannel->SendData( msg ) )
 	{
-		MemFreeScratch();
 		Disconnect("Server info data overflow");
 		return false;
 	}
 		
 	COM_TimestampedLog( " CBaseClient::SendServerInfo(finished)" );
-
-	MemFreeScratch();
 
 	return true;
 }
@@ -814,7 +814,7 @@ bool CBaseClient::ProcessSetConVar( NET_SetConVar *msg )
 		}
 
 		// "name" convar is handled differently
-		if ( V_stricmp( name, "name" ) == 0 )
+		if ( V_strieq( name, "name" ) )
 		{
 			ClientRequestNameChange( value );
 			continue;
@@ -1153,7 +1153,9 @@ void CBaseClient::SendSnapshot( CClientFrame *pFrame )
 
 	bool bFailedOnce = false;
 write_again:
-	bf_write msg( "CBaseClient::SendSnapshot", m_SnapshotScratchBuffer, sizeof( m_SnapshotScratchBuffer ) );
+	// RaphaelIT7: Were deep in networking and the stack can easily get close to an overflow
+	static thread_local std::unique_ptr<unsigned int[]> pSnapshotScratchBuffer(new unsigned int[g_nScratchBufferSizeAsInt]);
+	bf_write msg( "CBaseClient::SendSnapshot", pSnapshotScratchBuffer.get(), SNAPSHOT_SCRATCH_BUFFER_SIZE );
 
 	TRACE_PACKET( ( "SendSnapshot(%d)\n", pFrame->tick_count ) );
 
@@ -1308,7 +1310,7 @@ bool CBaseClient::ExecuteStringCommand( const char *pCommand )
 	if ( !pCommand || !pCommand[0] )
 		return false;
 
-	if ( !Q_stricmp( pCommand, "demorestart" ) )
+	if ( V_strieq( pCommand, "demorestart" ) )
 	{
 		DemoRestart();
 		// trick, dont return true, so serverGameClients gets this command too
@@ -1432,7 +1434,7 @@ void CBaseClient::UpdateUserSettings()
 void CBaseClient::ClientRequestNameChange( const char *pszNewName )
 {
 	// This is called several times.  Only show a status message the first time.
-	bool bShowStatusMessage = ( m_szPendingNameChange[0] == '\0' );
+	bool bShowStatusMessage = Q_isempty( m_szPendingNameChange );
 	
 	V_strcpy_safe( m_szPendingNameChange, pszNewName );
 	CheckFlushNameChange( bShowStatusMessage );
@@ -1443,16 +1445,15 @@ void CBaseClient::CheckFlushNameChange( bool bShowStatusMessage /*= false*/ )
 	if ( !IsConnected() )
 		return;
 	
-	if ( m_szPendingNameChange[0] == '\0' )
+	if ( Q_isempty( m_szPendingNameChange ) )
 		return;
 	
 	if ( m_bPlayerNameLocked )
 		return;
 
 	// Did they change it back to the original?
-	if ( !Q_strcmp( m_szPendingNameChange, m_Name ) )
+	if ( V_streq( m_szPendingNameChange, m_Name ) )
 	{
-
 		// Nothing really pending, they already changed it back
 		// we had a chance to apply the other one!
 		m_szPendingNameChange[0] = '\0';
@@ -1627,7 +1628,7 @@ const char *GetUserIDString( const USERID_t& id )
 			}
 			else
 			{
-				V_sprintf_safe( idstr, "%s", id.steamid.Render() );
+				V_strcpy_safe( idstr, id.steamid.Render() );
 			}
 		}
 		break;		

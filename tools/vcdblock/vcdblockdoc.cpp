@@ -150,7 +150,7 @@ bool CVcdBlockDoc::LoadFromFile( const char *pFileName )
 	// If we loaded a .bsp, clear out what we're doing
 	// load the Edits file into memory, assign it as our "root"
 	CDmElement *pEdit = NULL;
-	if ( pszExt && !V_stricmp( pszExt, "vle" ) )
+	if ( pszExt && V_strieq( pszExt, "vle" ) )
 	{
 		if ( g_pDataModel->RestoreFromFile( m_pEditFileName, NULL, "vmf", &pEdit ) != DMFILEID_INVALID )
 		{
@@ -318,7 +318,7 @@ CDmeVMFEntity *CVcdBlockDoc::GetInfoTargetForLocation( Vector &vecStart, Vector 
 	flEndDist = VectorNormalize( vecDelta );
 
 	CDmeVMFEntity *pSelectedNode = NULL;
-	float flMinDistFromLine = 1E30;
+	float flMinDistFromLine = std::numeric_limits<float>::max();
 
 	const CDmrElementArray<CDmElement> entities = GetEntityList();
 	intp nCount = entities.Count();
@@ -347,7 +347,7 @@ CDmeVMFEntity *CVcdBlockDoc::GetInfoTargetForLocation( Vector &vecStart, Vector 
 bool CVcdBlockDoc::GetStringChoiceList( const char *pChoiceListType, [[maybe_unused]] CDmElement *pElement, 
 									[[maybe_unused]] const char *pAttributeName, [[maybe_unused]] bool bArrayElement, StringChoiceList_t &list )
 {
-	if ( !Q_stricmp( pChoiceListType, "info_targets" ) )
+	if ( V_strieq( pChoiceListType, "info_targets" ) )
 	{
 		const CDmrElementArray<> entities = GetEntityList();
 
@@ -360,7 +360,7 @@ bool CVcdBlockDoc::GetStringChoiceList( const char *pChoiceListType, [[maybe_unu
 		for ( intp i = 0; i < nCount; ++i )
 		{
 			CDmeVMFEntity *pNode = CastElement< CDmeVMFEntity >( entities[ i ] );
-			if ( !V_stricmp( pNode->GetClassName(), "info_target" ) )
+			if ( V_strieq( pNode->GetClassName(), "info_target" ) )
 			{
 				StringChoice_t sChoiceChild;
 				sChoiceChild.m_pValue = pNode->GetTargetName();
@@ -380,13 +380,13 @@ bool CVcdBlockDoc::GetStringChoiceList( const char *pChoiceListType, [[maybe_unu
 bool CVcdBlockDoc::GetElementChoiceList( const char *pChoiceListType, [[maybe_unused]] CDmElement *pElement, 
 									 [[maybe_unused]] const char *pAttributeName, [[maybe_unused]] bool bArrayElement, ElementChoiceList_t &list )
 {
-	if ( !Q_stricmp( pChoiceListType, "allelements" ) )
+	if ( V_strieq( pChoiceListType, "allelements" ) )
 	{
 		AddElementsRecursively( m_hEditRoot, list );
 		return true;
 	}
 
-	if ( !Q_stricmp( pChoiceListType, "info_targets" ) )
+	if ( V_strieq( pChoiceListType, "info_targets" ) )
 	{
 		const CDmrElementArray<> entities = GetEntityList();
 
@@ -395,7 +395,7 @@ bool CVcdBlockDoc::GetElementChoiceList( const char *pChoiceListType, [[maybe_un
 		for ( intp i = 0; i < nCount; ++i )
 		{
 			CDmeVMFEntity *pNode = CastElement< CDmeVMFEntity >( entities[ i ] );
-			if ( !V_stricmp( pNode->GetClassName(), "info_target" ) )
+			if ( V_strieq( pNode->GetClassName(), "info_target" ) )
 			{
 				bFound = true;
 				ElementChoice_t sChoice;
@@ -460,7 +460,7 @@ void CVcdBlockDoc::InitializeFromServer( CDmrElementArray<> &entityList )
 
 		if (servertools->GetKeyValue( pServerEnt, "classname", classname, sizeof( classname ) ) )
 		{
-			if ( !Q_stricmp( classname, "info_target" ))
+			if ( V_strieq( classname, "info_target" ))
 			{
 				char hammerid[256];
 				if ( servertools->GetKeyValue( pServerEnt, "hammerid", hammerid, sizeof( hammerid ) ) )

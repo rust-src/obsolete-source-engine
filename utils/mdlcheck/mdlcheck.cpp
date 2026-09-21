@@ -9,7 +9,7 @@
 #include <windows.h>
 #include "mdlcheck_util.h"
 #include "tier0/dbg.h"
-#include "utldict.h"
+#include "tier1/utldict.h"
 #include "tier1/utlstring.h"
 
 bool uselogfile = false;
@@ -73,16 +73,16 @@ void printusage( void )
 
 void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char const *extension )
 {
-	WIN32_FIND_DATA wfd;
+	char directory[ MAX_PATH ];
+	char filename[ MAX_PATH ];
+	V_sprintf_safe( directory, "%s\\*.*", dir );
 
-	char directory[ 256 ];
-	char filename[ 256 ];
 	HANDLE ff;
-
-	sprintf( directory, "%s\\*.*", dir );
-
+	WIN32_FIND_DATA wfd;
 	if ( ( ff = FindFirstFile( directory, &wfd ) ) == INVALID_HANDLE_VALUE )
 		return;
+
+	RunCodeAtScopeExit(FindClose( ff ));
 
 	int extlen = strlen( extension );
 
@@ -95,7 +95,7 @@ void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char con
 				continue;
 
 			// Recurse down directory
-			sprintf( filename, "%s\\%s", dir, wfd.cFileName );
+			V_sprintf_safe( filename, "%s\\%s", dir, wfd.cFileName );
 			BuildFileList_R( files, filename, extension );
 		}
 		else
@@ -106,10 +106,10 @@ void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char con
 				if ( strstr( wfd.cFileName, ".360." ) )
 				{
 				}
-				else if ( !stricmp( &wfd.cFileName[ len - extlen ], extension ) )
+				else if ( V_strieq( &wfd.cFileName[ len - extlen ], extension ) )
 				{
 					char filename[ MAX_PATH ];
-					Q_snprintf( filename, sizeof( filename ), "%s\\%s", dir, wfd.cFileName );
+					V_sprintf_safe( filename, "%s\\%s", dir, wfd.cFileName );
 					_strlwr( filename );
 
 					Q_FixSlashes( filename );
@@ -160,7 +160,7 @@ bool GetModelNameFromSourceFile( char const *filename, char *modelname, int maxl
 	while ( current )
 	{
 		current = CC_ParseToken( current );
-		if ( strlen( com_token ) <= 0 )
+		if ( Q_isempty( com_token ) )
 			break;
 
 		if ( stricmp( com_token, "$modelname" ) )
@@ -195,8 +195,8 @@ bool AddModelNameFromSource( CUtlDict< ModelFile, int >& models, char const *fil
 	{
 		char shortname[ MAX_PATH ];
 		char shortname2[ MAX_PATH ];
-		strcpy( shortname, &filename[ offset ] );
-		strcpy( shortname2, &models[ idx ].qcfile[ offset ] );
+		V_strcpy_safe( shortname, &filename[ offset ] );
+		V_strcpy_safe( shortname2, &models[ idx ].qcfile[ offset ] );
 
 		vprint_queued( 0, "multiple .qc's build %s\n  %s\n  %s\n",
 			modelname,
@@ -206,8 +206,8 @@ bool AddModelNameFromSource( CUtlDict< ModelFile, int >& models, char const *fil
 	}
 
 	ModelFile mf;
-	strcpy( mf.qcfile, filename );
-	_strlwr( mf.qcfile );
+	V_strcpy_safe( mf.qcfile, filename );
+	V_strlower( mf.qcfile );
 	mf.version = 0;
 
 	models.Insert( modelname, mf );
@@ -297,7 +297,7 @@ bool ValidateModelFile( char const *modelname, int offset )
 
 	// See if there's a .qc which builds this model
 	char shortname[ MAX_PATH ];
-	strcpy( shortname, &modelname[ offset ] );
+	V_strcpy_safe( shortname, &modelname[ offset ] );
 
 	Q_FixSlashes( shortname );
 
@@ -492,9 +492,9 @@ int main( int argc, char* argv[] )
 	CheckLogFile();
 
 	char modelsources[ 256 ];
-	strcpy( modelsources, argv[ i - 2 ] );
+	V_strcpy_safe( modelsources, argv[ i - 2 ] );
 	char modelsdir[ 256 ];
-	strcpy( modelsdir, argv[ i - 1 ] );
+	V_strcpy_safe( modelsdir, argv[ i - 1 ] );
 
 	if ( !strstr( modelsdir, "models" ) )
 	{

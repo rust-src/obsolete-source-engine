@@ -18,8 +18,8 @@
 #include "tier0/memdbgon.h"
 
 #define DEFINE_INVALID_STRING_INDEX                                  \
-  constexpr CUtlSymbolTable::CStringPoolIndex INVALID_STRING_INDEX( \
-    (unsigned short)0xFFFFU, (unsigned short)0xFFFFU)
+  constexpr CUtlSymbolTable::CStringPoolIndex INVALID_STRING_INDEX(  \
+    CUtlSymbolTable::kInvalidOffset, CUtlSymbolTable::kInvalidPool)
 
 constexpr inline intp MIN_STRING_POOL_SIZE{2048};
 
@@ -122,39 +122,16 @@ inline const char* CUtlSymbolTable::StringFromIndex( const CStringPoolIndex &ind
 
 bool CUtlSymbolTable::CLess::operator()( const CStringPoolIndex &i1, const CStringPoolIndex &i2 ) const
 {
-	// Need to do pointer math because CUtlSymbolTable is used in CUtlVectors, and hence
-	// can be arbitrarily moved in memory on a realloc. Yes, this is portable. In reality,
-	// right now at least, because m_LessFunc is the first member of CUtlRBTree, and m_Lookup
-	// is the first member of CUtlSymbolTable, this == pTable
-	CUtlSymbolTable *pTable = (CUtlSymbolTable *)( (byte *)GET_OUTER( CUtlSymbolTable::CTree, m_LessFunc ) - offsetof(CUtlSymbolTable, m_Lookup ) );
-	const char* str1 = pTable->StringFromIndex( i1 );
-	const char* str2 = pTable->StringFromIndex( i2 );
-
-	if ( !str1 && str2 )
-		return false;
-	if ( !str2 && str1 )
-		return true;
-	if ( !str1 && !str2 )
-		return false;
-	if ( !pTable->m_bInsensitive )
-		return V_strcmp( str1, str2 ) < 0;
-	else
-		return V_stricmp( str1, str2 ) < 0;
-}
-
-
-bool CUtlSymbolTable::CLessForFind::operator()( const CStringPoolIndex &i1, const CStringPoolIndex &i2, const char *searchString ) const
-{
 	DEFINE_INVALID_STRING_INDEX;
 
 	// Need to do pointer math because CUtlSymbolTable is used in CUtlVectors, and hence
 	// can be arbitrarily moved in memory on a realloc. Yes, this is portable. In reality,
 	// right now at least, because m_LessFunc is the first member of CUtlRBTree, and m_Lookup
 	// is the first member of CUtlSymbolTable, this == pTable
-	CUtlSymbolTable *pTable = (CUtlSymbolTable *)( (byte*)GET_OUTER( CUtlSymbolTable::CTree, m_LessFindFunc ) - offsetof(CUtlSymbolTable, m_Lookup ) );
-	const char* str1 = (i1 == INVALID_STRING_INDEX) ? searchString :
+	const CUtlSymbolTable *pTable = (const CUtlSymbolTable *)( (const byte *)GET_OUTER( CUtlSymbolTable::CTree, m_LessFunc ) - offsetof(CUtlSymbolTable, m_Lookup ) );
+	const char* str1 = (i1 == INVALID_STRING_INDEX) ? static_cast< const CUtlSymbolTable::CStringPoolIndexSearch& >( i1 ).m_pUserSearchString :
 													  pTable->StringFromIndex( i1 );
-	const char* str2 = (i2 == INVALID_STRING_INDEX) ? searchString :
+	const char* str2 = (i2 == INVALID_STRING_INDEX) ? static_cast< const CUtlSymbolTable::CStringPoolIndexSearch& >( i2 ).m_pUserSearchString :
 													  pTable->StringFromIndex( i2 );
 
 	if ( !str1 && str2 )
@@ -188,14 +165,14 @@ CUtlSymbolTable::~CUtlSymbolTable()
 
 CUtlSymbol CUtlSymbolTable::Find( const char* pString ) const
 {
-	DEFINE_INVALID_STRING_INDEX;
-
 	if (!pString)
 		return {};
 
+	CStringPoolIndexSearch search{ pString };
+
 	// Passing this special invalid symbol makes the comparison function
 	// use the string passed in the context
-	UtlSymId_t idx = m_Lookup.Find( INVALID_STRING_INDEX, pString );
+	UtlSymId_t idx = m_Lookup.Find( search );
 
 	return { idx };
 }
@@ -258,8 +235,12 @@ CUtlSymbol CUtlSymbolTable::AddString( const char* pString )
 
 	// didn't find, insert the string into the vector.
 	CStringPoolIndex index;
-	index.m_iPool = iPool;
-	index.m_iOffset = iStringOffset;
+
+	Assert( iPool <= std::numeric_limits<decltype(index.m_iPool)>::max() );
+	Assert( iStringOffset <= std::numeric_limits<decltype(index.m_iOffset)>::max() );
+
+	index.m_iPool = static_cast<decltype(index.m_iPool)>( iPool );
+	index.m_iOffset = static_cast<decltype(index.m_iOffset)>( iStringOffset );
 
 	UtlSymId_t idx = m_Lookup.Insert( index );
 	return { idx };
@@ -303,7 +284,8 @@ class CUtlFilenameSymbolTable::HashTable
 		empty_t,
 		DefaultHashFunctor<CUtlConstString>,
 		DefaultEqualFunctor<CUtlConstString>,
-		uint32
+		// dimhotepus: uint32 -> size_t
+		size_t
 	>
 {
 };
@@ -342,9 +324,8 @@ FileNameHandle_t CUtlFilenameSymbolTable::FindOrAddFileName( const char *pFileNa
 	char fn[ MAX_PATH ];
 	V_strcpy_safe( fn, pFileName );
 	V_RemoveDotSlashes( fn );
-#ifdef _WIN32
+	// dimhotepus: Do on all platforms.  See https://github.com/ValveSoftware/source-sdk-2013/issues/865
 	V_strlower( fn );
-#endif
 
 	// Split the filename into constituent parts
 	char basepath[ MAX_PATH ];
@@ -357,9 +338,15 @@ FileNameHandle_t CUtlFilenameSymbolTable::FindOrAddFileName( const char *pFileNa
 	{
 		m_lock.LockForWrite();
 		RunCodeAtScopeExit(m_lock.UnlockWrite());
+		
+		const auto path = m_Strings->Insert( basepath ) + 1;
+		const auto file = m_Strings->Insert( filename ) + 1;
 
-		handle.path = m_Strings->Insert( basepath ) + 1;
-		handle.file = m_Strings->Insert( filename ) + 1;
+		Assert(path <= std::numeric_limits<decltype(handle.path)>::max());
+		Assert(file <= std::numeric_limits<decltype(handle.file)>::max());
+
+		handle.path = static_cast<decltype(handle.path)>(path);
+		handle.file = static_cast<decltype(handle.file)>(file);
 	}
 
 	return *( FileNameHandle_t * )( &handle );
@@ -376,9 +363,8 @@ FileNameHandle_t CUtlFilenameSymbolTable::FindFileName( const char *pFileName )
 	char fn[ MAX_PATH ];
 	V_strcpy_safe( fn, pFileName );
 	V_RemoveDotSlashes( fn );
-#ifdef _WIN32
+	// dimhotepus: Do on all platforms.  See https://github.com/ValveSoftware/source-sdk-2013/issues/865
 	V_strlower( fn );
-#endif
 
 	// Split the filename into constituent parts
 	char basepath[ MAX_PATH ];
@@ -388,14 +374,20 @@ FileNameHandle_t CUtlFilenameSymbolTable::FindFileName( const char *pFileName )
 
 	alignas(FileNameHandle_t) FileNameHandleInternal_t handle;
 
-	Assert( (uint16)(m_Strings->InvalidHandle() + 1) == 0 );
+	static_assert( HashTable::InvalidHandle() + 1 == 0 );
 
 	{
 		m_lock.LockForRead();
 		RunCodeAtScopeExit(m_lock.UnlockRead());
 
-		handle.path = m_Strings->Find(basepath) + 1;
-		handle.file = m_Strings->Find(filename) + 1;
+		const auto path = m_Strings->Find(basepath) + 1;
+		const auto file = m_Strings->Find(filename) + 1;
+
+		Assert( path <= std::numeric_limits<decltype(handle.path)>::max() );
+		Assert( file <= std::numeric_limits<decltype(handle.file)>::max() );
+
+		handle.path = static_cast<decltype(handle.path)>( path );
+		handle.file = static_cast<decltype(handle.file)>( file );
 	}
 
 	if ( handle.path == 0 || handle.file == 0 )

@@ -58,7 +58,7 @@ CLocalizationDialog::CLocalizationDialog(const char *fileName) : Frame(NULL, "Lo
 
 	LoadControlSettings("Resource/LocalizationDialog.res");
 
-	strcpy(m_szFileName, fileName);
+	V_strcpy_safe(m_szFileName, fileName);
 
 	char buf[512];
 	Q_snprintf(buf, sizeof( buf ), "%s - Localization Editor", m_szFileName);
@@ -167,7 +167,7 @@ void CLocalizationDialog::OnTextChanged()
 	m_pLanguageEdit->GetText( buf1, sizeof( buf1 ) );
 	m_pEnglishEdit->GetText( buf2, sizeof( buf2 ) );
 
-	if (!strcmp(buf1, buf2))
+	if (V_streq(buf1, buf2))
 	{
 		m_pApplyButton->SetEnabled(false);
 	}
@@ -270,7 +270,7 @@ char const *CLocalizationDialog::GetFileName() const
 //-----------------------------------------------------------------------------
 void CLocalizationDialog::OnCommand(const char *command)
 {
-	if (!stricmp(command, "CreateToken"))
+	if (V_strieq(command, "CreateToken"))
 	{
 		OnCreateToken();
 	}

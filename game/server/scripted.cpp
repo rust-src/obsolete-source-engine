@@ -1288,13 +1288,13 @@ void CAI_ScriptedSequence::ModifyScriptedAutoMovement( Vector *vecNewPos )
 
 			if ( bDebug )
 			{
-				NDebugOverlay::Box( vecRelativeOrigin, -Vector(2,2,2), Vector(2,2,2), 0,255,0, 8, 0.1 );
+				NDebugOverlay::Box( vecRelativeOrigin, -Vector(2,2,2), Vector(2,2,2), 0,255,0, 8, 0.1f );
 			}
 			vecRelativeOrigin -= vecDeltaPos;
 			if ( bDebug )
 			{
 				Msg(", relative to sequence start: %f %f\n", vecRelativeOrigin.x, vecRelativeOrigin.y );
-				NDebugOverlay::Box( vecRelativeOrigin, -Vector(3,3,3), Vector(3,3,3), 255,0,0, 8, 0.1 );
+				NDebugOverlay::Box( vecRelativeOrigin, -Vector(3,3,3), Vector(3,3,3), 255,0,0, 8, 0.1f );
 			}
 		}
 
@@ -1313,7 +1313,7 @@ void CAI_ScriptedSequence::ModifyScriptedAutoMovement( Vector *vecNewPos )
 		if ( bDebug )
 		{
 			Msg("Desired Origin for %s: %f %f\n", m_hTargetEnt->GetDebugName(), vecOrigin.x, vecOrigin.y );
-			NDebugOverlay::Axis( vecOrigin, angAngles, 5, true, 0.1 );
+			NDebugOverlay::Axis( vecOrigin, angAngles, 5, true, 0.1f );
 		}
 
 		// Lerp to it over time

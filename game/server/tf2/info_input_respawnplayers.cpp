@@ -96,7 +96,7 @@ void CInfoInputRespawnPlayers::RespawnTeam( CTFTeam *pTeam )
 		return;
 
 	// Respawn all the players
-	for ( int i = 0; i < pTeam->GetNumPlayers(); i++ )
+	for ( intp i = 0; i < pTeam->GetNumPlayers(); i++ )
 	{
 		RespawnPlayer( (CBaseTFPlayer*)pTeam->GetPlayer(i) );
 	}

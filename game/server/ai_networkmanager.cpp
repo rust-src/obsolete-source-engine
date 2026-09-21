@@ -389,6 +389,8 @@ void CAI_NetworkManager::SaveNetworkGraph( void )
 		return;
 	}
 
+	RunCodeAtScopeExit(filesystem->Close( file ));
+
 	// ---------------------------
 	// Save the version number
 	// ---------------------------
@@ -459,8 +461,6 @@ void CAI_NetworkManager::SaveNetworkGraph( void )
 	{
 		filesystem->FPrintf( file, "%4d\n",m_pNodeIndexTable[node]);
 	}
-
-	filesystem->Close(file);
 }
 */
 
@@ -554,7 +554,7 @@ void CAI_NetworkManager::LoadNetworkGraph( void )
 		// hack for shipped ep1 and hl2 maps
 		// they were rebuilt a week after they were actually shipped so allow the slightly
 		// older node graphs to load for these maps
-		if ( !V_stricmp( szLoweredGameDir, "hl2" ) || !V_stricmp( szLoweredGameDir, "episodic" ) )
+		if ( V_strieq( szLoweredGameDir, "hl2" ) || V_strieq( szLoweredGameDir, "episodic" ) )
 		{
 			bOK = true;
 		}
@@ -577,7 +577,8 @@ void CAI_NetworkManager::LoadNetworkGraph( void )
 	{
 		DevWarning( "%s\n\n", buf.Base<const char>() );
 		Assert( 0 );
-		Error( "AI node graph %s is corrupt\n", szNrpFilename );
+		// dimhotepus: Dump problematic nodes count.
+		Error( "AI node graph %s is corrupt. Nodes count is %d.\n", szNrpFilename, numNodes );
 		return;
 	}
 	
@@ -952,7 +953,7 @@ bool CAI_NetworkManager::IsAIFileCurrent ( const char *szMapName )
 		Q_strncpy( szLoweredGameDir, pGameDir, sizeof( szLoweredGameDir ) );
 		Q_strlower( szLoweredGameDir );
 		
-		if ( !V_stricmp( szLoweredGameDir, "hl2" ) || !V_stricmp( szLoweredGameDir, "episodic" ) || !V_stricmp( szLoweredGameDir, "ep2" ) || !V_stricmp( szLoweredGameDir, "portal" ) || !V_stricmp( szLoweredGameDir, "lostcoast" )  || !V_stricmp( szLoweredGameDir, "hl1" ) )
+		if ( V_strieq( szLoweredGameDir, "hl2" ) || V_strieq( szLoweredGameDir, "episodic" ) || V_strieq( szLoweredGameDir, "ep2" ) || V_strieq( szLoweredGameDir, "portal" ) || V_strieq( szLoweredGameDir, "lostcoast" )  || V_strieq( szLoweredGameDir, "hl1" ) )
 		{
 			// we shipped good node graphs for our games
 			return true;
@@ -1475,8 +1476,8 @@ void CAI_NetworkEditTools::SetDebugBits(const char *ainet_name,int debug_bit)
 void CAI_NetworkEditTools::DrawEditInfoOverlay(void)
 {
 	hudtextparms_s tTextParam;
-	tTextParam.x			= 0.8;
-	tTextParam.y			= 0.8;
+	tTextParam.x			= 0.8f;
+	tTextParam.y			= 0.8f;
 	tTextParam.effect		= 0;
 	tTextParam.r1			= 255;
 	tTextParam.g1			= 255;
@@ -2510,7 +2511,7 @@ void CAI_NetworkBuilder::InitGroundNodePosition(CAI_Network *pNetwork, CAI_Node 
 		maxs.z = mins.z;
 
 		// Add an epsilon for cast
-		origin.z += 0.1;
+		origin.z += 0.1f;
 
 		// shift up so bottom of box is at center of node
 		origin.z -= mins.z;
@@ -2861,7 +2862,7 @@ void CAI_NetworkBuilder::InitNeighbors(CAI_Network *pNetwork, CAI_Node *pNode)
 			Vector	vec2DirToTestNode = ( pTestNode->GetOrigin() - pNode->GetOrigin() ); 
 			float	flDistToTestNode  = VectorNormalize( vec2DirToTestNode );
 
-			float	tolerance = 0.92388;	// 45 degrees
+			constexpr float	tolerance = 0.92388f;	// 45 degrees
 
 			if ( DotProduct ( vec2DirToCheckNode, vec2DirToTestNode ) >= tolerance ) 
 			{
@@ -2898,11 +2899,11 @@ static bool IsInLineForClimb( const Vector &srcPos, const Vector &srcFacing, con
 	VectorNormalize( normSrcFacing );
 	VectorNormalize( normDestFacing );
 
-	Assert( VectorsAreEqual( srcFacing, normSrcFacing, 0.01 ) && VectorsAreEqual( destFacing, normDestFacing, 0.01 ) );
+	Assert( VectorsAreEqual( srcFacing, normSrcFacing, 0.01f ) && VectorsAreEqual( destFacing, normDestFacing, 0.01f ) );
 #endif
 
 	// If they are not facing the same way...
-	if ( 1 - srcFacing.Dot( destFacing ) > 0.01 )
+	if ( 1 - srcFacing.Dot( destFacing ) > 0.01f )
 		return false;
 
 	// If they aren't in line along the facing...
@@ -2916,9 +2917,9 @@ static bool IsInLineForClimb( const Vector &srcPos, const Vector &srcFacing, con
 
 	float fabsCos = fabs( srcFacing.Dot( vecDelta ) );
 
-	constexpr float CosAngLadderStairs = 0.4472; // rise 2 & run 1
+	constexpr float CosAngLadderStairs = 0.4472f; // rise 2 & run 1
 
-	if ( fabsCos > 0.05 && fabs( fabsCos - CosAngLadderStairs ) > 0.05 )
+	if ( fabsCos > 0.05f && fabs( fabsCos - CosAngLadderStairs ) > 0.05f )
 		return false;
 
 	// *************************** --------------------------------

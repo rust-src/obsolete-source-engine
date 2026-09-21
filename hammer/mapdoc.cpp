@@ -696,7 +696,7 @@ void CMapDoc::AssignToVisGroups(void)
 		for (intp i = 0; i < nKeyCount; i++)
 		{
 			const char *pszKey = pChild->GetEditorKey(i);
-			if (!stricmp(pszKey, "visgroupid"))
+			if (V_strieq(pszKey, "visgroupid"))
 			{
 				const char *pszVisGroupID = pChild->GetEditorKeyValue(i);
 				Assert(pszVisGroupID != NULL);
@@ -717,7 +717,7 @@ void CMapDoc::AssignToVisGroups(void)
 					}
 				}
 			}
-			else if (!stricmp(pszKey, "colorvisgroupid"))
+			else if (V_strieq(pszKey, "colorvisgroupid"))
 			{
 				const char *pszVisGroupID = pChild->GetEditorKeyValue(i);
 				Assert(pszVisGroupID != NULL);
@@ -1636,7 +1636,7 @@ ChunkFileResult_t CMapDoc::LoadAutosaveCallback( CChunkFile *pFile, CMapDoc *pDo
 
 ChunkFileResult_t CMapDoc::LoadAutosaveKeyCallback(const char *szKey, const char *szValue, CMapDoc *pDoc)
 {
-	if (!stricmp(szKey, "originalname"))
+	if (V_strieq(szKey, "originalname"))
 	{
 		pDoc->m_bIsAutosave = true;
 		char szTempName[MAX_PATH];
@@ -1656,15 +1656,15 @@ ChunkFileResult_t CMapDoc::LoadCordonCallback(CChunkFile *pFile, CMapDoc *pDoc)
 
 ChunkFileResult_t CMapDoc::LoadCordonKeyCallback(const char *szKey, const char *szValue, CMapDoc *pDoc)
 {
-	if (!stricmp(szKey, "mins"))
+	if (V_strieq(szKey, "mins"))
 	{
 		CChunkFile::ReadKeyValuePoint(szValue, pDoc->m_vCordonMins);
 	}
-	else if (!stricmp(szKey, "maxs"))
+	else if (V_strieq(szKey, "maxs"))
 	{
 		CChunkFile::ReadKeyValuePoint(szValue, pDoc->m_vCordonMaxs);
 	}
-	else if (!stricmp(szKey, "active"))
+	else if (V_strieq(szKey, "active"))
 	{
 		bool bActive;
 		CChunkFile::ReadKeyValueBool(szValue, bActive );
@@ -2681,7 +2681,7 @@ CVisGroup *CMapDoc::VisGroups_GroupForName( const char *pszName, bool bIsAuto )
 	for ( intp i = 0; i < nCount; i++ )
 	{
 		CVisGroup *pGroup = m_VisGroups->Element(i);
-		if ( !Q_stricmp( pGroup->GetName(), pszName ) && ( pGroup->IsAutoVisGroup() == bIsAuto )  )
+		if ( V_strieq( pGroup->GetName(), pszName ) && ( pGroup->IsAutoVisGroup() == bIsAuto )  )
 		{
 			return pGroup;
 		}
@@ -3106,11 +3106,11 @@ BOOL CMapDoc::OnOpenDocument(LPCTSTR lpszPathName)
 	BOOL bRMF = FALSE;
 	BOOL bMAP = FALSE;
 
-	if (!stricmp(lpszPathName + strlen(lpszPathName) - 3, "rmf"))
+	if (V_strieq(lpszPathName + strlen(lpszPathName) - 3, "rmf"))
 	{
 		bRMF = TRUE;
 	}
-	else if (!stricmp(lpszPathName + strlen(lpszPathName) - 3, "map"))
+	else if (V_strieq(lpszPathName + strlen(lpszPathName) - 3, "map"))
 	{
 		bMAP = TRUE;
 	}
@@ -3243,11 +3243,11 @@ BOOL CMapDoc::OnSaveDocument(LPCTSTR lpszPathName)
 	//
 	BOOL bRMF = FALSE;
 	BOOL bMAP = FALSE;
-	if (!stricmp(lpszPathName + strlen(lpszPathName) - 3, "rmf"))
+	if (V_strieq(lpszPathName + strlen(lpszPathName) - 3, "rmf"))
 	{
 		bRMF = TRUE;
 	}
-	else if (!stricmp(lpszPathName + strlen(lpszPathName) - 3, "map"))
+	else if (V_strieq(lpszPathName + strlen(lpszPathName) - 3, "map"))
 	{
 		bMAP = TRUE;
 	}
@@ -4626,7 +4626,7 @@ void CMapDoc::GetBestPastePoint(Vector &vecPasteOrigin)
 
 					// If they clicked on a solid, the index of the face they clicked on is stored
 					// in array index [1].
-					CMapClass *pObject = Hits.pObject;
+					CMapClass *pObject = dynamic_cast<CMapClass *>(Hits.pObject);
 					CMapSolid *pSolid = dynamic_cast<CMapSolid *>(pObject);
 
 					Vector HitPos,HitNormal;
@@ -7076,7 +7076,7 @@ static bool FindName( CUtlVector<const char*>*pList, const char * pszString )
 {
 	for ( int i=0; i<pList->Count(); i++ )
 	{
-		if ( Q_stricmp( pszString, pList->Element(i)) == 0 )
+		if ( V_strieq( pszString, pList->Element(i)) )
 			return true;
 	}
 
@@ -7934,11 +7934,13 @@ static char * FindInString(char *pszSub, char *pszMain)
 	char *p = pszMain;
 	size_t nSub = strlen(pszSub);
 	
-	int ch1 = toupper(pszSub[0]);
+	// dimhotepus: toupper -> V_toupper.
+	char ch1 = V_toupper(pszSub[0]);
 
 	while(p[0])
 	{
-		if(ch1 == toupper(p[0]))
+		// dimhotepus: toupper -> V_toupper.
+		if(ch1 == V_toupper(p[0]))
 		{
 			if(!strnicmp(pszSub, p, nSub))
 				return p;
@@ -7979,7 +7981,7 @@ static BOOL ReplaceTexFunc(CMapSolid *pSolid, ReplaceTexInfo_t *pInfo)
 		{
 			case 0:	// replace exact matches only:
 			{
-				if(!strcmpi(pszFaceTex, pInfo->szFind))
+				if(V_strieq(pszFaceTex, pInfo->szFind))
 				{
 					if(bMarkOnly)
 					{
@@ -9100,7 +9102,7 @@ void CMapDoc::OnMapLoadportalfile(void)
 	int portalCount;
 	if (fscanf (fp,"%79s\n%i\n%i\n",szLine, &clusterCount, &portalCount) == 3)
 	{
-		if ( !Q_stricmp( szLine, "PRT1") )
+		if ( V_strieq( szLine, "PRT1") )
 		{
 			for ( int iPortal = 0; iPortal < portalCount; iPortal++ )
 			{
@@ -9259,7 +9261,7 @@ CVisGroup *CMapDoc::GetRootAutoVisGroup()
 	for ( intp i = 0; i < nVisGroupCount; ++i )
 	{
 		CVisGroup *pVisGroup = VisGroups_GetRootVisGroup(i);
-		if ( !Q_stricmp( "Auto", pVisGroup->GetName() ) )
+		if ( V_strieq( "Auto", pVisGroup->GetName() ) )
 		{
 			pFoundVisGroup = pVisGroup;
 			break;
@@ -9527,7 +9529,7 @@ void CMapDoc::AddToAutoVisGroup( CMapClass *pObject, const char *pAutoVisGroup )
 	for ( intp i = 0; i < nVisGroupCount; ++i )
 	{
 		CVisGroup *pVisGroup = pRootVisGroup->GetChild(i);
-		if ( !Q_stricmp( pAutoVisGroup, pVisGroup->GetName() ) )
+		if ( V_strieq( pAutoVisGroup, pVisGroup->GetName() ) )
 		{
 			pFoundVisGroup = pVisGroup;
 			break;
@@ -9566,7 +9568,7 @@ void CMapDoc::AddChildGroupToAutoVisGroup( CMapClass *pObject, const char *pAuto
 	for ( intp i = 0; i < nVisGroupCount; ++i )
 	{
 		CVisGroup *pVisGroup = pRootVisGroup->GetChild(i);
-		if ( !Q_stricmp( pAutoVisGroup, pVisGroup->GetName() ) )//&& pVisGroup->IsAutoVisGroup() )
+		if ( V_strieq( pAutoVisGroup, pVisGroup->GetName() ) )//&& pVisGroup->IsAutoVisGroup() )
 		{
 			pFoundVisGroup = pVisGroup;
 			break;
@@ -10173,7 +10175,7 @@ bool CMapDoc::ShouldObjectBeVisible(CMapClass *pObject, UpdateVisibilityData_t *
 	if (pEntity)
 	{
 		LPCTSTR	pszTargetName = pEntity->GetKeyValue("targetname");
-		if ( pszTargetName && !strcmp(pszTargetName, "relay_cancelVCDs") )
+		if ( pszTargetName && V_streq(pszTargetName, "relay_cancelVCDs") )
 		{
 			// Set breakpoint here for debugging this entity's visiblity
 			int foo = 0;
@@ -11939,7 +11941,7 @@ void CMapDoc::AddToFGDAutoVisGroups( CMapClass *pObject )
 					for ( eindex = 0; eindex < pGD->m_FGDAutoVisGroups[gindex].m_Classes[cindex].szEntities.Count(); eindex++ )
 					{
 						// 
-						if ( !V_stricmp( pEntity->GetClassName(), pGD->m_FGDAutoVisGroups[gindex].m_Classes[cindex].szEntities[eindex] ) )
+						if ( V_strieq( pEntity->GetClassName(), pGD->m_FGDAutoVisGroups[gindex].m_Classes[cindex].szEntities[eindex] ) )
 						{			
 							AddChildGroupToAutoVisGroup( pEntity, pGD->m_FGDAutoVisGroups[gindex].m_Classes[cindex].szClass, pGD->m_FGDAutoVisGroups[gindex].szParent );
 						}

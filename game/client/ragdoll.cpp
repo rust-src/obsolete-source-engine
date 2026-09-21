@@ -194,14 +194,14 @@ void CRagdoll::AcquireOrCopyBoneCache( CUtlVector<matrix3x4_t> &bonesToWorld )
 	{
 		Assert( m_BoneCache.Count() == bonesToWorld.Count() );
 		// m_BoneCache -> bonesToWorld 
-        BitwiseCopy( m_BoneCache.Base(), bonesToWorld.Base(), bonesToWorld.Count() );
+		BitwiseCopy( m_BoneCache.Base(), bonesToWorld.Base(), bonesToWorld.Count() );
 	}
 	// copy out our cache and acquire the old one
 	else
 	{
-        Assert( m_BoneCache.Count() == bonesToWorld.Count() );
+		Assert( m_BoneCache.Count() == bonesToWorld.Count() );
 		
-		const size_t uBoneDataSize = bonesToWorld.Count() * sizeof(matrix3x4_t);
+		const size_t uBoneDataSize = bonesToWorld.Count();
 		matrix3x4_t* pTempBoneData = stackallocT( matrix3x4_t, bonesToWorld.Count() );
 		// swap(bonesToWorld, m_BoneCache)
 		BitwiseCopy( bonesToWorld.Base(), pTempBoneData, uBoneDataSize );

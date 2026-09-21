@@ -45,7 +45,7 @@ static bool ValidateKeysAreSubset( KeyValues* kv, const CUtlVector<const char *>
 		const char* testVal = pKey->GetName();
 
 		for ( auto it = testKeys.begin(); it != testKeys.end(); ++it ) {
-			if (0 == V_stricmp((*it), testVal)) {
+			if (V_strieq((*it), testVal)) {
 				matchAny = true;
 				break;
 			}
@@ -718,7 +718,7 @@ bool CTFTauntInfo::InitTauntInputRemap( KeyValues *pKV, CUtlVector<CUtlString> *
 		int iButton = 0;
 		for ( int i=0; i<ARRAYSIZE( s_pszAllowedTauntInputButtonNames ); i++ )
 		{
-			if ( !V_strcmp( pszButtonName, s_pszAllowedTauntInputButtonNames[i] ) )
+			if ( V_streq( pszButtonName, s_pszAllowedTauntInputButtonNames[i] ) )
 			{
 				iButton = s_iAllowedTauntInputButtons[i];
 				break;
@@ -758,85 +758,85 @@ bool CTFTauntInfo::BInitFromKV( KeyValues *pKV, CUtlVector<CUtlString> *pVecErro
 	FOR_EACH_SUBKEY( pKV, pSubKey )
 	{
 		const char *pszKeyName = pSubKey->GetName();
-		if ( !V_strcmp( pszKeyName, "custom_taunt_scene_per_class" ) )
+		if ( V_streq( pszKeyName, "custom_taunt_scene_per_class" ) )
 		{
 			if ( !InitPerClassStringVectorArray( pSubKey, m_vecIntroScenes, pVecErrors ) )
 				return false;
 		}
-		else if ( !V_strcmp( pszKeyName, "custom_taunt_outro_scene_per_class" ) )
+		else if ( V_streq( pszKeyName, "custom_taunt_outro_scene_per_class" ) )
 		{
 			if ( !InitPerClassStringVectorArray( pSubKey, m_vecOutroScenes, pVecErrors ) ) 
 				return false;
 		}
-		else if ( !V_strcmp( pszKeyName, "custom_partner_taunt_per_class" ) )
+		else if ( V_streq( pszKeyName, "custom_partner_taunt_per_class" ) )
 		{
 			if ( !InitPerClassStringVectorArray( pSubKey, m_vecPartnerTauntInitiatorScenes, pVecErrors ) ) 
 				return false;
 			if ( !InitPerClassStringVectorArray( pSubKey, m_vecPartnerTauntReceiverScenes, pVecErrors ) )
 				return false;
 		}
-		else if ( !V_strcmp( pszKeyName, "custom_partner_taunt_initiator_per_class" ) )
+		else if ( V_streq( pszKeyName, "custom_partner_taunt_initiator_per_class" ) )
 		{
 			if ( !InitPerClassStringVectorArray( pSubKey, m_vecPartnerTauntInitiatorScenes, pVecErrors ) )
 				return false;
 		}
-		else if ( !V_strcmp( pszKeyName, "custom_partner_taunt_receiver_per_class" ) )
+		else if ( V_streq( pszKeyName, "custom_partner_taunt_receiver_per_class" ) )
 		{
 			if ( !InitPerClassStringVectorArray( pSubKey, m_vecPartnerTauntReceiverScenes, pVecErrors ) )
 				return false;
 		}
-		else if ( !V_strcmp( pszKeyName, "custom_taunt_input_remap" ) )
+		else if ( V_streq( pszKeyName, "custom_taunt_input_remap" ) )
 		{
 			if ( !InitTauntInputRemap( pSubKey, pVecErrors ) )
 			{
 				return false;
 			}
 		}
-		else if ( !V_strcmp( pszKeyName, "custom_taunt_prop_per_class" ) )
+		else if ( V_streq( pszKeyName, "custom_taunt_prop_per_class" ) )
 		{
 			InitPerClassStringArray( pSubKey, m_pszProp );
 		}
-		else if ( !V_strcmp( pszKeyName, "custom_taunt_prop_scene_per_class" ) )
+		else if ( V_streq( pszKeyName, "custom_taunt_prop_scene_per_class" ) )
 		{
 			InitPerClassStringArray( pSubKey, m_pszPropIntroScene );
 		}
-		else if ( !V_strcmp( pszKeyName, "custom_taunt_prop_outro_scene_per_class" ) )
+		else if ( V_streq( pszKeyName, "custom_taunt_prop_outro_scene_per_class" ) )
 		{
 			InitPerClassStringArray( pSubKey, m_pszPropOutroScene );
 		}
-		else if ( !V_strcmp( pszKeyName, "taunt_separation_forward_distance" ) )
+		else if ( V_streq( pszKeyName, "taunt_separation_forward_distance" ) )
 		{
 			m_flTauntSeparationForwardDistance = pSubKey->GetFloat();
 		}
-		else if ( !V_strcmp( pszKeyName, "taunt_separation_right_distance" ) )
+		else if ( V_streq( pszKeyName, "taunt_separation_right_distance" ) )
 		{
 			m_flTauntSeparationRightDistance = pSubKey->GetFloat();
 		}
-		else if ( !V_strcmp( pszKeyName, "min_taunt_time" ) )
+		else if ( V_streq( pszKeyName, "min_taunt_time" ) )
 		{
 			m_flMinTauntTime = pSubKey->GetFloat();
 		}
-		else if ( !V_strcmp( pszKeyName, "is_partner_taunt" ) )
+		else if ( V_streq( pszKeyName, "is_partner_taunt" ) )
 		{
 			m_bIsPartnerTaunt = pSubKey->GetBool();
 		}
-		else if ( !V_strcmp( pszKeyName, "stop_taunt_if_moved" ) )
+		else if ( V_streq( pszKeyName, "stop_taunt_if_moved" ) )
 		{
 			m_bStopTauntIfMoved = pSubKey->GetBool();
 		}
-		else if ( !V_strcmp( pszKeyName, "fov" ) )
+		else if ( V_streq( pszKeyName, "fov" ) )
 		{
 			m_nFOV = pSubKey->GetInt();
 		}
-		else if ( !V_strcmp( pszKeyName, "camera_dist" ) )
+		else if ( V_streq( pszKeyName, "camera_dist" ) )
 		{
 			m_flCameraDist = pSubKey->GetFloat();
 		}
-		else if ( !V_strcmp( pszKeyName, "camera_dist_up" ) )
+		else if ( V_streq( pszKeyName, "camera_dist_up" ) )
 		{
 			m_flCameraDistUp = pSubKey->GetFloat();
 		}
-		else if ( !V_strcmp( pszKeyName, "particle_attachment" ) )
+		else if ( V_streq( pszKeyName, "particle_attachment" ) )
 		{
 			m_pszParticleAttachment = pSubKey->GetString();
 		}
@@ -1174,7 +1174,7 @@ bool CTFItemDefinition::BInitFromKV( KeyValues *pKVItem, CUtlVector<CUtlString> 
 	const char *pszLoadoutSlot = pKVInitValues->GetString("item_slot", "");
 	if ( *pszLoadoutSlot )
 	{
-		if ( !V_strcmp( pszLoadoutSlot, "head" ) )
+		if ( V_streq( pszLoadoutSlot, "head" ) )
 		{
 			pszLoadoutSlot = "misc";
 		}
@@ -1246,7 +1246,7 @@ bool CTFItemDefinition::BInitFromKV( KeyValues *pKVItem, CUtlVector<CUtlString> 
 	const char *pszAnimSlot = pKVInitValues->GetString("anim_slot");
 	if ( pszAnimSlot && pszAnimSlot[0] )
 	{
-		if ( Q_stricmp(pszAnimSlot, "FORCE_NOT_USED") == 0 )
+		if ( V_strieq(pszAnimSlot, "FORCE_NOT_USED") )
 		{
 			m_iAnimationSlot = -2;
 		}
@@ -2335,7 +2335,7 @@ bool CTFItemSchema::BInitGameModes( KeyValues *pKVMaps, CUtlVector<CUtlString> *
 					const char *pszValue = NULL;
 
 					const char *pszType = pKVRestriction->GetName();
-					if ( Q_stricmp( pszType, "holiday" ) == 0 )
+					if ( V_strieq( pszType, "holiday" ) )
 					{
 						eType = kMatchmakingGameModeRestrictionType_Holiday;
 #ifndef GC_DLL
@@ -2344,7 +2344,7 @@ bool CTFItemSchema::BInitGameModes( KeyValues *pKVMaps, CUtlVector<CUtlString> *
 						nValue = EconHolidays_GetHolidayForString( pKVRestriction->GetString() );
 #endif
 					}
-					else if ( Q_stricmp( pszType, "operation" ) == 0 )
+					else if ( V_strieq( pszType, "operation" ) )
 					{
 						eType = kMatchmakingGameModeRestrictionType_Operation;
 						pszValue = pKVRestriction->GetString();
@@ -2676,7 +2676,7 @@ bool CTFItemSchema::BInitMvmMissions( KeyValues *pKVMvmMaps, CUtlVector<CUtlStri
 				}
 
 				// Pop filenames are required to obey a naming convention.
-				if ( ( Q_stricmp( mission.m_sPop.Get(), map.m_sMap.Get() ) != 0 )
+				if ( ( !V_strieq( mission.m_sPop.Get(), map.m_sMap.Get() ) )
 					&& ( Q_strnicmp( mission.m_sPop.Get(), map.m_sMap.Get(), nMapNameLen ) != 0
 					|| mission.m_sPop.Get()[nMapNameLen] != '_' ) )
 				{
@@ -2815,7 +2815,7 @@ const CQuestThemeDefinition *CTFItemSchema::GetQuestThemeByName( const char *psz
 	{
 		FOR_EACH_MAP_FAST( m_mapQuestThemes, i )
 		{
-			if ( !Q_stricmp( m_mapQuestThemes[ i ]->GetName(), pszDefName ) )
+			if ( V_strieq( m_mapQuestThemes[ i ]->GetName(), pszDefName ) )
 			{
 				return m_mapQuestThemes[ i ];
 			}
@@ -2857,7 +2857,7 @@ const CWarDefinition *CTFItemSchema::GetWarDefinitionByName( const char* pszDefN
 {
 	FOR_EACH_MAP_FAST( m_mapWars, i )
 	{
-		if ( !V_stricmp( pszDefName, m_mapWars[i]->GetDefName() ) )
+		if ( V_strieq( pszDefName, m_mapWars[i]->GetDefName() ) )
 		{
 			return m_mapWars[i];
 		}
@@ -2888,7 +2888,7 @@ int CTFItemSchema::FindMvmMissionByName( const char *pszMissionName ) const
 
 	FOR_EACH_VEC( m_vecMvMMissions, i )
 	{
-		if ( !V_stricmp( m_vecMvMMissions[i].m_sPop.Get(), pszMissionName ) )
+		if ( V_strieq( m_vecMvMMissions[i].m_sPop.Get(), pszMissionName ) )
 			return i;
 	}
 	return k_iMvmMissionIndex_NotInSchema;
@@ -2902,7 +2902,7 @@ int CTFItemSchema::FindMvmTourByName( const char *pszTourName ) const
 
 	FOR_EACH_VEC( m_vecMvMTours, i )
 	{
-		if ( !V_stricmp( m_vecMvMTours[i].m_sTourInternalName.Get(), pszTourName ) )
+		if ( V_strieq( m_vecMvMTours[i].m_sTourInternalName.Get(), pszTourName ) )
 			return i;
 	}
 	return k_iMvmTourIndex_NotInSchema;
@@ -2942,7 +2942,7 @@ const MapDef_t *CTFItemSchema::GetMasterMapDefByName( const char *pszSearchName 
 {
 	FOR_EACH_VEC( m_vecMasterListOfMaps, i )
 	{
-		if ( !V_stricmp( m_vecMasterListOfMaps[i]->pszMapName, pszSearchName ) )
+		if ( V_strieq( m_vecMasterListOfMaps[i]->pszMapName, pszSearchName ) )
 			return m_vecMasterListOfMaps[i];
 	}
 
@@ -2995,7 +2995,7 @@ int CTFItemSchema::CalculateNumberOfConcreteItems( const CEconItemDefinition *pI
 	if ( !pItemDef )
 		return 0;
 
-	if ( pItemDef->GetItemClass() && !Q_strcmp( pItemDef->GetItemClass(), "map_token" ) )
+	if ( pItemDef->GetItemClass() && V_streq( pItemDef->GetItemClass(), "map_token" ) )
 		return 0;
 
 	return CEconItemSchema::CalculateNumberOfConcreteItems( pItemDef );
@@ -3004,7 +3004,7 @@ int CTFItemSchema::CalculateNumberOfConcreteItems( const CEconItemDefinition *pI
 
 RTime32 CTFItemSchema::GetCustomExpirationDate( const char *pszExpirationDate ) const
 {
-	if ( !V_stricmp( pszExpirationDate, "end_of_halloween" ) )
+	if ( V_strieq( pszExpirationDate, "end_of_halloween" ) )
 		return EconHolidays_TerribleHack_GetHalloweenEndData();
 
 	return CEconItemSchema::GetCustomExpirationDate( pszExpirationDate );
@@ -3012,15 +3012,15 @@ RTime32 CTFItemSchema::GetCustomExpirationDate( const char *pszExpirationDate ) 
 
 EMvMChallengeDifficulty GetMvMChallengeDifficultyByInternalName( const char *pszEnglishID )
 {
-	if ( !Q_stricmp( pszEnglishID, "normal" ) )
+	if ( V_strieq( pszEnglishID, "normal" ) )
 		return k_EMvMChallengeDifficulty_Normal;
-	if ( !Q_stricmp( pszEnglishID, "intermediate" ) )
+	if ( V_strieq( pszEnglishID, "intermediate" ) )
 		return k_EMvMChallengeDifficulty_Intermediate;
-	if ( !Q_stricmp( pszEnglishID, "advanced" ) )
+	if ( V_strieq( pszEnglishID, "advanced" ) )
 		return k_EMvMChallengeDifficulty_Advanced;
-	if ( !Q_stricmp( pszEnglishID, "expert" ) )
+	if ( V_strieq( pszEnglishID, "expert" ) )
 		return k_EMvMChallengeDifficulty_Expert;
-	if ( !Q_stricmp( pszEnglishID, "haunted" ) )
+	if ( V_strieq( pszEnglishID, "haunted" ) )
 		return k_EMvMChallengeDifficulty_Haunted;
 	return k_EMvMChallengeDifficulty_Invalid;
 }
@@ -3127,7 +3127,7 @@ IEconTool *CTFItemSchema::CreateEconToolImpl( const char *pszToolType, const cha
 {
 	if ( pszToolType )
 	{
-		if ( !V_stricmp( pszToolType, "tf_spellbook_page" ) )
+		if ( V_strieq( pszToolType, "tf_spellbook_page" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -3135,7 +3135,7 @@ IEconTool *CTFItemSchema::CreateEconToolImpl( const char *pszToolType, const cha
 			return new CEconTool_TFSpellbookPage( pszToolType, unCapabilities );
 		}
 
-		if ( !V_stricmp( pszToolType, "tf_event_enable" ) )
+		if ( V_strieq( pszToolType, "tf_event_enable" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;

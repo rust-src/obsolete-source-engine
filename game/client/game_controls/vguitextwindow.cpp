@@ -290,7 +290,7 @@ void CTextWindow::Update( void )
 	}
 	else if ( m_nContentType == TYPE_URL )
 	{
-		if ( !Q_strncmp( m_szMessage, "http://", 7 ) || !Q_strncmp( m_szMessage, "https://", 8 ) || !Q_stricmp( m_szMessage, "about:blank" ) )
+		if ( !Q_strncmp( m_szMessage, "http://", 7 ) || !Q_strncmp( m_szMessage, "https://", 8 ) || V_strieq( m_szMessage, "about:blank" ) )
 		{
 			ShowURL( m_szMessage );
 		}
@@ -316,7 +316,7 @@ void CTextWindow::Update( void )
 
 void CTextWindow::OnCommand( const char *command )
 {
-	if (!Q_strcmp(command, "okay"))
+	if (V_streq(command, "okay"))
 	{
 		//=============================================================================
 		// HPE_BEGIN:

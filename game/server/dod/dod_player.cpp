@@ -2747,7 +2747,7 @@ void CDODPlayer::State_Enter_OBSERVER_MODE()
 	float flMinDist = FLT_MAX;
 	float flDist;
 
-	for ( int i=0;i<pTeam->GetNumPlayers();i++ )
+	for ( intp i=0;i<pTeam->GetNumPlayers();i++ )
 	{
 		pPlayer = pTeam->GetPlayer(i);
 
@@ -3272,7 +3272,7 @@ int CDODPlayer::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 				weaponID = pGren->GetEmitterWeaponID();
 			}
 		}
-		else if ( Q_stricmp( weaponName, "dod_bomb_target" ) == 0 )
+		else if ( V_strieq( weaponName, "dod_bomb_target" ) )
 		{
 			weaponID = WEAPON_NONE;
 		}
@@ -3926,7 +3926,9 @@ void CDODPlayer::SetupBones( matrix3x4_t *pBoneToWorld, int boneMask )
 				q, 
 				pBoneToWorld, 
 				pParent, 
-				pParentCache );
+				pParentCache,
+				// dimhotepus: Take into account bone mask for initialized quaternion and position.
+				boneMask );
 
 			return;
 		}

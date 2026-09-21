@@ -316,7 +316,7 @@ void CBaseToolSystem::Think( [[maybe_unused]] bool finalTick )
 
 void CBaseToolSystem::PostMessage( [[maybe_unused]] HTOOLHANDLE hEntity, KeyValues *message )
 {
-	if ( !Q_stricmp( message->GetName(), "ReleaseLayoffTexture" ) )
+	if ( V_strieq( message->GetName(), "ReleaseLayoffTexture" ) )
 	{
 		if ( m_hMiniViewport.Get() )
 		{
@@ -1085,7 +1085,7 @@ void CBaseToolSystem::PaintBackground()
 	if ( m_pLogo )
 	{
 		int texWide = m_pLogo->GetMappingWidth();
-		float logoAspectRatio = 0.442;
+		constexpr float logoAspectRatio = 0.442f;
 
 		if ( hasDoc )
 		{
@@ -1111,7 +1111,7 @@ void CBaseToolSystem::PaintBackground()
 			h = logoH;
 		}
 
-		int alpha = hasDoc ? 0 : 255;
+		byte alpha = hasDoc ? 0 : 255;
 
 		RenderQuad( m_pLogo, x, y, w, h, surface()->GetZPos(), 0.0f, 0.0f, 1.0f, 1.0f, Color( 255, 255, 255, alpha ) );
 	}

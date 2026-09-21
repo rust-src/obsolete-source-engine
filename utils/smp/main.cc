@@ -412,7 +412,8 @@ std::vector<std::string> ParseCommandLine(const char *cmd_line) {
   for (const auto *cp = cmd_line; *cp; ++cp) {
     if (*cp == '\"') {
       quoted = !quoted;
-    } else if (isspace(*cp) && !quoted) {
+    // dimhotepus: isspace -> V_isspace. 
+    } else if (V_isspace(*cp) && !quoted) {
       if (!args.back().empty()) args.emplace_back("");
     } else {
       args.back().push_back(*cp);
@@ -599,7 +600,7 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE,
     return 1;
   }
 
-  atexit(CoUninitialize);
+  RunCodeAtScopeExit(CoUninitialize());
 
   if (FailedUI(
           atl_com.Init(ObjectMap, instance, &LIBID_ATLLib),

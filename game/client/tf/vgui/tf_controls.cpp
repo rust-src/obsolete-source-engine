@@ -128,7 +128,7 @@ void CTFFooter::ApplySettings( KeyValues *inResourceData )
 	{
 		const char *pNameButton = pButton->GetName();
 
-		if ( !Q_stricmp( pNameButton, "button" ) )
+		if ( V_strieq( pNameButton, "button" ) )
 		{
 			// Add a button to the footer
 			const char *pName = pButton->GetString( "name", "NULL" );
@@ -184,7 +184,7 @@ void CTFFooter::ShowButtonLabel( const char *name, bool show )
 {
 	for ( int i = 0; i < m_Buttons.Count(); ++i )
 	{
-		if ( !Q_stricmp( m_Buttons[ i ]->name, name ) )
+		if ( V_strieq( m_Buttons[ i ]->name, name ) )
 		{
 			m_Buttons[ i ]->bVisible = show;
 			break;
@@ -420,14 +420,14 @@ void CTFAdvancedOptionsDialog::OnClose()
 //-----------------------------------------------------------------------------
 void CTFAdvancedOptionsDialog::OnCommand( const char *command )
 {
-	if ( !stricmp( command, "Ok" ) )
+	if ( V_strieq( command, "Ok" ) )
 	{
 		// OnApplyChanges();
 		SaveValues();
 		OnClose();
 		return;
 	}
-	else if ( !stricmp( command, "Close" ) )
+	else if ( V_strieq( command, "Close" ) )
 	{
 		OnClose();
 		return;
@@ -509,17 +509,17 @@ void CTFAdvancedOptionsDialog::GatherCurrentValues()
 		{
 		case O_BOOL:
 			pBox = (CheckButton *)pList->pControl;
-			sprintf( szValue, "%s", pBox->IsSelected() ? "1" : "0" );
+			V_sprintf_safe( szValue, "%s", pBox->IsSelected() ? "1" : "0" );
 			break;
 		case O_NUMBER:
 			pEdit = ( TextEntry * )pList->pControl;
 			pEdit->GetText( strValue, sizeof( strValue ) );
-			sprintf( szValue, "%s", strValue );
+			V_sprintf_safe( szValue, "%s", strValue );
 			break;
 		case O_STRING:
 			pEdit = ( TextEntry * )pList->pControl;
 			pEdit->GetText( strValue, sizeof( strValue ) );
-			sprintf( szValue, "%s", strValue );
+			V_sprintf_safe( szValue, "%s", strValue );
 			break;
 		case O_LIST:
 			{
@@ -540,18 +540,18 @@ void CTFAdvancedOptionsDialog::GatherCurrentValues()
 
 				if ( pItem )
 				{
-					sprintf( szValue, "%s", pItem->szValue );
+					V_sprintf_safe( szValue, "%s", pItem->szValue );
 				}
 				else  // Couln't find index
 				{
 					//assert(!("Couldn't find string in list, using default value"));
-					sprintf( szValue, "%s", pObj->defValue );
+					V_sprintf_safe( szValue, "%s", pObj->defValue );
 				}
 				break;
 			}
 		case O_SLIDER:
 			pSlider = ( CCvarSlider * )pList->pControl;
-			sprintf( szValue, "%.2f", pSlider->GetSliderValue() );
+			V_sprintf_safe( szValue, "%.2f", pSlider->GetSliderValue() );
 			break;
 		}
 
@@ -593,7 +593,7 @@ void CTFAdvancedOptionsDialog::CreateControls()
 			const char *pTag = pFriends->GetClanTag( clanID );
 
 			char id[12];
-			Q_snprintf( id, sizeof( id ), "%d", clanID.GetAccountID() );
+			V_to_chars( id, clanID.GetAccountID() );
 			pClanObj->AddItem( new CScriptListItem( CFmtStr( "%s (%s)", pTag, pName ), id ) );
 		}
 	}
@@ -666,7 +666,7 @@ void CTFAdvancedOptionsDialog::CreateControls()
 				pListItem = pObj->pListItems;
 				while ( pListItem )
 				{
-					if ( iRow == -1 && !Q_stricmp( pListItem->szValue, pObj->curValue ) )
+					if ( iRow == -1 && V_strieq( pListItem->szValue, pObj->curValue ) )
 						iRow = iCount;
 
 					pCombo->AddItem( pListItem->szItemText, NULL );

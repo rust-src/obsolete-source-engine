@@ -744,7 +744,7 @@ void CAI_PlayerAlly::PostSpeakDispatchResponse( AIConcept_t concept, AI_Response
 	ConceptInfo_t *pConceptInfo	= pSpeechManager->GetConceptInfo( concept );
 	if ( pConceptInfo && (pConceptInfo->flags & AICF_QUESTION) && GetSpeechTarget() )
 	{
-		bool bSaidHelloToNPC = !Q_strcmp(concept, "TLK_HELLO_NPC");
+		bool bSaidHelloToNPC = V_streq(concept, "TLK_HELLO_NPC");
 
 		float duration = GetExpresser()->GetSemaphoreAvailableTime(this) - gpGlobals->curtime;
 
@@ -1231,12 +1231,12 @@ CBaseEntity *CAI_PlayerAlly::EyeLookTarget( void )
 //-----------------------------------------------------------------------------
 CBaseEntity *CAI_PlayerAlly::FindNamedEntity( const char *pszName, IEntityFindFilter *pFilter )
 {
-	if ( !stricmp( pszName, "!speechtarget" ))
+	if ( V_strieq( pszName, "!speechtarget" ))
 	{
 		return GetSpeechTarget();
 	}
 
-	if ( !stricmp( pszName, "!friend" ))
+	if ( V_strieq( pszName, "!friend" ))
 	{
 		return FindSpeechTarget( AIST_NPCS );
 	}

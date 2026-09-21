@@ -917,17 +917,17 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 	InitFbx();
 #endif
 
-	if ( !CommandLine()->CheckParm( "-noscripting") )
+	if ( !CommandLine()->HasParm( "-noscripting") )
 	{
 		if ( (scriptmanager = (IScriptManager *)appSystemFactory( VSCRIPT_INTERFACE_VERSION, NULL )) == NULL )
 			return false;
 	}
 
 	// it's ok if this is NULL. That just means the sourcevr.dll wasn't found
-	if ( CommandLine()->CheckParm( "-vr" ) )
+	if ( CommandLine()->HasParm( "-vr" ) )
 		g_pSourceVR = (ISourceVirtualReality *)appSystemFactory(SOURCE_VIRTUAL_REALITY_INTERFACE_VERSION, NULL);
 
-	factorylist_t factories;
+	factorylist_t factories = {};
 	factories.appSystemFactory = appSystemFactory;
 	factories.physicsFactory = physicsFactory;
 	FactoryList_Store( factories );
@@ -938,10 +938,10 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 		return false;
 	}
 
-	if ( CommandLine()->FindParm( "-textmode" ) )
+	if ( CommandLine()->HasParm( "-textmode" ) )
 		g_bTextMode = true;
 
-	if ( CommandLine()->FindParm( "-makedevshots" ) )
+	if ( CommandLine()->HasParm( "-makedevshots" ) )
 		g_MakingDevShots = true;
 
 	// Not fatal if the material system stub isn't around.
@@ -1149,8 +1149,7 @@ void CHLClient::Shutdown( void )
 
 	// dimhotepus: Shutdown in reverse order to Init.
 #ifdef WIN32
-	// NVNT Disconnect haptics system.
-	// It unhooks messages autmoatically.
+	// NVNT Disconnect haptics system. It unhooks messages automatically.
 	DisconnectHaptics();
 #endif
 
@@ -1172,7 +1171,7 @@ void CHLClient::Shutdown( void )
 
 	TermSmokeFogOverlay();
 
-	VGui_Shutdown();
+	VGui_DestroyGlobalPanels();
 
 	input->Shutdown_All();
 
@@ -1191,11 +1190,11 @@ void CHLClient::Shutdown( void )
 	
 	gHUD.Shutdown();
 	
-	g_pClientMode->VGui_Shutdown();
-
 	modemanager->Shutdown( );
 
 	IGameSystem::RemoveAll();
+
+	vgui::VGui_ShutdownMatSysInterfacesList( "ClientDLL" );
 
 	VGui_Shutdown();
 
@@ -1209,9 +1208,15 @@ void CHLClient::Shutdown( void )
 
 	ConVar_Unregister();
 
+	// dimhotepus: Unhook the gaussian random number generator
+	s_GaussianRandomStream.AttachToStream( nullptr );
+
 	materials_stub = nullptr;
 
 	soundemitterbase->Disconnect();
+
+	factorylist_t factories = {};
+	FactoryList_Store( factories );
 	
 	g_pSourceVR = nullptr;
 	scriptmanager = nullptr;
@@ -1222,44 +1227,44 @@ void CHLClient::Shutdown( void )
 	DisconnectDataModel();
 #endif
 
-	engine = nullptr;
-	modelrender = nullptr;
-	effects = nullptr;
-	enginetrace = nullptr;
-	render = nullptr;
-	debugoverlay = nullptr;
-	datacache = nullptr;
-	mdlcache = nullptr;
-	modelinfo = nullptr;
-	enginevgui = nullptr;
-	networkstringtable = nullptr;
-	partition = nullptr;
-	shadowmgr = nullptr;
-	staticpropmgr = nullptr;
-	enginesound = nullptr;
-	filesystem = nullptr;
-	random = nullptr;
-	gameuifuncs = nullptr;
-	gameeventmanager = nullptr;
-	soundemitterbase = nullptr;
-	inputsystem = nullptr;
-	scenefilecache = nullptr;
-	xboxsystem = nullptr;
-	matchmaking = nullptr;
-
-#ifndef _XBOX
-	gamestatsuploader = nullptr;
-#endif
-
 #if defined( REPLAY_ENABLED )
 	g_pEngineReplay = nullptr;
 	g_pEngineClientReplay = nullptr;
 #endif
 
+#ifndef _XBOX
+	gamestatsuploader = nullptr;
+#endif
+
+	matchmaking = nullptr;
+	xboxsystem = nullptr;
+	scenefilecache = nullptr;
+	inputsystem = nullptr;
+	soundemitterbase = nullptr;
+	gameeventmanager = nullptr;
+	gameuifuncs = nullptr;
+	random = nullptr;
+	filesystem = nullptr;
+	enginesound = nullptr;
+	staticpropmgr = nullptr;
+	shadowmgr = nullptr;
+	partition = nullptr;
+	networkstringtable = nullptr;
+	enginevgui = nullptr;
+	modelinfo = nullptr;
+	mdlcache = nullptr;
+	datacache = nullptr;
+	debugoverlay = nullptr;
+	render = nullptr;
+	enginetrace = nullptr;
+	effects = nullptr;
+	modelrender = nullptr;
+	engine = nullptr;
+	
 #ifndef NO_STEAM
 	ClientSteamContext().Shutdown();
 #endif
-
+	
 	DisconnectTier3Libraries();
 	DisconnectTier2Libraries();
 	DisconnectTier1Libraries();
@@ -1902,7 +1907,7 @@ void OnSceneStringTableChanged( void *object, INetworkStringTable *stringTable, 
 void CHLClient::InstallStringTableCallback( const char *tableName )
 {
 	// Here, cache off string table IDs
-	if (!Q_strcasecmp(tableName, "VguiScreen"))
+	if (V_strieq(tableName, "VguiScreen"))
 	{
 		// Look up the id 
 		g_StringTableVguiScreen = networkstringtable->FindTable( tableName );
@@ -1910,7 +1915,7 @@ void CHLClient::InstallStringTableCallback( const char *tableName )
 		// When the material list changes, we need to know immediately
 		g_StringTableVguiScreen->SetStringChangedCallback( NULL, OnVguiScreenTableChanged );
 	}
-	else if (!Q_strcasecmp(tableName, "Materials"))
+	else if (V_strieq(tableName, "Materials"))
 	{
 		// Look up the id 
 		g_pStringTableMaterials = networkstringtable->FindTable( tableName );
@@ -1918,36 +1923,36 @@ void CHLClient::InstallStringTableCallback( const char *tableName )
 		// When the material list changes, we need to know immediately
 		g_pStringTableMaterials->SetStringChangedCallback( NULL, OnMaterialStringTableChanged );
 	}
-	else if ( !Q_strcasecmp( tableName, "EffectDispatch" ) )
+	else if ( V_strieq( tableName, "EffectDispatch" ) )
 	{
 		g_StringTableEffectDispatch = networkstringtable->FindTable( tableName );
 	}
-	else if ( !Q_strcasecmp( tableName, "InfoPanel" ) )
+	else if ( V_strieq( tableName, "InfoPanel" ) )
 	{
 		g_pStringTableInfoPanel = networkstringtable->FindTable( tableName );
 	}
-	else if ( !Q_strcasecmp( tableName, "Scenes" ) )
+	else if ( V_strieq( tableName, "Scenes" ) )
 	{
 		g_pStringTableClientSideChoreoScenes = networkstringtable->FindTable( tableName );
 		g_pStringTableClientSideChoreoScenes->SetStringChangedCallback( NULL, OnSceneStringTableChanged );
 	}
-	else if ( !Q_strcasecmp( tableName, "ParticleEffectNames" ) )
+	else if ( V_strieq( tableName, "ParticleEffectNames" ) )
 	{
 		g_pStringTableParticleEffectNames = networkstringtable->FindTable( tableName );
 		networkstringtable->SetAllowClientSideAddString( g_pStringTableParticleEffectNames, true );
 		// When the particle system list changes, we need to know immediately
 		g_pStringTableParticleEffectNames->SetStringChangedCallback( NULL, OnParticleSystemStringTableChanged );
 	}
-	else if ( !Q_strcasecmp( tableName, "ServerMapCycle" ) )
+	else if ( V_strieq( tableName, "ServerMapCycle" ) )
 	{
 		g_pStringTableServerMapCycle = networkstringtable->FindTable( tableName );
 	}
 #ifdef TF_CLIENT_DLL
-	else if ( !Q_strcasecmp( tableName, "ServerPopFiles" ) )
+	else if ( V_strieq( tableName, "ServerPopFiles" ) )
 	{
 		g_pStringTableServerPopFiles = networkstringtable->FindTable( tableName );
 	}
-	else if ( !Q_strcasecmp( tableName, "ServerMapCycleMvM" ) )
+	else if ( V_strieq( tableName, "ServerMapCycleMvM" ) )
 	{
 		g_pStringTableServerMapCycleMvM = networkstringtable->FindTable( tableName );
 	}
@@ -1988,7 +1993,7 @@ void CHLClient::PrecacheMaterial( const char *pMaterialName )
 
 void CHLClient::UncacheAllMaterials( )
 {
-	for (int i = m_CachedMaterials.Count(); --i >= 0; )
+	for (intp i = m_CachedMaterials.Count(); --i >= 0; )
 	{
 		m_CachedMaterials[i]->DecrementReferenceCount();
 	}
@@ -2505,7 +2510,7 @@ void CHLClient::OnDemoPlaybackStart( char const* pDemoBaseName )
 #if defined( REPLAY_ENABLED )
 	// Load any ragdoll override frames from disk
 	char szRagdollFile[MAX_OSPATH];
-	V_snprintf( szRagdollFile, sizeof(szRagdollFile), "%s.dmx", pDemoBaseName );
+	V_sprintf_safe( szRagdollFile, "%s.dmx", pDemoBaseName );
 	CReplayRagdollCache::Instance().Init( szRagdollFile );
 #endif
 }

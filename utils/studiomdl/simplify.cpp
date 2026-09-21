@@ -2990,7 +2990,7 @@ int findGlobalBone( const char *name )
 	name = RenameBone( name );
 	for ( int k = 0; k < g_numbones; k++ )
 	{
-		if ( !Q_stricmp( g_bonetable[k].name, name ) )
+		if ( V_strieq( g_bonetable[k].name, name ) )
 			return k;
 	}
 	
@@ -3502,7 +3502,7 @@ bool BoneHasAttachments( char const *pname )
 {
 	for (int k = 0; k < g_numattachments; k++)
 	{
-		if ( !stricmp( g_attachment[k].bonename, pname ) )
+		if ( V_strieq( g_attachment[k].bonename, pname ) )
 		{
 			return true;
 		}
@@ -3557,7 +3557,7 @@ bool BoneIsIK( char const *pname )
 	// tag bones used by ikchains 
 	for (k = 0; k < g_numikchains; k++)
 	{
-		if ( !stricmp( g_ikchain[k].bonename, pname ) )
+		if ( V_strieq( g_ikchain[k].bonename, pname ) )
 		{
 			return true;
 		}
@@ -3696,7 +3696,7 @@ void MakeStaticProp()
 			bool bFound = false;
 			for ( k = 0; k < g_numattachments; k++ )
 			{
-				if ( !Q_stricmp( g_attachment[k].name, pAttachmentName ) )
+				if ( V_strieq( g_attachment[k].name, pAttachmentName ) )
 				{
 					bFound = true;
 					break;
@@ -3835,7 +3835,7 @@ void MapFlexDriveBonesToGlobalBoneTable()
 
 		for ( int j = 0; j < g_numbones; ++j )
 		{
-			if ( !Q_stricmp( g_bonetable[j].name, pDmeBoneFlexDriver->m_sBoneName.Get() ) )
+			if ( V_strieq( g_bonetable[j].name, pDmeBoneFlexDriver->m_sBoneName.Get() ) )
 			{
 				if ( g_bonetable[j].flags & BONE_ALWAYS_PROCEDURAL )
 				{
@@ -3911,7 +3911,7 @@ void TagFlexDriverBones( s_source_t *pSource )
 
 			for ( int k = 0; k < g_numflexcontrollers; ++k )
 			{
-				if ( !Q_stricmp( g_flexcontroller[k].name, pDmeBoneFlexDriverControl->m_sFlexControllerName.Get() ) )
+				if ( V_strieq( g_flexcontroller[k].name, pDmeBoneFlexDriverControl->m_sFlexControllerName.Get() ) )
 				{
 					pDmeBoneFlexDriverControl->SetValue( "__flexControlIndex", k );
 					break;
@@ -3934,7 +3934,7 @@ void TagFlexDriverBones( s_source_t *pSource )
 
 		for ( int j = 0; j < pSource->numbones; ++j )
 		{
-			if ( !Q_stricmp( pSource->localBone[j].name, pDmeBoneFlexDriver->m_sBoneName.Get() ) )
+			if ( V_strieq( pSource->localBone[j].name, pDmeBoneFlexDriver->m_sBoneName.Get() ) )
 			{
 				// Mark used by all LODs
 				pSource->boneflags[j] |= BONE_USED_BY_VERTEX_MASK;
@@ -3986,7 +3986,7 @@ void TagUsedBones( )
 		{
 			for (j = 0; j < psource->numbones; j++)
 			{
-				if ( !stricmp( g_attachment[k].bonename, psource->localBone[j].name ) )
+				if ( V_strieq( g_attachment[k].bonename, psource->localBone[j].name ) )
 				{
 					// this bone is a keeper with or without associated vertices
 					// because an attachment point depends on it.
@@ -4013,7 +4013,7 @@ void TagUsedBones( )
 		{
 			for (j = 0; j < psource->numbones; j++)
 			{
-				if ( !stricmp( g_ikchain[k].bonename, psource->localBone[j].name ) )
+				if ( V_strieq( g_ikchain[k].bonename, psource->localBone[j].name ) )
 				{
 					// this bone is a keeper with or without associated vertices
 					// because a ikchain depends on it.
@@ -4026,7 +4026,7 @@ void TagUsedBones( )
 		{
 			for (j = 0; j < psource->numbones; j++)
 			{
-				if ( !stricmp( g_mouth[k].bonename, psource->localBone[j].name ) )
+				if ( V_strieq( g_mouth[k].bonename, psource->localBone[j].name ) )
 				{
 					// this bone is a keeper with or without associated vertices
 					// because a mouth shader depends on it.
@@ -4083,7 +4083,7 @@ void RenameBones( )
 		{
 			for (int k = 0; k < g_numrenamedbones; k++)
 			{
-				if (!stricmp( g_source[i]->localBone[j].name, g_renamedbone[k].from))
+				if (V_strieq( g_source[i]->localBone[j].name, g_renamedbone[k].from))
 				{
 					V_strcpy_safe( g_source[i]->localBone[j].name, g_renamedbone[k].to );
 					break;
@@ -4098,7 +4098,7 @@ const char *RenameBone( const char *pName )
 {
 	for ( int k = 0; k < g_numrenamedbones; k++)
 	{
-		if ( !Q_stricmp( pName, g_renamedbone[k].from ) )
+		if ( V_strieq( pName, g_renamedbone[k].from ) )
 			return g_renamedbone[k].to;
 	}
 	return pName;
@@ -6018,7 +6018,7 @@ static void LinkAttachments()
 		// search through known bones
 		for (k = 0; k < g_numbones; k++)
 		{
-			if ( !stricmp( g_attachment[i].bonename, g_bonetable[k].name ))
+			if ( V_strieq( g_attachment[i].bonename, g_bonetable[k].name ))
 			{
 				g_attachment[i].bone = k;
 				MatrixCopy( g_bonetable[k].boneToPose, boneToPose );
@@ -6036,7 +6036,7 @@ static void LinkAttachments()
 			{
 				for (k = 0; k < g_source[j]->numbones && !found; k++)
 				{
-					if ( !stricmp( g_attachment[i].bonename, g_source[j]->localBone[k].name ) )
+					if ( V_strieq( g_attachment[i].bonename, g_source[j]->localBone[k].name ) )
 					{
 						MatrixCopy( g_source[j]->boneToPose[k], boneToPose );
 

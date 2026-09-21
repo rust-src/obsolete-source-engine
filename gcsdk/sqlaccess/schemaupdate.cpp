@@ -1235,7 +1235,7 @@ SQLRETURN CJobUpdateSchema::YieldingGetTableFKConstraints( ESchemaCatalog eSchem
 		const char *pchTableName;
 		DbgVerify( sqlRecord.BGetStringValue( 1, &pchTableName ) );
 
-		AssertMsg( Q_stricmp( pchTableName, pRecordInfo->GetName() ) == 0, "FOREIGN KEY schema conversion found FK for table not matching search!\n" );
+		AssertMsg( V_strieq( pchTableName, pRecordInfo->GetName() ), "FOREIGN KEY schema conversion found FK for table not matching search!\n" );
 
 		const char *pchParentTable;
 		DbgVerify( sqlRecord.BGetStringValue( 2, &pchParentTable ) );
@@ -1254,7 +1254,7 @@ SQLRETURN CJobUpdateSchema::YieldingGetTableFKConstraints( ESchemaCatalog eSchem
 
 		// Is this more data for the FK we are already tracking?  If so just append the column data,
 		// otherwise, assuming some data exists, add the key to the record info
-		if ( Q_strcmp( fkData.m_rgchName, pchFKName ) == 0 )
+		if ( V_streq( fkData.m_rgchName, pchFKName ) )
 		{
 			int iColRelation = fkData.m_VecColumnRelations.AddToTail();
 			FKColumnRelation_t &colRelation = fkData.m_VecColumnRelations[iColRelation];
@@ -1650,7 +1650,7 @@ EGCSQLType ETypeFromMSSQLDataType( const char *pchType )
 {
 	for( uint32 unMapping = 0; unMapping < g_cSQLTypeMapping; unMapping++ )
 	{
-		if( !Q_stricmp( pchType, g_rSQLTypeMapping[ unMapping ].m_pchTypeName ) )
+		if( V_strieq( pchType, g_rSQLTypeMapping[ unMapping ].m_pchTypeName ) )
 			return g_rSQLTypeMapping[ unMapping ].m_eType;
 	}
 	return k_EGCSQLTypeInvalid;

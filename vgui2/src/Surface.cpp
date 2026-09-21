@@ -738,7 +738,7 @@ static void staticGenerateIconForTexture(Texture *texture, HDC hdc)
 	}
 	*/
 
-	memset(planeAND, 0x00, sizeof(planeAND));
+	BitwiseClear(planeAND);
 	HBITMAP mask = ::CreateBitmap(texture->_wide, texture->_tall, 1, 1, planeAND);
 	RunCodeAtScopeExit(::DeleteObject(mask));
 
@@ -1605,7 +1605,7 @@ void CWin32Surface::DrawSetTextureRGBAEx(int id,const unsigned char* rgba,int wi
 	{
 		// allocate a new texture
 		texture = AllocTextureForId(id);
-		memset(texture, 0, sizeof(Texture));
+		BitwiseClear(*texture);
 	}
 
 	{
@@ -1651,7 +1651,7 @@ int	  CWin32Surface::DrawGetTextureId( char const *filename )
 	while ( i != m_VGuiSurfaceTextures.InvalidIndex() )
 	{
 		Texture *texture = &m_VGuiSurfaceTextures[i];
-		if ( !Q_stricmp( filename, texture->_filename ) )
+		if ( V_strieq( filename, texture->_filename ) )
 			return texture->_id;
 
 		i = m_VGuiSurfaceTextures.NextInorder( i );
@@ -1675,7 +1675,7 @@ void CWin32Surface::DrawSetTextureFile(int id, const char *filename, int, bool f
 		{
 			// allocate a new texture
 			texture = AllocTextureForId(id);
-			memset(texture, 0, sizeof(Texture));
+			BitwiseClear(*texture);
 		}
 		if (texture)
 		{
@@ -1794,7 +1794,7 @@ typedef struct
 HBITMAP staticCreateBitmapHandle(int wide, int tall, HDC hdc, unsigned short bpp, void **dib)
 {
 	BITMAPINFOHEADER bitmapInfoHeader;
-	memset(&bitmapInfoHeader, 0, sizeof(bitmapInfoHeader));
+	BitwiseClear(bitmapInfoHeader);
 	bitmapInfoHeader.biSize = sizeof(bitmapInfoHeader);
 	bitmapInfoHeader.biWidth = wide;
 	bitmapInfoHeader.biHeight = -tall;
@@ -1802,8 +1802,7 @@ HBITMAP staticCreateBitmapHandle(int wide, int tall, HDC hdc, unsigned short bpp
 	bitmapInfoHeader.biBitCount = bpp;
 	bitmapInfoHeader.biCompression = BI_RGB;
 
-	HBITMAP hRet;
-	hRet = CreateDIBSection(hdc, (BITMAPINFO*)&bitmapInfoHeader, DIB_RGB_COLORS, dib, 0, 0);
+	HBITMAP hRet = CreateDIBSection(hdc, (BITMAPINFO*)&bitmapInfoHeader, DIB_RGB_COLORS, dib, 0, 0);
 	if ( !hRet )
 		Error( "staticCreateBitmapHandle: can't create DIB" );
 
@@ -1834,7 +1833,7 @@ bool CWin32Surface::LoadBMP(Texture *texture, const char *filename)
 
 	const DWORD dwFileSize = g_pFullFileSystem->Size( file );
 
-	g_pFullFileSystem->Read( &bmfHeader, sizeof(bmfHeader), file );
+	g_pFullFileSystem->Read( bmfHeader, file );
 	
 	if (bmfHeader.bfType == DIB_HEADER_MARKER)
 	{
@@ -1919,7 +1918,7 @@ bool CWin32Surface::LoadTGA(Texture *texture, const char *filename)
 
 	// read the header
 	tga_header_t tgaHeader;
-	g_pFullFileSystem->Read(&tgaHeader, sizeof(tgaHeader), file);
+	g_pFullFileSystem->Read(tgaHeader, file);
 
 	if (tgaHeader.image_type != 2 && tgaHeader.image_type != 10)
 	{
@@ -3471,9 +3470,9 @@ private:
 
 static bool ShouldMakeUnique( char const *extension )
 {
-	if ( !Q_stricmp( extension, "cur" ) )
+	if ( V_strieq( extension, "cur" ) )
 		return true;
-	if ( !Q_stricmp( extension, "ani" ) )
+	if ( V_strieq( extension, "ani" ) )
 		return true;
 	return false;
 }
@@ -3498,7 +3497,7 @@ IImage *CWin32Surface::GetIconImageForFullPath( char const *pFullPath )
 			V_ExtractFileExtension( pFullPath, ext );
 
 			char lookup[ 512 ];
-			V_sprintf_safe( lookup, "%s", ShouldMakeUnique( ext ) ? pFullPath : info.szTypeName );
+			V_strcpy_safe( lookup, ShouldMakeUnique( ext ) ? pFullPath : info.szTypeName );
 
 			// Now check the dictionary
 			auto idx = m_FileTypeImages.Find( lookup );
@@ -3597,7 +3596,7 @@ void CWin32Surface::initStaticData()
 	staticDefaultCursor[dc_hand]     =(HICON)LoadCursor(nullptr,(LPCTSTR)32649);
 
 	// make and register a very simple Window Class
-	memset( &staticWndclass,0,sizeof(staticWndclass) );
+	BitwiseClear( staticWndclass );
 	staticWndclass.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
 	staticWndclass.lpfnWndProc = staticProc;
 	staticWndclass.hInstance = GetModuleHandle(NULL);

@@ -25,6 +25,7 @@
 #include "resource.h"
 #include "perf_counters.h"
 #include "tier0/icommandline.h"
+#include "tier1/strtools.h"
 
 
 // If we couldn't get into a job (maybe they weren't accepting more workers at the time),
@@ -136,9 +137,7 @@ void SetPassword( const char *pPassword )
 	delete [] g_pPassword;
 	if ( pPassword )
 	{
-		int len = V_strlen( pPassword ) + 1;
-		g_pPassword = new char[len];
-		V_strncpy( g_pPassword, pPassword, len );
+		g_pPassword = V_strdup( pPassword );
 	}
 	else
 	{
@@ -391,10 +390,7 @@ SpewRetval_t MySpewOutputFunc( SpewType_t spewType, const char *pMsg )
 
 char* CopyString( const char *pStr )
 {
-	int len = V_strlen( pStr ) + 1;
-	char *pRet = new char[len];
-	V_strncpy( pRet, pStr, len );
-	return pRet;
+	return V_strdup( pStr );
 }
 
 void AppendArg( CUtlVector<char*> &newArgv, const char *pIn )
@@ -408,7 +404,7 @@ void SendStartStatus( bool bStatus )
 	for ( int i=0; i < 3; i++ )
 	{
 		char data[4096];
-		bf_write dataBuf( data, sizeof( data ) );
+		bf_write dataBuf( data );
 		dataBuf.WriteByte( VMPI_PROTOCOL_VERSION );
 		dataBuf.WriteByte( VMPI_NOTIFY_START_STATUS );
 		dataBuf.WriteBytes( g_CurJobID, sizeof( g_CurJobID ) );
@@ -425,7 +421,7 @@ void SendEndStatus()
 	for ( int i=0; i < 3; i++ )
 	{
 		char data[4096];
-		bf_write dataBuf( data, sizeof( data ) );
+		bf_write dataBuf( data );
 		dataBuf.WriteByte( VMPI_PROTOCOL_VERSION );
 		dataBuf.WriteByte( VMPI_NOTIFY_END_STATUS );
 		dataBuf.WriteBytes( g_CurJobID, sizeof( g_CurJobID ) );
@@ -725,7 +721,7 @@ void BuildCommandLineFromArgs( CUtlVector<char*> &newArgv, char *pOut, int outLe
 	for ( int i=0; i < newArgv.Count(); i++ )
 	{
 		char argStr[512];
-		if ( strlen( newArgv[i] ) > 0 && newArgv[i][strlen(newArgv[i])-1] == '\\' )
+		if ( !Q_isempty( newArgv[i] ) && newArgv[i][strlen(newArgv[i])-1] == '\\' )
 			Q_snprintf( argStr, sizeof( argStr ), "\"%s\\\" ", newArgv[i] );
 		else
 			Q_snprintf( argStr, sizeof( argStr ), "\"%s\" ", newArgv[i] );
@@ -793,7 +789,7 @@ void RunProcessAtCommandLine(
 		{
 			V_FileBase( newArgv[0], g_RunningProcess_ExeName, sizeof( g_RunningProcess_ExeName ) );
 			
-			if ( V_stricmp( g_RunningProcess_ExeName, "vrad" ) == 0 || V_stricmp( g_RunningProcess_ExeName, "vvis" ) == 0 )
+			if ( V_strieq( g_RunningProcess_ExeName, "vrad" ) || V_strieq( g_RunningProcess_ExeName, "vvis" ) )
 				V_FileBase( newArgv[newArgv.Count()-1], g_RunningProcess_MapName, sizeof( g_RunningProcess_MapName ) );
 		}
 
@@ -1092,9 +1088,7 @@ void AdjustSuperDebugArgs( CUtlVector<char*> &args )
 
 
 	// Now insert -allowdebug.
-	const char *pAllowDebug = "-allowdebug";
-	char *pToInsert = new char[ strlen( pAllowDebug ) + 1 ];
-	strcpy( pToInsert, pAllowDebug );
+	char *pToInsert = V_strdup( "-allowdebug" );
 	args.InsertAfter( 0, pToInsert );
 
 }
@@ -1137,6 +1131,8 @@ bool StartDownloadingAppFiles(
 	intptr_t ret = _findfirst( searchStr, &findData );
 	if ( ret != -1 )
 	{
+    	RunCodeAtScopeExit(_findclose( handle ));
+
 		do
 		{
 			if ( findData.name[0] == '.' )
@@ -1150,8 +1146,6 @@ bool StartDownloadingAppFiles(
 				return false;
 			}
 		} while ( _findnext( ret, &findData ) == 0 );
-		
-		_findclose( ret );
 	}
 
 	// Change the EXE name to an absolute path to exactly where it is in the cache directory.
@@ -1191,7 +1185,7 @@ bool StartDownloadingAppFiles(
 	// Pass all the -mpi_worker, -mpi_file, -mpi_filebase args into the downloader app.
 	for ( int i=1; i < (int)newArgv.Count()-1; i++ )
 	{
-		if ( V_stricmp( newArgv[i], "-mpi_filebase" ) == 0 || V_stricmp( newArgv[i], "-mpi_file" ) == 0 )
+		if ( V_strieq( newArgv[i], "-mpi_filebase" ) || V_strieq( newArgv[i], "-mpi_file" ) )
 		{
 			downloaderArgs.AddToTail( newArgv[i] );
 			downloaderArgs.AddToTail( newArgv[i+1] );
@@ -1199,7 +1193,7 @@ bool StartDownloadingAppFiles(
 			newArgv.Remove( i );
 			--i;
 		}
-		else if ( V_stricmp( newArgv[i], "-mpi_worker" ) == 0 )
+		else if ( V_strieq( newArgv[i], "-mpi_worker" ) )
 		{
 			// We need this arg so it knows what IP to connect to, but we want to leave it in the final launch args too.
 			downloaderArgs.AddToTail( newArgv[i] );
@@ -1425,7 +1419,7 @@ void HandlePacket_LOOKING_FOR_WORKERS( bf_read &buf, const CIPAddr &ipFrom )
 	if ( StartDownloadingAppFiles( newArgv, cacheDir, sizeof( cacheDir ), g_Waiting_bShowAppWindow, &g_Waiting_hProcess, bPatching ) )
 	{
 		// After it's downloaded, we want it to switch to the main connection port.
-		if ( newArgv.Count() >= 3 && V_stricmp( newArgv[2], strDownloaderIP ) == 0 )
+		if ( newArgv.Count() >= 3 && V_strieq( newArgv[2], strDownloaderIP ) )
 		{
 			delete newArgv[2];
 			newArgv[2] = CopyString( strMainIP );
@@ -1522,7 +1516,7 @@ void VMPI_Waiter_Update()
 		if ( len <= 0 )
 			break;
 
-		bf_read buf( data, len );
+		bf_read buf( &data[0], len );
 		if ( buf.ReadByte() != VMPI_PROTOCOL_VERSION )
 			continue;
 

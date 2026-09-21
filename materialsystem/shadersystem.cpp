@@ -249,8 +249,8 @@ void CShaderSystem::Init()
 	m_SaveSpewOutput = NULL;
 	
 	m_bForceUsingGraphicsReturnTrue = false;
-	if ( CommandLine()->FindParm( "-noshaderapi" ) ||
-		 CommandLine()->FindParm( "-makereslists" ) )
+	if ( CommandLine()->HasParm( "-noshaderapi" ) ||
+		 CommandLine()->HasParm( "-makereslists" ) )
 	{
 		m_bForceUsingGraphicsReturnTrue = true;
 	}
@@ -351,7 +351,7 @@ void CShaderSystem::LoadAllShaderDLLs( )
 
 #ifdef _DEBUG
 	// For fast-iteration debugging
-	if ( CommandLine()->FindParm( "-testshaders" ) )
+	if ( CommandLine()->HasParm( "-testshaders" ) )
 	{
 		LoadShaderDLL( "shader_test" DLL_EXT_STRING );
 	}
@@ -380,10 +380,10 @@ void CShaderSystem::LoadModShaderDLLs( int dxSupportLevel )
 {
 	// Don't do this for Valve mods. They don't need them, and attempting to load them is an opportunity for cheaters to get their code into the process
 	const char *pGameDir = COM_GetModDirectory();
-	if ( !Q_stricmp( pGameDir, "hl2" ) || !Q_stricmp( pGameDir, "cstrike" ) || !Q_stricmp( pGameDir, "cstrike_beta" ) ||
-		!Q_stricmp( pGameDir, "hl2mp" ) || !Q_stricmp( pGameDir, "lostcoast" ) || !Q_stricmp( pGameDir, "episodic" ) ||
-		!Q_stricmp( pGameDir, "portal" ) || !Q_stricmp( pGameDir, "ep2" ) || !Q_stricmp( pGameDir, "dod" ) ||
-		!Q_stricmp( pGameDir, "tf" ) || !Q_stricmp( pGameDir, "tf_beta" ) || !Q_stricmp( pGameDir, "hl1" ) )
+	if ( V_strieq( pGameDir, "hl2" ) || V_strieq( pGameDir, "cstrike" ) || V_strieq( pGameDir, "cstrike_beta" ) ||
+		V_strieq( pGameDir, "hl2mp" ) || V_strieq( pGameDir, "lostcoast" ) || V_strieq( pGameDir, "episodic" ) ||
+		V_strieq( pGameDir, "portal" ) || V_strieq( pGameDir, "ep2" ) || V_strieq( pGameDir, "dod" ) ||
+		V_strieq( pGameDir, "tf" ) || V_strieq( pGameDir, "tf_beta" ) || V_strieq( pGameDir, "hl1" ) )
 	{
 		return;
 	}
@@ -564,7 +564,7 @@ intp CShaderSystem::FindShaderDLL( const char *pFullPath )
 {
 	for ( intp i = m_ShaderDLLs.Count(); --i >= 0; )
 	{
-		if ( !Q_stricmp( pFullPath, m_ShaderDLLs[i].m_pFileName ) )
+		if ( V_strieq( pFullPath, m_ShaderDLLs[i].m_pFileName ) )
 			return i;
 	}
 
@@ -682,7 +682,7 @@ void CShaderSystem::SetupShaderDictionary( intp nShaderDLLIndex )
 		const char *pShaderName = pShader->GetName();
 
 #ifdef POSIX
-		if (CommandLine()->FindParm("-glmspew"))
+		if (CommandLine()->HasParm("-glmspew"))
 			printf("CShaderSystem::SetupShaderDictionary: %s", pShaderName );
 #endif
 		
@@ -1357,8 +1357,7 @@ bool CShaderSystem::ComputeVertexFormatFromSnapshot( IMaterialVar **params, Shad
 		numSnapshots += pRenderState->m_pSnapshots[SHADER_USING_EDITOR].m_nPassCount;
 	}
 
-	StateSnapshot_t* pSnapshots = (StateSnapshot_t*)stackalloc( 
-		numSnapshots * sizeof(StateSnapshot_t) ); 
+	StateSnapshot_t* pSnapshots = stackallocT( StateSnapshot_t,	numSnapshots ); 
 
 	int snapshotID = 0;
 	AddSnapshotsToList( &pRenderState->m_pSnapshots[0], snapshotID, pSnapshots );
@@ -1381,8 +1380,7 @@ bool CShaderSystem::ComputeVertexFormatFromSnapshot( IMaterialVar **params, Shad
 	for ( int mod = 1; mod < nModulationSnapshotCount; ++mod )
 	{
 		int numSnapshotsTest = pRenderState->m_pSnapshots[mod].m_nPassCount;
-		StateSnapshot_t* pSnapshotsTest = (StateSnapshot_t*)_alloca( 
-			numSnapshotsTest * sizeof(StateSnapshot_t) );
+		StateSnapshot_t* pSnapshotsTest = stackallocT( StateSnapshot_t, numSnapshotsTest );
 
 		for (int i = 0; i < numSnapshotsTest; ++i)
 		{
@@ -1662,7 +1660,7 @@ void CShaderSystem::CopyMaterialVarToDebugShader( IMaterialInternal *pDebugMater
 
 	for( int i = pShader->GetNumParams(); --i >= 0; )
 	{
-		if( !Q_stricmp( ppParams[i]->GetName( ), pSrcVarName ) )
+		if( V_strieq( ppParams[i]->GetName( ), pSrcVarName ) )
 		{
 			pMaterialVar->CopyFrom( ppParams[i] );
 			return;

@@ -218,7 +218,7 @@ void CTestScriptMgr::CheckPoint( const char *pName )
 
 	if ( m_NextCheckPoint[0] )
 	{
-		if ( Q_stricmp( m_NextCheckPoint, pName ) != 0 )
+		if ( !V_strieq( m_NextCheckPoint, pName ) )
 		{
 			// This isn't the checkpoint you're looking for.
 			return;
@@ -281,7 +281,7 @@ void CTestScriptMgr::RunCommands()
 		curCommand[iCurPos] = 0;
 		
 		// Did we hit the end of the file?
-		if ( curCommand[0] == 0 )
+		if ( Q_isempty( curCommand ) )
 		{
 			if ( g_pFileSystem->EndOfFile( m_hFile ) )
 			{

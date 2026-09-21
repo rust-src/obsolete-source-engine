@@ -104,7 +104,7 @@ bool GetHWMExpressionFileName( const char *pFilename, char (&pHWMFilename)[fileN
 	while ( pszToken != NULL )
 	{
 		V_strcat_safe( szExpressionHWM, pszToken );
-		if ( !V_stricmp( pszToken, "player" ) )
+		if ( V_strieq( pszToken, "player" ) )
 		{
 			V_strcat_safe( szExpressionHWM, "\\hwm" );
 		}
@@ -180,7 +180,7 @@ void C_BaseFlex::SetupMappings( char const *pchFileRoot )
 	memset( m_PhonemeClasses, 0, sizeof( m_PhonemeClasses ) );
 
 	Emphasized_Phoneme *normal = &m_PhonemeClasses[ PHONEME_CLASS_NORMAL ];
-	Q_snprintf( normal->classname, sizeof( normal->classname ), "%s", pchFileRoot );
+	V_strcpy_safe( normal->classname, pchFileRoot );
 	normal->required = true;
 
 	Emphasized_Phoneme *weak = &m_PhonemeClasses[ PHONEME_CLASS_WEAK ];
@@ -451,7 +451,7 @@ void *CFlexSceneFileManager::FindSceneFile( IHasLocalToGlobalFlexSettings *insta
 	for ( int i = 0; i < m_FileList.Count(); i++ )
 	{
 		CFlexSceneFile *file = m_FileList[ i ];
-		if ( file && !Q_stricmp( file->filename, szFilename ) )
+		if ( file && V_strieq( file->filename, szFilename ) )
 		{
 			// Make sure translations (local to global flex controller) are set up for this instance
 			EnsureTranslations( instance, ( const flexsettinghdr_t * )file->buffer );
@@ -837,8 +837,8 @@ void C_BaseFlex::AddVisemesForSentence( Emphasized_Phoneme *classes, float empha
 		return;
 	}
 
-	int pcount = sentence->GetRuntimePhonemeCount();
-	for ( int k = 0; k < pcount; k++ )
+	intp pcount = sentence->GetRuntimePhonemeCount();
+	for ( intp k = 0; k < pcount; k++ )
 	{
 		const CBasePhonemeTag *phoneme = sentence->GetRuntimePhoneme( k );
 
@@ -1345,9 +1345,10 @@ int C_BaseFlex::g_numflexcontrollers;
 char * C_BaseFlex::g_flexcontroller[MAXSTUDIOFLEXCTRL*4];
 float C_BaseFlex::g_flexweight[MAXSTUDIOFLEXDESC];
 
-int C_BaseFlex::AddGlobalFlexController( const char *szName )
+// dimhotepus: int -> UtlSymId_t.
+UtlSymId_t C_BaseFlex::AddGlobalFlexController( const char *szName )
 {
-	int i;
+	UtlSymId_t i;
 	for (i = 0; i < g_numflexcontrollers; i++)
 	{
 		if (Q_stricmp( g_flexcontroller[i], szName ) == 0)
@@ -1365,10 +1366,12 @@ int C_BaseFlex::AddGlobalFlexController( const char *szName )
 	// dimhotepus: Handle out of capacity error.
 	AssertMsg( g_numflexcontrollers < MAXSTUDIOFLEXCTRL * 4, "Flex controllers out of max capacity %d", MAXSTUDIOFLEXCTRL * 4 );
 	Warning( "Flex controllers out of max capacity %d", MAXSTUDIOFLEXCTRL * 4 );
-	return -1;
+	// dimhotepus: -1 -> UTL_INVAL_SYMBOL
+	return UTL_INVAL_SYMBOL;
 }
 
-char const *C_BaseFlex::GetGlobalFlexControllerName( int idx )
+// dimhotepus: int -> UtlSymId_t.
+char const *C_BaseFlex::GetGlobalFlexControllerName( UtlSymId_t idx )
 {
 	if ( idx < 0 || idx >= g_numflexcontrollers )
 	{
@@ -1391,7 +1394,7 @@ const flexsetting_t *C_BaseFlex::FindNamedSetting( const flexsettinghdr_t *pSett
 
 		const char *name = pSetting->pszName();
 
-		if ( !stricmp( name, expr ) )
+		if ( V_strieq( name, expr ) )
 			break;
 	}
 
@@ -1438,7 +1441,7 @@ void C_BaseFlex::ClearSceneEvents( CChoreoScene *scene, bool canceled )
 		return;
 	}
 
-	for ( int i = m_SceneEvents.Count() - 1; i >= 0; i-- )
+	for ( intp i = m_SceneEvents.Count() - 1; i >= 0; i-- )
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
 
@@ -1866,7 +1869,7 @@ void C_BaseFlex::AddFlexSetting( const char *expr, float scale,
 
 		const char *name = pSetting->pszName();
 
-		if ( !V_stricmp( name, expr ) )
+		if ( V_strieq( name, expr ) )
 			break;
 	}
 

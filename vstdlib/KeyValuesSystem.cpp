@@ -235,7 +235,7 @@ HKeySymbol CKeyValuesSystem::GetSymbolForString( const char *name, bool bCreate 
 {
 	if ( !name )
 	{
-		return (-1);
+		return INVALID_KEY_SYMBOL;
 	}
 
 	AUTO_LOCK( m_mutex );
@@ -244,7 +244,9 @@ HKeySymbol CKeyValuesSystem::GetSymbolForString( const char *name, bool bCreate 
 	hash_item_t *item = &m_HashTable[hash];
 	while (true)
 	{
-		if (!stricmp(name, (char *)m_Strings.GetBase() + item->stringIndex ))
+		// dimhotepus: Precache in var for easy debugging.
+		const char *nameForIndex = static_cast<const char *>(m_Strings.GetBase()) + item->stringIndex;
+		if (V_strieq(name, nameForIndex))
 		{
 			return (HKeySymbol)item->stringIndex;
 		}
@@ -254,7 +256,7 @@ HKeySymbol CKeyValuesSystem::GetSymbolForString( const char *name, bool bCreate 
 			if ( !bCreate )
 			{
 				// not found
-				return -1;
+				return INVALID_KEY_SYMBOL;
 			}
 
 			// we're not in the table
@@ -271,10 +273,10 @@ HKeySymbol CKeyValuesSystem::GetSymbolForString( const char *name, bool bCreate 
 			char *pString = static_cast<char *>(m_Strings.Alloc( stringSize ));
 			if ( !pString )
 			{
-				Error( "Out of keyvalue string space" );
-				return -1;
+				Error( "Can't allocate %zd bytes. Out of keyvalue string space", stringSize );
+				return INVALID_KEY_SYMBOL;
 			}
-			item->stringIndex = pString - static_cast<char *>(m_Strings.GetBase());
+			item->stringIndex = pString - static_cast<const char *>(m_Strings.GetBase());
 			V_strncpy(pString, name, stringSize);
 			return item->stringIndex;
 		}
@@ -284,7 +286,7 @@ HKeySymbol CKeyValuesSystem::GetSymbolForString( const char *name, bool bCreate 
 
 	// shouldn't be able to get here
 	Assert(0);
-	return (-1);
+	return INVALID_KEY_SYMBOL;
 }
 
 //-----------------------------------------------------------------------------
@@ -292,11 +294,11 @@ HKeySymbol CKeyValuesSystem::GetSymbolForString( const char *name, bool bCreate 
 //-----------------------------------------------------------------------------
 const char *CKeyValuesSystem::GetStringForSymbol(HKeySymbol symbol)
 {
-	if ( symbol == -1 )
+	if ( symbol == INVALID_KEY_SYMBOL )
 	{
 		return "";
 	}
-	return ((char *)m_Strings.GetBase() + (size_t)symbol);
+	return static_cast<const char *>(m_Strings.GetBase()) + symbol;
 }
 
 //-----------------------------------------------------------------------------

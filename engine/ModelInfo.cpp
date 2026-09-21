@@ -251,7 +251,7 @@ int CModelInfo::GetModelIndex( const char *name ) const
 		int netdyn = pTable->FindStringIndex( name );
 		if ( netdyn != INVALID_STRING_INDEX )
 		{
-			Assert( !m_NetworkedDynamicModels.IsValidIndex( netdyn ) || V_strcmp( m_NetworkedDynamicModels[netdyn]->strName, name ) == 0 );
+			Assert( !m_NetworkedDynamicModels.IsValidIndex( netdyn ) || V_streq( m_NetworkedDynamicModels[netdyn]->strName, name ) );
 			return NETDYNAMIC_TO_MODEL( netdyn );
 		}
 
@@ -262,7 +262,7 @@ int CModelInfo::GetModelIndex( const char *name ) const
 			netdyn = pTable->FindStringIndex( name + 7 );
 			if ( netdyn != INVALID_STRING_INDEX )
 			{
-				Assert( !m_NetworkedDynamicModels.IsValidIndex( netdyn ) || V_strcmp( m_NetworkedDynamicModels[netdyn]->strName, name ) == 0 );
+				Assert( !m_NetworkedDynamicModels.IsValidIndex( netdyn ) || V_streq( m_NetworkedDynamicModels[netdyn]->strName, name ) );
 				return NETDYNAMIC_TO_MODEL( netdyn );
 			}
 		}
@@ -282,7 +282,7 @@ int CModelInfo::GetModelClientSideIndex( const char *name ) const
 			UtlHashHandle_t h = m_ClientDynamicModels.Find( file );
 			if ( h != m_ClientDynamicModels.InvalidHandle() )
 			{
-				Assert( V_strcmp( m_ClientDynamicModels[h]->strName, name ) == 0 );
+				Assert( V_streq( m_ClientDynamicModels[h]->strName, name ) );
 				return CLIENTSIDE_TO_MODEL( h );
 			}
 		}
@@ -316,7 +316,7 @@ model_t *CModelInfo::LookupDynamicModel( int i )
 			char fixupBuf[MAX_PATH];
 			if ( V_strnicmp( name, "models/", 7 ) != 0 && demoplayer && demoplayer->IsPlayingBack() && demoplayer->GetProtocolVersion() < PROTOCOL_VERSION_20 )
 			{
-				V_snprintf( fixupBuf, MAX_PATH, "models/%s", name );
+				V_sprintf_safe( fixupBuf, "models/%s", name );
 				name = fixupBuf;
 			}
 #endif

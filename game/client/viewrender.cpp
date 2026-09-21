@@ -1433,7 +1433,7 @@ void CViewRender::ViewDrawScene( bool bDrew3dSkybox, SkyboxVisibility_t nSkyboxV
 }
 
 
-void CheckAndTransitionColor( float flPercent, float *pColor, float *pLerpToColor )
+static void CheckAndTransitionColor( float flPercent, float *pColor, float *pLerpToColor )
 {
 	if ( pLerpToColor[0] != pColor[0] || pLerpToColor[1] != pColor[1] || pLerpToColor[2] != pColor[2] )
 	{
@@ -1446,12 +1446,6 @@ void CheckAndTransitionColor( float flPercent, float *pColor, float *pLerpToColo
 		pColor[0] = FLerp( pColor[0], flDestColor[0], flPercent );
 		pColor[1] = FLerp( pColor[1], flDestColor[1], flPercent );
 		pColor[2] = FLerp( pColor[2], flDestColor[2], flPercent );
-	}
-	else
-	{
-		pColor[0] = pLerpToColor[0];
-		pColor[1] = pLerpToColor[1];
-		pColor[2] = pLerpToColor[2];
 	}
 }
 
@@ -1665,7 +1659,7 @@ static float GetFogMaxDensity( fogparams_t *pFogParams )
 }
 
 // dimhotepus: TF2 backport.
-static float GetFogRadial( fogparams_t *pFogParams )
+static bool GetFogRadial( fogparams_t *pFogParams )
 {
 	if ( cl_leveloverview.GetFloat() > 0 )
 		return false;
@@ -2014,7 +2008,7 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 			if ( bFirstTime )
 			{
 				bFirstTime = false;
-			Msg( "This game has a minimum GPU requirement of DirectX 9.0 Shader Model 2 to run properly.\n" );
+				Msg( "This game has a minimum GPU requirement of DirectX 9.0 Shader Model 2 to run properly.\n" );
 			}
 			return;
 		}
@@ -2044,62 +2038,66 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 			( ( whatToDraw & RENDERVIEW_SUPPRESSMONITORRENDERING ) == 0 ) )
 		{
 			CViewSetup viewMiddle = GetView( STEREO_EYE_MONO );
-			DrawMonitors( viewMiddle );	
+			DrawMonitors( viewMiddle );
 		}
 	#endif
 
 		g_bRenderingView = true;
 
-		// Must be first 
-		render->SceneBegin();
-
-		pRenderContext.GetFrom( materials );
-		pRenderContext->TurnOnToneMapping();
-		pRenderContext.SafeRelease();
-
-		// clear happens here probably
-		SetupMain3DView( viewRender, nClearFlags );
-			 	  
-		bool bDrew3dSkybox = false;
-		SkyboxVisibility_t nSkyboxVisible = SKYBOX_NOT_VISIBLE;
-
-		// if the 3d skybox world is drawn, then don't draw the normal skybox
-		CSkyboxView *pSkyView = new CSkyboxView( this );
-		if ( ( bDrew3dSkybox = pSkyView->Setup( viewRender, &nClearFlags, &nSkyboxVisible ) ) != false )
 		{
-			AddViewToScene( pSkyView );
-		}
-		SafeRelease( pSkyView );
+			// Must be first 
+			render->SceneBegin();
+			// Finish scene
+			RunCodeAtScopeExit(render->SceneEnd());
 
-		// Force it to clear the framebuffer if they're in solid space.
-		if ( ( nClearFlags & VIEW_CLEAR_COLOR ) == 0 )
-		{
-			if ( enginetrace->GetPointContents( viewRender.origin ) == CONTENTS_SOLID )
+			pRenderContext.GetFrom( materials );
+			pRenderContext->TurnOnToneMapping();
+			pRenderContext.SafeRelease();
+
+			// clear happens here probably
+			SetupMain3DView( viewRender, nClearFlags );
+
+			bool bDrew3dSkybox = false;
+			SkyboxVisibility_t nSkyboxVisible = SKYBOX_NOT_VISIBLE;
+
 			{
-				nClearFlags |= VIEW_CLEAR_COLOR;
+				// if the 3d skybox world is drawn, then don't draw the normal skybox
+				auto *pSkyView = new CSkyboxView( this );
+				RunCodeAtScopeExit(SafeRelease( pSkyView ));
+
+				if ( ( bDrew3dSkybox = pSkyView->Setup( viewRender, &nClearFlags, &nSkyboxVisible ) ) != false )
+				{
+					AddViewToScene( pSkyView );
+				}
 			}
+
+			// Force it to clear the framebuffer if they're in solid space.
+			if ( ( nClearFlags & VIEW_CLEAR_COLOR ) == 0 )
+			{
+				if ( enginetrace->GetPointContents( viewRender.origin ) == CONTENTS_SOLID )
+				{
+					nClearFlags |= VIEW_CLEAR_COLOR;
+				}
+			}
+
+			// Render world and all entities, particles, etc.
+			if( !g_pIntroData )
+			{
+				ViewDrawScene( bDrew3dSkybox, nSkyboxVisible, viewRender, nClearFlags, VIEW_MAIN, whatToDraw & RENDERVIEW_DRAWVIEWMODEL );
+			}
+			else
+			{
+				ViewDrawScene_Intro( viewRender, nClearFlags, *g_pIntroData );
+			}
+
+			// We can still use the 'current view' stuff set up in ViewDrawScene
+			s_bCanAccessCurrentView = true;
+
+
+			engine->DrawPortals();
+
+			DisableFog();
 		}
-
-		// Render world and all entities, particles, etc.
-		if( !g_pIntroData )
-		{
-			ViewDrawScene( bDrew3dSkybox, nSkyboxVisible, viewRender, nClearFlags, VIEW_MAIN, whatToDraw & RENDERVIEW_DRAWVIEWMODEL );
-		}
-		else
-		{
-			ViewDrawScene_Intro( viewRender, nClearFlags, *g_pIntroData );
-		}
-
-		// We can still use the 'current view' stuff set up in ViewDrawScene
-		s_bCanAccessCurrentView = true;
-
-
-		engine->DrawPortals();
-
-		DisableFog();
-
-		// Finish scene
-		render->SceneEnd();
 
 		// Draw lightsources if enabled
 		render->DrawLights();
@@ -2113,11 +2111,10 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 			if ( ( mat_motion_blur_enabled.GetInt() ) && ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() >= 90 ) )
 			{
 				pRenderContext.GetFrom( materials );
-				{
-					PIXEVENT( pRenderContext, "DoImageSpaceMotionBlur" );
-					DoImageSpaceMotionBlur( viewRender, viewRender.x, viewRender.y, viewRender.width, viewRender.height );
-				}
-				pRenderContext.SafeRelease();
+				RunCodeAtScopeExit(pRenderContext.SafeRelease());
+
+				PIXEVENT( pRenderContext, "DoImageSpaceMotionBlur" );
+				DoImageSpaceMotionBlur( viewRender, viewRender.x, viewRender.y, viewRender.width, viewRender.height );
 			}
 		}
 
@@ -2149,23 +2146,17 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 		if ( !building_cubemaps.GetBool() && viewRender.m_bDoBloomAndToneMapping )
 		{
 			pRenderContext.GetFrom( materials );
-			{
-				PIXEVENT( pRenderContext, "DoEnginePostProcessing" );
+			RunCodeAtScopeExit(pRenderContext.SafeRelease());
 
-				bool bFlashlightIsOn = false;
-				C_BasePlayer *pLocal = C_BasePlayer::GetLocalPlayer();
-				if ( pLocal )
-				{
-					bFlashlightIsOn = pLocal->IsEffectActive( EF_DIMLIGHT );
-				}
-				DoEnginePostProcessing( viewRender.x, viewRender.y, viewRender.width, viewRender.height, bFlashlightIsOn );
-			}
-			pRenderContext.SafeRelease();
+			PIXEVENT( pRenderContext, "DoEnginePostProcessing" );
+
+			const C_BasePlayer *pLocal = C_BasePlayer::GetLocalPlayer();
+			const bool bFlashlightIsOn = pLocal && pLocal->IsEffectActive( EF_DIMLIGHT );
+
+			DoEnginePostProcessing( viewRender.x, viewRender.y, viewRender.width, viewRender.height, bFlashlightIsOn );
 		}
 
 		// And here are the screen-space effects
-
-		if ( IsPC() )
 		{
 			tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "GrabPreColorCorrectedFrame" );
 
@@ -2186,15 +2177,12 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 
 		if ( m_rbTakeFreezeFrame[viewRender.m_eStereoEye ] )
 		{
-			Rect_t rect;
-			rect.x = viewRender.x;
-			rect.y = viewRender.y;
-			rect.width = viewRender.width;
-			rect.height = viewRender.height;
+			Rect_t rect{viewRender.x, viewRender.y, viewRender.width, viewRender.height};
 
 			pRenderContext = materials->GetRenderContext();
-				pRenderContext->CopyRenderTargetToTextureEx( GetFullscreenTexture(), 0, &rect, &rect );
-			pRenderContext.SafeRelease();
+			RunCodeAtScopeExit(pRenderContext.SafeRelease());
+
+			pRenderContext->CopyRenderTargetToTextureEx( GetFullscreenTexture(), 0, &rect, &rect );
 			m_rbTakeFreezeFrame[viewRender.m_eStereoEye ] = false;
 		}
 
@@ -2204,7 +2192,7 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 
 		// Draw the overlay
 		if ( m_bDrawOverlay )
-		{	   
+		{
 			tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "DrawOverlay" );
 
 			// This allows us to be ok if there are nested overlay views
@@ -2216,7 +2204,6 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 			RenderView( tempView, m_OverlayClearFlags, m_OverlayDrawFlags );
 			m_CurrentView = currentView;
 		}
-
 	}
 
 	if ( mat_viewportupscale.GetBool() && mat_viewportscale.GetFloat() < 1.0f ) 
@@ -2337,35 +2324,35 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 
 		tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "VGui_DrawHud", __FUNCTION__ );
 
-		// paint the vgui screen
-		VGui_PreRender();
-
-		// Make sure the client .dll root panel is at the proper point before doing the "SolveTraverse" calls
-		vgui::VPANEL root = enginevgui->GetPanel( PANEL_CLIENTDLL );
-		if ( root != 0 )
 		{
-			vgui::ipanel()->SetSize( root, viewWidth, viewHeight );
+			// paint the vgui screen
+			VGui_PreRender();
+			RunCodeAtScopeExit(VGui_PostRender());
+
+			// Make sure the client .dll root panel is at the proper point before doing the "SolveTraverse" calls
+			vgui::VPANEL root = enginevgui->GetPanel( PANEL_CLIENTDLL );
+			if ( root != 0 )
+			{
+				vgui::ipanel()->SetSize( root, viewWidth, viewHeight );
+			}
+			// Same for client .dll tools
+			root = enginevgui->GetPanel( PANEL_CLIENTDLL_TOOLS );
+			if ( root != 0 )
+			{
+				vgui::ipanel()->SetSize( root, viewWidth, viewHeight );
+			}
+
+			// The crosshair, etc. needs to get at the current setup stuff
+			AllowCurrentViewAccess( true );
+			RunCodeAtScopeExit(AllowCurrentViewAccess( false ));
+
+			// Draw the in-game stuff based on the actual viewport being used
+			render->VGui_Paint( PAINT_INGAMEPANELS );
+
+			// maybe paint the main menu and cursor too if we're in stereo hud mode
+			if( bPaintMainMenu )
+				render->VGui_Paint( PAINT_UIPANELS | PAINT_CURSOR );
 		}
-		// Same for client .dll tools
-		root = enginevgui->GetPanel( PANEL_CLIENTDLL_TOOLS );
-		if ( root != 0 )
-		{
-			vgui::ipanel()->SetSize( root, viewWidth, viewHeight );
-		}
-
-		// The crosshair, etc. needs to get at the current setup stuff
-		AllowCurrentViewAccess( true );
-
-		// Draw the in-game stuff based on the actual viewport being used
-		render->VGui_Paint( PAINT_INGAMEPANELS );
-
-		// maybe paint the main menu and cursor too if we're in stereo hud mode
-		if( bPaintMainMenu )
-			render->VGui_Paint( PAINT_UIPANELS | PAINT_CURSOR );
-
-		AllowCurrentViewAccess( false );
-
-		VGui_PostRender();
 
 		g_pClientMode->PostRenderVGui();
 		pRenderContext = materials->GetRenderContext();
@@ -2409,10 +2396,7 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 	// We can no longer use the 'current view' stuff set up in ViewDrawScene
 	s_bCanAccessCurrentView = false;
 
-	if ( IsPC() )
-	{
-		CDebugViewRender::GenerateOverdrawForTesting();
-	}
+	CDebugViewRender::GenerateOverdrawForTesting();
 
 	render->PopView( GetFrustum() );
 	g_WorldListCache.Flush();
@@ -2717,11 +2701,12 @@ bool DoesViewPlaneIntersectWater( float waterZ, int leafWaterDataID )
 
 	Vector mins, maxs;
 	ClearBounds( mins, maxs );
-	Vector testPoint[4];
-	testPoint[0].Init( -1.0f, -1.0f, 0.0f );
-	testPoint[1].Init( -1.0f, 1.0f, 0.0f );
-	testPoint[2].Init( 1.0f, -1.0f, 0.0f );
-	testPoint[3].Init( 1.0f, 1.0f, 0.0f );
+	Vector testPoint[4]{
+		Vector( -1.0f, -1.0f, 0.0f ),
+		Vector( -1.0f, 1.0f, 0.0f ),
+		Vector( 1.0f, -1.0f, 0.0f ),
+		Vector( 1.0f, 1.0f, 0.0f )
+	};
 	int i;
 	bool bAbove = false;
 	bool bBelow = false;
@@ -3931,7 +3916,7 @@ static inline void DrawOpaqueRenderable( IClientRenderable *pEnt, bool bTwoPass,
 		view->SetCurrentlyDrawingEntity( pEnt->GetIClientUnknown()->GetBaseEntity() );
 		pEnt->DrawModel( flags );
 		view->SetCurrentlyDrawingEntity( NULL );
-		if( pRenderClipPlane && !materials->UsingFastClipping() )	
+		if( !materials->UsingFastClipping() )	
 			pRenderContext->PopCustomClipPlane();
 	}
 	else
@@ -4108,8 +4093,8 @@ void CRendering3dView::DrawOpaqueRenderables( ERenderDepthMode DepthMode )
 	for ( int bucket = 0; bucket < RENDER_GROUP_CFG_NUM_OPAQUE_ENT_BUCKETS; ++ bucket )
 		numOpaqueEnts += m_pRenderablesList->m_RenderGroupCounts[ RENDER_GROUP_OPAQUE_ENTITY_HUGE + 2 * bucket ];
 
-	CUtlVector< C_BaseAnimating * > arrBoneSetupNpcsLast( (C_BaseAnimating **)_alloca( numOpaqueEnts * sizeof( C_BaseAnimating * ) ), numOpaqueEnts, numOpaqueEnts );
-	CUtlVector< CClientRenderablesList::CEntry > arrRenderEntsNpcsFirst( (CClientRenderablesList::CEntry *)_alloca( numOpaqueEnts * sizeof( CClientRenderablesList::CEntry ) ), numOpaqueEnts, numOpaqueEnts );
+	CUtlVector< C_BaseAnimating * > arrBoneSetupNpcsLast( stackallocT( C_BaseAnimating *, numOpaqueEnts ), numOpaqueEnts, numOpaqueEnts );
+	CUtlVector< CClientRenderablesList::CEntry > arrRenderEntsNpcsFirst( stackallocT( CClientRenderablesList::CEntry, numOpaqueEnts ), numOpaqueEnts, numOpaqueEnts );
 	int numNpcs = 0, numNonNpcsAnimating = 0;
 
 	for ( int bucket = 0; bucket < RENDER_GROUP_CFG_NUM_OPAQUE_ENT_BUCKETS; ++ bucket )
@@ -4333,7 +4318,7 @@ static inline void DrawTranslucentRenderable( IClientRenderable *pEnt, bool twoP
 		pEnt->DrawModel( flags );
 		view->SetCurrentlyDrawingEntity( NULL );
 
-		if( pRenderClipPlane && !materials->UsingFastClipping() )	
+		if( !materials->UsingFastClipping() )	
 			pRenderContext->PopCustomClipPlane();
 	}
 	else
@@ -4518,7 +4503,7 @@ void CRendering3dView::DrawTranslucentRenderables( bool bInSkybox, bool bShadowD
 	VPROF_BUDGET( "CViewRender::DrawTranslucentRenderables", "DrawTranslucentRenderables" );
 	int iPrevLeaf = info.m_LeafCount - 1;
 	int nDetailLeafCount = 0;
-	LeafIndex_t *pDetailLeafList = (LeafIndex_t*)stackalloc( info.m_LeafCount * sizeof(LeafIndex_t) );
+	LeafIndex_t *pDetailLeafList = stackallocT( LeafIndex_t, info.m_LeafCount );
 
 // 	bool bDrawUnderWater = (nFlags & DF_RENDER_UNDERWATER) != 0;
 // 	bool bDrawAboveWater = (nFlags & DF_RENDER_ABOVEWATER) != 0;
@@ -4883,6 +4868,7 @@ void CSkyboxView::DrawInternal( view_id_t iSkyBoxViewID, bool bInvokePreAndPostR
 
 	render->BeginUpdateLightmaps();
 	// dimhotepus: Automatically compute view leaf instead of 1.
+	// dimhotepus: Fix maps with multiple 3d skyboxes rendering all of them at the same time
 	BuildWorldRenderLists( true, -1, true );
 	BuildRenderableRenderLists( iSkyBoxViewID );
 	render->EndUpdateLightmaps();

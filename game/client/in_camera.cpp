@@ -683,7 +683,8 @@ void CInput::CAM_ToThirdPerson(void)
 	{
 		m_fCameraInThirdPerson = true; 
 	
-		g_ThirdPersonManager.SetCameraOffsetAngles( Vector( viewangles[ YAW ], viewangles[ PITCH ], CAM_MIN_DIST ) );
+		// dimhotepus: Fix flipped initial pitch/yaw on thirdperson switch (ficool).
+		g_ThirdPersonManager.SetCameraOffsetAngles( Vector( viewangles[ PITCH ], viewangles[ YAW ], CAM_MIN_DIST ) );
 	}
 
 	cam_command.SetValue( 0 );
@@ -700,6 +701,8 @@ void CInput::CAM_ToFirstPerson(void)
 	g_ThirdPersonManager.SetDesiredCameraOffset( vec3_origin );
 
 	m_fCameraInThirdPerson = false;
+	// dimhotepus: Fix not being able to toggle off the orthographic camera (copperpixel)
+	m_CameraIsOrthographic = false;
 	cam_command.SetValue( 0 );
 
 	// Let the local player know

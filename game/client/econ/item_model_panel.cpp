@@ -1181,7 +1181,7 @@ bool CEmbeddedItemModelPanel::UpdateParticle(
 	if ( m_pItemParticle )
 	{
 		// Check if its a new particle system
-		if ( V_strcmp( m_pItemParticle->m_pParticleSystem->GetName(), pszSystemName ) )
+		if ( !V_streq( m_pItemParticle->m_pParticleSystem->GetName(), pszSystemName ) )
 		{
 			SafeDeleteParticleData( &m_pItemParticle );
 			m_pItemParticle = CreateParticleData( pszSystemName );
@@ -1289,22 +1289,25 @@ void CEmbeddedItemModelPanel::RenderingRootModel( IMatRenderContext *pRenderCont
 		matrix3x4_t matIdentity;
 		SetIdentityMatrix( matIdentity );
 
-		matrix3x4_t *pBoneToWorld = g_pStudioRender->LockBoneMatrices( pItemStudioHdr->numbones );
-		m_ItemModel.m_MDL.SetUpBones( matIdentity, pItemStudioHdr->numbones, pBoneToWorld );
-
-		// Get attachment transform
-		mstudioattachment_t attach = pItemStudioHdr->pAttachment( m_iPedestalAttachment );
 		matrix3x4_t matLocalToWorld;
 		matrix3x4_t matWorldToLocal;
 		matrix3x4_t matTransform;
 
-		ConcatTransforms( pBoneToWorld[ attach.localbone ], attach.local, matLocalToWorld );
-		MatrixInvert( matLocalToWorld, matWorldToLocal );
-		ConcatTransforms( m_RootMDL.m_MDLToWorld, matWorldToLocal, matTransform );
+		matrix3x4_t *pBoneToWorld = g_pStudioRender->LockBoneMatrices( pItemStudioHdr->numbones );
+		{
+			RunCodeAtScopeExit( g_pStudioRender->UnlockBoneMatrices() );
 
-		m_ItemModel.m_MDL.SetUpBones( matTransform, pItemStudioHdr->numbones, pBoneToWorld );
+			m_ItemModel.m_MDL.SetUpBones( matIdentity, pItemStudioHdr->numbones, pBoneToWorld );
 
-		g_pStudioRender->UnlockBoneMatrices();
+			// Get attachment transform
+			mstudioattachment_t attach = pItemStudioHdr->pAttachment( m_iPedestalAttachment );
+
+			ConcatTransforms( pBoneToWorld[ attach.localbone ], attach.local, matLocalToWorld );
+			MatrixInvert( matLocalToWorld, matWorldToLocal );
+			ConcatTransforms( m_RootMDL.m_MDLToWorld, matWorldToLocal, matTransform );
+
+			m_ItemModel.m_MDL.SetUpBones( matTransform, pItemStudioHdr->numbones, pBoneToWorld );
+		}
 
 		IMaterial* pOverrideMaterial = GetOverrideMaterial( m_ItemModel.m_MDL.GetMDL() );
 		if ( pOverrideMaterial != NULL )
@@ -2470,7 +2473,7 @@ bool CItemModelPanel::CheckRecipeMatches()
 
 	// If this isnt a dynamic recipe tool, dont show or do any of this
 	if( !pTool 
-		|| V_stricmp( m_ItemData.GetStaticData()->GetEconTool()->GetTypeName() , "dynamic_recipe")
+		|| !V_strieq( m_ItemData.GetStaticData()->GetEconTool()->GetTypeName(), "dynamic_recipe")
 		|| m_ItemData.GetStaticData()->GetDefaultLoadoutSlot() != INVALID_EQUIPPED_SLOT )
 	{
 		if( m_pMatchesLabel )
@@ -3681,7 +3684,8 @@ void CItemModelPanel::OnCommand( const char *command )
 			}
 			uint32 nAssetContext = 2; // k_EEconContextBackpack
 			char szURL[512];
-			V_snprintf( szURL, sizeof(szURL), "http://%ssteamcommunity.com/my/inventory/?sellOnLoad=1#%d_%d_%llu", pszPrefix, engine->GetAppID(), nAssetContext, GetItem()->GetItemID() );
+			// dimhotepus: http:// -> https://
+			V_snprintf( szURL, sizeof(szURL), "https://%ssteamcommunity.com/my/inventory/?sellOnLoad=1#%d_%d_%llu", pszPrefix, engine->GetAppID(), nAssetContext, GetItem()->GetItemID() );
 			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( szURL );
 		}
 	}

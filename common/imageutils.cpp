@@ -493,7 +493,7 @@ unsigned char *ImgUtl_ReadJPEGAsRGBA( const char *jpegPath, int &width, int &hei
 	int image_width;
 
 	jpeg_decompress_struct jpegInfo;
-	memset( &jpegInfo, 0, sizeof( jpegInfo ) );
+	BitwiseClear( jpegInfo );
 
 	// open the jpeg image file.
 	FILE *infile = fopen(jpegPath, "rb");
@@ -796,11 +796,14 @@ unsigned char *ImgUtl_ReadBMPAsRGBA( const char *bmpPath, int &width, int &heigh
 	if (bitmap.bmBitsPixel == 24 || bitmap.bmBitsPixel == 32)
 	{
 		bitmapInfo = (BITMAPINFO *)malloc(sizeof(BITMAPINFO));
+		BitwiseClear(*bitmapInfo);
 	}
 	else if (bitmap.bmBitsPixel == 8 || bitmap.bmBitsPixel == 4 || bitmap.bmBitsPixel == 1)
 	{
 		int colorsUsed = 1 << bitmap.bmBitsPixel;
-		bitmapInfo = (BITMAPINFO *)malloc(colorsUsed * sizeof(RGBQUAD) + sizeof(BITMAPINFO));
+		intp size = colorsUsed * sizeof(RGBQUAD) + sizeof(BITMAPINFO);
+		bitmapInfo = (BITMAPINFO *)malloc(size);
+		BitwiseClear(bitmapInfo, size);
 		bUseColorTable = true;
 	}
 	else
@@ -811,7 +814,6 @@ unsigned char *ImgUtl_ReadBMPAsRGBA( const char *bmpPath, int &width, int &heigh
 
 	RunCodeAtScopeExit(free( bitmapInfo ));
 
-	memset(bitmapInfo, 0, sizeof(BITMAPINFO));
 	bitmapInfo->bmiHeader.biSize = sizeof(bitmapInfo->bmiHeader);
 	if (bUseColorTable)
 	{
@@ -1032,23 +1034,23 @@ unsigned char *ImgUtl_ReadImageAsRGBA( const char *path, int &width, int &height
 	const char *pExt = V_GetFileExtension( path );
 	if ( pExt )
 	{
-		if ( !Q_stricmp(pExt, "vtf") )
+		if ( V_strieq(pExt, "vtf") )
 		{
 			return ImgUtl_ReadVTFAsRGBA( path, width, height, errcode );
 		}
-		if ( !Q_stricmp(pExt, "bmp") )
+		if ( V_strieq(pExt, "bmp") )
 		{
 			return ImgUtl_ReadBMPAsRGBA( path, width, height, errcode );
 		}
-		if ( !Q_stricmp(pExt, "jpg") || !Q_stricmp(pExt, "jpeg") )
+		if ( V_strieq(pExt, "jpg") || V_strieq(pExt, "jpeg") )
 		{
 			return ImgUtl_ReadJPEGAsRGBA( path, width, height, errcode );
 		}
-		if ( !Q_stricmp(pExt, "png") )
+		if ( V_strieq(pExt, "png") )
 		{
 			return ImgUtl_ReadPNGAsRGBA( path, width, height, errcode );
 		}
-		if ( !Q_stricmp(pExt, "tga") )
+		if ( V_strieq(pExt, "tga") )
 		{
 			TGAHeader header;
 			return ImgUtl_ReadTGAAsRGBA( path, width, height, errcode, header );
@@ -1460,7 +1462,7 @@ static void DoDeleteFile( const char *filename )
 
 ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const char *pMaterialsSubDir, int nMaxWidth/*=-1*/, int nMaxHeight/*=-1*/ )
 {
-	if ((pInPath == nullptr) || (pInPath[0] == 0))
+	if (Q_isempty(pInPath))
 	{
 		return CE_ERROR_PARSING_SOURCE;
 	}
@@ -1512,7 +1514,7 @@ ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const ch
 
 		//  jpeg files
 		//
-		if (!stricmp(extension, "jpg") || !stricmp(extension, "jpeg"))
+		if (V_strieq(extension, "jpg") || V_strieq(extension, "jpeg"))
 		{
 			// convert from the jpeg file format to the TGA file format
 			nErrorCode = ImgUtl_ConvertJPEGToTGA(pInPath, tgaPath, false);
@@ -1527,7 +1529,7 @@ ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const ch
 		}
 		//  bmp files
 		//
-		else if (!stricmp(extension, "bmp"))
+		else if (V_strieq(extension, "bmp"))
 		{
 			// convert from the bmp file format to the TGA file format
 			nErrorCode = ImgUtl_ConvertBMPToTGA(pInPath, tgaPath);
@@ -1543,7 +1545,7 @@ ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const ch
 		}
 		//  vtf files
 		//
-		else if (!stricmp(extension, "vtf"))
+		else if (V_strieq(extension, "vtf"))
 		{
 			// if the file is already in the vtf format there's no need to convert it.
 			convertTGAToVTF = false;

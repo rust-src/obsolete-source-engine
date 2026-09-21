@@ -11,12 +11,42 @@
 #pragma once
 #endif
 
+#include <type_traits>
+
 #define TICK_INTERVAL			(gpGlobals->interval_per_tick)
 
+template<typename TDelta, typename TValue>
+using TimeDeltaConcept = typename std::enable_if_t<
+	std::is_integral_v<TDelta> ||
+	std::is_floating_point_v<TDelta>, TValue>;
 
-#define TIME_TO_TICKS( dt )		( (int)( 0.5f + (float)(dt) / TICK_INTERVAL ) )
-#define TICKS_TO_TIME( t )		( TICK_INTERVAL *( t ) )
-#define ROUND_TO_TICKS( t )		( TICK_INTERVAL * TIME_TO_TICKS( t ) )
+template<typename TDelta>
+[[nodiscard]]
+inline
+TimeDeltaConcept<TDelta, int>
+TIME_TO_TICKS( TDelta dt )
+{
+	return static_cast<int>( 0.5F + static_cast<float>( dt ) / TICK_INTERVAL );
+}
+
+template<typename TDelta>
+[[nodiscard]]
+inline
+TimeDeltaConcept<TDelta, float>
+TICKS_TO_TIME( TDelta dt )
+{
+	return TICK_INTERVAL * dt;
+}
+
+template<typename TDelta>
+[[nodiscard]]
+inline
+TimeDeltaConcept<TDelta, float>
+ROUND_TO_TICKS( TDelta dt )
+{
+	return TICK_INTERVAL * TIME_TO_TICKS( dt );
+}
+
 #define TICK_NEVER_THINK		(-1)
 
 #if defined( TF_DLL )

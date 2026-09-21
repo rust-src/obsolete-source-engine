@@ -274,7 +274,8 @@ void COptionsSubAudio::OnApplyChanges()
 		Snd_PitchQuality.SetValue(false);
 		break;
 	default:
-		Assert("Undefined sound quality setting.");
+		Assert("Undefined sound quality setting. Fallback to high quality");
+		[[fallthrough]];
 	case SOUNDQUALITY_HIGH:
 		dsp_slow_cpu.SetValue(false);
 		Snd_PitchQuality.SetValue(true);
@@ -338,7 +339,7 @@ bool COptionsSubAudio::RequiresRestart()
 //-----------------------------------------------------------------------------
 void COptionsSubAudio::OnCommand( const char *command )
 {
-	if ( !stricmp( command, "TestSpeakers" ) )
+	if ( V_strieq( command, "TestSpeakers" ) )
 	{
 		// ask them if they REALLY want to test the speakers if they're in a game already.
 		if (engine->IsConnected())
@@ -366,7 +367,7 @@ void COptionsSubAudio::OnCommand( const char *command )
 			RunTestSpeakers();
 		}
 	}
-   else if ( !stricmp( command, "ShowThirdPartyAudioCredits" ) )
+   else if ( V_strieq( command, "ShowThirdPartyAudioCredits" ) )
    {
       OpenThirdPartySoundCreditsDialog();
    }

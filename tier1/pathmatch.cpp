@@ -54,6 +54,7 @@
 #include <map>
 #include <string>
 #include <time.h>
+#include "tier1/strtools.h"
 
 // Enable to do pathmatch caching. Beware: this code isn't threadsafe.
 // #define DO_PATHMATCH_CACHE
@@ -427,8 +428,8 @@ static bool Descend( char *pPath, size_t nStartIdx, bool bAllowBasenameMismatch,
 
         // the candidate must match the target, but not be a case-identical match (we would
         // have looked there in the short-circuit code above, so don't look again)
-        bool bMatches = ( strcasecmp( CDirTrimmer(pszComponent, cbComponent), pEntry->d_name ) == 0 &&
-                          strcmp( CDirTrimmer(pszComponent, cbComponent), pEntry->d_name ) != 0 );
+        bool bMatches = ( V_strieq( CDirTrimmer(pszComponent, cbComponent), pEntry->d_name ) &&
+                          !V_streq( CDirTrimmer(pszComponent, cbComponent), pEntry->d_name ) );
 
         if ( bMatches )
         {
@@ -570,7 +571,8 @@ PathMod_t pathmatch( const char *pszIn, char **ppszOut, bool bAllowBasenameMisma
 			if ( *p == '/' )
 				pBasename = p+1;
 
-			*p = tolower(*p);
+			// dimhotepus: tolower -> V_tolower.
+			*p = V_tolower(*p);
 			p++;
 		}
 		if ( __real_access( pPath, F_OK ) == 0 )

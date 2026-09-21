@@ -77,7 +77,7 @@ void ConsoleLogFileCallback( IConVar *var, const char *pOldValue, float flOldVal
 	else
 	{
 		const char *extension = Q_GetFileExtension( logFile );
-		if ( !extension || ( Q_strcasecmp( extension, "log" ) && Q_strcasecmp( extension, "txt" ) ) )
+		if ( !extension || ( !V_strieq( extension, "log" ) && !V_strieq( extension, "txt" ) ) )
 		{
 			char szTemp[MAX_PATH];
 			V_sprintf_safe( szTemp, "%s.log", logFile );
@@ -88,7 +88,7 @@ void ConsoleLogFileCallback( IConVar *var, const char *pOldValue, float flOldVal
 	
 	if ( !COM_IsValidPath( logFile ) )
 	{
-		con_debuglog = CommandLine()->FindParm( "-condebug" ) != 0;
+		con_debuglog = CommandLine()->HasParm( "-condebug" );
 	}
 	else
 	{
@@ -236,8 +236,8 @@ void Con_ShowConsole_f()
 	// make sure we're allowed to see the console
 	if ( con_enable.GetBool() ||
 		developer.GetInt() ||
-		CommandLine()->CheckParm("-console") ||
-		CommandLine()->CheckParm("-rpt") )
+		CommandLine()->HasParm("-console") ||
+		CommandLine()->HasParm("-rpt") )
 	{
 		// show the console
 		EngineVGui()->ShowConsole();
@@ -366,18 +366,18 @@ void Con_Init()
 	// Check -consolelog arg and set con_logfile if it's present. This gets some messages logged
 	//  that we would otherwise miss due to con_logfile being set in the .cfg file.
 	const char *filename = NULL;
-	if ( CommandLine()->CheckParm( "-consolelog", &filename ) && filename && filename[ 0 ] )
+	if ( CommandLine()->CheckParm( "-consolelog", &filename ) && !Q_isempty( filename ) )
 	{
 		con_logfile.SetValue( filename );
 	}
 #else
-	bool bRPTClient = ( CommandLine()->FindParm( "-rpt" ) != 0 );
-	con_debuglog = bRPTClient || ( CommandLine()->FindParm( "-condebug" ) != 0 );
-	con_debuglogmapprefixed = CommandLine()->FindParm( "-makereslists" ) != 0;
+	bool bRPTClient = CommandLine()->HasParm( "-rpt" );
+	con_debuglog = bRPTClient || CommandLine()->HasParm( "-condebug" );
+	con_debuglogmapprefixed = CommandLine()->HasParm( "-makereslists" );
 	if ( con_debuglog )
 	{
 		con_logfile.SetValue( "console.log" );
-		if ( bRPTClient || ( CommandLine()->FindParm( "-conclearlog" ) ) )
+		if ( bRPTClient || ( CommandLine()->HasParm( "-conclearlog" ) ) )
 		{
 			GetConsoleLogManager().RemoveConsoleLogFile();
 		}
@@ -487,19 +487,19 @@ void Con_ColorPrint( const Color& clr, char const *msg )
 		{
 		case 1:
 			// if line does not contain keyword do not print the line
-			if ( pszText && ( *pszText != '\0' ) && ( Q_stristr( msg, pszText ) == NULL ))
+			if ( !Q_isempty( pszText ) && ( Q_stristr( msg, pszText ) == NULL ))
 				return;
-			if ( pszIgnoreText && *pszIgnoreText && ( Q_stristr( msg, pszIgnoreText ) != NULL ) )
+			if ( !Q_isempty( pszIgnoreText ) && ( Q_stristr( msg, pszIgnoreText ) != NULL ) )
 				return;
 			break;
 
 		case 2:
-			if ( pszIgnoreText && *pszIgnoreText && ( Q_stristr( msg, pszIgnoreText ) != NULL ) )
+			if ( !Q_isempty( pszIgnoreText ) && ( Q_stristr( msg, pszIgnoreText ) != NULL ) )
 				return;
 			// if line does not contain keyword print it in a darker color
-			if ( pszText && ( *pszText != '\0' ) && ( Q_stristr( msg, pszText ) == NULL ))
+			if ( !Q_isempty( pszText ) && ( Q_stristr( msg, pszText ) == NULL ))
 			{
-				Color mycolor(200, 200, 200, 150 );
+				Color mycolor( 200, 200, 200, 150 );
 				g_pCVar->ConsoleColorPrintf( mycolor, "%s", msg );
 				return;
 			}
@@ -1245,13 +1245,14 @@ void CConPanel::PaintBackground()
 		}
 		else
 		{
+			char buffer[32];
 			V_swprintf_safe(ver,
 #ifdef _WIN32
 				L"Server '%S' Map '%S'",
 #else
 				L"Server '%ls' Map '%ls'",
 #endif
-				cl.m_NetChannel->GetRemoteAddress().ToString(), cl.m_szLevelBaseName );
+				cl.m_NetChannel->GetRemoteAddress().ToString_safe(buffer), cl.m_szLevelBaseName );
 		}
 
 		int tall = vgui::surface()->GetFontTall( m_hFont );
@@ -1264,7 +1265,7 @@ void CConPanel::PaintBackground()
 //-----------------------------------------------------------------------------
 // Purpose: Creates the Console VGUI object
 //-----------------------------------------------------------------------------
-static CConPanel *conPanel = NULL;
+static CConPanel *conPanel = nullptr;
 
 void Con_CreateConsolePanel( vgui::Panel *parent )
 {
@@ -1273,6 +1274,13 @@ void Con_CreateConsolePanel( vgui::Panel *parent )
 	{
 		conPanel->SetVisible(false);
 	}
+}
+
+// dimhotepus: Pair with create.
+void Con_DestroyConsolePanel()
+{
+	conPanel->MarkForDeletion();
+	conPanel = nullptr;
 }
 
 vgui::Panel* Con_GetConsolePanel()

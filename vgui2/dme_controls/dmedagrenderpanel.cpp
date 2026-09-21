@@ -257,17 +257,17 @@ void CDmeDagRenderPanel::DrawJointNames( CDmeDag *pRoot, CDmeDag *pDag, const ma
 		char pJointName[512];
 		if ( nJointIndex >= 0 )
 		{
-			Q_snprintf( pJointName, sizeof(pJointName), "%d : %s", nJointIndex, pJoint->GetName() );
+			V_sprintf_safe( pJointName, "%zd : %s", nJointIndex, pJoint->GetName() );
 		}
 		else
 		{
-			Q_snprintf( pJointName, sizeof(pJointName), "%s", pJoint->GetName() );
+			V_strcpy_safe( pJointName, pJoint->GetName() );
 		}
-		g_pMatSystemSurface->DrawColoredText( m_hFont, vecPanelPos.x + 5, vecPanelPos.y, 255, 255, 255, 255, pJointName );
+		g_pMatSystemSurface->DrawColoredText( m_hFont, vecPanelPos.x + 5, vecPanelPos.y, 255, 255, 255, 255, "%s", pJointName );
 	}
 
-	int nCount = pDag->GetChildCount();
-	for ( int i = 0; i < nCount; ++i )
+	intp nCount = pDag->GetChildCount();
+	for ( intp i = 0; i < nCount; ++i )
 	{
 		CDmeDag *pChild = pDag->GetChild(i);
 		if ( !pChild )

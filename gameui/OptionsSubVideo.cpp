@@ -278,7 +278,7 @@ public:
 		{
 			// don't allow choice of lower dxlevels than the default, 
 			// unless we're already at that lower level or have it forced
-			if (!CommandLine()->CheckParm("-dxlevel") &&
+			if (!CommandLine()->HasParm("-dxlevel") &&
 				dxl != config.dxSupportLevel &&
 				dxl < pKeyValues->GetInt("ConVar.mat_dxlevel"))
 				continue;
@@ -975,7 +975,7 @@ public:
 
 	void OnCommand( const char *command ) override
 	{
-		if ( !stricmp(command, "OK") )
+		if ( V_strieq(command, "OK") )
 		{
 			if ( RequiresRestart() )
 			{

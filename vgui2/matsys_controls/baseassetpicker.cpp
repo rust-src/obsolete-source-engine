@@ -307,7 +307,7 @@ bool CAssetTreeView::SelectFolder_R( intp nItemID, const char *pPath )
 
 	KeyValues *kv = GetItemData( nItemID );
 	const char *pTestPath = kv->GetString( "path" );
-	if ( !Q_stricmp( pTestPath, pPath ) )
+	if ( V_strieq( pTestPath, pPath ) )
 	{
 		AddSelectedItem( nItemID, true, false, true );
 		return true;
@@ -570,7 +570,7 @@ bool CAssetCache::DoesExtensionMatch( CachedAssetList_t& info, const char *pFile
 	intp nCount = info.m_Ext.Count();
 	for ( intp i = 0; i < nCount; ++i )
 	{
-		if ( !Q_stricmp( info.m_Ext[i], pChildExt ) )
+		if ( V_strieq( info.m_Ext[i], pChildExt ) )
 			return true;
 	}
 
@@ -692,11 +692,10 @@ bool CAssetCache::ContinueSearchForAssets( AssetList_t hList, float flDuration )
 			pStartingFile = g_pFullFileSystem->FindNext( list.m_hFind );
 		}
 
-		RunCodeAtScopeExit(g_pFullFileSystem->FindClose(list.m_hFind));
-
 		if ( !AddFilesInDirectory( list, pStartingFile, pFilePath, hCurrentDir, flStartTime, flDuration ) )
 			return false;
 
+		g_pFullFileSystem->FindClose(list.m_hFind);
 		list.m_hFind = FILESYSTEM_INVALID_FIND_HANDLE;
 		list.m_DirectoriesToCheck.Remove( list.m_DirectoriesToCheck.Head() );
 	}
@@ -1023,7 +1022,7 @@ void CBaseAssetPicker::SetInitialSelection( const char *pAssetName )
 			if ( !pTestAssetName )
 				continue;
 				
-			if ( Q_stricmp( pTestAssetName, pAssetName ) == 0 )
+			if ( V_strieq( pTestAssetName, pAssetName ) )
 			{
 				m_pAssetBrowser->SetSelectedCell( i, 0 );
 				break;
@@ -1089,7 +1088,7 @@ bool CBaseAssetPicker::IsAssetVisible( intp nAssetIndex )
 
 	// Filter based on name
 	const char *pAssetName = info.m_AssetName;
-	if ( !Q_strcmp( pAssetName, m_SelectedAsset ) )
+	if ( V_streq( pAssetName, m_SelectedAsset ) )
 		return true;
 
 	if ( m_Filter.Length() && !Q_stristr( pAssetName, m_Filter.Get() ) )
@@ -1122,7 +1121,7 @@ void CBaseAssetPicker::AddAssetToList( intp nAssetIndex )
 	kv->SetInt( "root", bInRootDir );
 	intp nItemID = m_pAssetBrowser->AddItem( kv, 0, false, false );
 	
-	if ( m_pAssetBrowser->GetSelectedItemsCount() == 0 && !Q_strcmp( m_SelectedAsset, info.m_AssetName ) )
+	if ( m_pAssetBrowser->GetSelectedItemsCount() == 0 && V_streq( m_SelectedAsset, info.m_AssetName ) )
 	{
 		m_pAssetBrowser->SetSelectedCell( nItemID, 0 );
 	}
@@ -1270,7 +1269,7 @@ const char *CBaseAssetPicker::GetModPath( intp nModIndex )
 //-----------------------------------------------------------------------------
 void CBaseAssetPicker::OnCommand( const char *pCommand )
 {
-	if ( !Q_stricmp( pCommand, "AssetRescan" ) )
+	if ( V_strieq( pCommand, "AssetRescan" ) )
 	{
 		RescanAssets();
 		return;
@@ -1593,7 +1592,7 @@ void CBaseAssetPickerFrame::PostMessageAndClose( KeyValues *pKeyValues )
 //-----------------------------------------------------------------------------
 void CBaseAssetPickerFrame::OnCommand( const char *pCommand )
 {
-	if ( !Q_stricmp( pCommand, "Open" ) )
+	if ( V_strieq( pCommand, "Open" ) )
 	{
 		KeyValues *pActionKeys = new KeyValues( "AssetSelected" );
 		if ( !m_pPicker->IsMultiselectEnabled() )
@@ -1616,7 +1615,7 @@ void CBaseAssetPickerFrame::OnCommand( const char *pCommand )
 		return;
 	}
 
-	if ( !Q_stricmp( pCommand, "Cancel" ) )
+	if ( V_strieq( pCommand, "Cancel" ) )
 	{
 		CloseModal();
 		return;

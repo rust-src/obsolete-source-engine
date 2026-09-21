@@ -76,7 +76,7 @@ void CAI_BlendedMotor::MoveStart()
 	{
 		m_nPrimarySequence = GetSequence();
 		m_flStartCycle = GetCycle();
-		m_flCurrRate = 0.4;
+		m_flCurrRate = 0.4f;
 
 		// Assert( !GetOuter()->HasMovement( m_nStartSequence ) );
 

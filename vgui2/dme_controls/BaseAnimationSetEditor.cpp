@@ -382,7 +382,7 @@ CDmeChannel* CBaseAnimationSetEditor::FindImportChannel( CDmeChannel *pChannel, 
 		const char *pImportName = pImportTargetElement->GetName();
 		
 		// Element name has to match exactly or be of the form *(channel name)*
-		if ( !Q_stricmp( pTargetName, pImportName ) )
+		if ( V_strieq( pTargetName, pImportName ) )
 			return pImportChannel;
 
 		char pTemp[512];
@@ -394,7 +394,7 @@ CDmeChannel* CBaseAnimationSetEditor::FindImportChannel( CDmeChannel *pChannel, 
 		if ( !pParen2 )
 			continue;
 		*pParen2 = 0;
-		if ( !Q_stricmp( pImportName, pTemp ) )
+		if ( V_strieq( pImportName, pTemp ) )
 			return pImportChannel;
 	}
 	return NULL;
@@ -438,7 +438,7 @@ void CBaseAnimationSetEditor::TransformImportedChannel( CDmeChannel *pChannel )
 
 		// Deal with the 'up axis' rotation
 		matrix3x4_t rootTransform;
-		RadianEuler angles( M_PI / 2.0f, 0.0f, M_PI / 2.0f );
+		RadianEuler angles( M_PI_F / 2.0f, 0.0f, M_PI_F / 2.0f );
 		if ( bHasPreTransform )
 		{
 			AngleMatrix( angles, rootTransform );
@@ -855,7 +855,7 @@ void CBaseAnimationSetEditor::SetupFileOpenDialog( vgui::FileOpenDialog *pDialog
 	Assert( !bOpenFile );
 	pDialog->SetTitle( "Save Facial Animation As", true );
 
-	Assert( !V_strcmp( pFileFormat, "facial_animation" ) );
+	Assert( V_streq( pFileFormat, "facial_animation" ) );
 	pDialog->SetStartDirectoryContext( "facial_animation_export", pStartingDir );
 	pDialog->AddFilter( "*.*", "All Files (*.*)", false );
 	pDialog->AddFilter( "*.dmx", "Facial animation file (*.dmx)", true, pFileFormat );

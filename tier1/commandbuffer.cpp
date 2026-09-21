@@ -31,7 +31,7 @@ struct cmdalias_t
 //-----------------------------------------------------------------------------
 CCommandBuffer::CCommandBuffer( ) : m_Commands( 32, 32 )
 {
-	memset(m_pArgSBuffer, 0, sizeof(m_pArgSBuffer));
+	BitwiseClear(m_pArgSBuffer);
 	m_nLastUsedArgSSize = 0;
 	m_nArgSBufferSize = 0;
 	m_nCurrentTick = 0;
@@ -225,14 +225,14 @@ bool CCommandBuffer::AddText( const char *pText, int nTickDelay )
 			continue;
 
 		const char *pArgS;
-		char *pArgV0 = (char*)_alloca( nCommandLength+1 );
+		char *pArgV0 = stackallocT( char, nCommandLength+1 );
 		CUtlBuffer bufParse( pCurrentCommand, nCommandLength, CUtlBuffer::TEXT_BUFFER | CUtlBuffer::READ_ONLY ); 
 		ParseArgV0( bufParse, pArgV0, nCommandLength+1, &pArgS );
 		if ( pArgV0[0] == 0 )
 			continue;
 
 		// Deal with the special 'wait' command
-		if ( !Q_stricmp( pArgV0, "wait" ) && IsWaitEnabled() )
+		if ( V_strieq( pArgV0, "wait" ) && IsWaitEnabled() )
 		{
 			int nDelay = pArgS ? atoi( pArgS ) : m_nWaitDelayTicks;
 			nTick += nDelay;

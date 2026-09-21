@@ -561,7 +561,7 @@ bool CStaticProp::Init( int index, StaticPropLump_t &lump, model_t *pModel )
 	{
 		modelinfo->GetIlluminationPoint( m_pModel, this, m_Origin, m_Angles, &m_LightingOrigin );
 	}
-	g_MakingDevShots = CommandLine()->FindParm( "-makedevshots" ) ? true : false;
+	g_MakingDevShots = CommandLine()->HasParm( "-makedevshots" );
 
 	// If we do Mod_SetMaterialVarFlag() while running with the dedicated server, we crash.
 	//  RJ said he'd save my butt and look into this. (Hip hip horray! We love RJ!)
@@ -934,7 +934,7 @@ void CStaticProp::DisplayStaticPropInfo( int nInfoType )
 	switch( nInfoType )
 	{
 	case 1:
-		Q_snprintf( buf, sizeof( buf ), "%s", modelloader->GetName( m_pModel ) );
+		V_strcpy_safe( buf, modelloader->GetName( m_pModel ) );
 		break;
 
 	case 2:
@@ -1177,7 +1177,7 @@ void CStaticProp::CreateVPhysics( IPhysicsEnvironment *pPhysEnv, IVPhysicsKeyHan
 		while ( !pParse->Finished() )
 		{
 			const char *pBlock = pParse->GetCurrentBlockName();
-			if ( !strcmpi( pBlock, "solid" ) )
+			if ( V_strieq( pBlock, "solid" ) )
 			{
 				pParse->ParseSolid( &solid, pDefaults );
 				break;
@@ -1496,11 +1496,8 @@ void CStaticPropMgr::LevelInitClient()
 
 	extern ConVar r_proplightingfromdisk;
 
-	bool bNeedsMapAccess = r_proplightingfromdisk.GetBool();
-	if ( bNeedsMapAccess )
-	{
-		g_pFileSystem->BeginMapAccess();
-	}
+	const bool bNeedsMapAccess = r_proplightingfromdisk.GetBool();
+	const LocalMapAccessScope mapscope{ bNeedsMapAccess, g_pFileSystem };
 
 	Assert( m_bLevelInitialized );
 	Assert( !m_bClientInitialized );
@@ -1531,11 +1528,6 @@ void CStaticPropMgr::LevelInitClient()
 	PrecacheLighting();
 
 	m_bClientInitialized = true;
-
-	if ( bNeedsMapAccess )
-	{
-		g_pFileSystem->EndMapAccess();
-	}
 #endif
 }
 
@@ -2320,3 +2312,15 @@ void Cmd_PropCrosshair_f (void)
 
 static ConCommand prop_crosshair( "prop_crosshair", Cmd_PropCrosshair_f, "Shows name for prop looking at", FCVAR_CHEAT );
 
+// dimhotepus: RAII for map access
+LocalMapAccessScope::LocalMapAccessScope( bool enabled, IFileSystem *fileSystem )
+	: bEnabled( enabled ),
+	pFileSystem{fileSystem}
+{
+	if ( enabled ) fileSystem->BeginMapAccess();
+}
+
+LocalMapAccessScope::~LocalMapAccessScope()
+{
+	if ( bEnabled ) pFileSystem->EndMapAccess();
+}

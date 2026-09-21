@@ -86,7 +86,7 @@ void CVMTPreviewPanel::DrawIn3DMode( bool b3DMode )
 void CVMTPreviewPanel::SetupLightingState()
 {
 	LightDesc_t desc;
-	memset( &desc, 0, sizeof(desc) );
+	BitwiseClear( desc );
 
 	desc.m_Type = MATERIAL_LIGHT_DIRECTIONAL;
 
@@ -498,7 +498,7 @@ void CVMTPreviewPanel::LookAt( const Vector &vecLookAt, float flRadius )
 	float flFOVx = FOV;
 
 	// Compute fov/2 in radians
-	flFOVx *= M_PI / 360.0f;
+	flFOVx *= M_PI_F / 360.0f;
 
 	// Compute an effective fov	based on the aspect ratio 
 	// if the height is smaller than the width
@@ -599,6 +599,7 @@ void CVMTPreviewPanel::Paint( void )
 	int w, h;
 	GetSize( w, h );
 	vgui::MatSystemSurface()->Begin3DPaint( 0, 0, w, h );
+	RunCodeAtScopeExit(vgui::MatSystemSurface()->End3DPaint( ));
 
 	// Deal with refraction
 	if ( m_Material->NeedsPowerOfTwoFrameBufferTexture() )
@@ -628,6 +629,4 @@ void CVMTPreviewPanel::Paint( void )
 	{
 		DrawRectangle();
 	}
-
-	vgui::MatSystemSurface()->End3DPaint( );
 }

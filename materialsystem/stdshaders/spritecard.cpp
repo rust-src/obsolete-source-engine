@@ -41,14 +41,14 @@ int GetDefaultDepthFeatheringValue( void ) //Allow the command-line to go agains
 	{
 #		if( DEFAULT_PARTICLE_FEATHERING_ENABLED == 1 )
 		{
-			if( CommandLine()->CheckParm( "-softparticlesdefaultoff" ) )
+			if( CommandLine()->HasParm( "-softparticlesdefaultoff" ) )
 				iRetVal = 0;
 			else
 				iRetVal = 1;
 		}
 #		else
 		{
-			if( CommandLine()->CheckParm( "-softparticlesdefaulton" ) )
+			if( CommandLine()->HasParm( "-softparticlesdefaulton" ) )
 				iRetVal = 1;
 			else
 				iRetVal = 0;
@@ -416,8 +416,8 @@ SHADER_DRAW
 
 		if ( bZoomSeq2 )
 		{
-			float flZScale=1.0/(params[ZOOMANIMATESEQ2]->GetFloatValue());
-			float C0[4]={ (float)(0.5*(1.0+flZScale)), flZScale, 0, 0 };
+			float flZScale=1.0f/(params[ZOOMANIMATESEQ2]->GetFloatValue());
+			float C0[4]={ 0.5f*(1.0f+flZScale), flZScale, 0, 0 };
 			pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_7, C0,
 				ssize(C0)/4 );
 		}

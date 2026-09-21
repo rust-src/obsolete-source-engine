@@ -789,7 +789,7 @@ TextImage *Label::GetTextImage()
 //-----------------------------------------------------------------------------
 bool Label::RequestInfo(KeyValues *outputData)
 {
-	if (!stricmp(outputData->GetName(), "GetText"))
+	if (V_strieq(outputData->GetName(), "GetText"))
 	{
 		wchar_t wbuf[256];
 		_textImage->GetText(wbuf);
@@ -1170,39 +1170,39 @@ void Label::ApplySettings( KeyValues *inResourceData )
 	const char *alignmentString = inResourceData->GetString( "textAlignment", "" );
 	int align = -1;
 
-	if ( !stricmp(alignmentString, "north-west") )
+	if ( V_strieq(alignmentString, "north-west") )
 	{
 		align = a_northwest;
 	}
-	else if ( !stricmp(alignmentString, "north") )
+	else if ( V_strieq(alignmentString, "north") )
 	{
 		align = a_north;
 	}
-	else if ( !stricmp(alignmentString, "north-east") )
+	else if ( V_strieq(alignmentString, "north-east") )
 	{
 		align = a_northeast;
 	}
-	else if ( !stricmp(alignmentString, "west") )
+	else if ( V_strieq(alignmentString, "west") )
 	{
 		align = a_west;
 	}
-	else if ( !stricmp(alignmentString, "center") )
+	else if ( V_strieq(alignmentString, "center") )
 	{
 		align = a_center;
 	}
-	else if ( !stricmp(alignmentString, "east") )
+	else if ( V_strieq(alignmentString, "east") )
 	{
 		align = a_east;
 	}
-	else if ( !stricmp(alignmentString, "south-west") )
+	else if ( V_strieq(alignmentString, "south-west") )
 	{
 		align = a_southwest;
 	}
-	else if ( !stricmp(alignmentString, "south") )
+	else if ( V_strieq(alignmentString, "south") )
 	{
 		align = a_south;
 	}
-	else if ( !stricmp(alignmentString, "south-east") )
+	else if ( V_strieq(alignmentString, "south-east") )
 	{
 		align = a_southeast;
 	}
@@ -1215,11 +1215,9 @@ void Label::ApplySettings( KeyValues *inResourceData )
 	// the control we are to be associated with may not have been created yet,
 	// so keep a pointer to it's name and calculate it when we can
 	const char *associateName = inResourceData->GetString("associate", "");
-	if (associateName[0] != 0)
+	if (!Q_isempty(associateName))
 	{
-		intp len = Q_strlen(associateName) + 1;
-		_associateName = new char[ len ];
-		Q_strncpy( _associateName, associateName, len );
+		_associateName = V_strdup(associateName);
 	}
 
 	if (inResourceData->GetInt("dulltext", 0) == 1)
@@ -1242,9 +1240,7 @@ void Label::ApplySettings( KeyValues *inResourceData )
 	if (*overrideFont)
 	{
 		delete [] _fontOverrideName;
-		intp len = Q_strlen(overrideFont) + 1;
-		_fontOverrideName = new char[ len ];
-		Q_strncpy(_fontOverrideName, overrideFont, len );
+		_fontOverrideName = V_strdup(overrideFont);
 		SetFont(pScheme->GetFont(_fontOverrideName, IsProportional()));
 	}
 	else if (_fontOverrideName)

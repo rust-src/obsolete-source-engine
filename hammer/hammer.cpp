@@ -162,7 +162,7 @@ static int WrapFunctionWithMinidumpHandler( int (*pfn)(void *pParam), void *pPar
 {
 	int nRetVal;
 
-	if ( !Plat_IsInDebugSession() && !CommandLine()->FindParm( "-nominidumps") )
+	if ( !Plat_IsInDebugSession() && !CommandLine()->HasParm( "-nominidumps") )
 	{
 		MinidumpWrapperHelper_t info;
 		info.m_pfn = pfn;
@@ -359,7 +359,7 @@ class CHammerCmdLine : public CCommandLineInfo
 
 		void ParseParam(LPCTSTR lpszParam, BOOL bFlag, BOOL bLast) override
 		{
-			if ((!m_bGame) && (bFlag && !stricmp(lpszParam, "game")))
+			if ((!m_bGame) && (bFlag && V_strieq(lpszParam, "game")))
 			{
 				m_bGame = true;	
 			}
@@ -372,11 +372,11 @@ class CHammerCmdLine : public CCommandLineInfo
 
 				m_bGame = false;
 			}
-			else if (bFlag && !strcmpi(lpszParam, "nologo"))
+			else if (bFlag && V_strieq(lpszParam, "nologo"))
 			{
 				m_bShowLogo = false;
 			}
-			else if (bFlag && !strcmpi(lpszParam, "makelib"))
+			else if (bFlag && V_strieq(lpszParam, "makelib"))
 			{
 				bMakeLib = TRUE;
 			}
@@ -384,7 +384,7 @@ class CHammerCmdLine : public CCommandLineInfo
 			{
 				MakePrefabLibrary(lpszParam);
 			}
-			else if ((!m_bConfigDir) && (bFlag && !stricmp(lpszParam, "configdir")))
+			else if ((!m_bConfigDir) && (bFlag && V_strieq(lpszParam, "configdir")))
 			{
 				m_bConfigDir = true;	
 			}
@@ -942,7 +942,7 @@ bool CHammer::InitSessionGameConfig(const char *szGame)
 	CGameConfig *pConfig = NULL;
 	bool bManualChoice = false;
 
-	if ( CommandLine()->FindParm( "-chooseconfig" ) )
+	if ( CommandLine()->HasParm( "-chooseconfig" ) )
 	{
 		pConfig = PromptForGameConfig();
 		bManualChoice = true;
@@ -1835,7 +1835,7 @@ BOOL CHammer::PreTranslateMessage(MSG* pMsg)
 		::GetClassNameA( pMsg->hwnd, className, sizeof( className ) );
 
 		// The classname of dialog window in the VGUI model browser and particle browser is AfxWnd100sd in Debug and AfxWnd100s in Release
-		if ( !V_stricmp( className, "edit" ) || V_stristr( className, "AfxWnd" ) )
+		if ( V_strieq( className, "edit" ) || V_stristr( className, "AfxWnd" ) )
 		{
 			// Typing in an edit control. Don't pretranslate, just translate/dispatch.
 			return FALSE;
@@ -2186,7 +2186,7 @@ int CHammer::GetNextAutosaveNumber( CUtlMap<FILETIME, WIN32_FIND_DATA, int> *pFi
 	if ( HANDLE hFile = FindFirstFile( strAutosaveDirectory + "*.vmf_autosave", &fileData );
 		 hFile != INVALID_HANDLE_VALUE )
 	{
-		RunCodeAtScopeExit(	FindClose(hFile) );
+		RunCodeAtScopeExit( FindClose(hFile) );
 
 		//go through and for each file check to see if it is an autosave for this map; also keep track of total file size
 		//for directory.
@@ -2378,9 +2378,6 @@ void CHammer::Autosave( void )
 //-----------------------------------------------------------------------------
 bool CHammer::VerifyAutosaveDirectory( char *szAutosaveDirectory ) const
 {	
-	HANDLE hDir;
-	HANDLE hTestFile;
-
 	char szRootDir[MAX_PATH];
 	if ( szAutosaveDirectory )
 	{
@@ -2407,7 +2404,7 @@ bool CHammer::VerifyAutosaveDirectory( char *szAutosaveDirectory ) const
 		}
 	}
 
-	hDir = CreateFile (
+	HANDLE hDir = CreateFile (
 		strAutosaveDirectory,
 		GENERIC_READ,
 		FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
@@ -2416,7 +2413,6 @@ bool CHammer::VerifyAutosaveDirectory( char *szAutosaveDirectory ) const
 		FILE_FLAG_BACKUP_SEMANTICS,
 		NULL
 		);
-
 	if ( hDir == INVALID_HANDLE_VALUE )
 	{
 		bool bDirResult = CreateDirectory( strAutosaveDirectory, NULL );
@@ -2428,35 +2424,30 @@ bool CHammer::VerifyAutosaveDirectory( char *szAutosaveDirectory ) const
 	}    
 	else
 	{
-		CloseHandle( hDir );
+		RunCodeAtScopeExit( CloseHandle( hDir ) );
 
-		hTestFile = CreateFile( strAutosaveDirectory + "test.txt", 
+		HANDLE hTestFile = CreateFile( strAutosaveDirectory + "test.txt", 
 			GENERIC_READ,
 			FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
 			NULL,
 			CREATE_NEW,
-			FILE_FLAG_BACKUP_SEMANTICS,
+			// dimhotepus: Use delete on close semantic.
+			FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_DELETE_ON_CLOSE,
 			NULL
 			);
-		
 		if ( hTestFile == INVALID_HANDLE_VALUE )
 		{
-			 if ( GetLastError() == ERROR_ACCESS_DENIED )
-			 {
-				 AfxMessageBox( "The autosave directory is marked as read only.\n\nPlease remove the read only attribute or select a new directory in Tools->Options->General.\nThe autosave feature will be disabled.", MB_OK | MB_ICONERROR );
-				 return false;
-			 }
-			 else
-			 {
-				 AfxMessageBox( "There is a problem with the autosave directory.\n\nPlease select a new directory in Tools->Options->General.\nThe autosave feature will be disabled.", MB_OK | MB_ICONERROR );
-				 return false;
-			 }
+			if ( GetLastError() == ERROR_ACCESS_DENIED )
+			{
+				AfxMessageBox( "The autosave directory is marked as read only.\n\nPlease remove the read only attribute or select a new directory in Tools->Options->General.\nThe autosave feature will be disabled.", MB_OK | MB_ICONERROR );
+				return false;
+			}
 
-			 
+			AfxMessageBox( "There is a problem with the autosave directory.\n\nPlease select a new directory in Tools->Options->General.\nThe autosave feature will be disabled.", MB_OK | MB_ICONERROR );
+			return false;
 		}
 
-		CloseHandle( hTestFile );
-		DeleteFile( strAutosaveDirectory + "test.txt" );	
+		RunCodeAtScopeExit( CloseHandle( hTestFile ) );
 	}
 
 	return true;

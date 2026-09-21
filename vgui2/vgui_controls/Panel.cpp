@@ -263,7 +263,7 @@ public:
 
 	void AddPanelToContext( KeyBindingContextHandle_t handle, Panel *panel )
 	{
-		if ( !panel->GetName() || !panel->GetName()[ 0 ] )
+		if ( Q_isempty( panel->GetName() ) )
 		{
 			Warning( "Can't add Keybindings Context for unnamed panels\n" );
 			return;
@@ -815,7 +815,7 @@ void Panel::SetName( const char *panelName )
 	// No change?
 	if ( _panelName && 
 		panelName && 
-		!Q_strcmp( _panelName, panelName ) )
+		V_streq( _panelName, panelName ) )
 	{
 		return;
 	}
@@ -828,9 +828,7 @@ void Panel::SetName( const char *panelName )
 
 	if (panelName)
 	{
-		intp len = Q_strlen(panelName) + 1;
-		_panelName = new char[ len ];
-		Q_strncpy( _panelName, panelName, len );
+		_panelName = V_strdup( panelName );
 	}
 }
 
@@ -971,7 +969,7 @@ Panel *Panel::GetParent()
 	    if (parent)
 	    {
 		    Panel *pParent = ipanel()->GetPanel(parent, GetControlsModuleName());
-		    Assert(!pParent || !strcmp(pParent->GetModuleName(), GetControlsModuleName()));
+		    Assert(!pParent || V_streq(pParent->GetModuleName(), GetControlsModuleName()));
 		    return pParent;
 	    }
 	}
@@ -1406,7 +1404,7 @@ void Panel::SetParent(Panel *newParent)
 {
 	// Assert that the parent is from the same module as the child
 	// FIXME: !!! work out how to handle this properly!
-	//	Assert(!newParent || !strcmp(newParent->GetModuleName(), GetControlsModuleName()));
+	//	Assert(!newParent || V_streq(newParent->GetModuleName(), GetControlsModuleName()));
 
 	Panel* pCurrentParent = GetParent();
 	if ( pCurrentParent )
@@ -1540,6 +1538,22 @@ void Panel::MoveToFront(void)
 }
 
 //-----------------------------------------------------------------------------
+// Purpose: Moves the panel to the back of the z-order
+//-----------------------------------------------------------------------------
+void Panel::MoveToBack(void)
+{
+	// FIXME: only use ipanel() as per src branch?
+	if (IsPopup())
+	{
+		surface()->BringToFront(GetParent()->GetVPanel());
+	}
+	else
+	{
+		ipanel()->MoveToBack(GetVPanel());
+	}
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: Iterates up the hierarchy looking for a particular parent
 //-----------------------------------------------------------------------------
 bool Panel::HasParent(VPANEL potentialParent)
@@ -1562,7 +1576,7 @@ int Panel::FindChildIndexByName(const char *childName)
 		if (!pChild)
 			continue;
 
-		if (!stricmp(pChild->GetName(), childName))
+		if (V_strieq(pChild->GetName(), childName))
 		{
 			return i;
 		}
@@ -1600,7 +1614,7 @@ Panel *Panel::FindChildByName(const char *childName, bool recurseDown)
 		if (!pChild)
 			continue;
 
-		if (!V_stricmp(pChild->GetName(), childName))
+		if (V_strieq(pChild->GetName(), childName))
 		{
 			idx = m_dictChidlren.Insert( childName );
 			m_dictChidlren[ idx ].Set( pChild->GetVPanel() );
@@ -1634,7 +1648,7 @@ Panel *Panel::FindSiblingByName(const char *siblingName)
 	{
 		VPANEL sibling = ipanel()->GetChild(GetVParent(), i);
 		Panel *panel = ipanel()->GetPanel(sibling, GetControlsModuleName());
-		if (!stricmp(panel->GetName(), siblingName))
+		if (V_strieq(panel->GetName(), siblingName))
 		{
 			return panel;
 		}
@@ -2203,7 +2217,7 @@ KeyBindingMap_t *Panel::LookupBinding( char const *bindingName )
 		for( intp i = 0; i < c ; ++i )
 		{
 			KeyBindingMap_t *binding = &map->entries[ i ];
-			if ( !Q_stricmp( binding->bindingname, bindingName ) )
+			if ( V_strieq( binding->bindingname, bindingName ) )
 				return binding;
 		}
 
@@ -2222,7 +2236,7 @@ PanelKeyBindingMap *Panel::LookupMapForBinding( char const *bindingName )
 		for( intp i = 0; i < c ; ++i )
 		{
 			KeyBindingMap_t *binding = &map->entries[ i ];
-			if ( !Q_stricmp( binding->bindingname, bindingName ) )
+			if ( V_strieq( binding->bindingname, bindingName ) )
 				return map;
 		}
 
@@ -2267,7 +2281,7 @@ BoundKey_t *Panel::LookupDefaultKey( char const *bindingName )
 		for( intp i = 0; i < c ; ++i )
 		{
 			BoundKey_t *kb = &map->defaultkeys[ i ];
-			if ( !Q_stricmp( kb->bindingname, bindingName ) )
+			if ( V_strieq( kb->bindingname, bindingName ) )
 			{
 				return kb;
 			}
@@ -2287,7 +2301,7 @@ void Panel::LookupBoundKeys( char const *bindingName, CUtlVector< BoundKey_t * >
 		for( intp i = 0; i < c ; ++i )
 		{
 			BoundKey_t *kb = &map->boundkeys[ i ];
-			if ( !Q_stricmp( kb->bindingname, bindingName ) )
+			if ( V_strieq( kb->bindingname, bindingName ) )
 			{
 				list.AddToTail( kb );
 			}
@@ -2531,7 +2545,7 @@ KeyCode Panel::StringToKeyCode( char const *str )
 {
 	for ( auto &&keyName : g_KeyNames )
 	{
-		if ( !Q_stricmp( str, keyName.string ) )
+		if ( V_strieq( str, keyName.string ) )
 			return keyName.code;
 	}
 
@@ -3943,11 +3957,11 @@ bool Panel::IsCursorOver(void)
 //-----------------------------------------------------------------------------
 void Panel::OnCommand(const char *command)
 {
-	if ( !Q_stricmp( "performlayout", command ) )
+	if ( V_strieq( "performlayout", command ) )
 	{
 		InvalidateLayout();
 	}
-	else if ( !Q_stricmp( "reloadscheme", command ) )
+	else if ( V_strieq( "reloadscheme", command ) )
 	{
 		InvalidateLayout( false, true );
 	}
@@ -4082,7 +4096,7 @@ void Panel::PinToSibling( const char *pszSibling, PinCorner_e pinOurCorner, PinC
 	_pinCornerToSibling = pinOurCorner;
 	_pinToSiblingCorner = pinSibling;
 
-	if ( m_pinSibling.Get() && _pinToSibling && pszSibling && !Q_strcmp( _pinToSibling, pszSibling ) )
+	if ( m_pinSibling.Get() && _pinToSibling && pszSibling && V_streq( _pinToSibling, pszSibling ) )
 		return;
 
 	if (_pinToSibling)
@@ -4093,9 +4107,7 @@ void Panel::PinToSibling( const char *pszSibling, PinCorner_e pinOurCorner, PinC
 
 	if (pszSibling)
 	{
-		intp len = Q_strlen(pszSibling) + 1;
-		_pinToSibling = new char[ len ];
-		Q_strncpy( _pinToSibling, pszSibling, len );
+		_pinToSibling = V_strdup( pszSibling );
 	}
 	m_pinSibling = NULL;
 
@@ -4363,7 +4375,7 @@ Panel::PinCorner_e GetPinCornerFromString( const char* pszCornerName )
 
 	for( size_t i=0; i<std::size( g_PinCornerStrings ); ++i )
 	{
-		if ( !Q_stricmp( g_PinCornerStrings[i], pszCornerName ) )
+		if ( V_strieq( g_PinCornerStrings[i], pszCornerName ) )
 		{
 			return (Panel::PinCorner_e)i;
 		}
@@ -4698,7 +4710,8 @@ void Panel::ApplySettings(KeyValues *inResourceData)
 			// Get the color as a string - test whether it is an actual color or a reference to a scheme color
 			const char *pColorStr = inResourceData->GetString( e.m_pszScriptName );
 			Color &clrDest = e.m_colFromScript;
-			if ( pColorStr[0] == '.' || isdigit( pColorStr[0] ) )
+			// dimhotepus: isdigit -> V_isdigit.
+			if ( pColorStr[0] == '.' || V_isdigit( pColorStr[0] ) )
 			{
 				float r = 0.0f, g = 0.0f, b = 0.0f, a = 0.0f;
 				// dimhotepus: Check all 4 color components are present.
@@ -5415,7 +5428,7 @@ void Panel::OnOldMessage(KeyValues *params, VPANEL ifromPanel)
 		static int s_bDebugMessages = -1;
 		if ( s_bDebugMessages == -1 )
 		{
-			s_bDebugMessages = CommandLine()->FindParm( "-vguimessages" ) ? 1 : 0;
+			s_bDebugMessages = CommandLine()->HasParm( "-vguimessages" ) ? 1 : 0;
 		}
 		if ( s_bDebugMessages == 1 )
 		{
@@ -5722,9 +5735,7 @@ void Panel::SetTooltip( BaseTooltip *pToolTip, const char *pszText )
 
 	if ( pszText )
 	{
-		intp len = Q_strlen(pszText) + 1;
-		_tooltipText = new char[ len ];
-		Q_strncpy( _tooltipText, pszText, len );
+		_tooltipText = V_strdup( pszText );
 	}
 }
 
@@ -6116,7 +6127,7 @@ public:
 	{
 		void *data = ( void * )( (*entry->m_pfnLookup)( panel ) );
 		bool b = false;
-		if ( !stricmp( entry->defaultvalue(), "true" )||
+		if ( V_strieq( entry->defaultvalue(), "true" )||
 			atoi( entry->defaultvalue() )!= 0 )
 		{
 			b = true;
@@ -6289,15 +6300,30 @@ void Panel::AddPropertyConverter( char const *typeName, IPanelAnimationPropertyC
 	g_AnimationPropertyConverters.Insert( typeName, converter );
 }
 
+// dimhotepus: Pair with Add.
+void Panel::RemovePropertyConverter( char const *typeName )
+{
+	const auto lookup = g_AnimationPropertyConverters.Find( typeName );
+	if ( lookup != g_AnimationPropertyConverters.InvalidIndex() )
+	{
+		g_AnimationPropertyConverters.RemoveAt( lookup );
+		return;
+	}
+
+	AssertMsg( false, "Missed expected %s property converter when try to remove.", typeName );
+}
+
+static bool g_PanelPropertyConvertersInitialized = false;
+
 //-----------------------------------------------------------------------------
 // Purpose: Static method to initialize all needed converters
 //-----------------------------------------------------------------------------
-void Panel::InitPropertyConverters( void )
+void Panel::InitPropertyConverters()
 {
-	static bool initialized = false;
-	if ( initialized )
+	if ( g_PanelPropertyConvertersInitialized )
 		return;
-	initialized = true;
+
+	g_PanelPropertyConvertersInitialized = true;
 
 	AddPropertyConverter( "float", &floatconverter );
 	AddPropertyConverter( "int", &intconverter );
@@ -6320,6 +6346,34 @@ void Panel::InitPropertyConverters( void )
 	AddPropertyConverter( "proportional_height", &proportional_height_converter );
 
 	AddPropertyConverter( "textureid", &textureidconverter );
+}
+
+// dimhotepus: Pair with Init.
+void Panel::ShutdownPropertyConverters()
+{
+	RemovePropertyConverter( "textureid" );
+
+	RemovePropertyConverter( "proportional_height" );
+	RemovePropertyConverter( "proportional_width" );
+
+	RemovePropertyConverter( "proportional_ypos" );
+	RemovePropertyConverter( "proportional_xpos" );
+
+	// This is an aliased type for proportional float
+	RemovePropertyConverter( "proportional_int" );
+	RemovePropertyConverter( "proportional_float" );
+	
+	RemovePropertyConverter( "vgui::HFont" );
+	RemovePropertyConverter( "HFont" );
+	RemovePropertyConverter( "string" );
+	RemovePropertyConverter( "char" );
+	RemovePropertyConverter( "bool" );
+	//RemovePropertyConverter( "vgui::Color" );
+	RemovePropertyConverter( "Color" );
+	RemovePropertyConverter( "int" );
+	RemovePropertyConverter( "float" );
+
+	g_PanelPropertyConvertersInitialized = false;
 }
 
 bool Panel::InternalRequestInfo( PanelAnimationMap *map, KeyValues *outputData )
@@ -6381,7 +6435,7 @@ PanelAnimationMapEntry *Panel::FindPanelAnimationEntry( char const *scriptname, 
 	{
 		PanelAnimationMapEntry *e = &map->entries[ i ];
 
-		if ( !stricmp( e->name(), scriptname ) )
+		if ( V_strieq( e->name(), scriptname ) )
 		{
 			return e;
 		}
@@ -9032,7 +9086,7 @@ int ComputePos( Panel* pPanel, const char *pszInput, int &nPos, const int& nSize
 
 	}
 
-	if (tf_debug_tabcontainer.GetBool() && !Q_stricmp("TabContainer", pPanel->GetName()))
+	if (tf_debug_tabcontainer.GetBool() && V_strieq("TabContainer", pPanel->GetName()))
 	{
 		Msg("TabContainer nFlags:%x nPos:%d nParentSize:%d nPosDelta:%d nSize:%d GetParent:%p (%s) pszInput:'%s'\n",
 			nFlags, nPos, nParentSize, nPosDelta, nSize, pPanel->GetParent(), pPanel->GetParent() ? pPanel->GetParent()->GetName() : "??",

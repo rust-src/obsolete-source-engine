@@ -138,7 +138,7 @@ public:
 
 	void					UpdateBodyControl( void );
 	void					UpdateHeadControl( const Vector &vHeadTarget, float flHeadInfluence );
-	virtual	float			GetHeadDebounce( void ) { return 0.3; } // how much of previous head turn to use
+	virtual	float			GetHeadDebounce( void ) { return 0.3f; } // how much of previous head turn to use
 
 	virtual void			MaintainLookTargets( float flInterval );
 	virtual bool			ValidEyeTarget(const Vector &lookTargetPos);

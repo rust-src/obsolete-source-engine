@@ -135,7 +135,7 @@ static bool HasRemovableCustomName ( const CEconItemView *pEconItemView, const c
 	if ( !pEconItemView->GetItemDefinition() )
 		return false;
 
-	if ( pEconItemView->GetQuality() == AE_UNIQUE && pEconItemView->GetItemDefinition()->GetArmoryDescString() && !V_stricmp( pEconItemView->GetItemDefinition()->GetArmoryDescString(), "stockitem" ) )
+	if ( pEconItemView->GetQuality() == AE_UNIQUE && pEconItemView->GetItemDefinition()->GetArmoryDescString() && V_strieq( pEconItemView->GetItemDefinition()->GetArmoryDescString(), "stockitem" ) )
 		return false;
 
 	return pEconItemView->GetSOCData() && pEconItemView->GetSOCData()->GetCustomName();
@@ -146,7 +146,7 @@ static bool HasRemovableCustomDesc ( const CEconItemView *pEconItemView, const c
 	if ( !pEconItemView->GetItemDefinition() )
 		return false;
 
-	if ( pEconItemView->GetQuality() == AE_UNIQUE && pEconItemView->GetItemDefinition()->GetArmoryDescString() && !V_stricmp( pEconItemView->GetItemDefinition()->GetArmoryDescString(), "stockitem" ) )
+	if ( pEconItemView->GetQuality() == AE_UNIQUE && pEconItemView->GetItemDefinition()->GetArmoryDescString() && V_strieq( pEconItemView->GetItemDefinition()->GetArmoryDescString(), "stockitem" ) )
 		return false;
 
 	return pEconItemView->GetSOCData() && pEconItemView->GetSOCData()->GetCustomDesc();
@@ -876,13 +876,13 @@ void CBackpackPanel::FireGameEvent( IGameEvent *event )
 
 			// Paint can list
 			// Ignore the stock paintcan thats only for armory purposes
-			if ( !V_strcmp( pEconTool->GetTypeName(), "paint_can" ) && pItemDef_BasePaintCan != pItemDef ) 
+			if ( V_streq( pEconTool->GetTypeName(), "paint_can" ) && pItemDef_BasePaintCan != pItemDef ) 
 			{
 				// Paint Can
 				m_vecPaintCans.AddToTail( pItemDef->GetDefinitionIndex() );
 			}
 			// Strange Parts List
-			else if ( !V_strcmp( pEconTool->GetTypeName(), "strange_part" ) )
+			else if ( V_streq( pEconTool->GetTypeName(), "strange_part" ) )
 			{
 				m_vecStrangeParts.AddToTail( pItemDef->GetDefinitionIndex() );
 			}
@@ -935,7 +935,7 @@ void CBackpackPanel::CheckForQuickOpenKey()
 			if ( !pInvItem->GetStaticData()->GetEconTool() )
 				continue;
 
-			if ( !Q_strcmp( pInvItem->GetStaticData()->GetEconTool()->GetTypeName(), "decoder_ring" ) == 0 )
+			if ( V_streq( pInvItem->GetStaticData()->GetEconTool()->GetTypeName(), "decoder_ring" ) == 0 )
 				continue;
 
 			ApplyTool( this, pInvItem, m_hQuickOpenCrate );
@@ -1212,7 +1212,7 @@ void CBackpackPanel::AssignItemToPanel( CItemModelPanel *pPanel, int iIndex )
 						continue;
 					}
 
-					if ( ( m_ToolSelectionItem.GetStaticData()->GetCapabilities() & ITEM_CAP_DECODABLE ) && pItem->GetStaticData()->GetEconTool() && ( Q_strcmp( pItem->GetStaticData()->GetEconTool()->GetTypeName(), "decoder_ring" ) != 0 ) )
+					if ( ( m_ToolSelectionItem.GetStaticData()->GetCapabilities() & ITEM_CAP_DECODABLE ) && pItem->GetStaticData()->GetEconTool() && ( !V_streq( pItem->GetStaticData()->GetEconTool()->GetTypeName(), "decoder_ring" ) ) )
 					{
 						continue;
 					}
@@ -3339,7 +3339,8 @@ void CBackpackPanel::DoSellMarketplace()
 		}
 		uint32 nAssetContext = 2; // k_EEconContextBackpack
 		char szURL[512];
-		V_snprintf( szURL, sizeof(szURL), "http://%ssteamcommunity.com/my/inventory/?sellOnLoad=1#%d_%d_%llu", pszPrefix, engine->GetAppID(), nAssetContext, pItem->GetItemID() );
+		// dimhotepus: http:// -> https://
+		V_snprintf( szURL, sizeof(szURL), "https://%ssteamcommunity.com/my/inventory/?sellOnLoad=1#%d_%d_%llu", pszPrefix, engine->GetAppID(), nAssetContext, pItem->GetItemID() );
 		steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( szURL );
 	}
 }
@@ -3992,7 +3993,8 @@ void CBackpackPanel::AttemptToShowItemInMarket( item_definition_index_t iItemDef
 		g_pVGuiLocalize->ConvertUnicodeToANSI( g_pVGuiLocalize->Find( pItemDef->GetItemBaseName() ), pszItemName, sizeof( pszItemName ) );
 
 		char szURL[512];
-		V_snprintf( szURL, sizeof( szURL ), "http://%ssteamcommunity.com/market/listings/%d/%s", pszPrefix, engine->GetAppID(), pszItemName );
+		// dimhotepus: http:// -> https://
+		V_snprintf( szURL, sizeof( szURL ), "https://%ssteamcommunity.com/market/listings/%d/%s", pszPrefix, engine->GetAppID(), pszItemName );
 		steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( szURL );
 	}
 }
@@ -4078,7 +4080,7 @@ void CBackpackPanel::OnCommand( const char *command )
 		UpdateModelPanels();
 		return;
 	}
-	else if ( !Q_stricmp( command, "show_explanations" ) )
+	else if ( V_strieq( command, "show_explanations" ) )
 	{
 		if ( !m_flStartExplanationsAt )
 		{
@@ -4087,7 +4089,7 @@ void CBackpackPanel::OnCommand( const char *command )
 		}
 		RequestFocus();
 	}
-	else if ( !Q_stricmp( command, "showdetails" ) )
+	else if ( V_strieq( command, "showdetails" ) )
 	{
 		for ( int i = 0; i < m_pItemModelPanels.Count(); i++ )
 		{

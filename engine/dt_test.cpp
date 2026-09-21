@@ -838,27 +838,44 @@ void RunDataTableTest()
 	SendTable *pSendTable = &REFERENCE_SEND_TABLE(DT_DTTest);
 
 
-	ALIGN4 unsigned char buf[4096] ALIGN4_POST;
-	bf_write x = bf_write(buf, 4096);
-	bf_read y = bf_read(buf, 4096);
+	alignas(4) unsigned char buf[4096];
+	bf_write x = bf_write(buf);
+	bf_read y = bf_read(buf);
 	x.WriteUBitLong(1, 1);
 	x.WriteUBitLong(3, 2);
 	x.WriteUBitLong(7, 3);
 	x.WriteUBitLong(0x31415926, 32);
+	x.WriteBitAngles(QAngle{1.5f, 2.5f, 3.5f});
+	x.WriteBitCoord(2.5f);
+	x.WriteBitCoordMP(3.5f, false, false);
+	x.WriteBitFloat(4.5f);
+	x.WriteBitLong(123, 8, false);
+	x.WriteBitLong(static_cast<uint32>(-12), 8, true);
 	Verify( y.ReadOneBit() == 1 );
 	Verify( y.ReadUBitLong(5) == 7*4+3 );
 	Verify( y.ReadUBitLong(32) == 0x31415926 );
+	QAngle res;
+	y.ReadBitAngles(res);
+	Verify( res == QAngle(1.5f, 2.5f, 3.5f) );
+	Verify( y.ReadBitCoord() == 2.5f );
+	Verify( y.ReadBitCoordMP(false, false) == 3.5f );
+	Verify( y.ReadBitFloat() == 4.5f );
+	Verify( y.ReadBitLong(8, false) == 123 );
+	Verify( static_cast<int32>(y.ReadBitLong(8, true)) == -12 );
 
 
 	// Initialize the send and receive modules.
 	SendTable_Init( &pSendTable, 1 );
+	RunCodeAtScopeExit(SendTable_Term());
+
 	RecvTable_Init( &pRecvTable, 1 );
+	RunCodeAtScopeExit(RecvTable_Term());
 
 	pSendTable->SetWriteFlag( false );
 	
 	// Send DataTable info to the client.
-	ALIGN4 unsigned char commBuf[8192] ALIGN4_POST;
-	bf_write bfWrite( "RunDataTableTest->commBuf", commBuf, sizeof(commBuf) );
+	alignas(4) unsigned char commBuf[8192];
+	bf_write bfWrite( "RunDataTableTest->commBuf", commBuf );
 	if( !WriteSendTable_R( pSendTable, bfWrite, true ) )
 	{
 		AssertMsg( false, "RunDataTableTest: SendTable_SendInfo failed." );
@@ -867,7 +884,7 @@ void RunDataTableTest()
 
 
 	// Receive the SendTable's info.
-	bf_read bfRead( "RunDataTableTest->bfRead", commBuf, sizeof(commBuf));
+	bf_read bfRead( "RunDataTableTest->bfRead", commBuf );
 	while( bfRead.ReadOneBit() )
 	{
 		bool bNeedsDecoder = bfRead.ReadOneBit()!=0;
@@ -890,12 +907,12 @@ void RunDataTableTest()
 	DTTestServer dtServer;
 	DTTestClient dtClient;
 
-	ALIGN4 unsigned char prevEncoded[4096] ALIGN4_POST;
-	ALIGN4 unsigned char fullEncoded[4096] ALIGN4_POST;
+	alignas(4) unsigned char prevEncoded[4096];
+	alignas(4) unsigned char fullEncoded[4096];
 
 	memset(&dtServer, 0, sizeof(dtServer));
 	memset(&dtClient, 0, sizeof(dtClient));
-	memset(prevEncoded, 0, sizeof(prevEncoded));
+	BitwiseClear(prevEncoded);
 
 	SetGuardBytes( &dtClient );
 
@@ -927,7 +944,7 @@ void RunDataTableTest()
 		}
 
 		// Fully encode it.
-		bf_write bfFullEncoded( "RunDataTableTest->bfFullEncoded", fullEncoded, sizeof(fullEncoded) );
+		bf_write bfFullEncoded( "RunDataTableTest->bfFullEncoded", fullEncoded );
 		if( !SendTable_Encode( pSendTable, &dtServer, &bfFullEncoded, -1, NULL ) )
 		{
 			Assert(false);
@@ -935,7 +952,7 @@ void RunDataTableTest()
 
 
 		ALIGN4 unsigned char deltaEncoded[4096] ALIGN4_POST;
-		bf_write bfDeltaEncoded( "RunDataTableTest->bfDeltaEncoded", deltaEncoded, sizeof(deltaEncoded) );
+		bf_write bfDeltaEncoded( "RunDataTableTest->bfDeltaEncoded", deltaEncoded );
 		
 		if ( iIteration == 0 )
 		{
@@ -950,8 +967,8 @@ void RunDataTableTest()
 			// Figure out the delta between the newly encoded one and the previously encoded one.
 			ALIGN4 int deltaProps[MAX_DATATABLE_PROPS] ALIGN4_POST;
 
-			bf_read fullEncodedRead( "RunDataTableTest->fullEncodedRead", fullEncoded, sizeof( fullEncoded ), bfFullEncoded.GetNumBitsWritten() );
-			bf_read prevEncodedRead( "RunDataTableTest->prevEncodedRead", prevEncoded, sizeof( prevEncoded ) );
+			bf_read fullEncodedRead( "RunDataTableTest->fullEncodedRead", fullEncoded, bfFullEncoded.GetNumBitsWritten() );
+			bf_read prevEncodedRead( "RunDataTableTest->prevEncodedRead", prevEncoded );
 
 			int nDeltaProps = SendTable_CalcDelta( 
 				pSendTable, 
@@ -981,14 +998,14 @@ void RunDataTableTest()
 		// This step isn't necessary to have the client decode the data but it's here to test
 		// RecvTable_CopyEncoding (and RecvTable_MergeDeltas). This call should just make an exact
 		// copy of the encoded data.
-		ALIGN4 unsigned char copyEncoded[4096] ALIGN4_POST;
-		bf_read bfReadDeltaEncoded( "RunDataTableTest->bfReadDeltaEncoded", deltaEncoded, sizeof( deltaEncoded ) );
-		bf_write bfCopyEncoded( "RunDataTableTest->bfCopyEncoded", copyEncoded, sizeof(copyEncoded) );
+		alignas(4) unsigned char copyEncoded[4096];
+		bf_read bfReadDeltaEncoded( "RunDataTableTest->bfReadDeltaEncoded", deltaEncoded );
+		bf_write bfCopyEncoded( "RunDataTableTest->bfCopyEncoded", copyEncoded );
 
 		RecvTable_CopyEncoding( pRecvTable, &bfReadDeltaEncoded, &bfCopyEncoded, -1 );
 		
 		// Decode..
-		bf_read bfDecode( "RunDataTableTest->copyEncoded", copyEncoded, sizeof( copyEncoded ) );
+		bf_read bfDecode( "RunDataTableTest->copyEncoded", copyEncoded );
 		if(!RecvTable_Decode(pRecvTable, &dtClient, &bfDecode, 1111))
 		{
 			Assert(false);
@@ -1002,9 +1019,6 @@ void RunDataTableTest()
 		// Verify that only the changed properties were sent and that they were received correctly.
 		CompareDTTest( &dtClient, &dtServer );
 	}
-
-	SendTable_Term();
-	RecvTable_Term();
 }
 
 

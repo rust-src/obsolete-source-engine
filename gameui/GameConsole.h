@@ -21,8 +21,8 @@ class CGameConsoleDialog;
 class CGameConsole : public IGameConsole
 {
 public:
-	CGameConsole();
-	~CGameConsole();
+	CGameConsole() : m_pConsole{nullptr} {} 
+	~CGameConsole() = default;
 
 	// sets up the console for use
 	void Initialize() override;
@@ -40,8 +40,12 @@ public:
 	// dimhotepus: Use strict type.
 	void SetParent( vgui::VPANEL parent ) override;
 
+	// dimhotepus: Initialize with parent to scale UI.
 	// sets up the console for use
 	void Initialize( vgui::VPANEL parent, const char *panelModule ) override;
+
+	// dimhotepus: Pair with initialize.
+	void Shutdown() override;
 
 	// activates the console after a delay
 	void ActivateDelayed(float time);
@@ -49,7 +53,6 @@ public:
 	static void OnCmdCondump();
 private:
 
-	bool m_bInitialized;
 	CGameConsoleDialog *m_pConsole;
 };
 

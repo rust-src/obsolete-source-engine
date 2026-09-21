@@ -51,7 +51,9 @@ int area_sky_cameras[MAX_MAP_AREAS];
 
 entity_t	*face_entity[MAX_MAP_FACES];
 Vector		face_offset[MAX_MAP_FACES];		// for rotating bmodels
-int			fakeplanes;
+// dimhotepus: Extend serveral BSP limits (ficool2).
+dplane_t 	fakeplanes[MAX_MAP_PLANES];
+int			numfakeplanes = 0;
 
 unsigned	numbounce = 100; // 25; /* Originally this was 8 */
 
@@ -368,7 +370,7 @@ void LightForTexture( const char *name, Vector& result )
 
 	for (i=0 ; i<num_texlights ; i++)
 	{
-		if (!Q_strcasecmp (name, texlights[i].name))
+		if (V_strieq (name, texlights[i].name))
 		{
 			VectorCopy( texlights[i].value, result );
 			return;
@@ -627,12 +629,11 @@ void MakePatchForFace (int fn, winding_t *w)
 		dplane_t	*pl;
 
 		// origin offset faces must create new planes
-		if (numplanes + fakeplanes >= MAX_MAP_PLANES)
+		if (numfakeplanes >= MAX_MAP_PLANES)
 		{
-			Error ("numplanes + fakeplanes >= MAX_MAP_PLANES");
+			Error ("numfakeplanes >= MAX_MAP_PLANES");
 		}
-		pl = &dplanes[numplanes + fakeplanes];
-		fakeplanes++;
+		pl = &fakeplanes[numfakeplanes++];
 
 		*pl = *(patch->plane);
 		pl->dist += DotProduct (face_offset[fn], pl->normal);
@@ -699,7 +700,7 @@ entity_t *EntityForModel (int modnum)
 	for (int i=0 ; i<num_entities ; i++)
 	{
 		const char *s = ValueForKey (&entities[i], "model");
-		if (!strcmp (s, name))
+		if (V_streq (s, name))
 			return &entities[i];
 	}
 
@@ -1729,19 +1730,6 @@ void RadWorld_Start()
 {
 	if (luxeldensity < 1.0f)
 	{
-		// Remember the old lightmap vectors.
-		float oldLightmapVecs[MAX_MAP_TEXINFO][2][4];
-		for (intp i = 0; i < texinfo.Count(); i++)
-		{
-			for( int j=0; j < 2; j++ )
-			{
-				for( int k=0; k < 3; k++ )
-				{
-					oldLightmapVecs[i][j][k] = texinfo[i].lightmapVecsLuxelsPerWorldUnits[j][k];
-				}
-			}
-		}
-
 		// rescale luxels to be no denser than "luxeldensity"
 		for (intp i = 0; i < texinfo.Count(); i++)
 		{
@@ -1949,7 +1937,7 @@ void MakeAllScales (void)
 
 			// Draw the text.
 			char str[512];
-			Q_snprintf( str, sizeof( str ), "%d", i );
+			V_to_chars( str, i );
 
 			CTextParams params;
 
@@ -2361,33 +2349,33 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 
 	for( int i=1 ; i<argc ; i++ )
 	{
-		if ( !Q_stricmp( argv[i], "-StaticPropLighting" ) )
+		if ( V_strieq( argv[i], "-StaticPropLighting" ) )
 		{
 			Msg( "--static-prop-lighting: true\n");
 			g_bStaticPropLighting = true;
 		}
-		else if ( !stricmp( argv[i], "-StaticPropNormals" ) )
+		else if ( V_strieq( argv[i], "-StaticPropNormals" ) )
 		{
 			Msg( "--static-prop-normals: true\n");
 			g_bShowStaticPropNormals = true;
 		}
-		else if ( !stricmp( argv[i], "-OnlyStaticProps" ) )
+		else if ( V_strieq( argv[i], "-OnlyStaticProps" ) )
 		{
 			Msg( "--only-static-props: true\n");
 			g_bOnlyStaticProps = true;
 		}
-		else if ( !Q_stricmp( argv[i], "-StaticPropPolys" ) )
+		else if ( V_strieq( argv[i], "-StaticPropPolys" ) )
 		{
 			Msg( "--static-prop-polys: true\n");
 			g_bStaticPropPolys = true;
 		}
-		else if ( !Q_stricmp( argv[i], "-nossprops" ) )
+		else if ( V_strieq( argv[i], "-nossprops" ) )
 		{
 			Msg( "--no-self-shadow-props: true\n");
 			g_bDisablePropSelfShadowing = true;
 		}
 		// dimhotepus: Allow to specify indirect static props lighting mode.
-		else if ( !Q_stricmp( argv[i], "-StaticPropIndirectMode" ) )
+		else if ( V_strieq( argv[i], "-StaticPropIndirectMode" ) )
 		{
 			if ( ++i < argc )
 			{
@@ -2410,47 +2398,47 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 				return -1;
 			}
 		}
-		else if ( !Q_stricmp( argv[i], "-textureshadows" ) )
+		else if ( V_strieq( argv[i], "-textureshadows" ) )
 		{
 			Msg( "--texture-shadows: true\n");
 			g_bTextureShadows = true;
 		}
-		else if ( !strcmp( argv[i], "-dump" ) )
+		else if ( V_streq( argv[i], "-dump" ) )
 		{
 			Msg( "--dump-patches: true\n");
 			g_bDumpPatches = true;
 		}
-		else if ( !Q_stricmp( argv[i], "-nodetaillight" ) )
+		else if ( V_strieq( argv[i], "-nodetaillight" ) )
 		{
 			Msg( "--no-detail-light: true\n");
 			g_bNoDetailLighting = true;
 		}
-		else if ( !Q_stricmp( argv[i], "-rederrors" ) )
+		else if ( V_strieq( argv[i], "-rederrors" ) )
 		{
 			Msg( "--red-errors: true\n");
 			bRed2Black = false;
 		}
-		else if ( !Q_stricmp( argv[i], "-dumpnormals" ) )
+		else if ( V_strieq( argv[i], "-dumpnormals" ) )
 		{
 			Msg( "--dump-normals: true\n");
 			bDumpNormals = true;
 		}
-		else if ( !Q_stricmp( argv[i], "-dumptrace" ) )
+		else if ( V_strieq( argv[i], "-dumptrace" ) )
 		{
 			Msg( "--dump-trace: true\n");
 			g_bDumpRtEnv = true;
 		}
-		else if ( !Q_stricmp( argv[i], "-LargeDispSampleRadius" ) )
+		else if ( V_strieq( argv[i], "-LargeDispSampleRadius" ) )
 		{
 			Msg( "--large-disp-sample-radius: true\n");
 			g_bLargeDispSampleRadius = true;
 		}
-		else if (!Q_stricmp( argv[i], "-dumppropmaps"))
+		else if (V_strieq( argv[i], "-dumppropmaps"))
 		{
 			Msg( "--dump-prop-maps: true\n");
 			g_bDumpPropLightmaps = true;
 		}
-		else if (!Q_stricmp(argv[i], "-bounce"))
+		else if (V_strieq(argv[i], "-bounce"))
 		{
 			if ( ++i < argc )
 			{
@@ -2469,12 +2457,12 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 				return -1;
 			}
 		}
-		else if (!Q_stricmp(argv[i],"-verbose") || !Q_stricmp(argv[i],"-v"))
+		else if (V_strieq(argv[i],"-verbose") || V_strieq(argv[i],"-v"))
 		{
 			Msg( "--verbose: true\n");
 			verbose = true;
 		}
-		else if (!Q_stricmp(argv[i],"-threads"))
+		else if (V_strieq(argv[i],"-threads"))
 		{
 			if ( ++i < argc )
 			{
@@ -2493,7 +2481,7 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 				return -1;
 			}
 		}
-		else if ( !Q_stricmp(argv[i], "-lights" ) )
+		else if ( V_strieq(argv[i], "-lights" ) )
 		{
 			if ( ++i < argc && *argv[i] )
 			{
@@ -2506,38 +2494,38 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 				return -1;
 			}
 		}
-		else if (!Q_stricmp(argv[i],"-noextra"))
+		else if (V_strieq(argv[i],"-noextra"))
 		{
 			Msg( "--no-extra: true\n" );
 			do_extra = false;
 		}
-		else if (!Q_stricmp(argv[i],"-debugextra"))
+		else if (V_strieq(argv[i],"-debugextra"))
 		{
 			Msg( "--debug-extra: true\n" );
 			debug_extra = true;
 		}
-		else if ( !Q_stricmp(argv[i], "-fastambient") )
+		else if ( V_strieq(argv[i], "-fastambient") )
 		{
 			Msg( "--fast-ambient: true\n" );
 			g_bFastAmbient = true;
 		}
-		else if (!Q_stricmp(argv[i],"-fast"))
+		else if (V_strieq(argv[i],"-fast"))
 		{
 			Msg( "--fast: true\n" );
 			do_fast = true;
 		}
-		else if (!Q_stricmp(argv[i],"-noskyboxrecurse"))
+		else if (V_strieq(argv[i],"-noskyboxrecurse"))
 		{
 			Msg( "--no-skybox-recurse: true\n" );
 			g_bNoSkyRecurse = true;
 		}
-		else if (!Q_stricmp(argv[i],"-final"))
+		else if (V_strieq(argv[i],"-final"))
 		{
 			Msg( "--final: true\n" );
 			g_flSkySampleScale = 16.0f;
 			g_flStaticPropSampleScale = 16.0f;
 		}
-		else if (!Q_stricmp(argv[i],"-extrasky"))
+		else if (V_strieq(argv[i],"-extrasky"))
 		{
 			if ( ++i < argc && *argv[i] )
 			{
@@ -2551,7 +2539,7 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 				return -1;
 			}
 		}
-		else if ( !Q_stricmp( argv[i], "-StaticPropSampleScale" ) )
+		else if ( V_strieq( argv[i], "-StaticPropSampleScale" ) )
 		{
 			if ( ++i < argc && *argv[i] )
 			{
@@ -2564,7 +2552,7 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 				return -1;
 			}
 		}
-		else if (!Q_stricmp(argv[i], "-extrapasses"))
+		else if (V_strieq(argv[i], "-extrapasses"))
 		{
 			if (++i < argc)
 			{
@@ -2583,12 +2571,12 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 				return -1;
 			}
 		}
-		else if (!Q_stricmp(argv[i],"-centersamples"))
+		else if (V_strieq(argv[i],"-centersamples"))
 		{
 			Msg( "--center-samples: true\n" );
 			do_centersamples = true;
 		}
-		else if (!Q_stricmp(argv[i],"-smooth"))
+		else if (V_strieq(argv[i],"-smooth"))
 		{
 			if ( ++i < argc )
 			{
@@ -2608,12 +2596,12 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 				return -1;
 			}
 		}
-		else if (!Q_stricmp(argv[i],"-dlightmap"))
+		else if (V_strieq(argv[i],"-dlightmap"))
 		{
 			Msg( "--dlightmap: true\n" );
 			dlight_map = 1;
 		}
-		else if (!Q_stricmp(argv[i],"-luxeldensity"))
+		else if (V_strieq(argv[i],"-luxeldensity"))
 		{
 			if ( ++i < argc )
 			{
@@ -2629,22 +2617,22 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 				return -1;
 			}
 		}
-		else if( !Q_stricmp( argv[i], "-low" ) )
+		else if( V_strieq( argv[i], "-low" ) )
 		{
 			Msg( "--low: Run worker threads with low priority\n" );
 			g_bLowPriority = true;
 		}
-		else if( !Q_stricmp( argv[i], "-loghash" ) )
+		else if( V_strieq( argv[i], "-loghash" ) )
 		{
 			Msg( "--log-hash: true\n" );
 			g_bLogHashData = true;
 		}
-		else if( !Q_stricmp( argv[i], "-onlydetail" ) )
+		else if( V_strieq( argv[i], "-onlydetail" ) )
 		{
 			Msg( "--only-detail: true\n" );
 			*onlydetail = true;
 		}
-		else if (!Q_stricmp(argv[i],"-softsun"))
+		else if (V_strieq(argv[i],"-softsun"))
 		{
 			if ( ++i < argc )
 			{
@@ -2660,7 +2648,7 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 			}
 		}
 		// dimhotepus: Allow to configure non-point sun light samples count.
-		else if (!Q_stricmp(argv[i], "-sunSamplesAreaLight"))
+		else if (V_strieq(argv[i], "-sunSamplesAreaLight"))
 		{
 			if (++i < argc)
 			{
@@ -2679,7 +2667,7 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 				return -1;
 			}
 		}
-		else if ( !Q_stricmp( argv[i], "-maxdispsamplesize" ) )
+		else if ( V_strieq( argv[i], "-maxdispsamplesize" ) )
 		{
 			if ( ++i < argc )
 			{
@@ -2702,30 +2690,30 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 			Msg( "--allow-debug or --steam: true\n" );
 			// Don't need to do anything, just don't error out.
 		}
-		else if ( !Q_stricmp( argv[i], CMDLINEOPTION_NOVCONFIG ) )
+		else if ( V_strieq( argv[i], CMDLINEOPTION_NOVCONFIG ) )
 		{
 			Msg( "--no-vconfig: true\n" );
 		}
-		else if ( !Q_stricmp( argv[i], "-vproject" ) || !Q_stricmp( argv[i], "-game" ) || !Q_stricmp( argv[i], "-insert_search_path" ) )
+		else if ( V_strieq( argv[i], "-vproject" ) || V_strieq( argv[i], "-game" ) || V_strieq( argv[i], "-insert_search_path" ) )
 		{
 			++i;
 		}
-		else if ( !Q_stricmp( argv[i], "-FullMinidumps" ) )
+		else if ( V_strieq( argv[i], "-FullMinidumps" ) )
 		{
 			Msg( "--full-minidumps: true\n" );
 			se::utils::common::EnableFullMinidumps( true );
 		}
-		else if ( !Q_stricmp( argv[i], "-hdr" ) )
+		else if ( V_strieq( argv[i], "-hdr" ) )
 		{
 			Msg( "--hdr: true\n" );
 			SetHDRMode( true );
 		}
-		else if ( !Q_stricmp( argv[i], "-ldr" ) )
+		else if ( V_strieq( argv[i], "-ldr" ) )
 		{
 			Msg( "--ldr: true\n" );
 			SetHDRMode( false );
 		}
-		else if (!Q_stricmp(argv[i],"-maxchop"))
+		else if (V_strieq(argv[i],"-maxchop"))
 		{
 			if ( ++i < argc )
 			{
@@ -2743,7 +2731,7 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 				return -1;
 			}
 		}
-		else if (!Q_stricmp(argv[i],"-chop"))
+		else if (V_strieq(argv[i],"-chop"))
 		{
 			if ( ++i < argc )
 			{
@@ -2762,7 +2750,7 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 				return -1;
 			}
 		}
-		else if ( !Q_stricmp( argv[i], "-dispchop" ) )
+		else if ( V_strieq( argv[i], "-dispchop" ) )
 		{
 			if ( ++i < argc )
 			{
@@ -2780,7 +2768,7 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 				return -1;
 			}
 		}
-		else if ( !Q_stricmp( argv[i], "-disppatchradius" ) )
+		else if ( V_strieq( argv[i], "-disppatchradius" ) )
 		{
 			if ( ++i < argc )
 			{
@@ -2800,7 +2788,7 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 		}
 
 #if ALLOWDEBUGOPTIONS
-		else if (!Q_stricmp(argv[i],"-scale"))
+		else if (V_strieq(argv[i],"-scale"))
 		{
 			if ( ++i < argc )
 			{
@@ -2813,7 +2801,7 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 				return -1;
 			}
 		}
-		else if (!Q_stricmp(argv[i],"-ambient"))
+		else if (V_strieq(argv[i],"-ambient"))
 		{
 			if ( i+3 < argc )
 			{
@@ -2828,7 +2816,7 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 				return -1;
 			}
 		}
-		else if (!Q_stricmp(argv[i],"-dlight"))
+		else if (V_strieq(argv[i],"-dlight"))
 		{
 			if ( ++i < argc )
 			{
@@ -2841,7 +2829,7 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 				return -1;
 			}
 		}
-		else if (!Q_stricmp(argv[i],"-sky"))
+		else if (V_strieq(argv[i],"-sky"))
 		{
 			if ( ++i < argc )
 			{
@@ -2854,12 +2842,12 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 				return -1;
 			}
 		}
-		else if (!Q_stricmp(argv[i],"-notexscale"))
+		else if (V_strieq(argv[i],"-notexscale"))
 		{
 			Msg( "--no-texture-scale: true\n" );
 			texscale = false;
 		}
-		else if (!Q_stricmp(argv[i],"-coring"))
+		else if (V_strieq(argv[i],"-coring"))
 		{
 			if ( ++i < argc )
 			{
@@ -2885,7 +2873,7 @@ static int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 			Msg("--mpi: %s MPI", g_bUseMPI ? "Enable" : "Disable");
 		
 			// Any other args that start with -mpi are ok too.
-			if ( i == argc - 1 && V_stricmp( argv[i], "-mpi_ListParams" ) != 0 )
+			if ( i == argc - 1 && !V_strieq( argv[i], "-mpi_ListParams" ) )
 				break;
 		}
 #endif
@@ -2981,7 +2969,7 @@ void PrintUsage( int argc, char **argv )
 		"                            light across a wider area.\n"
         "  -StaticPropLighting     : Generate baked static prop vertex lighting.\n"
         "  -StaticPropPolys        : Perform shadow tests of static props at polygon precision.\n"
-        "  -StaticPropIndirectMode : Override prop indirect lighting algorithm (0 - Balanced [CS:GO], 1 - Dark [SteamPipe], 2 - Bright [Orangebox]).\n"
+        "  -StaticPropIndirectMode : Override prop indirect lighting algorithm (0 - Balanced [CS:GO], 1 - Dark [SteamPipe], 2 - Bright [Orangebox]) (default: 0).\n"
         "  -StaticPropSampleScale  : Override prop indirect lighting sample scale factor (default 4).\n"
 		"  -OnlyStaticProps        : Only perform direct static prop lighting (vrad debug option).\n"
 		"  -StaticPropNormals      : When lighting static props, just show their normal vector.\n"
@@ -2999,7 +2987,7 @@ void PrintUsage( int argc, char **argv )
 	// Show VMPI parameters?
 	for ( int i=1; i < argc; i++ )
 	{
-		if ( V_stricmp( argv[i], "-mpi_ListParams" ) == 0 )
+		if ( V_strieq( argv[i], "-mpi_ListParams" ) )
 		{
 			Warning( "VMPI-specific options:\n\n" );
 
@@ -3085,7 +3073,7 @@ int VRAD_Main(int argc, char **argv)
 	constexpr char kEnUsUtf8Locale[]{"en_US.UTF-8"};
 
 	const se::ScopedAppLocale scoped_app_locale{kEnUsUtf8Locale};
-	if (V_stricmp(se::ScopedAppLocale::GetCurrentLocale(), kEnUsUtf8Locale)) {
+	if (!V_strieq(se::ScopedAppLocale::GetCurrentLocale(), kEnUsUtf8Locale)) {
 		Warning("setlocale('%s') failed, current locale is '%s'.\n",
 			kEnUsUtf8Locale, se::ScopedAppLocale::GetCurrentLocale());
 	}

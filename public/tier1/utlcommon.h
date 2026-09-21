@@ -25,26 +25,26 @@ struct undefined_t;
 
 // CTypeSelect<sel,A,B>::type is a typedef of A if sel is nonzero, else B
 template <int sel, typename A, typename B>
-struct CTypeSelect { using type = A; };
+struct [[deprecated("Use std::conditional")]] CTypeSelect { using type = A; };
 
 template <typename A, typename B>
-struct CTypeSelect<0, A, B> { using type = B; };
+struct [[deprecated("Use std::conditional")]] CTypeSelect<0, A, B> { using type = B; };
 
 // CTypeEquals<A, B>::value is nonzero if A and B are the same type
 template <typename A, typename B, bool bIgnoreConstVolatile = false, bool bIgnoreReference = false>
-struct CTypeEquals { enum { value = 0 }; };
+struct [[deprecated("Use std::is_same_v")]] CTypeEquals { enum { value = 0 }; };
 
 template <typename Same>
-struct CTypeEquals<Same, Same, false, false> { enum { value = 1 }; };
+struct [[deprecated("Use std::is_same_v")]] CTypeEquals<Same, Same, false, false> { enum { value = 1 }; };
 
 template <typename A, typename B>
-struct CTypeEquals<A, B, true, true> : CTypeEquals< const volatile A&, const volatile B& > {};
+struct [[deprecated("Use std::is_same_v")]] CTypeEquals<A, B, true, true> : CTypeEquals< const volatile A&, const volatile B& > {};
 
 template <typename A, typename B>
-struct CTypeEquals<A, B, true, false> : CTypeEquals< const volatile A, const volatile B > {};
+struct [[deprecated("Use std::is_same_v")]] CTypeEquals<A, B, true, false> : CTypeEquals< const volatile A, const volatile B > {};
 
 template <typename A, typename B>
-struct CTypeEquals<A, B, false, true> : CTypeEquals< A&, B& > {};
+struct [[deprecated("Use std::is_same_v")]] CTypeEquals<A, B, false, true> : CTypeEquals< A&, B& > {};
 
 // CUtlKeyValuePair is intended for use with key-lookup containers.
 // Because it is specialized for "empty_t" values, one container can
@@ -70,6 +70,22 @@ public:
 	[[nodiscard]] constexpr const V &GetValue() const { return m_value; }
 };
 
+template<typename K, typename V>
+[[nodiscard]] constexpr bool operator ==(
+	const CUtlKeyValuePair<K, V>& l,
+	const CUtlKeyValuePair<K, V>& r)
+{
+	return l.m_key == r.m_key && l.m_value == r.m_value;
+}
+
+template<typename K, typename V>
+[[nodiscard]] constexpr bool operator !=(
+	const CUtlKeyValuePair<K, V>& l,
+	const CUtlKeyValuePair<K, V>& r)
+{
+	return !(l == r);
+}
+
 template <typename K>
 class CUtlKeyValuePair<K, empty_t>
 {
@@ -88,6 +104,22 @@ public:
 	constexpr CUtlKeyValuePair( const K &k, const empty_t& ) : m_key( k ) {}
 	[[nodiscard]] constexpr const K &GetValue() const { return m_key; }
 };
+
+template<typename K>
+[[nodiscard]] constexpr bool operator ==(
+	const CUtlKeyValuePair<K, empty_t>& l,
+	const CUtlKeyValuePair<K, empty_t>& r)
+{
+	return l.m_key == r.m_key;
+}
+
+template<typename K>
+[[nodiscard]] constexpr bool operator !=(
+	const CUtlKeyValuePair<K, empty_t>& l,
+	const CUtlKeyValuePair<K, empty_t>& r)
+{
+	return !(l == r);
+}
 
 
 // Default functors. You can specialize these if your type does
@@ -117,10 +149,10 @@ template <typename T> struct ArgumentTypeInfo;
 
 
 // Some fundamental building-block functors...
-struct StringLessFunctor { bool operator()( const char *a, const char *b ) const { return Q_strcmp( a, b ) < 0; } };
-struct StringEqualFunctor { bool operator()( const char *a, const char *b ) const { return Q_strcmp( a, b ) == 0; } };
-struct CaselessStringLessFunctor { bool operator()( const char *a, const char *b ) const { return Q_strcasecmp( a, b ) < 0; } };
-struct CaselessStringEqualFunctor { bool operator()( const char *a, const char *b ) const { return Q_strcasecmp( a, b ) == 0; } };
+struct StringLessFunctor { bool operator()( const char *a, const char *b ) const { return V_strcmp( a, b ) < 0; } };
+struct StringEqualFunctor { bool operator()( const char *a, const char *b ) const { return V_streq( a, b ); } };
+struct CaselessStringLessFunctor { bool operator()( const char *a, const char *b ) const { return V_stricmp( a, b ) < 0; } };
+struct CaselessStringEqualFunctor { bool operator()( const char *a, const char *b ) const { return V_strieq( a, b ); } };
 
 struct Mix32HashFunctor { [[nodiscard]] constexpr unsigned int operator()( uint32 s ) const; };
 struct Mix64HashFunctor { [[nodiscard]] constexpr unsigned int operator()( uint64 s ) const; };
@@ -203,7 +235,7 @@ struct HasClassAltArgumentType
 {
 	template < typename X > static long Test( typename X::AltArgumentType_t* );
 	template < typename X > static char Test( ... );
-	enum { value = ( sizeof( Test< T >( NULL ) ) != sizeof( char ) ) };
+	enum { value = ( sizeof( Test< T >( nullptr ) ) != sizeof( char ) ) };
 };
 
 template < typename T, bool = HasClassAltArgumentType< T >::value >

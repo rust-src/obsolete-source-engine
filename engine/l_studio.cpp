@@ -198,8 +198,8 @@ bool WorldLightToMaterialLight( dworldlight_t* pWorldLight, LightDesc_t& light )
 		// A 180 degree spotlight
 		light.m_Type = MATERIAL_LIGHT_SPOT;
 		light.m_Attenuation2 = 1.0;
-		light.m_Theta = M_PI;
-		light.m_Phi = M_PI;
+		light.m_Theta = M_PI_F;
+		light.m_Phi = M_PI_F;
 		light.m_ThetaDot = 0.0f;
 		light.m_PhiDot = 0.0f;
 		light.m_Falloff = 1.0f;
@@ -1844,10 +1844,11 @@ matrix3x4_t* CModelRender::SetupModelState( IClientRenderable *pRenderable )
 	// Set up skinning state
 	Assert ( pRenderable );
 	{
-		int nBoneCount = pStudioHdr->numbones;
-		pBoneMatrices = g_pStudioRender->LockBoneMatrices( pStudioHdr->numbones );
+		const int nBoneCount = pStudioHdr->numbones;
+		pBoneMatrices = g_pStudioRender->LockBoneMatrices( nBoneCount );
+		RunCodeAtScopeExit( g_pStudioRender->UnlockBoneMatrices() );
+
 		pRenderable->SetupBones( pBoneMatrices, nBoneCount, BONE_USED_BY_ANYTHING, cl.GetTime() ); // hack hack
-		g_pStudioRender->UnlockBoneMatrices();
 	}
 #endif
 
@@ -2396,18 +2397,15 @@ bool CModelRender::DrawModelSetup( ModelRenderInfo_t &pInfo, DrawModelState_t *p
 	}
 
 	int nBoneCount = state.m_pStudioHdr->numbones;
-	matrix3x4_t *pBoneToWorld = pCustomBoneToWorld;
-	if ( !pCustomBoneToWorld )
+	matrix3x4_t *pBoneToWorld = !pCustomBoneToWorld
+		? g_pStudioRender->LockBoneMatrices( nBoneCount )
+		: pCustomBoneToWorld;
 	{
-		pBoneToWorld = g_pStudioRender->LockBoneMatrices( nBoneCount );
+		RunCodeAtScopeExitOpt( !pCustomBoneToWorld, g_pStudioRender->UnlockBoneMatrices() );
+		const bool bOk = pInfo.pRenderable->SetupBones( pBoneToWorld, nBoneCount, boneMask, cl.GetTime() );
+		if ( !bOk )
+			return false;
 	}
-	const bool bOk = pInfo.pRenderable->SetupBones( pBoneToWorld, nBoneCount, boneMask, cl.GetTime() );
-	if ( !pCustomBoneToWorld )
-	{
-		g_pStudioRender->UnlockBoneMatrices();
-	}
-	if ( !bOk )
-		return false;
 
 	*ppBoneToWorldOut = pBoneToWorld;
 
@@ -2670,7 +2668,7 @@ int	CModelRender::DrawModelExStaticProp( ModelRenderInfo_t &pInfo )
 #ifdef _DEBUG
 	Vector tmp;
 	MatrixGetColumn( *pInfo.pModelToWorld, 3, &tmp );
-	Assert( VectorsAreEqual( pInfo.origin, tmp, 1e-3 ) );
+	Assert( VectorsAreEqual( pInfo.origin, tmp, 1e-3f ) );
 #endif
 
 	g_pStudioRender->DrawModelStaticProp( info, *pInfo.pModelToWorld, drawFlags );
@@ -3237,15 +3235,16 @@ matrix3x4_t* CModelRender::DrawModelShadowSetup( IClientRenderable *pRenderable,
 		info.m_Lod = info.m_pHardwareData->m_RootLOD;
 	}
 
-	matrix3x4_t *pBoneToWorld = pCustomBoneToWorld;
-	if ( !pBoneToWorld )
+	matrix3x4_t *pBoneToWorld = !pCustomBoneToWorld
+		? g_pStudioRender->LockBoneMatrices( info.m_pStudioHdr->numbones )
+		: pCustomBoneToWorld;
 	{
-		pBoneToWorld = g_pStudioRender->LockBoneMatrices( info.m_pStudioHdr->numbones );
+		// dimhotepus: Unlock only if locked.
+		RunCodeAtScopeExitOpt( !pCustomBoneToWorld, g_pStudioRender->UnlockBoneMatrices() );
+		const bool bOk = pRenderable->SetupBones( pBoneToWorld, info.m_pStudioHdr->numbones, BONE_USED_BY_VERTEX_AT_LOD(info.m_Lod), cl.GetTime() );
+		if ( !bOk )
+			return NULL;
 	}
-	const bool bOk = pRenderable->SetupBones( pBoneToWorld, info.m_pStudioHdr->numbones, BONE_USED_BY_VERTEX_AT_LOD(info.m_Lod), cl.GetTime() );
-	g_pStudioRender->UnlockBoneMatrices();
-	if ( !bOk )
-		return NULL;
 	return pBoneToWorld;
 #else
 	return NULL;
@@ -3478,7 +3477,7 @@ void CModelRender::ComputeModelVertexLighting( IHandleEntity *pProp,
 		return;
 
 	int i;
-	unsigned char *pInSolid = (unsigned char*)stackalloc( ((pModel->numvertices + 7) >> 3) * sizeof(unsigned char) );
+	unsigned char *pInSolid = stackallocT( unsigned char, ((pModel->numvertices + 7) >> 3) );
 	Vector worldPos, worldNormal;
 
 	const mstudio_modelvertexdata_t *vertData = pModel->GetVertexData();
@@ -3645,7 +3644,7 @@ void CModelRender::ValidateStaticPropColorData( ModelInstanceHandle_t handle )
 		}
 	}
 
-	if ( !g_pFileSystem->ReadFile( fileName, "GAME", utlBuf, sizeof( HardwareVerts::FileHeader_t ), 0 ) )
+	if ( !g_pFileSystem->ReadFile<HardwareVerts::FileHeader_t>( fileName, "GAME", utlBuf ) )
 	{
 		// not available
 		return;

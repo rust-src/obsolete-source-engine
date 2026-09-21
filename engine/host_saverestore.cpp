@@ -268,10 +268,13 @@ public:
 	{
 		m_bClearSaveDir = false;
 		m_szSaveGameScreenshotFile[0] = '\0';
-		SetMostRecentElapsedMinutes( 0 );
-		SetMostRecentElapsedSeconds( 0 );
+		m_flClientSaveRestoreTime = 0;
 		m_szMostRecentSaveLoadGame[0] = '\0';
 		m_szSaveGameName[ 0 ] = '\0';
+		SetMostRecentElapsedMinutes( 0 );
+		SetMostRecentElapsedSeconds( 0 );
+		m_bWaitingForSafeDangerousSave = false;
+		m_nDeferredCommandFrames = 0;
 	}
 
 	void					Init( void ) override;
@@ -500,7 +503,7 @@ char *CSaveRestore::GetSaveDir()
 	if ( szDirectory[0] ) return szDirectory;
 
 	// dimhotepus: Dropped / at the end to unify all places.
-	V_sprintf_safe(szDirectory, "save" PLATFORM_DIR, MOD_DIR);
+	V_strcpy_safe(szDirectory, "save" PLATFORM_DIR);
 
 	return szDirectory;
 }
@@ -527,7 +530,6 @@ void CSaveRestore::AgeSaveFile( const char *pName, const char *ext, int count )
 {
 	char newName[MAX_OSPATH], oldName[MAX_OSPATH];
 
-	// dimhotepus: Use MOD inside GetSaveDir.
 	if ( count == 1 )
 	{
 		V_sprintf_safe( oldName, "%s/%s.%s", GetSaveDir(), pName, ext );	// quick.sav.
@@ -537,9 +539,9 @@ void CSaveRestore::AgeSaveFile( const char *pName, const char *ext, int count )
 		V_sprintf_safe( oldName, "%s/%s%02d.%s", GetSaveDir(), pName, count-1, ext );	// quick04.sav, etc.
 	}
 	
-	// dimhotepus: Use MOD inside GetSaveDir.
 	V_sprintf_safe( newName, "%s/%s%02d.%s", GetSaveDir(), pName, count, ext );
-
+	
+	// dimhotepus: Use MOD for fs.
 	// Scroll the name list down (rename quick04.sav to quick05.sav)
 	if ( g_pFileSystem->FileExists( oldName, MOD_DIR ) )
 	{
@@ -847,7 +849,7 @@ int CSaveRestore::SaveReadHeader( FileHandle_t pFile, GAME_HEADER *pHeader, int 
 	char				*pszTokenList;
 	CSaveRestoreData	*pSaveData = NULL;
 
-	if( g_pSaveRestoreFileSystem->Read( &tag, sizeof(int), pFile ) != sizeof(int) )
+	if( g_pSaveRestoreFileSystem->Read( tag, pFile ) != sizeof(tag) )
 		return 0;
 
 	if ( tag != MAKEID('J','S','A','V') )
@@ -856,7 +858,7 @@ int CSaveRestore::SaveReadHeader( FileHandle_t pFile, GAME_HEADER *pHeader, int 
 		return 0;
 	}
 		
-	if ( g_pSaveRestoreFileSystem->Read( &tag, sizeof(int), pFile ) != sizeof(int) )
+	if ( g_pSaveRestoreFileSystem->Read( tag, pFile ) != sizeof(tag) )
 		return 0;
 
 	if ( tag != SAVEGAME_VERSION )				// Enforce version for now
@@ -865,13 +867,13 @@ int CSaveRestore::SaveReadHeader( FileHandle_t pFile, GAME_HEADER *pHeader, int 
 		return 0;
 	}
 
-	if ( g_pSaveRestoreFileSystem->Read( &size, sizeof(int), pFile ) != sizeof(int) )
+	if ( g_pSaveRestoreFileSystem->Read( size, pFile ) != sizeof(size) )
 		return 0;
 
-	if ( g_pSaveRestoreFileSystem->Read( &tokenCount, sizeof(int), pFile ) != sizeof(int) )
+	if ( g_pSaveRestoreFileSystem->Read( tokenCount, pFile ) != sizeof(tokenCount) )
 		return 0;
 
-	if ( g_pSaveRestoreFileSystem->Read( &tokenSize, sizeof(int), pFile ) != sizeof(int) )
+	if ( g_pSaveRestoreFileSystem->Read( tokenSize, pFile ) != sizeof(tokenSize) )
 		return 0;
 
 	// At this point we must clean this data up if we fail!
@@ -998,7 +1000,6 @@ bool CSaveRestore::SaveFileExists( const char *pName )
 //-----------------------------------------------------------------------------
 bool CSaveRestore::LoadGame( const char *pName )
 {
-	FileHandle_t	pFile;
 	GAME_HEADER		gameHeader;
 	char			name[ MAX_PATH ];
 	bool			validload = false;
@@ -1020,14 +1021,12 @@ bool CSaveRestore::LoadGame( const char *pName )
 
 	m_bClearSaveDir = false;
 	DoClearSaveDir();
-
-	bool bLoadedToMemory = false;
 	
 	int iElapsedMinutes = 0;
 	int iElapsedSeconds = 0;
 	bool bOldSave = false;
 
-	pFile = g_pSaveRestoreFileSystem->Open( name, "rb", MOD_DIR );
+	FileHandle_t pFile = g_pSaveRestoreFileSystem->Open( name, "rb", MOD_DIR );
 	if ( pFile )
 	{
 		RunCodeAtScopeExit(g_pSaveRestoreFileSystem->Close(pFile));
@@ -1053,10 +1052,6 @@ bool CSaveRestore::LoadGame( const char *pName )
 		}
 		else
 		{
-			if ( bLoadedToMemory )
-			{
-				g_pSaveRestoreFileSystem->RemoveFile( name );
-			}
 			return NULL;
 		}
 
@@ -1073,11 +1068,6 @@ bool CSaveRestore::LoadGame( const char *pName )
 			// dimhotepus: Msg -> Warning.
 			Warning( "Map '%s' missing or invalid\n", gameHeader.mapName );
 			validload = false;
-		}
-		
-		if ( bLoadedToMemory )
-		{
-			g_pSaveRestoreFileSystem->RemoveFile( name );
 		}
 	}
 	else
@@ -1098,9 +1088,9 @@ bool CSaveRestore::LoadGame( const char *pName )
 	deathmatch.SetValue( 0 );
 	coop.SetValue( 0 );
 
-	bool bIsTransitionSave = ( gameHeader.originMapName[0] != 0 );
+	bool bIsTransitionSave = !Q_isempty( gameHeader.originMapName );
 
-	bool retval = Host_NewGame( gameHeader.mapName, true, false, ( bIsTransitionSave ) ? gameHeader.originMapName : NULL, ( bIsTransitionSave ) ? gameHeader.landmark : NULL, bOldSave );
+	bool retval = Host_NewGame( gameHeader.mapName, true, false, bIsTransitionSave ? gameHeader.originMapName : NULL, bIsTransitionSave ? gameHeader.landmark : NULL, bOldSave );
 
 	SetMostRecentElapsedMinutes( iElapsedMinutes );
 	SetMostRecentElapsedSeconds( iElapsedSeconds );
@@ -1652,7 +1642,7 @@ void CSaveRestore::RestoreClientState( char const *fileName, bool adjacent )
 	RunCodeAtScopeExit(g_pSaveRestoreFileSystem->Close(pFile));
 
 	SaveFileHeaderTag_t tag;
-	g_pSaveRestoreFileSystem->Read( &tag, sizeof(tag), pFile );
+	g_pSaveRestoreFileSystem->Read( tag, pFile );
 	if ( tag != CURRENT_SAVEFILE_HEADER_TAG )
 	{
 		return;
@@ -1665,17 +1655,17 @@ void CSaveRestore::RestoreClientState( char const *fileName, bool adjacent )
 	int magicnumber = 0;
 	baseclientsections_t sections;
 
-	g_pSaveRestoreFileSystem->Read( &magicnumber, sizeof( magicnumber ), pFile );
+	g_pSaveRestoreFileSystem->Read( magicnumber, pFile );
 
 	if ( magicnumber == SECTION_MAGIC_NUMBER )
 	{
-		g_pSaveRestoreFileSystem->Read( &sectionheaderversion, sizeof( sectionheaderversion ), pFile );
+		g_pSaveRestoreFileSystem->Read( sectionheaderversion, pFile );
 
 		if ( sectionheaderversion != SECTION_VERSION_NUMBER )
 		{
 			return;
 		}
-		g_pSaveRestoreFileSystem->Read( &sections, sizeof(baseclientsections_t), pFile );
+		g_pSaveRestoreFileSystem->Read( sections, pFile );
 	}
 	else
 	{
@@ -1684,7 +1674,7 @@ void CSaveRestore::RestoreClientState( char const *fileName, bool adjacent )
 	
 		baseclientsectionsold_t oldsections;
 
-		g_pSaveRestoreFileSystem->Read( &oldsections, sizeof(baseclientsectionsold_t), pFile );
+		g_pSaveRestoreFileSystem->Read( oldsections, pFile );
 
 		Q_memset( &sections, 0, sizeof( sections ) );
 		sections.entitysize = oldsections.entitysize;
@@ -1825,7 +1815,9 @@ void CSaveRestore::RestoreClientState( char const *fileName, bool adjacent )
 void CSaveRestore::RestoreAdjacenClientState( char const *map )
 {
 	char name[256];
-	Q_snprintf( name, sizeof( name ), "%s/%s.HL2", GetSaveDir(), GetSaveGameMapName( map ) );// DON'T FixSlashes on this, it needs to be //MOD
+	Q_snprintf( name, sizeof( name ), "%s/%s.HL2", GetSaveDir(), GetSaveGameMapName( map ) );
+	// dimhotepus: Fix file name.
+	V_FixSlashes( name );
 	COM_CreatePath( name );
 
 	RestoreClientState( name, true );
@@ -1964,20 +1956,20 @@ int CSaveRestore::SaveReadNameAndComment( FileHandle_t f, OUT_Z_CAP(nameSize) ch
 	if ( g_pSaveRestoreFileSystem->Size( f ) < tagsize )
 		return 0;
 
-	int nRead = g_pSaveRestoreFileSystem->Read( &tag, sizeof(int), f );
+	int nRead = g_pSaveRestoreFileSystem->Read( tag, f );
 	if ( ( nRead != sizeof(int) ) || tag != MAKEID('J','S','A','V') )
 		return 0;
 
-	if ( g_pSaveRestoreFileSystem->Read( &tag, sizeof(int), f ) != sizeof(int) )
+	if ( g_pSaveRestoreFileSystem->Read( tag, f ) != sizeof(tag) )
 		return 0;
 
-	if ( g_pSaveRestoreFileSystem->Read( &size, sizeof(int), f ) != sizeof(int) )
+	if ( g_pSaveRestoreFileSystem->Read( size, f ) != sizeof(size) )
 		return 0;
 
-	if ( g_pSaveRestoreFileSystem->Read( &tokenCount, sizeof(int), f ) != sizeof(int) )	// These two ints are the token list
+	if ( g_pSaveRestoreFileSystem->Read( tokenCount, f ) != sizeof(tokenCount) )	// These two ints are the token list
 		return 0;
 
-	if ( g_pSaveRestoreFileSystem->Read( &tokenSize, sizeof(int), f ) != sizeof(int) )
+	if ( g_pSaveRestoreFileSystem->Read( tokenSize, f ) != sizeof(tokenSize) )
 		return 0;
 
 	size += tokenSize;
@@ -2044,12 +2036,12 @@ int CSaveRestore::SaveReadNameAndComment( FileHandle_t f, OUT_Z_CAP(nameSize) ch
 		pFieldName = pTokenList[ *(short *)pData ];
 		pData += sizeof(short);
 
-		if ( !Q_stricmp( pFieldName, "comment" ) )
+		if ( V_strieq( pFieldName, "comment" ) )
 		{
 			int copySize = MAX( commentSize, nFieldSize );
 			Q_strncpy( comment, pData, copySize );
 		}
-		else if ( !Q_stricmp( pFieldName, "mapName" ) )
+		else if ( V_strieq( pFieldName, "mapName" ) )
 		{
 			int copySize = MAX( commentSize, nFieldSize );
 			Q_strncpy( name, pData, copySize );
@@ -2069,54 +2061,56 @@ int CSaveRestore::SaveReadNameAndComment( FileHandle_t f, OUT_Z_CAP(nameSize) ch
 //-----------------------------------------------------------------------------
 CSaveRestoreData *CSaveRestore::LoadSaveData( const char *level )
 {
-	char			name[MAX_OSPATH];
-	FileHandle_t	pFile;
-
-	Q_snprintf( name, sizeof( name ), "%s/%s.HL1", GetSaveDir(), level);// DON'T FixSlashes on this, it needs to be //MOD
-	ConMsg ("Loading game from %s...\n", name);
-
-	pFile = g_pSaveRestoreFileSystem->Open( name, "rb", MOD_DIR );
-	if (!pFile)
-	{
-		ConMsg ("ERROR: couldn't open.\n");
-		return NULL;
-	}
-
-	//---------------------------------
-	// Read the header
-	SaveFileHeaderTag_t tag;
-	if ( g_pSaveRestoreFileSystem->Read( &tag, sizeof(tag), pFile ) != sizeof(tag) )
-		return NULL;
-
-	// Is this a valid save?
-	if ( tag != CURRENT_SAVEFILE_HEADER_TAG )
-		return NULL;
-
-	//---------------------------------
-	// Read the sections info and the data
-	//
 	SaveFileSectionsInfo_t sectionsInfo;
-	
-	if ( g_pSaveRestoreFileSystem->Read( &sectionsInfo, sizeof(sectionsInfo), pFile ) != sizeof(sectionsInfo) )
-		return NULL;
+	CSaveRestoreData *pSaveData;
 
-	void *pSaveMemory = SaveAllocMemory( sizeof(CSaveRestoreData) + sectionsInfo.SumBytes(), sizeof(char) );
-	if ( !pSaveMemory )
 	{
-		return 0;
-	}
+		char name[MAX_OSPATH];
+		V_sprintf_safe( name, "%s/%s.HL1", GetSaveDir(), level);// DON'T FixSlashes on this, it needs to be //MOD
 
-	CSaveRestoreData *pSaveData = MakeSaveRestoreData( pSaveMemory );
-	Q_strncpy( pSaveData->levelInfo.szCurrentMapName, level, sizeof( pSaveData->levelInfo.szCurrentMapName ) );
+		ConMsg ("Loading game from %s...\n", name);
+
+		FileHandle_t pFile = g_pSaveRestoreFileSystem->Open( name, "rb", MOD_DIR );
+		if (!pFile)
+		{
+			ConMsg ("ERROR: couldn't open.\n");
+			return NULL;
+		}
+
+		RunCodeAtScopeExit( g_pSaveRestoreFileSystem->Close( pFile ) );
+
+		//---------------------------------
+		// Read the header
+		SaveFileHeaderTag_t tag;
+		if ( g_pSaveRestoreFileSystem->Read( tag, pFile ) != sizeof(tag) )
+			return NULL;
+
+		// Is this a valid save?
+		if ( tag != CURRENT_SAVEFILE_HEADER_TAG )
+			return NULL;
+
+		//---------------------------------
+		// Read the sections info and the data
+		//	
+		if ( g_pSaveRestoreFileSystem->Read( sectionsInfo, pFile ) != sizeof(sectionsInfo) )
+			return NULL;
+
+		void *pSaveMemory = SaveAllocMemory( sizeof(CSaveRestoreData) + sectionsInfo.SumBytes(), sizeof(char) );
+		if ( !pSaveMemory )
+		{
+			return 0;
+		}
+
+		pSaveData = MakeSaveRestoreData( pSaveMemory );
+		Q_strncpy( pSaveData->levelInfo.szCurrentMapName, level, sizeof( pSaveData->levelInfo.szCurrentMapName ) );
 	
-	if ( g_pSaveRestoreFileSystem->Read( (char *)(pSaveData + 1), sectionsInfo.SumBytes(), pFile ) != sectionsInfo.SumBytes() )
-	{
-		// Free the memory and give up
-		Finish( pSaveData );
-		return NULL;
+		if ( g_pSaveRestoreFileSystem->Read( (char *)(pSaveData + 1), sectionsInfo.SumBytes(), pFile ) != sectionsInfo.SumBytes() )
+		{
+			// Free the memory and give up
+			Finish( pSaveData );
+			return NULL;
+		}
 	}
-
-	g_pSaveRestoreFileSystem->Close( pFile );
 	
 	//---------------------------------
 	// Parse the symbol table
@@ -2124,7 +2118,7 @@ CSaveRestoreData *CSaveRestore::LoadSaveData( const char *level )
 
 	if ( sectionsInfo.nBytesSymbols > 0 )
 	{
-		pSaveMemory = SaveAllocMemory( sectionsInfo.nSymbols, sizeof(char *), true );
+		void *pSaveMemory = SaveAllocMemory( sectionsInfo.nSymbols, sizeof(char *), true );
 		if ( !pSaveMemory )
 		{
 			SaveFreeMemory( pSaveData );
@@ -2262,23 +2256,22 @@ void CSaveRestore::EntityPatchWrite( CSaveRestoreData *pSaveData, const char *le
 //-----------------------------------------------------------------------------
 void CSaveRestore::EntityPatchRead( CSaveRestoreData *pSaveData, const char *level )
 {
-	char			name[MAX_OSPATH];
-	FileHandle_t	pFile;
-	int				i, size, entityId;
+	char name[MAX_OSPATH];
+	V_sprintf_safe(name, "%s/%s.HL3", GetSaveDir(), GetSaveGameMapName( level ) );// DON'T FixSlashes on this, it needs to be //MOD
 
-	Q_snprintf(name, sizeof( name ), "%s/%s.HL3", GetSaveDir(), GetSaveGameMapName( level ) );// DON'T FixSlashes on this, it needs to be //MOD
-
-	pFile = g_pSaveRestoreFileSystem->Open( name, "rb", MOD_DIR );
+	FileHandle_t pFile = g_pSaveRestoreFileSystem->Open( name, "rb", MOD_DIR );
 	if ( pFile )
 	{
+		RunCodeAtScopeExit( g_pSaveRestoreFileSystem->Close( pFile ) );
+
+		int	size, entityId;
 		// Patch count
-		g_pSaveRestoreFileSystem->Read( &size, sizeof(int), pFile );
-		for ( i = 0; i < size; i++ )
+		g_pSaveRestoreFileSystem->Read( size, pFile );
+		for ( int i = 0; i < size; i++ )
 		{
-			g_pSaveRestoreFileSystem->Read( &entityId, sizeof(int), pFile );
+			g_pSaveRestoreFileSystem->Read( entityId, pFile );
 			pSaveData->GetEntityInfo(entityId)->flags = FENTTABLE_REMOVED;
 		}
-		g_pSaveRestoreFileSystem->Close( pFile );
 	}
 }
 
@@ -2387,7 +2380,7 @@ int EntryInTable( CSaveRestoreData *pSaveData, const char *pMapName, int index )
 	index++;
 	for ( int i = index; i < pSaveData->levelInfo.connectionCount; i++ )
 	{
-		if ( !stricmp( pSaveData->levelInfo.levelList[i].mapName, pMapName ) )
+		if ( V_strieq( pSaveData->levelInfo.levelList[i].mapName, pMapName ) )
 			return i;
 	}
 
@@ -2407,7 +2400,7 @@ void LandmarkOrigin( CSaveRestoreData *pSaveData, Vector& output, const char *pL
 
 	for ( i = 0; i < pSaveData->levelInfo.connectionCount; i++ )
 	{
-		if ( !stricmp( pSaveData->levelInfo.levelList[i].landmarkName, pLandmarkName ) )
+		if ( V_strieq( pSaveData->levelInfo.levelList[i].landmarkName, pLandmarkName ) )
 		{
 			VectorCopy( pSaveData->levelInfo.levelList[i].vecLandmarkOrigin, output );
 			return;
@@ -2446,7 +2439,7 @@ void CSaveRestore::LoadAdjacentEnts( const char *pOldLevel, const char *pLandmar
 
 		// make sure the previous level is in the connection list so we can
 		// bring over the player.
-		if ( !strcmpi( mapName, pOldLevel ) )
+		if ( V_strieq( mapName, pOldLevel ) )
 		{
 			foundprevious = true;
 		}
@@ -2454,7 +2447,7 @@ void CSaveRestore::LoadAdjacentEnts( const char *pOldLevel, const char *pLandmar
 		for ( test = 0; test < i; test++ )
 		{
 			// Only do maps once
-			if ( !stricmp( mapName, levelList[test].mapName ) )
+			if ( V_strieq( mapName, levelList[test].mapName ) )
 				break;
 		}
 		// Map was already in the list
@@ -2478,7 +2471,7 @@ void CSaveRestore::LoadAdjacentEnts( const char *pOldLevel, const char *pLandmar
 			LandmarkOrigin( pSaveData, pSaveData->levelInfo.vecLandmarkOffset, pLandmarkName );
 
 			VectorSubtract( landmarkOrigin, pSaveData->levelInfo.vecLandmarkOffset, pSaveData->levelInfo.vecLandmarkOffset );
-			if ( !stricmp( mapName, pOldLevel ) )
+			if ( V_strieq( mapName, pOldLevel ) )
 				flags |= FENTTABLE_PLAYER;
 
 			index = -1;
@@ -2537,8 +2530,12 @@ void CSaveRestore::DirectoryCopy( const char *pPath, const char *pDestFileName )
 	FileHandle_t hFile = g_pSaveRestoreFileSystem->Open( pDestFileName, "ab+", MOD_DIR );
 	if ( hFile )
 	{
-		g_pSaveRestoreFileSystem->Write( &nMaps, sizeof(nMaps), hFile );
-		g_pSaveRestoreFileSystem->Close( hFile );
+		{
+			RunCodeAtScopeExit( g_pSaveRestoreFileSystem->Close( hFile ) );
+
+			g_pSaveRestoreFileSystem->Write( nMaps, hFile );
+		}
+
 		g_pSaveRestoreFileSystem->DirectoryCopy( pPath, pDestFileName );
 	}
 	else
@@ -2552,7 +2549,7 @@ void CSaveRestore::DirectoryCopy( const char *pPath, const char *pDestFileName )
 //-----------------------------------------------------------------------------
 bool CSaveRestore::DirectoryExtract( FileHandle_t pFile, int fileCount )
 {
-	return g_pSaveRestoreFileSystem->DirectoryExtract( pFile, fileCount, false );
+	return g_pSaveRestoreFileSystem->DirectoryExtract( pFile, fileCount );
 }
 
 //-----------------------------------------------------------------------------
@@ -2572,7 +2569,7 @@ void CSaveRestore::DirectoryCount( const char *pPath, int *pResult )
 //-----------------------------------------------------------------------------
 void CSaveRestore::DirectoryClear( const char *pPath )
 {
-	g_pSaveRestoreFileSystem->DirectoryClear( pPath, false );
+	g_pSaveRestoreFileSystem->DirectoryClear( pPath );
 }
 
 
@@ -2596,6 +2593,8 @@ void CSaveRestore::DoClearSaveDir()
 	char szName[MAX_OSPATH];
 
 	V_strcpy_safe( szName, GetSaveDir() );
+	// dimhotepus: GetSaveDir after changes missed separator, readd it.
+	V_strcat_safe( szName, CORRECT_PATH_SEPARATOR_S );
 	Q_FixSlashes( szName );
 	// Create save directory if it doesn't exist
 	Sys_mkdir( szName );
@@ -2696,15 +2695,15 @@ static void SaveGame( const CCommand &args )
 	{
 		for ( int i = 2; i < args.ArgC(); i++ )
 		{
-			if ( !Q_stricmp( args[i], "wait" ) )
+			if ( V_strieq( args[i], "wait" ) )
 			{
 				bFinishAsync = true;
 			}
-			else if ( !Q_stricmp(args[i], "notmostrecent"))
+			else if ( V_strieq(args[i], "notmostrecent"))
 			{
 				bSetMostRecent = false;
 			}
-			else if ( !Q_stricmp( args[i], "copymap" ) )
+			else if ( V_strieq( args[i], "copymap" ) )
 			{
 				bRenameMap = true;
 			}
@@ -3034,7 +3033,7 @@ void CSaveRestore::Init( void )
 
 	m_nDeferredCommandFrames = 0;
 	m_szSaveGameScreenshotFile[0] = '\0';
-	if ( !CommandLine()->FindParm( "-noclearsave" ) )
+	if ( !CommandLine()->HasParm( "-noclearsave" ) )
 	{
 		ClearSaveDir();
 	}

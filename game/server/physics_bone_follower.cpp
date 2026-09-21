@@ -155,7 +155,7 @@ void CBoneFollowerManager::UpdateBoneFollowers( CBaseAnimating *pParentEntity )
 
 			pParentEntity->GetBoneTransform( m_physBones[i].boneIndex, boneToWorld );
 			MatrixAngles( boneToWorld, boneAngles, bonePosition );
-			m_physBones[i].hFollower->UpdateFollower( bonePosition, boneAngles, 0.1 );
+			m_physBones[i].hFollower->UpdateFollower( bonePosition, boneAngles, 0.1f );
 		}
 	}
 }
@@ -466,7 +466,7 @@ void CreateBoneFollowersFromRagdoll( CBaseAnimating *pEntity, CBoneFollowerManag
 	while ( !pParse->Finished() )
 	{
 		const char *pBlock = pParse->GetCurrentBlockName();
-		if ( !strcmpi( pBlock, "solid" ) )
+		if ( V_strieq( pBlock, "solid" ) )
 		{
 			solid_t solid;
 

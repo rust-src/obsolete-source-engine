@@ -17,30 +17,35 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-#define SIGN(d)				((d)<0?-1:1)
+template<typename T>
+[[nodiscard]] constexpr inline int SIGN(T d) noexcept
+{
+	return d < 0 ? -1 : 1;
+}
 
+template<typename T>
+[[nodiscard]] constexpr inline T SEC_TO_SAMPS(T a) noexcept
+{
+	return a * SOUND_DMA_SPEED;				// convert seconds to # samples in equivalent time
+}
 
-#define MSEC_TO_SAMPS(a)	(((a)*SOUND_DMA_SPEED) / 1000)		// convert milliseconds to # samples in equivalent time
-#define SEC_TO_SAMPS(a)		((a)*SOUND_DMA_SPEED)				// convert seconds to # samples in equivalent time
+template<typename T>
+[[nodiscard]] constexpr inline T MSEC_TO_SAMPS(T a) noexcept
+{
+	return SEC_TO_SAMPS( a ) / 1000;		// convert milliseconds to # samples in equivalent time
+}
 
 // Suppress the noisy warnings caused by CLIP_DSP
 template<typename T>
-[[nodiscard]] constexpr inline T CLIP_DSP(T x) {
+[[nodiscard]] constexpr inline T CLIP_DSP(T x) noexcept
+{
   return x;
 }
 
 extern ConVar das_debug;
 
-#define SOUND_MS_PER_FT	1			// sound travels approx 1 foot per millisecond
-#define ROOM_MAX_SIZE	1000		// max size in feet of room simulation for dsp
-
 void DSP_ReleaseMemory( void );
 bool DSP_LoadPresetFile( void );
-
-extern float Gain_To_dB ( float gain );
-extern float dB_To_Gain ( float dB );
-extern float Gain_To_Amplitude ( float gain );
-extern float Amplitude_To_Gain ( float amplitude );
 
 extern bool g_bdas_room_init;
 extern bool g_bdas_init_nodes;
@@ -698,7 +703,8 @@ typedef int fix20int;
 
 typedef void * (*prc_Param_t)( void *pprc );					// individual processor allocation functions
 typedef int (*prc_GetNext_t) ( void *pdata, int x );			// get next function for processor
-typedef int (*prc_GetNextN_t) ( void *pdata,  portable_samplepair_t *pbuffer, int SampleCount, int op);	// batch version of getnext
+// dimhotepus: int -> void as we assign such functions. 
+typedef void (*prc_GetNextN_t) ( void *pdata,  portable_samplepair_t *pbuffer, int SampleCount, int op);	// batch version of getnext
 typedef void (*prc_Free_t) ( void *pdata );						// free function for processor
 typedef void (*prc_Mod_t) (void *pdata, float v);				// modulation function for processor	
 
@@ -789,27 +795,27 @@ struct flt_t
 
 flt_t flts[CFLTS];
 
-void FLT_Init ( flt_t *pf ) { if ( pf ) Q_memset ( pf, 0, sizeof (flt_t) ); }
-void FLT_InitAll ( void ) {	for ( int i = 0 ; i < CFLTS; i++ ) FLT_Init ( &flts[i] ); }
+void FLT_Init ( flt_t *pf ) { if ( pf ) BitwiseClear ( *pf ); }
+void FLT_InitAll ( void ) {	for ( auto &f : flts ) FLT_Init ( &f ); }
 
 void FLT_Free ( flt_t *pf ) 
 {
 	if ( pf )	
 	{
 		if (pf->pf1)
-			Q_memset ( pf->pf1, 0, sizeof (flt_t) );	
+			BitwiseClear ( *pf->pf1 );	
 		
 		if (pf->pf2)
-			Q_memset ( pf->pf2, 0, sizeof (flt_t) );	
+			BitwiseClear ( *pf->pf2 );	
 		
 		if (pf->pf3)
-			Q_memset ( pf->pf3, 0, sizeof (flt_t) );	
+			BitwiseClear ( *pf->pf3 );	
 		
-		Q_memset ( pf, 0, sizeof (flt_t) );	
+		BitwiseClear ( *pf );	
 	}
 }
 
-void FLT_FreeAll ( void ) {	for (int i = 0 ; i < CFLTS; i++) FLT_Free ( &flts[i] ); }
+void FLT_FreeAll ( void ) {	for (auto &f : flts) FLT_Free ( &f ); }
 
 
 // find a free filter from the filter pool
@@ -999,11 +1005,22 @@ flt_t * FLT_Params ( prc_t *pprc )
 	flt_t *pf3 = NULL;
 	
 	// scale b numerators with gain - only scale for first filter if series filters
-
-	for (int i = 0; i < FLT_M; i++)
+	// dimhotepus: Fill b / b_bp only when needed.
+	if (bpass)
+	{
+	// dimhotepus: Correctly read from b_bp only filled data.
+	for (int i = 0; i <= M_bp; i++)
 	{
 		b_bp_scaled[i] = (int)((float)(b_bp[i]) * gain );
+	}
+	}
+	else
+	{
+	// dimhotepus: Correctly read from b only filled data.
+	for (int i = 0; i <= M; i++)
+	{
 		b_scaled[i] = (int)((float)(b[i]) * gain );
+	}
 	}
 
 	if (bpass)
@@ -1310,8 +1327,8 @@ struct dly_t
 
 dly_t dlys[CDLYS];					// delay lines
 
-void DLY_Init ( dly_t *pdly ) {	if ( pdly )	Q_memset( pdly, 0, sizeof (dly_t)); }
-void DLY_InitAll ( void ) {	for (int i = 0 ; i < CDLYS; i++) DLY_Init ( &dlys[i] ); }
+void DLY_Init ( dly_t *pdly ) {	if ( pdly )	BitwiseClear( *pdly ); }
+void DLY_InitAll ( void ) {	for (auto &d : dlys) DLY_Init ( &d ); }
 void DLY_Free ( dly_t *pdly )
 {
 	// free memory buffer
@@ -1324,12 +1341,12 @@ void DLY_Free ( dly_t *pdly )
 		
 		// free dly slot
 
-		Q_memset ( pdly, 0, sizeof (dly_t) );
+		BitwiseClear ( *pdly );
 	}
 }
 
 
-void DLY_FreeAll ( void ) {	for (int i = 0; i < CDLYS; i++ ) DLY_Free ( &dlys[i] ); }
+void DLY_FreeAll ( void ) {	for (auto &d : dlys) DLY_Free ( &d ); }
 
 // return adjusted feedback value for given dly
 // such that decay time is same as that for dmin and fbmin
@@ -1571,7 +1588,7 @@ constexpr prm_rng_t dly_rng[] = {
 
 	{dly_idtype,	0, DLY_MAX},		// delay type DLY_PLAIN, DLY_LOWPASS, DLY_ALLPASS etc	
 	{dly_idelay,	-1.0, 1000.0},		// delay in milliseconds (-1 forces auto dsp to set delay value from room size)
-	{dly_ifeedback,	0.0, 0.99},			// feedback 0-1.0
+	{dly_ifeedback,	0.0, 0.99f},			// feedback 0-1.0
 	{dly_igain,	    0.0, 10.0},			// final gain of output stage, 0-10.0 
 
 	// filter params if dly type DLY_LOWPASS or DLY_FLINEAR
@@ -1794,7 +1811,7 @@ void DLY_ChangeVal ( dly_t *pdly, int t )
 
 // ignored - use MDY_ for modulatable delay
 
-inline void DLY_Mod ( void *p, float v ) { return; }
+inline void DLY_Mod ( void *p, float v ) {}
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1831,7 +1848,7 @@ void RMP_Init( rmp_t *prmp, float ramptime, int initval, int targetval, bool bEn
 	int run;
 
 	if (prmp)
-		Q_memset( prmp, 0, sizeof (rmp_t) ); 
+		BitwiseClear( *prmp ); 
 	else
 		return;
 			
@@ -1953,10 +1970,10 @@ struct mdy_t
 
 mdy_t mdys[CMDYS];
 
-void MDY_Init( mdy_t *pmdy ) { if (pmdy) Q_memset( pmdy, 0, sizeof (mdy_t) ); };
-void MDY_Free( mdy_t *pmdy ) { if (pmdy) { DLY_Free (pmdy->pdly); Q_memset( pmdy, 0, sizeof (mdy_t) ); } };
-void MDY_InitAll() { for (int i = 0; i < CMDYS; i++) MDY_Init( &mdys[i] ); };
-void MDY_FreeAll() { for (int i = 0; i < CMDYS; i++) MDY_Free( &mdys[i] ); };
+void MDY_Init( mdy_t *pmdy ) { if (pmdy) BitwiseClear( *pmdy ); };
+void MDY_Free( mdy_t *pmdy ) { if (pmdy) { DLY_Free (pmdy->pdly); BitwiseClear( *pmdy ); } };
+void MDY_InitAll() { for (auto &m : mdys) MDY_Init( &m ); };
+void MDY_FreeAll() { for (auto &m : mdys) MDY_Free( &m ); };
 
 
 // allocate mod delay, given previously allocated dly (NOTE: mod delay only sweeps tap 0, not t1,t2 or t3)
@@ -2177,7 +2194,7 @@ constexpr prm_rng_t mdy_rng[] = {
 
 	{mdy_idtype,	0, DLY_MAX},		// delay type DLY_PLAIN, DLY_LOWPASS, DLY_ALLPASS	
 	{mdy_idelay,	0.0, 1000.0},		// delay in milliseconds
-	{mdy_ifeedback,	0.0, 0.99},			// feedback 0-1.0
+	{mdy_ifeedback,	0.0, 0.99f},			// feedback 0-1.0
 	{mdy_igain,	    0.0, 1.0},			// final gain of output stage, 0-1.0
 
 	// filter params if mdy type DLY_LOWPASS
@@ -2187,9 +2204,9 @@ constexpr prm_rng_t mdy_rng[] = {
 	{mdy_iqwidth,	100.0, 11025.0},
 	{mdy_iquality,	0, QUA_MAX},
 	
-	{mdy_imodrate,	0.01, 200.0},		// frequency at which delay values change to new random value. 0 is no self-modulation
+	{mdy_imodrate,	0.01f, 200.0},		// frequency at which delay values change to new random value. 0 is no self-modulation
 	{mdy_imoddepth,	0.0, 1.0},			// how much delay changes (decreases) from current value (0-1.0) 
-	{mdy_imodglide,	0.01, 100.0},		// glide time between dcur and dnew in milliseconds
+	{mdy_imodglide,	0.01f, 100.0},		// glide time between dcur and dnew in milliseconds
 	{mdy_imix,		0.0, 1.0}			// 1.0 = full fx mix, 0.5 = 50% fx, 50% dry
 };
 
@@ -2290,40 +2307,38 @@ struct rva_t
 
 rva_t rvas[CRVAS];
 
-void RVA_Init ( rva_t *prva ) {	if ( prva )	Q_memset (prva, 0, sizeof (rva_t)); }
-void RVA_InitAll( void ) { for (int i = 0; i < CRVAS; i++) RVA_Init ( &rvas[i] ); }
+void RVA_Init ( rva_t *prva ) {	if ( prva )	BitwiseClear ( *prva ); }
+void RVA_InitAll( void ) { for (auto &r : rvas) RVA_Init ( &r ); }
 
 // free parallel series reverb
 
 void RVA_Free( rva_t *prva )
 {
-	int i;
-
 	if ( prva )
 	{
 		// free all delays
-		for (i = 0; i < CRVA_DLYS; i++)
-			DLY_Free ( prva->pdlys[i] );
+		for ( auto *d : prva->pdlys )
+			DLY_Free ( d );
 		
 		// zero all ptrs to delays in mdy array
-		for (i = 0; i < CRVA_DLYS; i++)
+		for ( auto *m : prva->pmdlys )
 		{
-			if ( prva->pmdlys[i] )
-				prva->pmdlys[i]->pdly = NULL;
+			if ( m )
+				m->pdly = NULL;
 		}
 
 		// free all mod delays
-		for (i = 0; i < CRVA_DLYS; i++)
-			MDY_Free ( prva->pmdlys[i] );
+		for ( auto *m : prva->pmdlys )
+			MDY_Free ( m );
 		
 		FLT_Free( prva->pflt );
 		
-		Q_memset( prva, 0, sizeof (rva_t) );
+		BitwiseClear( *prva );
 	}
 }
 
 
-void RVA_FreeAll( void ) { for (int i = 0; i < CRVAS; i++) RVA_Free( &rvas[i] ); }
+void RVA_FreeAll( void ) { for (auto &r : rvas) RVA_Free( &r ); }
 
 // create parallel reverb - m parallel reverbs summed 
 
@@ -2492,11 +2507,11 @@ rva_t * RVA_Alloc ( int *D, int *a, int *b, int m, flt_t *pflt, int fparallel, f
 //		otherwise, filter is in feedback loop
 
 
-constexpr int g_MapIntoPBITSDivInt[] = 
-{
-	0, PMAX/1, PMAX/2,	PMAX/3,	PMAX/4,	PMAX/5,	PMAX/6,	PMAX/7,	PMAX/8, 
-	   PMAX/9, PMAX/10, PMAX/11,PMAX/12,PMAX/13,PMAX/14,PMAX/15,PMAX/16, 
-};
+// constexpr int g_MapIntoPBITSDivInt[] = 
+// {
+// 	0, PMAX/1, PMAX/2,	PMAX/3,	PMAX/4,	PMAX/5,	PMAX/6,	PMAX/7,	PMAX/8, 
+// 	   PMAX/9, PMAX/10, PMAX/11,PMAX/12,PMAX/13,PMAX/14,PMAX/15,PMAX/16, 
+// };
 
 inline int RVA_GetNext( rva_t *prva, int x )
 {
@@ -2635,7 +2650,7 @@ constexpr prm_rng_t rva_rng[] = {
 	{rva_fbheight,	-1.0, 1.0},		// 0-1.0 material reflectivity - used as feedback param instead of decay if non-zero	
 									// if < 0, a predelay is allocated, then feedback is -1*param given
 
-	{rva_iftaps,	0.0, 0.333}		// if > 0, use 3 extra taps with delay values = d * (1 - faps*n) n = 0,1,2,3
+	{rva_iftaps,	0.0, 0.333f}		// if > 0, use 3 extra taps with delay values = d * (1 - faps*n) n = 0,1,2,3
 };
 
 #define RVA_BASEM		1				// base number of parallel delays
@@ -2643,8 +2658,8 @@ constexpr prm_rng_t rva_rng[] = {
 // nominal delay and feedback values. More delays = more density.
 
 #define RVADLYSMAX	49
-constexpr float rvadlys[] =   {18,  23,  28,  33,   42,  21,  26,  36,   39,  45,  47,  30};
-constexpr float rvafbs[] =	{0.9, 0.9, 0.9, 0.85, 0.8, 0.9, 0.9, 0.85, 0.8, 0.8, 0.8, 0.85};
+// constexpr float rvadlys[] =   {18,  23,  28,  33,   42,  21,  26,  36,   39,  45,  47,  30};
+// constexpr float rvafbs[] =	{0.9, 0.9, 0.9, 0.85, 0.8, 0.9, 0.9, 0.85, 0.8, 0.8, 0.8, 0.85};
 
 #define SWAP(a,b,t)				{(t) = (a); (a) = (b); (b) = (t);}
 
@@ -2895,8 +2910,8 @@ struct dfr_t
 
 dfr_t dfrs[CDFRS];
 
-void DFR_Init ( dfr_t *pdfr ) {	if ( pdfr )	Q_memset (pdfr, 0, sizeof (dfr_t)); }
-void DFR_InitAll( void ) { for (int i = 0; i < CDFRS; i++) DFR_Init ( &dfrs[i] ); }
+void DFR_Init ( dfr_t *pdfr ) {	if ( pdfr )	BitwiseClear (*pdfr); }
+void DFR_InitAll( void ) { for (auto &d : dfrs) DFR_Init ( &d ); }
 
 // free parallel series reverb
 
@@ -2904,17 +2919,17 @@ void DFR_Free( dfr_t *pdfr )
 {
 	if ( pdfr )
 	{
-	// free all delays
+		// free all delays
 
-	for (int i = 0; i < CDFR_DLYS; i++)
-		DLY_Free ( pdfr->pdlys[i] );
-	
-	Q_memset( pdfr, 0, sizeof (dfr_t) );
+		for (auto *p : pdfr->pdlys)
+			DLY_Free ( p );
+		
+		BitwiseClear( *pdfr );
 	}
 }
 
 
-void DFR_FreeAll( void ) { for (int i = 0; i < CDFRS; i++) DFR_Free( &dfrs[i] ); }
+void DFR_FreeAll( void ) { for (auto &d : dfrs) DFR_Free( &d ); }
 
 // create n series allpass reverbs
 
@@ -3161,17 +3176,18 @@ void LFOWAV_Free( lfowav_t *plw )
 	// free delay
 
 	if ( plw )
+	{
 		DLY_Free( plw->pdly );
-
-	Q_memset( plw, 0, sizeof (lfowav_t) );
+		BitwiseClear( *plw );
+	}
 }
 
 // deallocate all lfo wave tables. Called only when sound engine exits.
 
 void LFOWAV_FreeAll( void )
 {
-	for ( int i = 0; i < CLFOWAV; i++ )
-		LFOWAV_Free( &lfowavs[i] );
+	for ( auto &l : lfowavs )
+		LFOWAV_Free( &l );
 }
 
 // fill lfo array w with count samples of lfo type 'type'
@@ -3237,7 +3253,7 @@ void LFOWAV_InitAll()
 	int i;
 	dly_t *pdly;
 
-	Q_memset( lfowavs, 0, sizeof( lfowavs ) );
+	BitwiseClear( lfowavs );
 
 	// alloc space for each lfo wav type
 	
@@ -3285,10 +3301,10 @@ struct lfo_t
 
 lfo_t lfos[CLFO];
 
-void LFO_Init( lfo_t *plfo ) { if ( plfo ) Q_memset( plfo, 0, sizeof (lfo_t) ); }
-void LFO_InitAll( void ) { for (int i = 0; i < CLFO; i++) LFO_Init(&lfos[i]); }
-void LFO_Free( lfo_t *plfo ) { if ( plfo ) Q_memset( plfo, 0, sizeof (lfo_t) ); }
-void LFO_FreeAll( void ) { for (int i = 0; i < CLFO; i++) LFO_Free(&lfos[i]); }
+void LFO_Init( lfo_t *plfo ) { if ( plfo ) BitwiseClear( *plfo ); }
+void LFO_InitAll( void ) { for (auto &l : lfos) LFO_Init(&l); }
+void LFO_Free( lfo_t *plfo ) { if ( plfo ) BitwiseClear( *plfo ); }
+void LFO_FreeAll( void ) { for (auto &l : lfos) LFO_Free(&l); }
 
 
 // get step value given desired playback frequency
@@ -3515,7 +3531,7 @@ struct ptc_t
 
 ptc_t ptcs[CPTCS];
 
-void PTC_Init( ptc_t *pptc ) { if (pptc) Q_memset( pptc, 0, sizeof (ptc_t) ); };
+void PTC_Init( ptc_t *pptc ) { if (pptc) BitwiseClear( *pptc ); };
 void PTC_Free( ptc_t *pptc ) 
 {
 	if (pptc)
@@ -3523,11 +3539,11 @@ void PTC_Free( ptc_t *pptc )
 		DLY_Free (pptc->pdly_in);
 		DLY_Free (pptc->pdly_out);
 
-		Q_memset( pptc, 0, sizeof (ptc_t) ); 
+		BitwiseClear( *pptc ); 
 	}
 };
-void PTC_InitAll() { for (int i = 0; i < CPTCS; i++) PTC_Init( &ptcs[i] ); };
-void PTC_FreeAll() { for (int i = 0; i < CPTCS; i++) PTC_Free( &ptcs[i] ); };
+void PTC_InitAll() { for (auto &p : ptcs) PTC_Init( &p ); };
+void PTC_FreeAll() { for (auto &p : ptcs) PTC_Free( &p ); };
 
 
 
@@ -3905,9 +3921,9 @@ constexpr prm_rng_t ptc_rng[] = {
 
 	{ptc_cparam,	0, 0},				// first entry is # of parameters
 
-	{ptc_ipitch,		0.1, 4.0},		// 0-n.0 where 1.0 = 1 octave up and 0.5 is one octave down	
-	{ptc_itimeslice,	20.0, 300.0},	// in milliseconds - size of sound chunk to analyze and cut/duplicate - 100ms nominal
-	{ptc_ixfade,		1.0, 200.0},	// in milliseconds - size of crossfade region between spliced chunks - 20ms nominal	
+	{ptc_ipitch,		0.1f, 4.0f},		// 0-n.0 where 1.0 = 1 octave up and 0.5 is one octave down	
+	{ptc_itimeslice,	20.0f, 300.0f},	// in milliseconds - size of sound chunk to analyze and cut/duplicate - 100ms nominal
+	{ptc_ixfade,		1.0f, 200.0f},	// in milliseconds - size of crossfade region between spliced chunks - 20ms nominal	
 };
 
 
@@ -3972,10 +3988,10 @@ struct env_t
 
 env_t envs[CENVS];
 
-void ENV_Init( env_t *penv ) { if (penv) Q_memset( penv, 0, sizeof (env_t) ); };
-void ENV_Free( env_t *penv ) { if (penv) Q_memset( penv, 0, sizeof (env_t) ); };
-void ENV_InitAll() { for (int i = 0; i < CENVS; i++) ENV_Init( &envs[i] ); };
-void ENV_FreeAll() { for (int i = 0; i < CENVS; i++) ENV_Free( &envs[i] ); };
+void ENV_Init( env_t *penv ) { if (penv) BitwiseClear( *penv ); };
+void ENV_Free( env_t *penv ) { if (penv) BitwiseClear( *penv ); };
+void ENV_InitAll() { for (auto &e : envs) ENV_Init( &e ); };
+void ENV_FreeAll() { for (auto &e : envs) ENV_Free( &e ); };
 
 
 // allocate ADSR envelope
@@ -4186,10 +4202,10 @@ struct efo_t
 
 efo_t efos[CEFOS];
 
-void EFO_Init( efo_t *pefo ) { if (pefo) Q_memset( pefo, 0, sizeof (efo_t) ); };
-void EFO_Free( efo_t *pefo ) { if (pefo) Q_memset( pefo, 0, sizeof (efo_t) ); };
-void EFO_InitAll() { for (int i = 0; i < CEFOS; i++) EFO_Init( &efos[i] ); };
-void EFO_FreeAll() { for (int i = 0; i < CEFOS; i++) EFO_Free( &efos[i] ); };
+void EFO_Init( efo_t *pefo ) { if (pefo) BitwiseClear( *pefo ); };
+void EFO_Free( efo_t *pefo ) { if (pefo) BitwiseClear( *pefo ); };
+void EFO_InitAll() { for (auto &e : efos) EFO_Init( &e ); };
+void EFO_FreeAll() { for (auto &e : efos) EFO_Free( &e ); };
 
 // return true when gate is off AND decay ramp has hit end
 
@@ -4515,20 +4531,20 @@ struct crs_t
 
 crs_t crss[CCRSS];
 
-void CRS_Init( crs_t *pcrs ) { if (pcrs) Q_memset( pcrs, 0, sizeof (crs_t) ); };
+void CRS_Init( crs_t *pcrs ) { if (pcrs) BitwiseClear( *pcrs ); };
 void CRS_Free( crs_t *pcrs ) 
 {
 	if (pcrs)
 	{
 		MDY_Free ( pcrs->pmdy );
 		LFO_Free ( pcrs->plfo );
-		Q_memset( pcrs, 0, sizeof (crs_t) ); 
+		BitwiseClear( *pcrs ); 
 	}
 }
 
 
-void CRS_InitAll() { for (int i = 0; i < CCRSS; i++) CRS_Init( &crss[i] ); }
-void CRS_FreeAll() { for (int i = 0; i < CCRSS; i++) CRS_Free( &crss[i] ); }
+void CRS_InitAll() { for (auto &c : crss) CRS_Init( &c ); }
+void CRS_FreeAll() { for (auto &c : crss) CRS_Free( &c ); }
 
 // fstep is base pitch shift, ie: floating point step value, where 1.0 = +1 octave, 0.5 = -1 octave 
 // lfotype is LFO_SIN, LFO_RND, LFO_TRI etc (LFO_RND for chorus, LFO_SIN for flange)
@@ -4570,7 +4586,7 @@ crs_t * CRS_Alloc( int lfotype, float fHz, float fdepth, float mix )
 
 	D = fdepth * MSEC_TO_SAMPS(CRS_DELAYMAX);		// sweep from 0 - n milliseconds
 
-	ramptime = (float) CRS_RAMPTIME / 1000.0;				// # milliseconds to ramp between new values
+	ramptime = (float) CRS_RAMPTIME / 1000.0f;				// # milliseconds to ramp between new values
 	
 	pdly = DLY_Alloc ( D, 0, 1, DLY_LINEAR );
 
@@ -4745,18 +4761,18 @@ struct amp_t
 
 amp_t amps[CAMPS];
 
-void AMP_Init( amp_t *pamp ) { if (pamp) Q_memset( pamp, 0, sizeof (amp_t) ); };
+void AMP_Init( amp_t *pamp ) { if (pamp) BitwiseClear( *pamp ); };
 void AMP_Free( amp_t *pamp ) 
 {
 	if (pamp)
 	{
-		Q_memset( pamp, 0, sizeof (amp_t) ); 
+		BitwiseClear( *pamp ); 
 	}
 }
 
 
-void AMP_InitAll() { for (int i = 0; i < CAMPS; i++) AMP_Init( &amps[i] ); }
-void AMP_FreeAll() { for (int i = 0; i < CAMPS; i++) AMP_Free( &amps[i] ); }
+void AMP_InitAll() { for (auto &a : amps) AMP_Init( &a ); }
+void AMP_FreeAll() { for (auto &a : amps) AMP_Free( &a ); }
 
 
 amp_t * AMP_Alloc( float gain, float vthresh, float distmix, float vfeed, float ramptime, float modtime, float depth, bool brand ) 
@@ -4967,7 +4983,7 @@ constexpr prm_rng_t amp_rng[] = {
 
 	{amp_imodrate,	0.0, 200.0},		// frequency at which amplitude values change to new random value. 0 is no self-modulation
 	{amp_imoddepth,	0.0, 1.0},			// how much amplitude changes (decreases) from current value (0-1.0) 
-	{amp_imodglide,	0.01, 100.0},		// glide time between mapcur and ampnew in milliseconds
+	{amp_imodglide,	0.01f, 100.0},		// glide time between mapcur and ampnew in milliseconds
 	{amp_irand,		0.0, 1.0},			// if 1, use random modulation otherwise alternate from max-min-max
 };
 
@@ -5368,15 +5384,15 @@ void PSET_Init( pset_t *ppset )
 	// clear state array
 
 	if (ppset)
-		Q_memset( ppset->w, 0, sizeof (int) * (CPSET_STATES) ); 
+		BitwiseClear( ppset->w ); 
 }
 
 // clear runtime slots
 
 void PSET_InitAll( void )
 {
-	for (int i = 0; i < CPSETS; i++)
-		Q_memset( &psets[i], 0, sizeof(pset_t));
+	for (auto &p : psets)
+		BitwiseClear( p );
 }
 
 // free the preset - free all processors
@@ -5391,11 +5407,11 @@ void PSET_Free( pset_t *ppset )
 
 		// clear
 
-		Q_memset( ppset, 0, sizeof (pset_t));
+		BitwiseClear( *ppset );
 	}
 }
 
-void PSET_FreeAll() { for (int i = 0; i < CPSETS; i++) PSET_Free( &psets[i] ); };
+void PSET_FreeAll() { for (auto &p : psets) PSET_Free( &p ); };
 
 // return preset struct, given index into preset template array
 // NOTE: should not ever be more than 2 or 3 of these active simultaneously
@@ -5437,7 +5453,7 @@ pset_t * PSET_Alloc ( int ipsettemplate )
 	
 	// clear preset
 	
-	Q_memset(ppset, 0, sizeof(pset_t));
+	BitwiseClear( *ppset );
 
 	// copy template into preset
 
@@ -5911,7 +5927,7 @@ void DSP_Init( int idsp )
 	
 	pdsp = &dsps[idsp];
 
-	Q_memset( pdsp, 0, sizeof (dsp_t) ); 
+	BitwiseClear( *pdsp ); 
 }
 
 void DSP_Free( int idsp ) 
@@ -5934,7 +5950,7 @@ void DSP_Free( int idsp )
 			PSET_Free( pdsp->ppsetprev[i] );
 	}
 
-	Q_memset( pdsp, 0, sizeof (dsp_t) ); 
+	BitwiseClear( *pdsp ); 
 }
 
 // Init all dsp processors - called once, during engine startup
@@ -6220,12 +6236,9 @@ void DSP_SetPreset( int idsp, int ipsetnew)
 	for (int i = 0; i < pdsp->cchan; i++)
 	{
 		// current becomes previous
-
-		pdsp->ppsetprev[i] = pdsp->ppset[i];
-		
 		// new becomes current
 
-		pdsp->ppset[i] = ppsetnew[i];
+		pdsp->ppsetprev[i] = std::exchange( pdsp->ppset[i], ppsetnew[i] );
 	}
 	
 	pdsp->ipsetprev = pdsp->ipset;
@@ -6732,11 +6745,11 @@ constexpr int MapReflectivityToDLYCutoff[] =
 
 constexpr float MapSizeToDLYFeedback[] = 
 {
-	0.9, // 0.6,	// SMALL	
-	0.8, // 0.5,	// MEDIUM	
-	0.7, // 0.4,	// LARGE	
-	0.6, // 0.3,	// HUGE		
-	0.5, // 0.2,	// GIGANTIC	
+	0.9f, // 0.6,	// SMALL	
+	0.8f, // 0.5,	// MEDIUM	
+	0.7f, // 0.4,	// LARGE	
+	0.6f, // 0.3,	// HUGE		
+	0.5f, // 0.2,	// GIGANTIC	
 };
 
 void ADSP_SetupAutoDelay( prc_t *pprc_dly, auto_params_t *pa )
@@ -6816,15 +6829,6 @@ constexpr float MapSizeToRVANumDelays[] =
 	12,	// GIGANTIC	12 reverbs
 };
 
-constexpr float MapSizeToRVAFeedback[] =
-{
-	0.75,	// SMALL	
-	0.8,	// MEDIUM	
-	0.9,	// LARGE	
-	0.95,	// HUGE		
-	0.98,	// GIGANTIC
-};
-
 void ADSP_SetupAutoReverb( prc_t *pprc_rva, auto_params_t *pa )
 {
 	// shape: hall, tunnel or room
@@ -6837,25 +6841,25 @@ void ADSP_SetupAutoReverb( prc_t *pprc_rva, auto_params_t *pa )
 	// decay: 0-2.0 scales feedback parameters (.7 to .9 * scale/2.0 = feedback)
 	// fparallel: if true, filters are built into delays, otherwise filter output only
 	// fmoddly: if true, all delays are modulating delays
-	float gain = 1.0;
+	float gain = 1.0f;
 
 	pprc_rva->type = PRC_RVA;
 
-	pprc_rva->prm[rva_size_max]			= 50.0;
-	pprc_rva->prm[rva_size_min]			= 30.0;
+	pprc_rva->prm[rva_size_max]			= 50.0f;
+	pprc_rva->prm[rva_size_min]			= 30.0f;
 	
 	if (ADSP_IsRoom(pa))
 		pprc_rva->prm[rva_inumdelays]	= MapSizeToRVANumDelays[pa->size];
 	else
 		pprc_rva->prm[rva_inumdelays]	= MapSizeToRVANumDelays[pa->len];
 
-	pprc_rva->prm[rva_ifeedback]	= 0.9;
+	pprc_rva->prm[rva_ifeedback]	= 0.9f;
 	
 	pprc_rva->prm[rva_icutoff]		= MapReflectivityToRVACutoff[pa->reflectivity];
 	
 	pprc_rva->prm[rva_ifparallel]	= 1;
 	pprc_rva->prm[rva_imoddly]		= ADSP_IsEmpty(pa) ? 0 : 4;
-	pprc_rva->prm[rva_imodrate]		= 3.48;
+	pprc_rva->prm[rva_imodrate]		= 3.48f;
 
 	pprc_rva->prm[rva_iftaps]		= 0;	// 0.1 // use extra delay taps to increase density
 
@@ -6864,9 +6868,9 @@ void ADSP_SetupAutoReverb( prc_t *pprc_rva, auto_params_t *pa )
 	pprc_rva->prm[rva_height]		= clamp( ((float)(pa->height) / 12.0F), 6.0F, 500.0F);
 
 	// room
-	pprc_rva->prm[rva_fbwidth]		= 0.9; // MapSizeToRVAFeedback[pa->size];	// larger size = more feedback
-	pprc_rva->prm[rva_fbdepth]		= 0.9; // MapSizeToRVAFeedback[pa->size];	
-	pprc_rva->prm[rva_fbheight]		= 0.5; // MapSizeToRVAFeedback[pa->size];
+	pprc_rva->prm[rva_fbwidth]		= 0.9f; // MapSizeToRVAFeedback[pa->size];	// larger size = more feedback
+	pprc_rva->prm[rva_fbdepth]		= 0.9f; // MapSizeToRVAFeedback[pa->size];	
+	pprc_rva->prm[rva_fbheight]		= 0.5f; // MapSizeToRVAFeedback[pa->size];
 
 	// feedback is based on size of room:
 	
@@ -6874,25 +6878,25 @@ void ADSP_SetupAutoReverb( prc_t *pprc_rva, auto_params_t *pa )
 	{
 		if (pa->shape == ADSP_HALL)
 		{
-			pprc_rva->prm[rva_fbwidth]		= 0.7; //MapSizeToRVAFeedback[pa->wid];
-			pprc_rva->prm[rva_fbdepth]		= -0.5; //MapSizeToRVAFeedback[pa->len];	
-			pprc_rva->prm[rva_fbheight]		= 0.3; //MapSizeToRVAFeedback[pa->ht];
+			pprc_rva->prm[rva_fbwidth]		= 0.7f; //MapSizeToRVAFeedback[pa->wid];
+			pprc_rva->prm[rva_fbdepth]		= -0.5f; //MapSizeToRVAFeedback[pa->len];	
+			pprc_rva->prm[rva_fbheight]		= 0.3f; //MapSizeToRVAFeedback[pa->ht];
 		}
 
 		if (pa->shape == ADSP_TUNNEL)
 		{
-			pprc_rva->prm[rva_fbwidth]		= 0.9;	
-			pprc_rva->prm[rva_fbdepth]		= -0.8;	// fixed pre-delay, no feedback
-			pprc_rva->prm[rva_fbheight]		= 0.3;	
+			pprc_rva->prm[rva_fbwidth]		= 0.9f;	
+			pprc_rva->prm[rva_fbdepth]		= -0.8f;	// fixed pre-delay, no feedback
+			pprc_rva->prm[rva_fbheight]		= 0.3f;	
 		}
 	}
 	else
 	{
 		if  (pa->shape == ADSP_ALLEY)
 		{
-			pprc_rva->prm[rva_fbwidth]		= 0.9; 
-			pprc_rva->prm[rva_fbdepth]		= -0.8; // fixed pre-delay, no feedback	
-			pprc_rva->prm[rva_fbheight]		= 0.0; 
+			pprc_rva->prm[rva_fbwidth]		= 0.9f; 
+			pprc_rva->prm[rva_fbdepth]		= -0.8f; // fixed pre-delay, no feedback	
+			pprc_rva->prm[rva_fbheight]		= 0.0f; 
 		}
 	}
 
@@ -8901,7 +8905,13 @@ constexpr dsp_stringmap_t gdsp_stringmap[] =
 
 constexpr inline int gcdsp_stringmap = ssize(gdsp_stringmap);
 
-#define isnumber(c) (c == '+' || c == '-' || c == '0' || c == '1' || c == '2' || c == '3' || c == '4' || c == '5' || c == '6' || c == '7'|| c == '8' || c == '9')\
+[[nodiscard]] static constexpr inline bool isnumber(char c) noexcept
+{
+	return (c == '+' || c == '-' || c == '0' ||
+		c == '1' || c == '2' || c == '3' ||
+		c == '4' || c == '5' ||	c == '6' ||
+		c == '7' || c == '8' || c == '9');
+}
 
 // given ptr to null term. string, return integer or float value from g_dsp_stringmap
 
@@ -8910,13 +8920,13 @@ float DSP_LookupStringToken( char *psz, int ipset )
 	int i;	
 	float fipset = (float)ipset;
 
-	// dimhotepus: atof -> strtof
+	// dimhotepus: atof -> V_atof
 	if (isnumber(psz[0]))
-		return strtof(psz, nullptr);
+		return V_atof(psz);
 
 	for (i = 0; i < gcdsp_stringmap; i++)
 	{
-		if (!strcmpi(gdsp_stringmap[i].sz, psz))
+		if (V_strieq(gdsp_stringmap[i].sz, psz))
 			return gdsp_stringmap[i].i;
 	}
 
@@ -8962,7 +8972,7 @@ bool DSP_LoadPresetFile( void )
 	float duration;
 	float fadeout;
 
-	Q_snprintf( szFile, sizeof( szFile ), "scripts/dsp_presets.txt" );
+	V_sprintf_safe( szFile, "scripts/dsp_presets.txt" );
 
 	MEM_ALLOC_CREDIT();
 

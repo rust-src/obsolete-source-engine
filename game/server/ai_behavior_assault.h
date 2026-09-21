@@ -16,7 +16,7 @@
 #include "ai_moveshoot.h"
 #include "ai_utils.h"
 
-#define CUE_POINT_TOLERANCE (3.0*12.0)
+constexpr inline float CUE_POINT_TOLERANCE{3.0f * 12.0f};
 
 enum RallySelectMethod_t
 {

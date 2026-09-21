@@ -313,7 +313,7 @@ CClassInput *GDclass::FindInput(const char *szName)
 	for (intp i = 0; i < nCount; i++)
 	{
 		CClassInput *pInput = GetInput(i);
-		if (!stricmp(pInput->GetName(), szName))
+		if (V_strieq(pInput->GetName(), szName))
 		{
 			return(pInput);
 		}
@@ -332,7 +332,7 @@ CClassOutput *GDclass::FindOutput(const char *szName)
 	for (intp i = 0; i < nCount; i++)
 	{
 		CClassOutput *pOutput = GetOutput(i);
-		if (!stricmp(pOutput->GetName(), szName))
+		if (V_strieq(pOutput->GetName(), szName))
 		{
 			return(pOutput);
 		}
@@ -927,7 +927,7 @@ bool GDclass::ParseVariables(TokenReader &tr)
 			break;
 		}
 
-		if (!stricmp(szToken, "input"))
+		if (V_strieq(szToken, "input"))
 		{
 			if (!ParseInput(tr))
 			{
@@ -937,7 +937,7 @@ bool GDclass::ParseVariables(TokenReader &tr)
 			continue;
 		}
 
-		if (!stricmp(szToken, "output"))
+		if (V_strieq(szToken, "output"))
 		{
 			if (!ParseOutput(tr))
 			{
@@ -947,7 +947,7 @@ bool GDclass::ParseVariables(TokenReader &tr)
 			continue;
 		}
 
-		if (!stricmp(szToken, "key"))
+		if (V_strieq(szToken, "key"))
 		{
 			// dimhotepus: Make error when no key token.
 			if (!GDGetToken(tr, szToken))
@@ -1020,7 +1020,7 @@ GDinputvariable *GDclass::VarForName(const char *pszName, intp *piIndex)
 	for(intp i = 0; i < GetVariableCount(); i++)
 	{
 		GDinputvariable *pVar = GetVariableAt(i);
-		if(!strcmpi(pVar->GetName(), pszName))
+		if(V_strieq(pVar->GetName(), pszName))
 		{
 			if(piIndex)
 				piIndex[0] = i;
@@ -1040,7 +1040,7 @@ void GDclass::GetHelperForGDVar( GDinputvariable *pVar, CUtlVector<const char *>
 		intp nParamCount = pHelper->GetParameterCount();
 		for ( intp j = 0; j < nParamCount; j++ )
 		{
-			if ( !strcmpi( pszName, pHelper->GetParameter( j ) ) )
+			if ( V_strieq( pszName, pHelper->GetParameter( j ) ) )
 			{
 				pszHelperName->AddToTail(pHelper->GetName());
 			}

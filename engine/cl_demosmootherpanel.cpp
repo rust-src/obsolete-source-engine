@@ -239,11 +239,11 @@ void CDemoSmootherPanel::Reset( void )
 	m_nPreviewLastFrame = 0;
 
 	m_bHasSelection = false;
-	memset( m_nSelection, 0, sizeof( m_nSelection ) );
+	BitwiseClear( m_nSelection );
 	m_iSelectionTicksSpan = 0;
 	
 	m_bInputActive = false;
-	memset( m_nOldCursor, 0, sizeof( m_nOldCursor ) );
+	BitwiseClear( m_nOldCursor );
 
 	WipeUndo();
 	WipeRedo();
@@ -347,173 +347,173 @@ bool CDemoSmootherPanel::CanEdit() const
 //-----------------------------------------------------------------------------
 void CDemoSmootherPanel::OnCommand(const char *command)
 {
-	if ( !Q_strcasecmp( command, "cancel" ) )
+	if ( V_strieq( command, "cancel" ) )
 	{
 		OnRevert();
 		MarkForDeletion();
 		Reset();
 		OnClose();
 	}
-	else if ( !Q_strcasecmp( command, "close" ) )
+	else if ( V_strieq( command, "close" ) )
 	{
 		OnSave();
 		MarkForDeletion();
 		Reset();
 		OnClose();
 	}
-	else if ( !Q_strcasecmp( command, "gotoframe" ) )
+	else if ( V_strieq( command, "gotoframe" ) )
 	{
 		OnGotoFrame();
 	}
-	else if ( !Q_strcasecmp( command, "undo" ) )
+	else if ( V_strieq( command, "undo" ) )
 	{
 		Undo();
 	}
-	else if ( !Q_strcasecmp( command, "redo" ) )
+	else if ( V_strieq( command, "redo" ) )
 	{
 		Redo();
 	}
-	else if ( !Q_strcasecmp( command, "revert" ) )
+	else if ( V_strieq( command, "revert" ) )
 	{
 		OnRevert();
 	}
-	else if ( !Q_strcasecmp( command, "original" ) )
+	else if ( V_strieq( command, "original" ) )
 	{
 		OnPreview( true );
 	}
-	else if ( !Q_strcasecmp( command, "processed" ) )
+	else if ( V_strieq( command, "processed" ) )
 	{
 		OnPreview( false );
 	}
-	else if ( !Q_strcasecmp( command, "save" ) )
+	else if ( V_strieq( command, "save" ) )
 	{
 		OnSave();
 	}
-	else if ( !Q_strcasecmp( command, "reload" ) )
+	else if ( V_strieq( command, "reload" ) )
 	{
 		OnReload();
 	}
-	else if ( !Q_strcasecmp( command, "select" ) )
+	else if ( V_strieq( command, "select" ) )
 	{
 		OnSelect();
 	}
-	else if ( !Q_strcasecmp( command, "togglepause" ) )
+	else if ( V_strieq( command, "togglepause" ) )
 	{
 		OnTogglePause();
 	}
-	else if ( !Q_strcasecmp( command, "stepforward" ) )
+	else if ( V_strieq( command, "stepforward" ) )
 	{
 		OnStep( true );
 	}
-	else if ( !Q_strcasecmp( command, "stepbackward" ) )
+	else if ( V_strieq( command, "stepbackward" ) )
 	{
 		OnStep( false );
 	}
-	else if ( !Q_strcasecmp( command, "revertpoint" ) )
+	else if ( V_strieq( command, "revertpoint" ) )
 	{
 		OnRevertPoint();
 	}
-	else if ( !Q_strcasecmp( command, "keyframe" ) )
+	else if ( V_strieq( command, "keyframe" ) )
 	{
 		OnToggleKeyFrame();
 	}
-	else if ( !Q_strcasecmp( command, "looktarget" ) )
+	else if ( V_strieq( command, "looktarget" ) )
 	{
 		OnToggleLookTarget();
 	}
-	else if ( !Q_strcasecmp( command, "nextkey" ) )
+	else if ( V_strieq( command, "nextkey" ) )
 	{
 		OnNextKey();
 	}
-	else if ( !Q_strcasecmp( command, "prevkey" ) )
+	else if ( V_strieq( command, "prevkey" ) )
 	{
 		OnPrevKey();
 	}
-	else if ( !Q_strcasecmp( command, "nexttarget" ) )
+	else if ( V_strieq( command, "nexttarget" ) )
 	{
 		OnNextTarget();
 	}
-	else if ( !Q_strcasecmp( command, "prevtarget" ) )
+	else if ( V_strieq( command, "prevtarget" ) )
 	{
 		OnPrevTarget();
 	}
-	else if ( !Q_strcasecmp( command, "smoothselectionangles" ) )
+	else if ( V_strieq( command, "smoothselectionangles" ) )
 	{
 		OnSmoothSelectionAngles();
 	}
-	else if ( !Q_strcasecmp( command, "keyshalf" ) )
+	else if ( V_strieq( command, "keyshalf" ) )
 	{
 		OnSetKeys( 0.5f );
 	}
-	else if ( !Q_strcasecmp( command, "keys1" ) )
+	else if ( V_strieq( command, "keys1" ) )
 	{
 		OnSetKeys( 1.0f );
 	}
-	else if ( !Q_strcasecmp( command, "keys2" ) )
+	else if ( V_strieq( command, "keys2" ) )
 	{
 		OnSetKeys( 2.0f );
 	}
-	else if ( !Q_strcasecmp( command, "keys4" ) )
+	else if ( V_strieq( command, "keys4" ) )
 	{
 		OnSetKeys( 4.0f );
 	}
-	else if ( !Q_strcasecmp( command, "smoothselectionorigin" ) )
+	else if ( V_strieq( command, "smoothselectionorigin" ) )
 	{
 		OnSmoothSelectionOrigin();
 	}
-	else if ( !Q_strcasecmp( command, "smoothlinearinterpolateangles" ) )
+	else if ( V_strieq( command, "smoothlinearinterpolateangles" ) )
 	{
 		OnLinearInterpolateAnglesBasedOnEndpoints();
 	}
-	else if ( !Q_strcasecmp( command, "smoothlinearinterpolateorigin" ) )
+	else if ( V_strieq( command, "smoothlinearinterpolateorigin" ) )
 	{
 		OnLinearInterpolateOriginBasedOnEndpoints();
 	}
-	else if ( !Q_strcasecmp( command, "splineorigin" ) )
+	else if ( V_strieq( command, "splineorigin" ) )
 	{
 		OnSplineSampleOrigin();
 	}
-	else if ( !Q_strcasecmp( command, "splineangles" ) )
+	else if ( V_strieq( command, "splineangles" ) )
 	{
 		OnSplineSampleAngles();
 	}
-	else if ( !Q_strcasecmp( command, "lookatpoints" ) )
+	else if ( V_strieq( command, "lookatpoints" ) )
 	{
 		OnLookAtPoints( false );
 	}
-	else if ( !Q_strcasecmp( command, "lookatpointsspline" ) )
+	else if ( V_strieq( command, "lookatpointsspline" ) )
 	{
 		OnLookAtPoints( true );
 	}
-	else if ( !Q_strcasecmp( command, "smoothleft" ) )
+	else if ( V_strieq( command, "smoothleft" ) )
 	{
 		OnSmoothEdges( true, false );
 	}
-	else if ( !Q_strcasecmp( command, "smoothright" ) )
+	else if ( V_strieq( command, "smoothright" ) )
 	{
 		OnSmoothEdges( false, true );
 	}
-	else if ( !Q_strcasecmp( command, "smoothboth" ) )
+	else if ( V_strieq( command, "smoothboth" ) )
 	{
 		OnSmoothEdges( true, true );
 	}
-	else if ( !Q_strcasecmp( command, "origineasein" ) )
+	else if ( V_strieq( command, "origineasein" ) )
 	{
 		OnOriginEaseCurve( Ease_In );
 	}
-	else if ( !Q_strcasecmp( command, "origineaseout" ) )
+	else if ( V_strieq( command, "origineaseout" ) )
 	{
 		OnOriginEaseCurve( Ease_Out );
 	}
-	else if ( !Q_strcasecmp( command, "origineaseboth" ) )
+	else if ( V_strieq( command, "origineaseboth" ) )
 	{
 		OnOriginEaseCurve( Ease_Both );
 	}
-	else if ( !Q_strcasecmp( command, "processkey" ) )
+	else if ( V_strieq( command, "processkey" ) )
 	{
 		OnSaveKey();
 	}
-	else if ( !Q_strcasecmp( command, "setview" ) )
+	else if ( V_strieq( command, "setview" ) )
 	{
 		OnSetView();
 	}
@@ -945,7 +945,7 @@ void CDemoSmootherPanel::OnSelect()
 
 	m_bHasSelection = false;
 	m_iSelectionTicksSpan = 0;
-	memset( m_nSelection, 0, sizeof( m_nSelection ) );
+	BitwiseClear( m_nSelection );
 
 	intp start = GetStartFrame();
 	intp end = GetEndFrame();
@@ -2640,7 +2640,7 @@ void CDemoSmootherPanel::SaveSmoothingInfo( char const *filename, CSmoothingCont
 	if ( !infile )
 		return;
 	
-	RunCodeAtScopeExit(fs->Close(infile));
+	RunCodeAtScopeExit(COM_CloseFile(infile));
 
 	int filesize = fs->Size( infile );
 

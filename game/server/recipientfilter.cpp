@@ -153,9 +153,8 @@ void CRecipientFilter::AddRecipientsByTeam( CTeam *team )
 {
 	Assert( team );
 
-	int i;
-	int c = team->GetNumPlayers();
-	for ( i = 0 ; i < c ; i++ )
+	intp c = team->GetNumPlayers();
+	for ( intp i = 0 ; i < c ; i++ )
 	{
 		CBasePlayer *player = team->GetPlayer( i );
 		if ( !player )
@@ -169,9 +168,8 @@ void CRecipientFilter::RemoveRecipientsByTeam( CTeam *team )
 {
 	Assert( team );
 
-	int i;
-	int c = team->GetNumPlayers();
-	for ( i = 0 ; i < c ; i++ )
+	intp c = team->GetNumPlayers();
+	for ( intp i = 0 ; i < c ; i++ )
 	{
 		CBasePlayer *player = team->GetPlayer( i );
 		if ( !player )

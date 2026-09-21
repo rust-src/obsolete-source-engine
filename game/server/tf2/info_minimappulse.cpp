@@ -97,7 +97,7 @@ void CInfoMinimapPulse::InputPulseForPlayer( inputdata_t &inputdata )
 void CInfoMinimapPulse::PulseForTeam( CTFTeam *pTeam )
 {
 	// Pulse all the players
-	for ( int i = 0; i < pTeam->GetNumPlayers(); i++ )
+	for ( intp i = 0; i < pTeam->GetNumPlayers(); i++ )
 	{
 		PulseForPlayer( (CBaseTFPlayer*)pTeam->GetPlayer(i) );
 	}

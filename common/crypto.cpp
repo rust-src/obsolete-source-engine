@@ -808,7 +808,7 @@ bool CCrypto::RSAEncrypt( const uint8 *pubPlaintextData, size_t cubPlaintextData
 		// ensure there is sufficient room in output buffer for result
 		if ( cubCipherText > ( *pcubEncryptedData ) )
 		{
-			AssertMsg2( false, "CCrypto::RSAEncrypt: insufficient output buffer for encryption, needed %d got %d\n",
+			AssertMsg2( false, "CCrypto::RSAEncrypt: insufficient output buffer for encryption, needed %zu got %zu\n",
 						cubCipherText, *pcubEncryptedData );
 			return false;
 		}
@@ -1307,7 +1307,12 @@ bool CCrypto::Base64Encode( const uint8 *pubData, size_t cubData, char *pchEncod
 		
 		if ( nNextLineBreak == 0 )
 		{
-			memcpy( pchEncodedData, pszLineBreak, unLineBreakLen );
+			// dimhotepus: Ensure no nullptr deref.
+			if ( pszLineBreak )
+			{
+				memcpy( pchEncodedData, pszLineBreak, unLineBreakLen );
+			}
+
 			pchEncodedData += unLineBreakLen;
 			cchEncodedData -= unLineBreakLen;
 			nNextLineBreak = k_LineBreakEveryNGroups;
@@ -1336,7 +1341,12 @@ bool CCrypto::Base64Encode( const uint8 *pubData, size_t cubData, char *pchEncod
 
 		if ( nNextLineBreak == 0 )
 		{
-			memcpy( pchEncodedData, pszLineBreak, unLineBreakLen );
+			// dimhotepus: Prevent nullptr dereference.
+			if ( pszLineBreak )
+			{
+				memcpy( pchEncodedData, pszLineBreak, unLineBreakLen );
+			}
+
 			pchEncodedData += unLineBreakLen;
 			cchEncodedData -= unLineBreakLen;
 		}

@@ -689,13 +689,13 @@ void CAI_AssaultBehavior::RunTask( const Task_t *pTask )
 		{
 			if ( IsCurSchedule( SCHED_MOVE_TO_ASSAULT_POINT ) )
 			{
-				NDebugOverlay::Line( WorldSpaceCenter(), GetNavigator()->GetGoalPos(), 255,0,0, true,0.1);
-				NDebugOverlay::Box( GetNavigator()->GetGoalPos(), -Vector(10,10,10), Vector(10,10,10), 255,0,0, 8, 0.1 );
+				NDebugOverlay::Line( WorldSpaceCenter(), GetNavigator()->GetGoalPos(), 255,0,0, true,0.1f);
+				NDebugOverlay::Box( GetNavigator()->GetGoalPos(), -Vector(10,10,10), Vector(10,10,10), 255,0,0, 8, 0.1f );
 			}
 			else if ( IsCurSchedule( SCHED_MOVE_TO_RALLY_POINT ) )
 			{
-				NDebugOverlay::Line( WorldSpaceCenter(), GetNavigator()->GetGoalPos(), 0,255,0, true,0.1);
-				NDebugOverlay::Box( GetNavigator()->GetGoalPos(), -Vector(10,10,10), Vector(10,10,10), 0,255,0, 8, 0.1 );
+				NDebugOverlay::Line( WorldSpaceCenter(), GetNavigator()->GetGoalPos(), 0,255,0, true,0.1f);
+				NDebugOverlay::Box( GetNavigator()->GetGoalPos(), -Vector(10,10,10), Vector(10,10,10), 0,255,0, 8, 0.1f );
 			}
 		}
 
@@ -796,7 +796,7 @@ bool CAI_AssaultBehavior::IsValidShootPosition( const Vector &vLocation, CAI_Nod
 //-----------------------------------------------------------------------------
 float CAI_AssaultBehavior::GetMaxTacticalLateralMovement( void )
 {
-	return CUE_POINT_TOLERANCE - 0.1;
+	return CUE_POINT_TOLERANCE - 0.1f;
 }
 
 //-----------------------------------------------------------------------------

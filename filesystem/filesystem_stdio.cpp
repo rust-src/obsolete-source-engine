@@ -559,18 +559,16 @@ int CFileSystem_Stdio::FS_chmod( const char *pathT, int pmode )
 		return -1;
 
 	char path[ MAX_PATH ];
-
 	CBaseFileSystem::FixUpPath ( pathT, path );
 
-	int rt = _chmod( path, pmode );
+	const int rt = _chmod( path, pmode );
 #if defined(LINUX)
-	if (rt==-1)
+	if ( rt == -1 )
 	{
 		char caseFixedName[ MAX_PATH ];
-		const bool found = findFileInDirCaseInsensitive_safe( path, caseFixedName );
-		if ( found )
+		if ( findFileInDirCaseInsensitive_safe( path, caseFixedName ) )
 		{
-			rt=_chmod( caseFixedName, pmode );
+			rt = _chmod( caseFixedName, pmode );
 		}
 	}	
 #endif
@@ -600,8 +598,7 @@ int CFileSystem_Stdio::FS_stat( const char *pathT, struct _stat *buf, bool *pbLo
 	if ( rt == -1 )
 	{
 		char caseFixedName[ MAX_PATH ];
-		bool found = findFileInDirCaseInsensitive_safe( path, caseFixedName );
-		if ( found )
+		if ( findFileInDirCaseInsensitive_safe( path, caseFixedName ) )
 		{
 			rt = _stat( caseFixedName, buf );
 		}
@@ -745,15 +742,14 @@ CStdioFile *CStdioFile::FS_fopen( const char *filenameT, const char *options, in
 
 #ifdef LINUX
 	// Try opening the lower cased version.
-	if ( !pFile && !strchr(options, 'w') && !strchr(options,'+') )
+	if ( !pFile && !strchr(options, 'w') && !strchr(options, '+') )
 	{
 		char caseFixedName[ MAX_PATH ];
-		const bool found = findFileInDirCaseInsensitive_safe( filename, caseFixedName );
-		if ( found )
+		if ( findFileInDirCaseInsensitive_safe( filename, caseFixedName ) )
 		{
 			pFile = fopen( caseFixedName, options );
 			// dimhotepus: filename should contain valid file name.
-			if (pFile)
+			if ( pFile )
 			{
 				V_strcpy_safe( filename, caseFixedName );
 			}
@@ -1015,7 +1011,8 @@ int GetSectorSize( const char *pszFilename )
 
 	static DriveSectorSize_t cachedSizes[8];
 
-	char volume = tolower( *pszFilename );
+	// dimhotepus: tolower -> V_tolower.
+	char volume = V_tolower( *pszFilename );
 
 	size_t i;
 	for ( i = 0; i < std::size(cachedSizes) && cachedSizes[i].volume; i++ )
@@ -1108,8 +1105,6 @@ bool CWin32ReadOnlyFile::CanOpen( const char *, const char *options )
 
 static HANDLE OpenWin32File( const char *filename, bool bOverlapped, bool bUnbuffered, int64 *pFileSize )
 {
-	HANDLE hFile;
-
 	DWORD createFlags = FILE_ATTRIBUTE_NORMAL;
 		
 	if ( bOverlapped )
@@ -1122,7 +1117,7 @@ static HANDLE OpenWin32File( const char *filename, bool bOverlapped, bool bUnbuf
 		createFlags |= FILE_FLAG_NO_BUFFERING;
 	}
 
-	hFile = ::CreateFile( filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, createFlags, NULL );
+	HANDLE hFile = ::CreateFile( filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, createFlags, NULL );
 	if ( hFile != INVALID_HANDLE_VALUE && !*pFileSize )
 	{
 		LARGE_INTEGER fileSize;
@@ -1130,8 +1125,14 @@ static HANDLE OpenWin32File( const char *filename, bool bOverlapped, bool bUnbuf
 		{
 			CloseHandle( hFile );
 			hFile = INVALID_HANDLE_VALUE;
+
+			// dimhotepus: Ensure 0 size when file is not opened.
+			*pFileSize = 0;
 		}
-		*pFileSize = fileSize.QuadPart;
+		else
+		{
+			*pFileSize = fileSize.QuadPart;
+		}
 	}
 	return hFile;
 }
@@ -1285,8 +1286,8 @@ size_t CWin32ReadOnlyFile::FS_fread( OUT_BYTECAP(destSize) void *dest, size_t de
 			// not properly aligned, snap to alignments
 			// attempt to perform single unbuffered operation using stack buffer
 			int64 alignedOffset = AlignValue( ( m_ReadPos - m_SectorSize ) + 1, m_SectorSize );
-			unsigned int alignedBytesToRead = AlignValue( ( m_ReadPos - alignedOffset ) + size, m_SectorSize );
-			if ( alignedBytesToRead <= sizeof( tempBuffer ) - destBaseAlign )
+			const unsigned int alignedBytesToRead = AlignValue( ( m_ReadPos - alignedOffset ) + size, m_SectorSize );
+			if ( alignedBytesToRead + destBaseAlign <= sizeof( tempBuffer ) )
 			{
 				// read operation can be performed as unbuffered follwed by a post fixup
 				nBytesToRead = alignedBytesToRead;

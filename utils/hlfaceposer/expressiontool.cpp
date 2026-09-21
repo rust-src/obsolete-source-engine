@@ -1751,7 +1751,7 @@ void ExpressionTool::DrawRelativeTags( CChoreoWidgetDrawHelper& drawHelper )
 		rcText.top -= 20;
 		
 		char text[ 256 ];
-		V_sprintf_safe( text, "%s", tag->GetName() );
+		V_strcpy_safe( text, tag->GetName() );
 		if ( tag->GetLocked() )
 		{
 			V_strcat_safe( text, " - locked" );
@@ -3286,14 +3286,14 @@ void ExpressionTool::OnNewExpression( void )
 		return;
 
 	if ( ( Q_isempty( params.m_szName ) ) ||
-		!stricmp( params.m_szName, "unnamed" ) )
+		V_strieq( params.m_szName, "unnamed" ) )
 	{
 		Con_ErrorPrintf( "You must type in a valid name\n" );
 		return;
 	}
 
 	if ( ( Q_isempty( params.m_szDescription ) ) ||
-   	   !stricmp( params.m_szDescription, "description" ) )
+   	   V_strieq( params.m_szDescription, "description" ) )
 	{
 		Con_ErrorPrintf( "You must type in a valid description\n" );
 		return;
@@ -3934,7 +3934,7 @@ void ExpressionTool::DrawMouseOverPos( CChoreoWidgetDrawHelper& drawHelper, RECT
 	char sz[ 128 ];
 	if ( t != snapped )
 	{
-		Q_snprintf( sz, sizeof( sz ), "%s", FacePoser_DescribeSnappedTime( t ) );
+		V_strcpy_safe( sz, FacePoser_DescribeSnappedTime( t ) );
 	}
 	else
 	{

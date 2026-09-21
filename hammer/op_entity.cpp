@@ -91,7 +91,7 @@ static bool IsValidTargetName( const char *pTestName )
 	{
 		CMapEntity *pEntity = pList->Element( i );
 		const char *pszTargetName = pEntity->GetKeyValue("targetname");
-		if ( pszTargetName && Q_stricmp( pszTargetName, pTestName ) == 0 )
+		if ( pszTargetName && V_strieq( pszTargetName, pTestName ) )
 			return true;
 	}
 
@@ -582,7 +582,7 @@ void COP_Entity::GetKeyState( const char *pShortName, EKeyState *pState, bool *p
 	varCopy.ResetDefaults();
 	varCopy.ToKeyValue( &tmpkv );
 
-	if ( Q_stricmp( pszCurValue, tmpkv.szValue ) == 0 )
+	if ( V_strieq( pszCurValue, tmpkv.szValue ) )
 		*pState = k_EKeyState_DefaultFGDValue;
 	else
 		*pState = k_EKeyState_Modified;
@@ -734,7 +734,7 @@ void COP_Entity::MergeKeyValue(char const *pszKey)
 		//
 		m_kv.SetValue(pszKey, VALUE_DIFFERENT_STRING);
 
-		if (!stricmp(pszKey, "angles"))
+		if (V_strieq(pszKey, "angles"))
 		{
 			// We can't merge angles, so set the main angles control to "different".
 			m_Angle.SetDifferent(true);
@@ -865,7 +865,7 @@ void COP_Entity::UpdateData( int Mode, PVOID pData, bool bCanEdit )
 		if ( m_bClassSelectionEmpty )
 			str = "";
 			
-		if (strcmpi(str, pEdit->GetClassName()))
+		if (!V_strieq(str, pEdit->GetClassName()))
 		{
 			//
 			// Not the same - set class to be blank and 
@@ -1199,7 +1199,7 @@ void COP_Entity::RefreshKVListValues( const char *pOnlyThisVar )
 		char tmpValueBuf[512];
 
 		// If they only wanted to update one var...
-		if ( pOnlyThisVar && Q_stricmp( pVarName, pOnlyThisVar ) != 0 )
+		if ( pOnlyThisVar && !V_strieq( pVarName, pOnlyThisVar ) )
 			continue;
 		
 		if ( m_bSmartedit )
@@ -1305,7 +1305,7 @@ void COP_Entity::PresentProperties()
 			//
 			// Spawnflags are handled separately - don't add that key.
 			//
-			if (strcmpi(pVar->GetName(), SPAWNFLAGS_KEYNAME) != 0)
+			if (!V_strieq(pVar->GetName(), SPAWNFLAGS_KEYNAME))
 			{
 				int iItem = m_VarList.InsertItem( size_cast<int>(i), pVar->GetLongName() );
 				m_VarList.SetItemData( iItem, (DWORD_PTR)pVar->GetName() );
@@ -1716,7 +1716,7 @@ void COP_Entity::SetCurKey(LPCTSTR pszKey)
 	for (int i = 0; i < nSel; i++)
 	{
 		CString str = (CString)(const char*)m_VarList.GetItemData( i );
-		if ( !Q_stricmp( str, pszKey ) )
+		if ( V_strieq( str, pszKey ) )
 		{
 			// found it here - 
 			SetCurVarListSelection( i );
@@ -1790,7 +1790,7 @@ void COP_Entity::CreateSmartControls(GDinputvariable *pVar, CUtlVector<const cha
 	// If this is the same var that our smart controls are already setup for, then don't do anything.
 	if ( m_SmartControls.Count() > 0 && 
 		 pVar == m_pLastSmartControlVar && 
-		 Q_stricmp( strValue, m_LastSmartControlVarValue ) == 0 )
+		 V_strieq( strValue, m_LastSmartControlVarValue ) )
 	{
 		return;
 	}
@@ -1927,7 +1927,7 @@ void COP_Entity::CreateSmartControls_Angle( GDinputvariable *pVar, CRect &ctrlre
 		LPCTSTR pszValue = m_kv.GetValue(pVar->GetName());
 		if (pszValue != NULL)
 		{
-			if (!stricmp(pszValue, VALUE_DIFFERENT_STRING))
+			if (V_strieq(pszValue, VALUE_DIFFERENT_STRING))
 			{
 				m_SmartAngle.SetDifferent(true);
 			}
@@ -2161,7 +2161,7 @@ void COP_Entity::CreateSmartControls_BasicEditControl( GDinputvariable *pVar, CR
 
 	for ( int i = 0; i < pHelperType->Count(); i++ )
 	{
-		if ( !Q_strcmp( pHelperType->Element(i), "sphere" ) )
+		if ( V_streq( pHelperType->Element(i), "sphere" ) )
 		{
 			CRect ButtonRect = ctrlrect;
 			ButtonRect.top = ctrlrect.bottom + 4;
@@ -2650,7 +2650,7 @@ void COP_Entity::OnChangeKeyorValue(void)
 	m_kv.SetValue(szKey, szValue);
 
 	// If they changed spawnflags, notify the flags page so its changes don't overwrite ours later.
-	if ( V_stricmp( szKey, SPAWNFLAGS_KEYNAME ) == 0 )
+	if ( V_strieq( szKey, SPAWNFLAGS_KEYNAME ) )
 	{
 		unsigned long value;
 		sscanf( szValue, "%lu", &value );
@@ -2663,7 +2663,7 @@ void COP_Entity::OnChangeKeyorValue(void)
 
 		// This code should only be hit as a result of user input in the edit control!
 		// If they changed the "angles" key, update the main angles control.
-		if (!stricmp(szKey, "angles"))
+		if (V_strieq(szKey, "angles"))
 		{
 			m_Angle.SetDifferent(false);
 			m_Angle.SetAngles(szValue, true);
@@ -2750,7 +2750,7 @@ static unsigned long GetMatchingFlagsMask( GDinputvariable *pVar1, GDinputvariab
 		{
 			if ( pVar1->GetFlagMask( i ) == pVar2->GetFlagMask( j ) )
 			{
-				if ( V_stricmp( pVar1->GetFlagCaption( i ), pVar2->GetFlagCaption( j ) ) == 0 )
+				if ( V_strieq( pVar1->GetFlagCaption( i ), pVar2->GetFlagCaption( j ) ) )
 				{
 					unsigned long iMask = (unsigned long)pVar1->GetFlagMask( i );
 					nMatchingMask |= iMask;
@@ -2781,7 +2781,7 @@ void COP_Entity::AssignClassDefaults(GDclass *pClass, GDclass *pOldClass)
 		LPCTSTR p = m_kv.GetValue(pVar->GetName(), &iIndex);
 		
 		// Always reset spawnflags.
-		if (!strcmpi(pVar->GetName(), SPAWNFLAGS_KEYNAME))
+		if (V_strieq(pVar->GetName(), SPAWNFLAGS_KEYNAME))
 		{
 			unsigned long nOriginalFlagsValue = 0;
 			if (p)
@@ -2828,7 +2828,7 @@ void COP_Entity::AssignClassDefaults(GDclass *pClass, GDclass *pOldClass)
 			Q_snprintf( szValue, sizeof( szValue ), "%lu", nCurrent );
 
 			// Remember that we added or changed this key.
-			if (!p || Q_stricmp(p, szValue) != 0)
+			if (!p || !V_strieq(p, szValue))
 			{
 				m_kvAdded.SetValue(SPAWNFLAGS_KEYNAME, "1");
 			}
@@ -2868,7 +2868,7 @@ void COP_Entity::UpdateEditClass(const char *pszClass, bool bForce)
 	//
 	// Remove unused keyvalues.
 	//
-	if (m_pEditClass != pOldEditClass && m_pEditClass && pOldEditClass && strcmpi(pszClass, "multi_manager"))
+	if (m_pEditClass != pOldEditClass && m_pEditClass && pOldEditClass && !V_strieq(pszClass, "multi_manager"))
 	{
 		unsigned short iNext;
 		for ( auto i=m_kv.GetFirst(); i != m_kv.GetInvalidIndex(); i=iNext )
@@ -3239,7 +3239,7 @@ void COP_Entity::InternalOnChangeSmartcontrol( const char *szValue )
 		if (pVar->GetType() == ivAngle)
 		{
 			// If they changed the "angles" key, update the main angles control.
-			if (!stricmp(pVar->GetName(), "angles"))
+			if (V_strieq(pVar->GetName(), "angles"))
 			{
 				m_Angle.SetDifferent(false);
 				m_Angle.SetAngles(strValue, true);
@@ -3638,7 +3638,7 @@ void COP_Entity::OnBrowse(void)
 	//
 	// dimhotepus: int -> bool.
 	bool ret;
-	if ( 1/*g_pFullFileSystem->IsSteam()*/ || CommandLine()->FindParm( "-NewDialogs" ) )
+	if ( 1/*g_pFullFileSystem->IsSteam()*/ || CommandLine()->HasParm( "-NewDialogs" ) )
 		ret = pDlg->DoModal();
 	else
 		ret = pDlg->DoModal_WindowsDialog();
@@ -3954,7 +3954,7 @@ void COP_Entity::OnPaste(void)
 	// copy entity keyvalues
 	for (auto i = kvClipboard.GetFirst(); i != kvClipboard.GetInvalidIndex(); i=kvClipboard.GetNext( i ) )
 	{
-		if (!strcmp(kvClipboard.GetKey(i), "xxxClassxxx"))
+		if (V_streq(kvClipboard.GetKey(i), "xxxClassxxx"))
 		{
 			m_cClasses.SelectItem( kvClipboard.GetValue(i) );
 			UpdateEditClass(kvClipboard.GetValue(i), false);

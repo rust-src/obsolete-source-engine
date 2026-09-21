@@ -55,8 +55,15 @@ static SpewRetval_t SpewStdout( SpewType_t spewType, char const *pMsg )
 	OutputDebugString( pMsg );
 #endif
 
-	printf( pMsg );
-	fflush( stdout );
+	if ( spewType == SPEW_WARNING || spewType == SPEW_ERROR )
+	{
+		fprintf( stderr, "%s", pMsg );
+	}
+	else
+	{
+		printf( "%s", pMsg );
+		fflush( stdout );
+	}
 
 	return ( spewType == SPEW_ASSERT ) ? SPEW_DEBUGGER : SPEW_CONTINUE; 
 }
@@ -394,7 +401,7 @@ int CVcdUpdateApp::Main()
 	// This bit of hackery allows us to access files on the harddrive
 	g_pFullFileSystem->AddSearchPath( "", "LOCAL", PATH_ADD_TO_HEAD ); 
 
-	if ( CommandLine()->CheckParm( "-h" ) || CommandLine()->CheckParm( "-help" ) )
+	if ( CommandLine()->HasParm( "-h" ) || CommandLine()->HasParm( "-help" ) )
 	{
 		PrintHelp();
 		return 0;
@@ -437,7 +444,7 @@ int CVcdUpdateApp::Main()
 	}
 
 	// Do Perforce Stuff
-	if ( CommandLine()->FindParm( "-nop4" ) )
+	if ( CommandLine()->HasParm( "-nop4" ) )
 	{
 		g_p4factory->SetDummyMode( true );
 	}

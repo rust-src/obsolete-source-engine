@@ -308,7 +308,7 @@ bool CPhysicsHook::FindOrAddVehicleScript( const char *pScriptName, vehicleparam
 	intp index = -1;
 	for ( intp i = 0; i < m_vehicleScripts.Count(); i++ )
 	{
-		if ( !Q_stricmp(m_vehicleScripts[i].scriptName.ToCStr(), pScriptName) )
+		if ( V_strieq(m_vehicleScripts[i].scriptName.ToCStr(), pScriptName) )
 		{
 			index = i;
 			bLoadedSounds = true;
@@ -332,11 +332,11 @@ bool CPhysicsHook::FindOrAddVehicleScript( const char *pScriptName, vehicleparam
 			while ( !pParse->Finished() )
 			{
 				const char *pBlock = pParse->GetCurrentBlockName();
-				if ( !strcmpi( pBlock, "vehicle" ) )
+				if ( V_strieq( pBlock, "vehicle" ) )
 				{
 					pParse->ParseVehicle( &m_vehicleScripts[index].params, NULL );
 				}
-				else if ( !Q_stricmp( pBlock, "vehicle_sounds" ) )
+				else if ( V_strieq( pBlock, "vehicle_sounds" ) )
 				{
 					bLoadedSounds = true;
 					CVehicleSoundsParser soundParser;
@@ -2237,11 +2237,11 @@ void CCollisionEvent::RestoreDamageInflictorState( IPhysicsObject *pInflictor )
 				massRatio = clamp( massRatio, 0.1f, 10.0f );
 				if ( massRatio < 1 )
 				{
-					velocityBlend = RemapVal( massRatio, 0.1, 1, 0, 0.5 );
+					velocityBlend = RemapVal( massRatio, 0.1f, 1, 0, 0.5f );
 				}
 				else
 				{
-					velocityBlend = RemapVal( massRatio, 1.0, 10, 0.5, 1 );
+					velocityBlend = RemapVal( massRatio, 1.0f, 10, 0.5f, 1 );
 				}
 			}
 			RestoreDamageInflictorState( index, velocityBlend );
@@ -2807,7 +2807,7 @@ void PhysFlushVehicleScripts()
 
 IPhysicsObject *FindPhysicsObjectByName( const char *pName, CBaseEntity *pErrorEntity )
 {
-	if ( !pName || !strlen(pName) )
+	if ( Q_isempty(pName) )
 		return NULL;
 
 	CBaseEntity *pEntity = NULL;

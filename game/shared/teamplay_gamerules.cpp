@@ -171,7 +171,7 @@ void CTeamplayRules::InitHUD( CBasePlayer *pPlayer )
 
 	// update the current player of the team he is joining
 	char text[1024];
-	if ( !strcmp( mdls, pPlayer->TeamName() ) )
+	if ( V_streq( mdls, pPlayer->TeamName() ) )
 	{
 		Q_snprintf( text,sizeof(text), "You are on team \'%s\'\n", pPlayer->TeamName() );
 	}
@@ -376,7 +376,7 @@ int CTeamplayRules::PlayerRelationship( CBaseEntity *pPlayer, CBaseEntity *pTarg
 	if ( !pPlayer || !pTarget || !pTarget->IsPlayer() )
 		return GR_NOTTEAMMATE;
 
-	if ( (*GetTeamID(pPlayer) != '\0') && (*GetTeamID(pTarget) != '\0') && !stricmp( GetTeamID(pPlayer), GetTeamID(pTarget) ) )
+	if ( (*GetTeamID(pPlayer) != '\0') && (*GetTeamID(pTarget) != '\0') && V_strieq( GetTeamID(pPlayer), GetTeamID(pTarget) ) )
 	{
 		return GR_TEAMMATE;
 	}
@@ -445,7 +445,7 @@ int CTeamplayRules::GetTeamIndex( const char *pTeamName )
 		// try to find existing team
 		for ( int tm = 0; tm < num_teams; tm++ )
 		{
-			if ( !stricmp( team_names[tm], pTeamName ) )
+			if ( V_strieq( team_names[tm], pTeamName ) )
 				return tm;
 		}
 	}

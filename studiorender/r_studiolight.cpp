@@ -72,7 +72,7 @@ void R_LightAmbient_4D( const FourVectors& normal, Vector4D* pLightBoxColor, Fou
 //	VPROF( "R_LightAmbient" );
 
 	// !!speed!! compute ambient color cube in sse format
-	static fltx4 FourZeros={0.,0.,0.,.0};
+	constexpr fltx4 FourZeros={0.,0.,0.,.0};
 
 	// find the contributions from each axis
 	fltx4 NegMask=CmpLtSIMD(normal.x,FourZeros);
@@ -478,10 +478,10 @@ void CStudioRenderContext::ComputeLighting( const Vector* pAmbient, int lightCou
 		return;
 	}
 
-	if ( lightCount > ssize( m_pLightPos ) )
+	if ( lightCount > static_cast<int>( ssize( m_pLightPos ) ) )
 	{
 		AssertMsg( 0, "Light count out of range in ComputeLighting\n" );
-		lightCount = ssize( m_pLightPos );
+		lightCount = static_cast<int>( ssize( m_pLightPos ) );
 	}
 
 	// Calculate color given lightpos_t lightpos, a normal, and the ambient
@@ -505,10 +505,10 @@ void CStudioRenderContext::ComputeLightingConstDirectional( const Vector* pAmbie
 		return;
 	}
 
-	if ( lightCount > ssize( m_pLightPos ) )
+	if ( lightCount > static_cast<int>( ssize( m_pLightPos ) ) )
 	{
 		AssertMsg( 0, "Light count out of range in ComputeLighting\n" );
-		lightCount = ssize( m_pLightPos );
+		lightCount = static_cast<int>( ssize( m_pLightPos ) );
 	}
 
 	// Calculate color given lightpos_t lightpos, a normal, and the ambient

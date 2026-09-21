@@ -143,11 +143,11 @@ static void ParseDetailGroup( int detailId, KeyValues* pGroupKeyValues )
 
 					if ( pProcModelType )
 					{
-						if ( !Q_stricmp( pProcModelType, "cross" ) )
+						if ( V_strieq( pProcModelType, "cross" ) )
 						{
 							model.m_Type = DETAIL_PROP_TYPE_SHAPE_CROSS;
 						}
-						else if ( !Q_stricmp( pProcModelType, "tri" ) )
+						else if ( V_strieq( pProcModelType, "tri" ) )
 						{
 							model.m_Type = DETAIL_PROP_TYPE_SHAPE_TRI;
 						}
@@ -287,7 +287,7 @@ static const char *FindDetailVBSPName( void )
 	for( int i = 0; i < num_entities; i++ )
 	{
 		const char* pEntity = ValueForKey( &entities[i], "classname" );
-		if ( !strcmp( pEntity, "worldspawn" ) )
+		if ( V_streq( pEntity, "worldspawn" ) )
 		{
 			const char *pDetailVBSP = ValueForKey( &entities[i], "detailvbsp" );
 			if ( !pDetailVBSP || !pDetailVBSP[0] ) 
@@ -500,9 +500,10 @@ static void AddDetailSpriteToLump( const Vector &vecOrigin, const QAngle &vecAng
 	// Insert an element into the object dictionary if it aint there...
 	intp i = s_DetailObjectLump.AddToTail( );
 
-	if (i >= 65535)
+	// dimhotepus: Bump max detail props count (ficool).
+	if (i >= INT_MAX)
 	{
-		Error( "Error! Too many detail props emitted on this map! (64K max!)n" );
+		Error( "Error! Too many detail props emitted on this map!\n" );
 	}
 
 	DetailObjectLump_t& objectLump = s_DetailObjectLump[i];
@@ -900,7 +901,7 @@ void EmitDetailModels()
 	for (int i = 0; i < num_entities; ++i)
 	{
 		const char* pEntity = ValueForKey(&entities[i], "classname");
-		if (!strcmp(pEntity, "detail_prop") || !strcmp(pEntity, "prop_detail"))
+		if (V_streq(pEntity, "detail_prop") || V_streq(pEntity, "prop_detail"))
 		{
 			GetVectorForKey( &entities[i], "origin", origin );
 			GetAnglesForKey( &entities[i], "angles", angles );
@@ -914,7 +915,7 @@ void EmitDetailModels()
 			continue;
 		}
 
-		if (!strcmp(pEntity, "prop_detail_sprite"))
+		if (V_streq(pEntity, "prop_detail_sprite"))
 		{
 			GetVectorForKey( &entities[i], "origin", origin );
 			GetAnglesForKey( &entities[i], "angles", angles );

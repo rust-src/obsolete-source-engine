@@ -202,7 +202,7 @@ MSVC_END_WARNING_OVERRIDE_SCOPE()
 		// Display version, service pack (if any), and build number.
 		
 		char build[256];
-		Q_snprintf (build, sizeof( build ), "%s (Build %lu) version %lu.%lu (%s) (super user: %s)",
+		Q_snprintf (build, sizeof( build ), "%s (Build %lu) version %lu.%lu (%s) (admin: %s)",
 			osvi.szCSDVersion,
 			osvi.dwBuildNumber & 0xFFFF,
 			osvi.dwMajorVersion,
@@ -422,7 +422,7 @@ CBugReportFinishedDialog::CBugReportFinishedDialog(Panel *parent, const char *na
 
 void CBugReportFinishedDialog::OnCommand( const char *command )
 {
-	if ( !Q_stricmp( command, "Close" ) )
+	if ( V_strieq( command, "Close" ) )
 	{
 		MarkForDeletion();
 		OnClose();
@@ -914,9 +914,9 @@ void CBugUIPanel::Shutdown()
 	if ( m_pBugReporter )
 	{
 		m_pBugReporter->Shutdown();
+		m_pBugReporter = NULL;
 	}
 
-	m_pBugReporter = NULL;
 	if ( m_hBugReporter )
 	{
 		Sys_UnloadModule( m_hBugReporter );
@@ -1189,17 +1189,17 @@ void CBugUIPanel::OnChooseArea(vgui::Panel *panel)
 
 	// dimhotepus: Drop internal bug reporter as we are fully public.
 	int area_index = m_pGameArea->GetActiveItem();
-	int c = m_pBugReporter->GetLevelCount(area_index);
+	intp c = m_pBugReporter->GetLevelCount(area_index);
 	int item = -1;
 	const char *currentLevel = cl.IsActive() ? cl.m_szLevelBaseName : "console";
 
 	m_pMapNumber->DeleteAllItems();
 		
-	for ( int i = 0; i < c; i++ )
+	for ( intp i = 0; i < c; i++ )
 	{
 		const char *level = m_pBugReporter->GetLevel(area_index, i );
 		int id = m_pMapNumber->AddItem( level, NULL );
-		if (!Q_strcmp(currentLevel, level))
+		if (V_streq(currentLevel, level))
 		{
 			item = id;
 		}
@@ -1275,11 +1275,11 @@ void CBugUIPanel::OnFileSelected( char const *fullpath )
 	// 
 	// if ( baseDirFile )
 	// {
-	// 	V_sprintf_safe( inc.fixedname, "%s", inc.name+3 ); // strip the "..\"
+	// 	V_strcpy_safe( inc.fixedname, inc.name+3 ); // strip the "..\"
 	// }
 	// else
 	// {
-	// 	V_sprintf_safe( inc.fixedname, "%s", inc.name );
+	// 	V_strcpy_safe( inc.fixedname, inc.name );
 	// }
 	// V_FixSlashes( inc.fixedname );
 	// 
@@ -1358,7 +1358,7 @@ void CBugUIPanel::Activate()
 			int id = m_pMapNumber->GetItemIDFromRow(i);
 			char level[256];
 			m_pMapNumber->GetItemText(id, level);
-			if (!Q_strcmp(currentLevel, level))
+			if (V_streq(currentLevel, level))
 			{
 				item = id;
 			}
@@ -1559,7 +1559,7 @@ bool CBugUIPanel::IsValidSubmission( bool verbose )
 	char owner[ 256 ];
 	Q_strncpy( owner, m_pBugReporter->GetDisplayName( m_pAssignTo->GetActiveItem() ), sizeof( owner ) );
 	// dimhotepus: Drop as only public repo used.
-	// if ( !isPublic && !Q_stricmp( owner, "<<Unassigned>>" ) )
+	// if ( !isPublic && V_strieq( owner, "<<Unassigned>>" ) )
 	// {
 	// 	if ( verbose ) 
 	// 	{
@@ -1733,7 +1733,7 @@ void CBugUIPanel::OnSubmit()
 	}
 	else
 	{
-		Q_snprintf( title, sizeof( title ), "%s", temp );
+		V_strcpy_safe( title, temp );
 	}
 
 	Msg( "title:  %s\n", title );
@@ -2355,20 +2355,20 @@ void CBugUIPanel::Close()
 
 void CBugUIPanel::OnCommand( char const *command )
 {
-	if ( !Q_strcasecmp( command, "submit" ) )
+	if ( V_strieq( command, "submit" ) )
 	{
 		OnSubmit();
 	}
-	else if ( !Q_strcasecmp( command, "cancel" ) )
+	else if ( V_strieq( command, "cancel" ) )
 	{
 		Close();
 		WipeData();
 	}
-	else if ( !Q_strcasecmp( command, "snapshot" ) )
+	else if ( V_strieq( command, "snapshot" ) )
 	{
 		OnTakeSnapshot();
 	}
-	else if ( !Q_strcasecmp( command, "savegame" ) )
+	else if ( V_strieq( command, "savegame" ) )
 	{
 		OnSaveGame();
 		
@@ -2381,23 +2381,23 @@ void CBugUIPanel::OnCommand( char const *command )
 		// 	OnSaveBSP();
 		// }
 	}
-	else if ( !Q_strcasecmp( command, "savebsp" ) )
+	else if ( V_strieq( command, "savebsp" ) )
 	{
 		OnSaveBSP();
 	}
-	else if ( !Q_strcasecmp( command, "savevmf" ) )
+	else if ( V_strieq( command, "savevmf" ) )
 	{
 		OnSaveVMF();
 	}
-	else if ( !Q_strcasecmp( command, "clearform" ) )
+	else if ( V_strieq( command, "clearform" ) )
 	{
 		OnClearForm();
 	}
-	else if ( !Q_strcasecmp( command, "addfile" ) )
+	else if ( V_strieq( command, "addfile" ) )
 	{
 		OnIncludeFile();
 	}
-	else if ( !Q_strcasecmp( command, "clearfiles" ) )
+	else if ( V_strieq( command, "clearfiles" ) )
 	{
 		OnClearIncludedFiles();
 	}
@@ -2441,13 +2441,12 @@ void CBugUIPanel::PopulateControls()
 		return;
 
 	m_pAssignTo->DeleteAllItems();
-	int i;
-	int c = m_pBugReporter->GetDisplayNameCount();
-	int defitem = 0;
-	for ( i = 0; i < c; i++ )
+	intp c = m_pBugReporter->GetDisplayNameCount();
+	intp defitem = 0;
+	for ( intp i = 0; i < c; i++ )
 	{
 		char const  *name = m_pBugReporter->GetDisplayName( i );
-		if (!V_strcasecmp(name, "Triage"))
+		if (V_strieq(name, "Triage"))
 			defitem = i;
 		m_pAssignTo->AddItem(name , NULL );
 	}
@@ -2456,10 +2455,10 @@ void CBugUIPanel::PopulateControls()
 	defitem = 0;
 	m_pSeverity->DeleteAllItems();
 	c = m_pBugReporter->GetSeverityCount();
-	for ( i = 0; i < c; i++ )
+	for ( intp i = 0; i < c; i++ )
 	{
 		char const  *severity = m_pBugReporter->GetSeverity( i );
-		if (!V_strcasecmp(severity, "Zero"))
+		if (V_strieq(severity, "Zero"))
 			defitem = i;
 		m_pSeverity->AddItem( severity, NULL );
 	}
@@ -2467,7 +2466,7 @@ void CBugUIPanel::PopulateControls()
 
 	m_pReportType->DeleteAllItems();
 	c = m_pBugReporter->GetReportTypeCount();
-	for ( i = 0; i < c; i++ )
+	for ( intp i = 0; i < c; i++ )
 	{
 		m_pReportType->AddItem( m_pBugReporter->GetReportType( i ), NULL );
 	}
@@ -2475,7 +2474,7 @@ void CBugUIPanel::PopulateControls()
 
 	m_pPriority->DeleteAllItems();
 	c = m_pBugReporter->GetPriorityCount();
-	for ( i = 0; i < c; i++ )
+	for ( intp i = 0; i < c; i++ )
 	{
 		m_pPriority->AddItem( m_pBugReporter->GetPriority( i ), NULL );
 	}
@@ -2483,7 +2482,7 @@ void CBugUIPanel::PopulateControls()
 
 	m_pGameArea->DeleteAllItems();
 	c = m_pBugReporter->GetAreaCount();
-	for ( i = 0; i < c; i++ )
+	for ( intp i = 0; i < c; i++ )
 	{
 		m_pGameArea->AddItem( m_pBugReporter->GetArea( i ), NULL );
 	}
@@ -2560,6 +2559,8 @@ void CBugUIPanel::ParseDefaultParams( void )
 	// load file into a null-terminated buffer
 	int fileSize = g_pFileSystem->Size(hLocal);
 	char *buffer = (char*)MemAllocScratch(fileSize + 1);
+	// dimhotepus: Do not leak allocated memory.
+	RunCodeAtScopeExit( MemFreeScratch() );
 
 	Assert(buffer);
 
@@ -2610,7 +2611,7 @@ bool CBugUIPanel::Compare( char const *value, char const *token, bool partial )
 {
 	if ( !partial )
 	{
-		if ( !Q_stricmp( value, token ) )
+		if ( V_strieq( value, token ) )
 			return true;
 	}
 	else
@@ -2631,11 +2632,8 @@ bool CBugUIPanel::AutoFillToken( char const *token, bool partial )
 	if ( !m_pBugReporter )
 		return true;
 
-	int i;
-	int c;
-	
-	c = m_pBugReporter->GetDisplayNameCount();
-	for ( i = 0; i < c; i++ )
+	intp c = m_pBugReporter->GetDisplayNameCount();
+	for ( intp i = 0; i < c; i++ )
 	{
 		if ( Compare( m_pBugReporter->GetDisplayName( i ), token, partial ) )
 		{
@@ -2645,7 +2643,7 @@ bool CBugUIPanel::AutoFillToken( char const *token, bool partial )
 	}
 	
 	c = m_pBugReporter->GetSeverityCount();
-	for ( i = 0; i < c; i++ )
+	for ( intp i = 0; i < c; i++ )
 	{
 		if ( Compare( m_pBugReporter->GetSeverity( i ), token, partial ) )
 		{
@@ -2655,7 +2653,7 @@ bool CBugUIPanel::AutoFillToken( char const *token, bool partial )
 	}
 
 	c = m_pBugReporter->GetReportTypeCount();
-	for ( i = 0; i < c; i++ )
+	for ( intp i = 0; i < c; i++ )
 	{
 		if ( Compare( m_pBugReporter->GetReportType( i ), token, partial ) )
 		{
@@ -2665,7 +2663,7 @@ bool CBugUIPanel::AutoFillToken( char const *token, bool partial )
 	}
 
 	c = m_pBugReporter->GetPriorityCount();
-	for ( i = 0; i < c; i++ )
+	for ( intp i = 0; i < c; i++ )
 	{
 		if ( Compare( m_pBugReporter->GetPriority( i ), token, partial ) )
 		{
@@ -2675,7 +2673,7 @@ bool CBugUIPanel::AutoFillToken( char const *token, bool partial )
 	}
 
 	c = m_pBugReporter->GetAreaCount();
-	for ( i = 0; i < c; i++ )
+	for ( intp i = 0; i < c; i++ )
 	{
 		if ( Compare( m_pBugReporter->GetArea( i ), token, partial ) )
 		{
@@ -2684,13 +2682,13 @@ bool CBugUIPanel::AutoFillToken( char const *token, bool partial )
 		}
 	}
 
-	if ( !Q_stricmp( token, "screenshot" ) )
+	if ( V_strieq( token, "screenshot" ) )
 	{
 		m_fAutoAddScreenshot = eAutoAddScreenshot_Add;
 		return true;
 	}
 
-	if ( !Q_stricmp( token, "noscreenshot" ) )
+	if ( V_strieq( token, "noscreenshot" ) )
 	{
 		m_fAutoAddScreenshot = eAutoAddScreenshot_DontAdd;
 		return true;
@@ -2748,7 +2746,7 @@ CON_COMMAND( _bugreporter_restart, "Restarts bug reporter " DLL_EXT_STRING )
 	IEngineBugReporter::BR_TYPE type = IEngineBugReporter::BR_PUBLIC;
 
 	// dimhotepus: Drop internal bug reporter.
-	if ( !Q_stricmp( args.Arg( 1 ), "autoselect" ) )
+	if ( V_strieq( args.Arg( 1 ), "autoselect" ) )
 	{
 		type = IEngineBugReporter::BR_AUTOSELECT;
 	}
@@ -2777,7 +2775,6 @@ void CEngineBugReporter::InstallBugReportingUI( vgui::Panel *parent, IEngineBugR
 
 	// dimhotepus: Always public bug reporter.
 	g_pBugUI = new CBugUIPanel( parent );
-	Assert( g_pBugUI );
 
 	m_ParentPanel = parent;
 }
@@ -2876,7 +2873,7 @@ int CBugUIPanel::GetArea()
 
 		if ( pszAreaPrefix )
 		{
-			if ( !Q_strcmp( szDirectory, gamedir) 
+			if ( V_streq( szDirectory, gamedir) 
 				&& Q_strstr( mapname, pszAreaPrefix ) )
 			{
 				return i+1;
@@ -2884,7 +2881,7 @@ int CBugUIPanel::GetArea()
 		}
 		else if ( !pszAreaPrefix )
 		{
-			if ( !Q_strcmp( szDirectory, gamedir ) )
+			if ( V_streq( szDirectory, gamedir ) )
 			{
 				return i+1;
 			}

@@ -51,7 +51,7 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE( CTEBaseBeam, DT_BaseBeam )
 	SendPropModelIndex( SENDINFO(m_nHaloIndex) ),
 	SendPropInt( SENDINFO(m_nStartFrame), 8, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO(m_nFrameRate), 8, SPROP_UNSIGNED ),
-	SendPropFloat( SENDINFO(m_fLife), 8, 0, 0.0, 25.6 ),
+	SendPropFloat( SENDINFO(m_fLife), 8, 0, 0.0, 25.6f ),
 	SendPropFloat( SENDINFO(m_fWidth), 10, 0, 0.0, 128.0 ),
 	SendPropFloat( SENDINFO(m_fEndWidth), 10, 0, 0.0, 128.0 ),
 	SendPropInt( SENDINFO(m_nFadeLength), 8, SPROP_UNSIGNED ),

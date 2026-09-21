@@ -21,15 +21,16 @@
 //
 //===========================================================================//
 #include "cbase.h"
-#include <stdio.h>
 #include <conio.h>
+#include <wctype.h>  // iswspace.
 #include <windows.h>
 #include <mmreg.h>
 #include <direct.h>
+#include <cstdio>
 #include "tier0/dbg.h"
-#include "utldict.h"
+#include "tier1/utldict.h"
+#include "tier1/KeyValues.h"
 #include "filesystem.h"
-#include "KeyValues.h"
 #include "cmdlib.h"
 #include "scriplib.h"
 #include "appframework/tier3app.h"
@@ -376,16 +377,17 @@ void Con_Printf( const char *fmt, ... )
 
 void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char const *extension )
 {
-	WIN32_FIND_DATA wfd;
-
-	char directory[ 256 ];
 	char filename[ MAX_PATH ];
+
+	char directory[ MAX_PATH ];
+	V_sprintf_safe( directory, "%s\\*.*", dir );
+
 	HANDLE ff;
-
-	sprintf( directory, "%s\\*.*", dir );
-
+	WIN32_FIND_DATA wfd;
 	if ( ( ff = FindFirstFile( directory, &wfd ) ) == INVALID_HANDLE_VALUE )
 		return;
+
+	RunCodeAtScopeExit(FindClose( ff ));
 
 	int extlen = strlen( extension );
 
@@ -398,7 +400,7 @@ void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char con
 				continue;
 
 			// Recurse down directory
-			sprintf( filename, "%s\\%s", dir, wfd.cFileName );
+			V_sprintf_safe( filename, "%s\\%s", dir, wfd.cFileName );
 			BuildFileList_R( files, filename, extension );
 		}
 		else
@@ -406,7 +408,7 @@ void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char con
 			int len = strlen( wfd.cFileName );
 			if ( len > extlen )
 			{
-				if ( !stricmp( &wfd.cFileName[ len - extlen ], extension ) )
+				if ( V_strieq( &wfd.cFileName[ len - extlen ], extension ) )
 				{
 					Q_snprintf( filename, sizeof( filename ), "%s\\%s", dir, wfd.cFileName );
 					_strlwr( filename );
@@ -648,7 +650,7 @@ bool ValidateCombinedFileCheckSum( char const *outfilename, char const *cctoken,
 
 	char actualfile[ 512 ];
 	g_pSoundEmitterSystem->GenderExpandString( gender, outfilename, actualfile, sizeof( actualfile ) );
-	if ( Q_strlen( actualfile ) <= 0 )
+	if ( Q_isempty( actualfile ) )
 	{
 		return false;
 	}
@@ -865,10 +867,11 @@ void ParseVCDFilesFromResList( CUtlVector< CUtlSymbol >& vcdsinreslist, char con
 	int addedStrings = 0;
 	int resourcesConsidered = 0;
 
-	FileHandle_t resfilehandle;
-	resfilehandle = g_pFullFileSystem->Open( resfile, "rb" );
-	if ( FILESYSTEM_INVALID_HANDLE != resfilehandle )
+	FileHandle_t resfilehandle = g_pFullFileSystem->Open( resfile, "rb" );
+	if ( resfilehandle )
 	{
+		RunCodeAtScopeExit(g_pFullFileSystem->Close(resfilehandle));
+
 		// Read in the entire file
 		int length = g_pFullFileSystem->Size(resfilehandle);
 		if ( length > 0 )
@@ -889,7 +892,7 @@ void ParseVCDFilesFromResList( CUtlVector< CUtlSymbol >& vcdsinreslist, char con
 					if ( !pFileList )
 						break;
 
-					if ( strlen( tokenFile ) > 0 )
+					if ( !Q_isempty( tokenFile ) )
 					{
 						char szFileName[ 256 ];
 						Q_strncpy( szFileName, tokenFile, sizeof( szFileName ) );
@@ -948,8 +951,6 @@ void ParseVCDFilesFromResList( CUtlVector< CUtlSymbol >& vcdsinreslist, char con
 			}
 			delete[] pStart;
 		}
-
-		g_pFullFileSystem->Close(resfilehandle);
 	}
 
 //	int filesFound = addedStrings;
@@ -982,10 +983,11 @@ void BuildVCDAndMapNameListsFromReslists( CUtlVector< CUtlSymbol >& vcdsinreslis
 		// and add engine.lst and all.lst at the very end
 
 		// Load them in
-		FileHandle_t resfilehandle;
-		resfilehandle = g_pFullFileSystem->Open( MAPLIST_FILE, "rb" );
-		if ( FILESYSTEM_INVALID_HANDLE != resfilehandle )
+		FileHandle_t resfilehandle = g_pFullFileSystem->Open( MAPLIST_FILE, "rb" );
+		if ( resfilehandle )
 		{
+			RunCodeAtScopeExit(g_pFullFileSystem->Close(resfilehandle));
+
 			// Read in and parse mapcycle.txt
 			int length = g_pFullFileSystem->Size(resfilehandle);
 			if ( length > 0 )
@@ -1003,7 +1005,7 @@ void BuildVCDAndMapNameListsFromReslists( CUtlVector< CUtlSymbol >& vcdsinreslis
 
 						pFileList = ParseFile( pFileList, com_token, NULL );
 
-						if ( strlen( com_token ) <= 0 )
+						if ( Q_isempty( com_token ) )
 							break;
 
 						Q_strncpy(szMap, com_token, sizeof(szMap));
@@ -1027,8 +1029,6 @@ void BuildVCDAndMapNameListsFromReslists( CUtlVector< CUtlSymbol >& vcdsinreslis
 
 				loaded = true;
 			}
-
-			g_pFullFileSystem->Close(resfilehandle);
 		}
 	}
 	
@@ -1101,10 +1101,11 @@ void ParseUsedSoundsFromSndFile( CUtlRBTree< int, int >& usedsounds, char const 
 	int addedStrings = 0;
 	int resourcesConsidered = 0;
 
-	FileHandle_t resfilehandle;
-	resfilehandle = g_pFullFileSystem->Open( sndfile, "rb" );
-	if ( FILESYSTEM_INVALID_HANDLE != resfilehandle )
+	FileHandle_t resfilehandle = g_pFullFileSystem->Open( sndfile, "rb" );
+	if ( resfilehandle )
 	{
+		RunCodeAtScopeExit(g_pFullFileSystem->Close(resfilehandle));
+
 		// Read in the entire file
 		int length = g_pFullFileSystem->Size(resfilehandle);
 		if ( length > 0 )
@@ -1125,7 +1126,7 @@ void ParseUsedSoundsFromSndFile( CUtlRBTree< int, int >& usedsounds, char const 
 					if ( !pFileList )
 						break;
 
-					if ( strlen( tokenFile ) > 0 )
+					if ( !Q_isempty( tokenFile ) )
 					{
 						char soundname[ 256 ];
 						Q_strncpy( soundname, tokenFile, sizeof( soundname ) );
@@ -1152,8 +1153,6 @@ void ParseUsedSoundsFromSndFile( CUtlRBTree< int, int >& usedsounds, char const 
 			}
 			delete[] pStart;
 		}
-
-		g_pFullFileSystem->Close(resfilehandle);
 	}
 
 	vprint( 1, "Found %i new resources (%i total) in %s\n", addedStrings, resourcesConsidered, sndfile );
@@ -1450,9 +1449,9 @@ void CheckUnusedSounds()
 								CSentence sentence;
 								if ( LoadSentenceFromWavFile( va( "sound/%s", PSkipSoundChars( wavname ) ), sentence ) )
 								{
-									if ( Q_strlen( sentence.GetText() ) > 0 ) 
+									if ( !Q_isempty( sentence.GetText() ) ) 
 									{
-										Q_snprintf( ansi, sizeof( ansi ), "%s", sentence.GetText() );
+										V_strcpy_safe( ansi, sentence.GetText() );
 										cleanquotes( ansi );
 
 										logprint( "cc_foundphonemes.txt", "\t\"%s\"\t\t\"%s\"\n", keyname, ansi );
@@ -1512,9 +1511,9 @@ void CheckUnusedSounds()
 					CSentence sentence;
 					if ( LoadSentenceFromWavFile( va( "sound/%s", PSkipSoundChars( wavname ) ), sentence ) )
 					{
-						if ( Q_strlen( sentence.GetText() ) > 0 )
+						if ( !Q_isempty( sentence.GetText() ) )
 						{
-							Q_snprintf( ansi, sizeof( ansi ), "%s", sentence.GetText() );
+							V_strcpy_safe( ansi, sentence.GetText() );
 							cleanquotes( ansi );
 						}
 					}
@@ -1616,9 +1615,9 @@ void SpewScript( char const *vcdname, CUtlRBTree< CChoreoEvent *, int >& list )
 					CSentence sentence;
 					if ( LoadSentenceFromWavFile( va( "sound/%s", PSkipSoundChars( wavname ) ), sentence ) )
 					{
-						if ( Q_strlen( sentence.GetText() ) > 0 ) 
+						if ( !Q_isempty( sentence.GetText() ) ) 
 						{
-							Q_snprintf( sentence_text, sizeof( sentence_text ), "%s", sentence.GetText() );
+							V_strcpy_safe( sentence_text, sentence.GetText() );
 							cleanquotes( sentence_text );
 						}
 					}
@@ -1701,7 +1700,7 @@ void CheckLocalizationEntries( CUtlVector< CUtlSymbol >& vcdfiles, CUtlRBTree< C
 
 		// Load the .vcd
 		char fullname[ 512 ];
-		Q_snprintf( fullname, sizeof( fullname ), "%s", g_Analysis.symbols.String( vcdname ) );
+		V_strcpy_safe( fullname, g_Analysis.symbols.String( vcdname ) );
 
 		LoadScriptFile( fullname );
 	
@@ -1814,9 +1813,9 @@ void CheckLocalizationEntries( CUtlVector< CUtlSymbol >& vcdfiles, CUtlRBTree< C
 										CSentence sentence;
 										if ( LoadSentenceFromWavFile( va( "sound/%s", PSkipSoundChars( wavname ) ), sentence ) )
 										{
-											if ( Q_strlen( sentence.GetText() ) > 0 ) 
+											if ( !Q_isempty( sentence.GetText() ) ) 
 											{
-												Q_snprintf( suggested, sizeof( suggested ), "%s", sentence.GetText() );
+												V_strcpy_safe( suggested, sentence.GetText() );
 												cleanquotes( suggested );
 											}
 										}
@@ -2020,7 +2019,7 @@ void ValidateForeignLanguageWaves( char const *language, CUtlVector< CUtlSymbol 
 				vprint( 0, "--> Localized combined file for '%s' doesn't have sentence data '%s'\n",
 					language, localizedwavename );
 			}
-			else if ( !Q_stricmp( sentence_english.GetText(), sentence_localized.GetText()) )
+			else if ( V_strieq( sentence_english.GetText(), sentence_localized.GetText()) )
 			{
 				vprint( 0, "--> Localized combined file for '%s' still using english phoneme and text data '%s'\n",
 					language, localizedwavename );
@@ -2114,9 +2113,9 @@ void CheckWaveFile( CUtlDict< CUtlSymbol, int >& wavtosound, char const *wavname
 	CSentence sentence;
 	if ( LoadSentenceFromWavFile( va( "sound/%s", PSkipSoundChars( wavname ) ), sentence ) )
 	{
-		if ( Q_strlen( sentence.GetText() ) > 0 ) 
+		if ( !Q_isempty( sentence.GetText() ) ) 
 		{
-			Q_snprintf( ansi, sizeof( ansi ), "%s", sentence.GetText() );
+			V_strcpy_safe( ansi, sentence.GetText() );
 			cleanquotes( ansi );
 		}
 	}
@@ -2132,7 +2131,7 @@ void CheckWaveFile( CUtlDict< CUtlSymbol, int >& wavtosound, char const *wavname
 	}
 	else
 	{
-		if ( !Q_stricmp( soundname, UNK_SOUND_ENTRY ) )
+		if ( V_strieq( soundname, UNK_SOUND_ENTRY ) )
 		{
 			Q_snprintf( caption, sizeof( caption ), "!!!%s", soundname );
 		}
@@ -2433,7 +2432,7 @@ void ExtractPhonemesForWave( IPhonemeExtractor *extractor, char const *wavname )
 	CSentence			outsentence;
 
 	char filename[ 512 ];
-	Q_snprintf( filename, sizeof( filename ), "%s", wavname );
+	V_strcpy_safe( filename, wavname );
 
 	int result = extractor->Extract( 
 		filename,
@@ -2509,6 +2508,7 @@ int LoadPhonemeExtractors()
 	// Enumerate modules under bin folder of exe
 	FileFindHandle_t findHandle;
 	const char *pFilename = g_pFullFileSystem->FindFirstEx( "phonemeextractors/*.dll", "EXECUTABLE_PATH", &findHandle );
+	RunCodeAtScopeExit(g_pFullFileSystem->FindClose( findHandle ));
 	int useextractor = -1;
 	while ( pFilename )
 	{	
@@ -2549,8 +2549,6 @@ int LoadPhonemeExtractors()
 
 		g_Extractors.AddToTail( e );	
 	}
-
-	g_pFullFileSystem->FindClose( findHandle );
 
 	return useextractor;
 }
@@ -2659,9 +2657,7 @@ struct OrderedCaption_t
 
 		if ( src.commands )
 		{
-			int len = wcslen( src.commands ) + 1;
-			commands = new wchar_t[ len ];
-			wcscpy( commands, src.commands );
+			commands = V_wcsdup( src.commands );
 		}
 		else
 		{
@@ -2670,9 +2666,7 @@ struct OrderedCaption_t
 
 		if ( src.english )
 		{
-			int len = wcslen( src.english ) + 1;
-			english = new wchar_t[ len ];
-			wcscpy( english, src.english );
+			english = V_wcsdup( src.english );
 		}
 		else
 		{
@@ -2708,7 +2702,8 @@ bool SplitCommand( wchar_t const **ppIn, wchar_t *cmd, wchar_t *args )
 	cmd[ 0 ]= 0;
 	wchar_t *out = cmd;
 	in++;
-	while ( *in != L'\0' && *in != L':' && *in != L'>' && !isspace( *in ) )
+	// dimhotepus: isspace -> iswspace for wchar_t.
+	while ( *in != L'\0' && *in != L':' && *in != L'>' && !iswspace( *in ) )
 	{
 		*out++ = *in++;
 	}
@@ -2767,22 +2762,19 @@ wchar_t *GetStartupCommands( const wchar_t *str )
 
 wchar_t *CopyUnicode( const wchar_t *in )
 {
-	int len = wcslen( in ) + 1;
-	wchar_t *out = new wchar_t[ len ];
-	wcsncpy( out, in, len );
-	out[ len - 1 ] = L'\0';
-	return out;
+	return V_wcsdup( in );
 }
 
 void BuildOrderedCaptionList( CUtlVector< OrderedCaption_t >& list )
 {
 	// parse out the file
 	FileHandle_t file = g_pFullFileSystem->Open( "resource/closecaption_english.txt", "rb");
-	if ( file == FILESYSTEM_INVALID_HANDLE )
+	if ( !file )
 	{
 		// assert(!("CLocalizedStringTable::AddFile() failed to load file"));
 		return;
 	}
+	RunCodeAtScopeExit(g_pFullFileSystem->Close(file));
 
 	// read into a memory block
 	int fileSize = g_pFullFileSystem->Size(file) ;
@@ -2796,7 +2788,6 @@ void BuildOrderedCaptionList( CUtlVector< OrderedCaption_t >& list )
 	// check the first character, make sure this a little-endian unicode file
 	if (data[0] != 0xFEFF)
 	{
-		g_pFullFileSystem->Close(file);
 		free(memBlock);
 		return;
 	}
@@ -2839,7 +2830,7 @@ void BuildOrderedCaptionList( CUtlVector< OrderedCaption_t >& list )
 		
 		if (state == STATE_BASE)
 		{
-			if (!stricmp(key, "Language"))
+			if (V_strieq(key, "Language"))
 			{
 				// copy out our language setting
 				/*
@@ -2848,11 +2839,11 @@ void BuildOrderedCaptionList( CUtlVector< OrderedCaption_t >& list )
 				strncpy(m_szLanguage, value, sizeof(m_szLanguage) - 1);
 				*/
 			}
-			else if (!stricmp(key, "Tokens"))
+			else if (V_strieq(key, "Tokens"))
 			{
 				state = STATE_TOKENS;
 			}
-			else if (!stricmp(key, "}"))
+			else if (V_streq(key, "}"))
 			{
 				// we've hit the end
 				break;
@@ -2860,7 +2851,7 @@ void BuildOrderedCaptionList( CUtlVector< OrderedCaption_t >& list )
 		}
 		else if (state == STATE_TOKENS)
 		{
-			if (!stricmp(key, "}"))
+			if (V_streq(key, "}"))
 			{
 				// end of tokens
 				state = STATE_BASE;
@@ -2886,7 +2877,6 @@ void BuildOrderedCaptionList( CUtlVector< OrderedCaption_t >& list )
 		}
 	}
 
-	g_pFullFileSystem->Close(file);
 	free(memBlock);
 
 	vprint( 0, "Loaded %i captionnames from closecaption_english.txt\n", list.Count() );
@@ -2908,11 +2898,12 @@ void LoadImportData( char const *filename, CUtlDict< LookupData_t, int >& lookup
 {
 // parse out the file
 	FileHandle_t file = g_pFullFileSystem->Open( filename, "rb");
-	if ( file == FILESYSTEM_INVALID_HANDLE )
+	if ( !file )
 	{
 		// assert(!("CLocalizedStringTable::AddFile() failed to load file"));
 		return;
 	}
+	RunCodeAtScopeExit(g_pFullFileSystem->Close(file));
 
 	// read into a memory block
 	int fileSize = g_pFullFileSystem->Size(file) ;
@@ -2926,7 +2917,6 @@ void LoadImportData( char const *filename, CUtlDict< LookupData_t, int >& lookup
 	// check the first character, make sure this a little-endian unicode file
 	if (data[0] != 0xFEFF)
 	{
-		g_pFullFileSystem->Close(file);
 		free(memBlock);
 		return;
 	}
@@ -2970,7 +2960,6 @@ void LoadImportData( char const *filename, CUtlDict< LookupData_t, int >& lookup
 		lookup.Insert( key, ld );
 	}
 
-	g_pFullFileSystem->Close(file);
 	free(memBlock);
 
 	vprint( 0, "Loaded %i wav/captions from %s\n", lookup.Count(), filename );
@@ -3085,10 +3074,10 @@ void ImportCaptions( char const *pchImportfile )
 
 	// Now try and spit out a file like the cc english file, but with the new data
 	FileHandle_t fh = g_pFullFileSystem->Open( CAPTION_OUT_FILE , "wb" );
-	if ( FILESYSTEM_INVALID_HANDLE != fh )
+	if ( fh )
 	{
+		RunCodeAtScopeExit(g_pFullFileSystem->Close( fh ));
 		g_pFullFileSystem->Write( buf.Base(), buf.TellPut(), fh );
-		g_pFullFileSystem->Close( fh );
 	}
 	else
 	{
@@ -3357,7 +3346,7 @@ int CLocalizationCheckApp::Main()
 				iArg++;
 				break;
 			case 'l':
-				if ( !Q_stricmp( &pArg[1], "loop" ) )
+				if ( V_strieq( &pArg[1], "loop" ) )
 				{
 					checkforloops = true;
 					Q_strncpy( sounddir, CommandLine()->GetParm( iArg + 1 ), sizeof( sounddir ) );
@@ -3369,7 +3358,7 @@ int CLocalizationCheckApp::Main()
 				}
 				break;
 			case 'f':
-				if ( !Q_stricmp( pArg, "-forceduck" ))
+				if ( V_strieq( pArg, "-forceduck" ))
 				{
 					forceducking = true;
 					break;
@@ -3418,7 +3407,7 @@ int CLocalizationCheckApp::Main()
 	Q_strncpy( language, CommandLine()->GetParm( argc - 1 ), sizeof( language ) );
 
 	// If it's english, turn off checks.
-	if ( !Q_stricmp( language, "english" ) )
+	if ( V_strieq( language, "english" ) )
 	{
 		language[ 0 ] = 0;
 	}

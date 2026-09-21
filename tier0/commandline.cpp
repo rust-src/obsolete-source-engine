@@ -93,7 +93,7 @@ CCommandLine::CCommandLine( )
 {
 	m_pszCmdLine = nullptr;
 	m_nParmCount = 0;
-	memset(m_ppParms, 0, sizeof(m_ppParms));
+	BitwiseClear(m_ppParms);
 }
 
 //-----------------------------------------------------------------------------
@@ -155,7 +155,7 @@ void CCommandLine::LoadParametersFromFile( const char *&pSrc, char *&pDst, size_
 			*pDst++ = static_cast<char>( c );
 			
 			// Don't go past the end, and allow for our terminating space character AND a terminating null character.
-			if ( (pDst - pDestStart) >= ((intp)maxDestLen-2) )
+			if ( (pDst - pDestStart) >= (static_cast<intp>(maxDestLen) - 2) )
 				break;
 
 			// Get the next character, if there are more
@@ -238,7 +238,7 @@ void CCommandLine::CreateCmdLine( const char *commandline )
 
 		if ( *pSrc == '@' )
 		{
-			if ( pSrc == commandline || (!bInQuotes && isspace( pSrc[-1] )) || (bInQuotes && pSrc == pInQuotesStart) )
+			if ( pSrc == commandline || (!bInQuotes && isspace( static_cast<unsigned char>( pSrc[-1] ) )) || (bInQuotes && pSrc == pInQuotesStart) )
 			{
 				LoadParametersFromFile( pSrc, pDst, sizeof( szFull ) - (pDst - szFull), bInQuotes );
 				continue;
@@ -265,7 +265,8 @@ void CCommandLine::CreateCmdLine( const char *commandline )
 //-----------------------------------------------------------------------------
 // Finds a string in another string with a case insensitive test
 //-----------------------------------------------------------------------------
-static char * _stristr( char * pStr, const char * pSearch )
+// dimhotepus: _stristr -> V_stristr
+static char * V_stristr( char * pStr, const char * pSearch )
 {
 	AssertValidStringPtr(pStr);
 	AssertValidStringPtr(pSearch);
@@ -279,7 +280,7 @@ static char * _stristr( char * pStr, const char * pSearch )
 	while (*pLetter != 0)
 	{
 		// Skip over non-matches
-		if (tolower((unsigned char)*pLetter) == tolower((unsigned char)*pSearch))
+		if (tolower(static_cast<unsigned char>(*pLetter)) == tolower(static_cast<unsigned char>(*pSearch)))
 		{
 			// Check for match
 			char const* pMatch = pLetter + 1;
@@ -290,7 +291,7 @@ static char * _stristr( char * pStr, const char * pSearch )
 				if (*pMatch == 0)
 					return nullptr;
 
-				if (tolower((unsigned char)*pMatch) != tolower((unsigned char)*pTest))
+				if (tolower(static_cast<unsigned char>(*pMatch)) != tolower(static_cast<unsigned char>(*pTest)))
 					break;
 
 				++pMatch;
@@ -330,7 +331,7 @@ void CCommandLine::RemoveParm( const char *pszParm )
 	{
 		curlen = strlen( p );
 
-		found = _stristr( p, pszParm );
+		found = V_stristr( p, pszParm );
 		if ( !found )
 			break;
 			
@@ -520,7 +521,7 @@ void CCommandLine::ParseCommandLine()
 		return;
 
 	const char *pChar = m_pszCmdLine;
-	while ( *pChar && isspace(*pChar) )
+	while ( *pChar && isspace( static_cast<unsigned char>( *pChar )) )
 	{
 		++pChar;
 	}
@@ -549,8 +550,7 @@ void CCommandLine::ParseCommandLine()
 				pFirstLetter = pChar + 1;
 				continue;
 			}
-
-			if ( isspace( *pChar ) )
+			if ( isspace( static_cast<unsigned char>( *pChar ) ) )
 				continue;
 
 			pFirstLetter = pChar;
@@ -558,7 +558,7 @@ void CCommandLine::ParseCommandLine()
 		}
 
 		// Here, we're in the middle of a word. Look for the end of it.
-		if ( isspace( *pChar ) )
+		if ( isspace( static_cast<unsigned char>( *pChar ) ) )
 		{
 			AddArgument( pFirstLetter, pChar );
 			pFirstLetter = nullptr;

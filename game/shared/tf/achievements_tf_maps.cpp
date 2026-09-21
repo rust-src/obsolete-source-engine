@@ -1078,8 +1078,8 @@ class CAchievementTFSnakewater_TeamKill : public CBaseTFAchievementSimple
 					if ( pTFAttacker->GetTeam()->GetNumPlayers() + pTFVictim->GetTeam()->GetNumPlayers() >= 12 )
 					{
 						bool bSomeAlive = false;
-						int nTeamCount = pTFVictim->GetTeam()->GetNumPlayers();
-						for ( int i = 0; i < nTeamCount; i++ )
+						intp nTeamCount = pTFVictim->GetTeam()->GetNumPlayers();
+						for ( intp i = 0; i < nTeamCount; i++ )
 						{
 							C_BasePlayer *pTemp = pTFVictim->GetTeam()->GetPlayer( i );
 							if ( pTemp && ( pTemp != pTFVictim ) && pTemp->IsAlive() )

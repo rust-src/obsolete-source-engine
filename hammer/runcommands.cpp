@@ -298,7 +298,7 @@ bool RunCommands(CCommandArray& Commands, LPCTSTR pszOrigDocName, CWnd *parent)
 		szNewParms[0] = szNewRun[0] = '\0';
 
 		// HACK: force the spawnv call for launching the game
-		if (!Q_stricmp(cmd.szRun, "$game_exe"))
+		if (V_strieq(cmd.szRun, "$game_exe"))
 		{
 			cmd.bUseProcessWnd = FALSE;
 		}
@@ -385,7 +385,7 @@ bool RunCommands(CCommandArray& Commands, LPCTSTR pszOrigDocName, CWnd *parent)
 					
 					// dimhotepus: stricmp -> V_stricmp for performance.
 					// don't copy if we're already there
-					if (V_stricmp(ppParms[1], ppParms[2]) != 0 && 
+					if (!V_strieq(ppParms[1], ppParms[2]) && 
 							(!CopyFile(ppParms[1], ppParms[2], FALSE)))
 					{
 						bError = TRUE;

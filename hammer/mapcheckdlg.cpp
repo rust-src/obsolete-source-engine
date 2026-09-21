@@ -979,7 +979,7 @@ static void CheckValidTarget(CMapEntity *pEntity, const char *pFieldName, const 
 		return;
 
 	// These procedural names are always assumed to exist.
-	if (!stricmp(pTargetName, "!activator") || !stricmp(pTargetName, "!caller") || !stricmp(pTargetName, "!player") || !stricmp(pTargetName, "!self"))
+	if (V_strieq(pTargetName, "!activator") || V_strieq(pTargetName, "!caller") || V_strieq(pTargetName, "!player") || V_strieq(pTargetName, "!self"))
 		return;
 
 	CMapDoc *pDoc = CMapDoc::GetActiveMapDoc();
@@ -1252,7 +1252,7 @@ static BOOL _CheckBadConnections(CMapEntity *pEntity, CListBox *pList)
 	//for (intp i = 0; i < nConnCount; i++)
 	//{
 	//	CEntityConnection *pConn = pEntity->Connections_Get(i);
-	//	if (!stricmp(pConn->GetInputName(), "kill"))
+	//	if (V_strieq(pConn->GetInputName(), "kill"))
 	//	{
 	//	}
 	//}
@@ -1735,7 +1735,8 @@ bool CMapCheckDlg::DoCheck(void)
 
 	if (!m_Errors.GetCount())
 	{
-		AfxMessageBox("No errors were found.");
+		// dimhotepus: Use information icon.
+		AfxMessageBox("There are no errors found.", MB_OK | MB_ICONINFORMATION);
 		EndDialog(IDOK);
 		return true;
 	}
@@ -1758,6 +1759,8 @@ void CMapCheckDlg::OnOK()
 //-----------------------------------------------------------------------------
 void CMapCheckDlg::OnClose()
 {
+	// dimhotepus: Invoke default messages on close.
+	__super::OnClose();
 	DestroyWindow();
 }
 

@@ -941,16 +941,16 @@ float CBaseAnimating::SequenceDuration( CStudioHdr *pStudioHdr, int iSequence )
 	if ( !pStudioHdr )
 	{
 		DevWarning( 2, "CBaseAnimating::SequenceDuration( %d ) NULL pstudiohdr on %s!\n", iSequence, GetClassname() );
-		return 0.1;
+		return 0.1f;
 	}
 	if ( !pStudioHdr->SequencesAvailable() )
 	{
-		return 0.1;
+		return 0.1f;
 	}
 	if (iSequence >= pStudioHdr->GetNumSeq() || iSequence < 0 )
 	{
 		DevWarning( 2, "CBaseAnimating::SequenceDuration( %d ) out of range\n", iSequence );
-		return 0.1;
+		return 0.1f;
 	}
 
 	return Studio_Duration( pStudioHdr, iSequence, GetPoseParameterArray() );
@@ -1227,9 +1227,14 @@ float CBaseAnimating::SetPoseParameter( CStudioHdr *pStudioHdr, int iParameter, 
 
 	if (iParameter >= 0)
 	{
-		float flNewValue;
-		flValue = Studio_SetPoseParameter( pStudioHdr, iParameter, flValue, flNewValue );
-		m_flPoseParameter.Set( iParameter, flNewValue );
+		// dimhotepus: Prevent pose parameters overflow.
+		Assert( iParameter < NUM_POSEPAREMETERS );
+		if ( iParameter < NUM_POSEPAREMETERS )
+		{
+			float flNewValue;
+			flValue = Studio_SetPoseParameter( pStudioHdr, iParameter, flValue, flNewValue );
+			m_flPoseParameter.Set( iParameter, flNewValue );
+		}
 	}
 
 	return flValue;
@@ -1299,7 +1304,7 @@ int CBaseAnimating::LookupPoseParameter( CStudioHdr *pStudioHdr, const char *szN
 
 	for (int i = 0; i < pStudioHdr->GetNumPoseParameters(); i++)
 	{
-		if (Q_stricmp( pStudioHdr->pPoseParameter( i ).pszName(), szName ) == 0)
+		if (V_strieq( pStudioHdr->pPoseParameter( i ).pszName(), szName ))
 		{
 			return i;
 		}
@@ -1717,7 +1722,9 @@ void CBaseAnimating::BuildMatricesWithBoneMerge(
 	const Quaternion q[MAXSTUDIOBONES],
 	matrix3x4_t bonetoworld[MAXSTUDIOBONES],
 	CBaseAnimating *pParent,
-	CBoneCache *pParentCache
+	CBoneCache *pParentCache,
+	// dimhotepus: Take into account bone mask for initialized quaternion and position.
+	int boneMask
 	)
 {
 	CStudioHdr *fhdr = pParent->GetModelPtr();
@@ -1743,17 +1750,27 @@ void CBaseAnimating::BuildMatricesWithBoneMerge(
 
 		if ( !merged )
 		{
-			// If we get down here, then the bone wasn't merged.
-			matrix3x4_t bonematrix;
-			QuaternionMatrix( q[i], pos[i], bonematrix );
+			// dimhotepus: Merge bone quaternion and position only if they were read by mask.
+			if ( pStudioHdr->pBone(i)->flags & boneMask )
+			{
+				// If we get down here, then the bone wasn't merged.
+				matrix3x4_t bonematrix;
+				QuaternionMatrix( q[i], pos[i], bonematrix );
 
-			if (pbones[i].parent == -1) 
+				if (pbones[i].parent == -1) 
+				{
+					ConcatTransforms (rotationmatrix, bonematrix, bonetoworld[i]);
+				} 
+				else 
+				{
+					ConcatTransforms (bonetoworld[pbones[i].parent], bonematrix, bonetoworld[i]);
+				}
+			}
+			else
 			{
-				ConcatTransforms (rotationmatrix, bonematrix, bonetoworld[i]);
-			} 
-			else 
-			{
-				ConcatTransforms (bonetoworld[pbones[i].parent], bonematrix, bonetoworld[i]);
+				// Having these uninitialized means that some bugs are very hard
+				// to reproduce. A memset of 0xFF is a simple way of getting NaNs.
+				memset( &bonetoworld[i], 0xFF, sizeof(bonetoworld[i]) );
 			}
 		}
 	}
@@ -1809,6 +1826,14 @@ void CBaseAnimating::SetupBones( matrix3x4_t *pBoneToWorld, int boneMask )
 	Vector pos[MAXSTUDIOBONES];
 	Quaternion q[MAXSTUDIOBONES];
 
+// dimhotepus: Catch uninit vars.
+#if defined(FP_EXCEPTIONS_ENABLED) || defined(DBGFLAG_ASSERT)
+	// Having these uninitialized means that some bugs are very hard
+	// to reproduce. A memset of 0xFF is a simple way of getting NaNs.
+	memset( pos, 0xFF, sizeof(pos) );
+	memset( q, 0xFF, sizeof(q) );
+#endif
+
 	// adjust hit boxes based on IK driven offset
 	Vector adjOrigin = GetAbsOrigin() + Vector( 0, 0, m_flEstIkOffset );
 
@@ -1854,12 +1879,14 @@ void CBaseAnimating::SetupBones( matrix3x4_t *pBoneToWorld, int boneMask )
 				q, 
 				pBoneToWorld, 
 				pParent, 
-				pParentCache );
+				pParentCache,
+				// dimhotepus: Take into account bone mask for initialized quaternion and position.
+				boneMask );
 			
 			RemoveEFlags( EFL_SETTING_UP_BONES );
 			if (ai_setupbones_debug.GetBool())
 			{
-				DrawRawSkeleton( pBoneToWorld, boneMask, true, 0.11 );
+				DrawRawSkeleton( pBoneToWorld, boneMask, true, 0.11f );
 			}
 			return;
 		}
@@ -1879,7 +1906,7 @@ void CBaseAnimating::SetupBones( matrix3x4_t *pBoneToWorld, int boneMask )
 	if (ai_setupbones_debug.GetBool())
 	{
 		// Msg("%s:%s:%s (%x)\n", GetClassname(), GetDebugName(), STRING(GetModelName()), boneMask );
-		DrawRawSkeleton( pBoneToWorld, boneMask, true, 0.11 );
+		DrawRawSkeleton( pBoneToWorld, boneMask, true, 0.11f );
 	}
 	RemoveEFlags( EFL_SETTING_UP_BONES );
 }
@@ -3219,7 +3246,7 @@ bool CBaseAnimating::LookupHitbox( const char *szName, int& outSet, int& outBox 
 				continue;
 			
 			const char* szBoxName = pBox->pszHitboxName();
-			if( Q_stricmp( szBoxName, szName ) == 0 )
+			if( V_strieq( szBoxName, szName ) )
 			{
 				outSet = set;
 				outBox = i;

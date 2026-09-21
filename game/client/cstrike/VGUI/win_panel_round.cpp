@@ -187,7 +187,7 @@ void WinPanel_Round::FireGameEvent( IGameEvent* event )
 		int iFunFactPlayer = event->GetInt("funfact_player");
 		const char* funfactToken = event->GetString("funfact_token", "");
 
-		if (strlen(funfactToken) != 0)
+		if (!Q_isempty(funfactToken))
 		{
 			wchar_t funFactText[256];
 			wchar_t playerText[64];
@@ -198,7 +198,7 @@ void WinPanel_Round::FireGameEvent( IGameEvent* event )
 			if ( iFunFactPlayer >= 1 && iFunFactPlayer <= MAX_PLAYERS )
 			{
 				const char* playerName = g_PR->GetPlayerName( iFunFactPlayer );
-				if( playerName && Q_strcmp( playerName, PLAYER_UNCONNECTED_NAME ) != 0 && Q_strcmp( playerName, PLAYER_ERROR_NAME ) != 0 )
+				if( playerName && !V_streq( playerName, PLAYER_UNCONNECTED_NAME ) && !V_streq( playerName, PLAYER_ERROR_NAME ) )
 				{
 					V_strtowcs( g_PR->GetPlayerName( iFunFactPlayer ), 64, playerText, sizeof( playerText ) );
 				}

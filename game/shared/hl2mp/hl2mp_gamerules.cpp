@@ -827,7 +827,7 @@ int CHL2MPRules::PlayerRelationship( CBaseEntity *pPlayer, CBaseEntity *pTarget 
 	if ( !pPlayer || !pTarget || !pTarget->IsPlayer() || IsTeamplay() == false )
 		return GR_NOTTEAMMATE;
 
-	if ( (*GetTeamID(pPlayer) != '\0') && (*GetTeamID(pTarget) != '\0') && !stricmp( GetTeamID(pPlayer), GetTeamID(pTarget) ) )
+	if ( (*GetTeamID(pPlayer) != '\0') && (*GetTeamID(pTarget) != '\0') && V_strieq( GetTeamID(pPlayer), GetTeamID(pTarget) ) )
 	{
 		return GR_TEAMMATE;
 	}
@@ -892,7 +892,7 @@ bool CHL2MPRules::IsOfficialMap( void )
 
 	for ( const auto *officialMap : s_OfficialMaps )
 	{
-		if ( !Q_stricmp( officialMap, szCurrentMap ) )
+		if ( V_strieq( officialMap, szCurrentMap ) )
 		{
 			return true;
 		}

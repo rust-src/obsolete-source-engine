@@ -98,7 +98,7 @@ static intp FindGameDataClass( const char *pName )
 		for (intp i = 0; i < nCount; i++)
 		{
 			GDclass *pc = pGD->GetClass(i);
-			if ( Q_stricmp( pName, pc->GetName() ) == 0 )
+			if ( V_strieq( pName, pc->GetName() ) )
 				return i;
 		}
 	}
@@ -112,6 +112,10 @@ static intp FindGameDataClass( const char *pName )
 CObjectBar::CObjectBar()
 	: CHammerBar(), m_CreateList( this )
 {
+	iBlockSel = -1;
+	iEntitySel = -1;
+	m_iLastTool = -1;
+
 	for(int i = 0; i < MAX_PREV_SEL; i++)
 	{
 		m_PrevSel[i].dwGameID = 0;
@@ -196,7 +200,7 @@ CPrefab* CObjectBar::FindPrefabByName( const char *pName )
 		CPrefab *pPrefab = pLibrary->EnumPrefabs( p );
 		while( pPrefab )
 		{
-			if ( Q_stricmp( pName, pPrefab->GetName() ) == 0 )
+			if ( V_strieq( pName, pPrefab->GetName() ) )
 				return pPrefab;
 
 			pPrefab = pLibrary->EnumPrefabs( p );

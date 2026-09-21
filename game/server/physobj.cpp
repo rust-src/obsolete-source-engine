@@ -41,7 +41,7 @@ const char *GetMassEquivalent(float flMass);
 
 #define SF_SPRING_ONLYSTRETCH		0x0001
 
-class CPhysicsSpring : public CBaseEntity
+class CPhysicsSpring final : public CBaseEntity
 {
 	DECLARE_CLASS( CPhysicsSpring, CBaseEntity );
 public:
@@ -140,8 +140,8 @@ CPhysicsSpring::CPhysicsSpring( void )
 	m_pSpring = NULL;
 	m_tempConstant = 150;
 	m_tempLength = 0;
-	m_tempDamping = 2.0;
-	m_tempRelativeDamping = 0.01;
+	m_tempDamping = 2.0f;
+	m_tempRelativeDamping = 0.01f;
 	m_isLocal = false;
 	m_teleportTick = 0xFFFFFFFF;
 }
@@ -1173,7 +1173,7 @@ void CPhysImpact::InputImpact( inputdata_t &inputdata )
 	{
 		// ep1_citadel_04 has a phys_impact just behind another entity, so if we startsolid then
 		// bump out just a little and retry the trace
-		Vector startOffset = start +  ( dir * 0.1 );
+		Vector startOffset = start +  ( dir * 0.1f );
 		UTIL_TraceLine( startOffset , end, MASK_SHOT, this, COLLISION_GROUP_NONE, &trace );
 	}
 

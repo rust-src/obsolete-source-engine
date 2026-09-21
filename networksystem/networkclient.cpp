@@ -107,7 +107,7 @@ void CNetworkClient::Disconnect()
 		return;
 
 	byte data[ 512 ];
-	bf_write buf( "CNetworkClient::Connect", data, sizeof( data ) );
+	bf_write buf( "CNetworkClient::Connect", data );
 
 	WriteSystemNetworkMessage( buf, net_disconnect );
 	buf.WriteString( "client disconnected" );
@@ -120,7 +120,7 @@ void CNetworkClient::Disconnect()
 bool CNetworkClient::Connect( char const *server, int port /*=SM_SERVER_PORT*/ )
 {
 	byte data[ 512 ];
-	bf_write buf( "CNetworkClient::Connect", data, sizeof( data ) );
+	bf_write buf( "CNetworkClient::Connect", data );
 
 	buf.WriteLong( -1 );
 	buf.WriteByte( c2s_connect );
@@ -131,7 +131,7 @@ bool CNetworkClient::Connect( char const *server, int port /*=SM_SERVER_PORT*/ )
 	
 	// Resolve remote name
 	sockaddr sa;
-	if ( !Q_stricmp( server, "localhost" ) )
+	if ( V_strieq( server, "localhost" ) )
 	{
 		remote.ip[ 0 ] = 127;
 		remote.ip[ 1 ] = 0;

@@ -36,7 +36,15 @@ unsigned long g_CurLoadOrder = 0;
 SpewRetval_t VMFTweakSpewFunc( SpewType_t spewType, char const *pMsg )
 {
 	OutputDebugString( pMsg );
-	printf( pMsg );
+	if ( spewType == SPEW_WARNING || spewType == SPEW_ERROR )
+	{
+		fprintf( stderr, "%s", pMsg );
+	}
+	else
+	{
+		printf( "%s", pMsg );
+		fflush( stdout );
+	}
 	switch( spewType )
 	{
 	case SPEW_MESSAGE:
@@ -224,9 +232,7 @@ void CChunk::RenameKey( const char *szOldName, const char *szNewName )
 // --------------------------------------------------------------------------------- //
 char *CopyString( char const *pStr )
 {
-	char *pRet = new char[ strlen(pStr) + 1 ];
-	strcpy( pRet, pStr );
-	return pRet;
+	return V_strdup( pStr );
 }
 
 ChunkFileResult_t MyDefaultHandler( CChunkFile *pFile, void *pData, char const *pChunkName )
@@ -407,7 +413,7 @@ void ScanRopeSlack( CChunk *pChunk )
 				// Subtract 100 from all the Slack properties.
 				float flCur = (float)atof( pKey->m_pValue );
 				char str[256];
-				sprintf( str, "%f", flCur + 100 );
+				V_sprintf_safe( str, "%f", flCur + 100 );
 				pKey->m_pValue = CopyString( str );
 			}
 		}
@@ -444,7 +450,7 @@ void LogicAuto( CChunk *pChunk )
 		FOR_EACH_LL( pConnections->m_Keys, i )
 		{
 			CKeyValue *pTestKV = pConnections->m_Keys[i];
-			if ( V_stricmp( pTestKV->m_pKey, "OnMapSpawn" ) == 0 )
+			if ( V_strieq( pTestKV->m_pKey, "OnMapSpawn" ) )
 			{
 				if ( V_stristr( pTestKV->m_pValue, "tonemap" ) == pTestKV->m_pValue )
 				{
@@ -474,7 +480,7 @@ void LogicAuto( CChunk *pChunk )
 			{
 				--curVal;
 				char str[512];
-				sprintf( str, "%lu", curVal );
+				V_sprintf_safe( str, "%lu", curVal );
 				pFlags->SetValue( str );
 			}
 		}

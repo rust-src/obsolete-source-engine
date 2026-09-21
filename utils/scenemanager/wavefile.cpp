@@ -88,7 +88,7 @@ CSoundEntry *CWaveFile::GetOwnerSoundEntry()
 //-----------------------------------------------------------------------------
 void CWaveFile::SetName( char const *filename )
 {
-	if ( !Q_stricmp( m_szName, filename ) )
+	if ( V_strieq( m_szName, filename ) )
 		return;
 
 	Q_strncpy( m_szName, filename, sizeof( m_szName ) );
@@ -121,7 +121,7 @@ char const	*CWaveFile::GetSentenceText()
 void CWaveFile::SetSentenceText( char const *newText )
 {
 	EnsureSentence();
-	if ( !Q_stricmp( GetSentenceText(), newText ) )
+	if ( V_strieq( GetSentenceText(), newText ) )
 		return;
 
 	if ( !IsCheckedOut() )
@@ -296,18 +296,16 @@ void CWaveFile::ExportValveDataChunk( char const *tempfile )
 		Con_ColorPrintf( ERROR_R, ERROR_G, ERROR_B, "CWaveFile::ExportValveDataChunk:  Unable to write to %s (read-only?)\n", tempfile );
 		return;
 	}
-	else
-	{
-		// Buffer and dump data
-		CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
+	RunCodeAtScopeExit(g_pFullFileSystem->Close(fh));
 
-		m_Sentence.SaveToBuffer( buf );
+	// Buffer and dump data
+	CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
 
-		filesystem->Write( buf.Base(), buf.TellPut(), fh );
-		filesystem->Close(fh);
+	m_Sentence.SaveToBuffer( buf );
 
-		Con_Printf( "Exported %i words to %s\n", m_Sentence.m_Words.Count(), tempfile );
-	}
+	filesystem->Write( buf.Base(), buf.TellPut(), fh );
+
+	Con_Printf( "Exported %zd words to %s\n", m_Sentence.m_Words.Count(), tempfile );
 }
 
 //-----------------------------------------------------------------------------
@@ -369,7 +367,7 @@ void CWaveFile::ImportValveDataChunk( char const *tempfile )
 void CWaveFile::GetPhonemeExportFile( char *path, int maxlen )
 {
 	char relative[ 512 ];
-	strcpy( relative, GetFileName() );
+	V_strcpy_safe( relative, GetFileName() );
 	Q_StripExtension( relative, relative, sizeof( relative ) );
 	Q_DefaultExtension( relative, WORD_DATA_EXTENSION, sizeof( relative ) );
 

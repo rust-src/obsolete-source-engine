@@ -249,16 +249,12 @@ struct CSmoothingContext
 			return *this;
 
 		active = src.active;
-		Q_strncpy( filename, src.filename, sizeof( filename ) );
+		V_strcpy_safe( filename, src.filename );
 
 		smooth.RemoveAll();
-		intp c = src.smooth.Count();
-		intp i;
-		for ( i = 0; i < c; i++ )
+		for ( const auto &s : src.smooth )
 		{
-			demosmoothing_t newitem;
-			newitem = src.smooth[ i ];
-			smooth.AddToTail( newitem );
+			smooth.AddToTail( s );
 		}
 
 		m_nFirstSelectableSample = src.m_nFirstSelectableSample;

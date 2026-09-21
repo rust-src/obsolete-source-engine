@@ -41,8 +41,15 @@ static SpewRetval_t SpewStdout( SpewType_t spewType, char const *pMsg )
 	OutputDebugString( pMsg );
 #endif
 
-	printf( pMsg );
-	fflush( stdout );
+	if ( spewType == SPEW_WARNING || spewType == SPEW_ERROR )
+	{
+		fprintf( stderr, "%s", pMsg );
+	}
+	else
+	{
+		printf( "%s", pMsg );
+		fflush( stdout );
+	}
 
 	return ( spewType == SPEW_ASSERT ) ? SPEW_DEBUGGER : SPEW_CONTINUE; 
 }
@@ -177,7 +184,7 @@ entity_t *FindEntity( KeyValues *pEntity )
 			const char *pMatchTargetName = ValueForKey( &entities[i], "targetname" );
 			if ( !pMatchTargetName || !pMatchTargetName[0] )
 				continue;
-			if ( !V_stricmp( pTargetName, pMatchTargetName ) )
+			if ( V_strieq( pTargetName, pMatchTargetName ) )
 			{
 				if ( nMatch >= 0 )
 				{
@@ -205,17 +212,17 @@ entity_t *FindEntity( KeyValues *pEntity )
 			const char *pMatchClassName = ValueForKey( &entities[i], "classname" );
 			if ( !pMatchClassName || !pMatchClassName[0] )
 				continue;
-			if ( V_stricmp( pClassName, pMatchClassName ) )
+			if ( !V_strieq( pClassName, pMatchClassName ) )
 				continue;
 
 			const char *pOrigin = "(na)";
-			if ( V_stricmp( pClassName, "worldspawn" ) ) // allow worldspawn to match all
+			if ( !V_strieq( pClassName, "worldspawn" ) ) // allow worldspawn to match all
 			{
 				pOrigin = pEntity->GetString( "origin" );
 				const char *pMatchOrigin = ValueForKey( &entities[i], "origin" );
 				if ( !pMatchOrigin || !pMatchOrigin[0] )
 					continue;
-				if ( V_stricmp( pOrigin, pMatchOrigin ) )
+				if ( !V_strieq( pOrigin, pMatchOrigin ) )
 					continue;
 			}
 
@@ -320,7 +327,7 @@ int CMkEntityPatchApp::Main()
 	// This bit of hackery allows us to access files on the harddrive
 	g_pFullFileSystem->AddSearchPath( "", "LOCAL", PATH_ADD_TO_HEAD ); 
 
-	if ( CommandLine()->CheckParm( "-h" ) || CommandLine()->CheckParm( "-help" ) || CommandLine()->ParmCount() == 1 )
+	if ( CommandLine()->HasParm( "-h" ) || CommandLine()->HasParm( "-help" ) || CommandLine()->ParmCount() == 1 )
 	{
 		PrintHelp();
 		return 0;
@@ -385,12 +392,12 @@ int CMkEntityPatchApp::Main()
 	for ( KeyValues *pKey = pKeyValues->GetFirstTrueSubKey(); pKey; pKey = pKey->GetNextTrueSubKey() )
 	{
 		const char *pKeyName = pKey->GetName();
-		if ( !V_stricmp( pKeyName, "entity" ) )
+		if ( V_strieq( pKeyName, "entity" ) )
 		{
 			if ( !InsertEntity( pKey ) )
 				return 0;
 		}
-		else if ( !V_stricmp( pKeyName, "replace_entity" ) )
+		else if ( V_strieq( pKeyName, "replace_entity" ) )
 		{
 			if ( !ReplaceEntity( pKey ) )
 				return 0;
@@ -398,7 +405,7 @@ int CMkEntityPatchApp::Main()
 	}
 
 	// Do Perforce Stuff
-	if ( CommandLine()->FindParm( "-nop4" ) )
+	if ( CommandLine()->HasParm( "-nop4" ) )
 	{
 		g_p4factory->SetDummyMode( true );
 	}

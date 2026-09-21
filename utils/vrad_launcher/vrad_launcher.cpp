@@ -49,7 +49,7 @@ template <intp size>
 [[nodiscard]] int GetBothArgIndex(int argc, char *argv[]) {
   int both_arg{0};
   for (int arg{1}; arg < argc; arg++) {
-    if (V_stricmp(argv[arg], "-both") == 0) {
+    if (V_strieq(argv[arg], "-both")) {
       both_arg = arg;
     }
   }
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
   constexpr char kEnUsUtf8Locale[]{"en_US.UTF-8"};
 
   const se::ScopedAppLocale scoped_app_locale{kEnUsUtf8Locale};
-  if (V_stricmp(se::ScopedAppLocale::GetCurrentLocale(), kEnUsUtf8Locale)) {
+  if (!V_strieq(se::ScopedAppLocale::GetCurrentLocale(), kEnUsUtf8Locale)) {
     fprintf(stderr, "setlocale('%s') failed, current locale is '%s'.\n",
             kEnUsUtf8Locale, se::ScopedAppLocale::GetCurrentLocale());
   }

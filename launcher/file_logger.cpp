@@ -47,8 +47,8 @@ FileLogger::FileLogger(ICommandLine *command_line, IFileSystem *file_system,
 
 void FileLogger::Init() {
   // Can't do this in edit mode
-  if (command_line_->CheckParm("-edit") ||
-      !command_line_->CheckParm("-makereslists")) {
+  if (command_line_->HasParm("-edit") ||
+      !command_line_->HasParm("-makereslists")) {
     return;
   }
 
@@ -74,8 +74,8 @@ void FileLogger::Init() {
 
   // game directory has not been established yet, must derive ourselves
   char path[MAX_PATH];
-  Q_snprintf(path, sizeof(path), "%s/%s", base_dir_,
-             command_line_->ParmValue("-game", "hl2"));
+  V_sprintf_safe(path, "%s/%s", base_dir_,
+                 command_line_->ParmValue("-game", "hl2"));
   Q_FixSlashes(path);
 
 #ifdef WIN32
@@ -86,13 +86,13 @@ void FileLogger::Init() {
 
   // create file to dump out to
   char directory[MAX_PATH];
-  V_snprintf(directory, sizeof(directory), "%s\\%s", full_game_path_.String(),
-             resource_listing_dir_.String());
+  V_sprintf_safe(directory, "%s\\%s", full_game_path_.String(),
+                 resource_listing_dir_.String());
 
   file_system_->CreateDirHierarchy(directory, "GAME");
 
-  if (!command_line_->FindParm("-startmap") &&
-      !command_line_->FindParm("-startstage")) {
+  if (!command_line_->HasParm("-startmap") &&
+      !command_line_->HasParm("-startstage")) {
     logged_tree_.RemoveAll();
 
     file_system_->RemoveFile(
@@ -148,7 +148,7 @@ void FileLogger::Shutdown() {
 void FileLogger::LogAllResources(const char *line) {
   if (all_logs_file_ != FILESYSTEM_INVALID_HANDLE) {
     file_system_->Write("\"", 1, all_logs_file_);
-    file_system_->Write(line, Q_strlen(line), all_logs_file_);
+    file_system_->Write(line, static_cast<int>(Q_strlen(line)), all_logs_file_);
     file_system_->Write("\"\n", 2, all_logs_file_);
   }
 }

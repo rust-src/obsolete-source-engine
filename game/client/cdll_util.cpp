@@ -923,7 +923,7 @@ void UTIL_ReplaceKeyBindings( const wchar_t *inbuf, intp inbufsizebytes, OUT_Z_B
 				//!! change some key names into better names
 				char friendlyName[64];
 				bool bAddBrackets = false;
-				V_sprintf_safe( friendlyName, "%s", key );
+				V_strcpy_safe( friendlyName, key );
 				V_strupr( friendlyName );
 
 				const wchar_t* locName = nullptr;
@@ -938,7 +938,7 @@ void UTIL_ReplaceKeyBindings( const wchar_t *inbuf, intp inbufsizebytes, OUT_Z_B
 					locName = g_pVGuiLocalize->Find( friendlyName );
 				}
 
-				if ( !locName || wcslen(locName) <= 0)
+				if ( Q_isempty( locName ) )
 				{
 					g_pVGuiLocalize->ConvertANSIToUnicode( friendlyName, token );
 
@@ -1154,34 +1154,14 @@ void UTIL_BoundToWorldSize( Vector *pVecPos )
 	}
 }
 
-#ifdef _X360
-#define MAP_KEY_FILE_DIR	"cfg"
-#else
 #define MAP_KEY_FILE_DIR	"media"
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Returns the filename to count map loads in
 //-----------------------------------------------------------------------------
 bool UTIL_GetMapLoadCountFileName( const char *pszFilePrependName, char *pszBuffer, int iBuflen )
 {
-	if ( IsX360() )
-	{
-#ifdef _X360
-		if ( XBX_GetStorageDeviceId() == XBX_INVALID_STORAGE_ID || XBX_GetStorageDeviceId() == XBX_STORAGE_DECLINED )
-			return false;
-#endif
-	}
-
-	if ( IsX360() )
-	{
-		Q_snprintf( pszBuffer, iBuflen, "%s:/%s", MAP_KEY_FILE_DIR, pszFilePrependName );
-	}
-	else
-	{
-		Q_snprintf( pszBuffer, iBuflen, "%s/%s", MAP_KEY_FILE_DIR, pszFilePrependName );
-	}
-
+	Q_snprintf( pszBuffer, iBuflen, "%s/%s", MAP_KEY_FILE_DIR, pszFilePrependName );
 	return true;
 }
 

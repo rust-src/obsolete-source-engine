@@ -149,7 +149,7 @@ void CGameEventEditPanel::OnTextChanged( KeyValues *params )
 
 				const char *type = subkey->GetString();
 
-				if ( !Q_strcmp( type, "string" ) )
+				if ( V_streq( type, "string" ) )
 				{
 					m_pParams[i]->SetAllowNumericInputOnly( false );
 				}
@@ -179,7 +179,7 @@ void CGameEventEditPanel::OnTextChanged( KeyValues *params )
 //-----------------------------------------------------------------------------
 void CGameEventEditPanel::OnCommand( const char *pCommand )
 {
-	if ( !Q_stricmp( pCommand, "SendEvent" ) )
+	if ( V_strieq( pCommand, "SendEvent" ) )
 	{
 		KeyValues *pData = m_pEventCombo->GetActiveItemUserData();
 

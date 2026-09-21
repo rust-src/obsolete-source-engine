@@ -121,8 +121,8 @@ static inline void SV_PackEntity(
 	}
 	
 	// First encode the entity's data.
-	ALIGN4 char packedData[MAX_PACKEDENTITY_DATA] ALIGN4_POST;
-	bf_write writeBuf( "SV_PackEntity->writeBuf", packedData, sizeof( packedData ) );
+	alignas(4) char packedData[MAX_PACKEDENTITY_DATA];
+	bf_write writeBuf( "SV_PackEntity->writeBuf", packedData );
 
 	SendTable *pSendTable = pServerClass->m_pTable;
 	
@@ -625,7 +625,7 @@ void CGameServer::AssignClassIds()
 	serverclasses = nClasses;
 	serverclassbits = Q_log2( serverclasses ) + 1;
 
-	bool bSpew = CommandLine()->FindParm( "-netspike" ) != 0;
+	bool bSpew = CommandLine()->HasParm( "-netspike" );
 
 	int curID = 0;
 	for ( ServerClass *pClass=pClasses; pClass; pClass=pClass->m_pNext )

@@ -22,7 +22,8 @@
 
 class CUtlBuffer;
 
-#define	MAX_BRUSH_SIDES	128
+// dimhotepus: Comment unused.
+// #define	MAX_BRUSH_SIDES	128
 #define	CLIP_EPSILON	0.1
 
 #define	TEXINFO_NODE		-1		// side is allready on a node
@@ -560,6 +561,8 @@ extern	int	firstmodelface;
 void MakeFaces (node_t *headnode);
 void MakeDetailFaces (node_t *headnode);
 face_t *FixTjuncs( node_t *headnode, face_t *pLeafFaceList );
+// dimhotepus: Notify about tjuncs overflow (ficool).
+void EndTjuncs();
 
 face_t	*AllocFace (void);
 void FreeFace (face_t *f);

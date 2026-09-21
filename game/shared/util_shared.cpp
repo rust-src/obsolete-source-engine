@@ -170,6 +170,17 @@ int SharedRandomInt( const char *sharedname, int iMinVal, int iMaxVal, int addit
 	return RandomInt( iMinVal, iMaxVal );
 }
 
+#ifdef PLATFORM_64BITS
+intp SharedRandomInt( const char *sharedname, intp iMinVal, intp iMaxVal, int additionalSeed /*=0*/ )
+{
+	Assert( CBaseEntity::GetPredictionRandomSeed() != -1 );
+
+	int seed = SeedFileLineHash( CBaseEntity::GetPredictionRandomSeed(), sharedname, additionalSeed );
+	RandomSeed( seed );
+	return RandomInt64( iMinVal, iMaxVal );
+}
+#endif
+
 Vector SharedRandomVector( const char *sharedname, float minVal, float maxVal, int additionalSeed /*=0*/ )
 {
 	Assert( CBaseEntity::GetPredictionRandomSeed() != -1 );
@@ -1007,7 +1018,7 @@ void UTIL_DecodeICE( unsigned char * buffer, int size, const unsigned char *key)
 
 	int blockSize = ice.blockSize();
 
-	unsigned char *temp = (unsigned char *)_alloca( PAD_NUMBER( size, blockSize ) );
+	unsigned char *temp = stackallocT( unsigned char, PAD_NUMBER( size, blockSize ) );
 	unsigned char *p1 = buffer;
 	unsigned char *p2 = temp;
 				
@@ -1166,7 +1177,7 @@ CBasePlayer* UTIL_PlayerByName( const char *name )
 			continue;
 #endif
 
-		if ( Q_stricmp( pPlayer->GetPlayerName(), name ) == 0 )
+		if ( V_strieq( pPlayer->GetPlayerName(), name ) )
 		{
 			return pPlayer;
 		}
@@ -1246,10 +1257,8 @@ char* ReadAndAllocStringValue( KeyValues *pSub, const char *pName, const char *p
 		return empty;
 	}
 
-	intp len = Q_strlen( pValue ) + 1;
-	char *pAlloced = new char[ len ];
+	char *pAlloced = V_strdup( pValue );
 	Assert( pAlloced );
-	Q_strncpy( pAlloced, pValue, len );
 	return pAlloced;
 }
 

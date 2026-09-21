@@ -60,7 +60,7 @@ void Bot_RunAll( void );
 #ifndef GAME_DLL
 inline bool FStrEq(const char *sz1, const char *sz2)
 {
-	return(Q_stricmp(sz1, sz2) == 0);
+	return sz1 == sz2 || V_strieq(sz1, sz2);
 }
 #endif
 //---------------------------------------------------------------------------------
@@ -737,7 +737,7 @@ PLUGIN_RESULT CEmptyServerPlugin::ClientCommand( edict_t *pEntity, const CComman
 		for( int i = 1; i < 9; i++ )
 		{
 			char num[10], msg[10], cmd[10];
-			Q_snprintf( num, sizeof(num), "%i", i );
+			V_to_chars( num, i );
 			Q_snprintf( msg, sizeof(msg), "Option %i", i );
 			Q_snprintf( cmd, sizeof(cmd), "option%i", i );
 

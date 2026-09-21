@@ -86,7 +86,7 @@ bool netadr_t::CompareClassCAdr (const netadr_t &a) const
 
 	return false;
 }
-// reserved addresses are not routeable, so they can all be used in a LAN game
+// reserved addresses are not routable, so they can all be used in a LAN game
 bool netadr_t::IsReservedAdr () const
 {
 	if ( type == NA_LOOPBACK )
@@ -106,8 +106,8 @@ bool netadr_t::IsReservedAdr () const
 const char * netadr_t::ToString( bool onlyBase ) const
 {
 	// Select a static buffer
-	static	char	s[4][64];
-	static int slot = 0;
+	static thread_local char s[4][64];
+	static thread_local int slot = 0;
 	int useSlot = ( slot++ ) % 4;
 
 	// Render into it
@@ -117,7 +117,7 @@ const char * netadr_t::ToString( bool onlyBase ) const
 	return s[useSlot];
 }
 
-void netadr_t::ToString( OUT_Z_CAP(unBufferSize) char *pchBuffer, size_t unBufferSize, bool onlyBase ) const
+const char *netadr_t::ToString( OUT_Z_CAP(unBufferSize) char *pchBuffer, size_t unBufferSize, bool onlyBase ) const
 {
 	if (type == NA_LOOPBACK)
 	{
@@ -131,17 +131,21 @@ void netadr_t::ToString( OUT_Z_CAP(unBufferSize) char *pchBuffer, size_t unBuffe
 	{
 		if ( onlyBase )
 		{
-			V_snprintf( pchBuffer, unBufferSize, "%i.%i.%i.%i", ip[0], ip[1], ip[2], ip[3]);
+			// dimhotepus: Print ip with correct specifiers.
+			V_snprintf( pchBuffer, unBufferSize, "%hhu.%hhu.%hhu.%hhu", ip[0], ip[1], ip[2], ip[3]);
 		}
 		else
 		{
-			V_snprintf( pchBuffer, unBufferSize, "%i.%i.%i.%i:%i", ip[0], ip[1], ip[2], ip[3], ntohs(port));
+			// dimhotepus: Print ip & port with correct specifiers.
+			V_snprintf( pchBuffer, unBufferSize, "%hhu.%hhu.%hhu.%hhu:%hu", ip[0], ip[1], ip[2], ip[3], ntohs(port));
 		}
 	}
 	else
 	{
 		V_strncpy( pchBuffer, "unknown", unBufferSize );
 	}
+
+	return pchBuffer;
 }
 
 bool netadr_t::IsLocalhost() const
@@ -152,15 +156,15 @@ bool netadr_t::IsLocalhost() const
 
 bool netadr_t::IsLoopback() const
 {
-	// are we useding engine loopback buffers
+	// are we using engine loopback buffers
 	return type == NA_LOOPBACK;
 }
 
 void netadr_t::Clear()
 {
+	type = NA_NULL;
 	ip[0] = ip[1] = ip[2] = ip[3] = 0;
 	port = 0;
-	type = NA_NULL;
 }
 
 void netadr_t::SetIP(uint8 b1, uint8 b2, uint8 b3, uint8 b4)
@@ -203,7 +207,7 @@ unsigned int netadr_t::GetIPHostByteOrder() const
 
 void netadr_t::ToSockadr (sockaddr * s) const
 {
-	Q_memset ( s, 0, sizeof(sockaddr));
+	BitwiseClear ( *s );
 
 	if (type == NA_BROADCAST)
 	{
@@ -214,7 +218,7 @@ void netadr_t::ToSockadr (sockaddr * s) const
 	else if (type == NA_IP)
 	{
 		((sockaddr_in*)s)->sin_family = AF_INET;
-		((sockaddr_in*)s)->sin_addr.s_addr = *(int *)&ip;
+		((sockaddr_in*)s)->sin_addr.s_addr = *(const int *)&ip;
 		((sockaddr_in*)s)->sin_port = port;
 	}
 	else if (type == NA_LOOPBACK )
@@ -230,8 +234,8 @@ bool netadr_t::SetFromSockadr(const sockaddr * s)
 	if (s->sa_family == AF_INET)
 	{
 		type = NA_IP;
-		*(int *)&ip = ((sockaddr_in *)s)->sin_addr.s_addr;
-		port = ((sockaddr_in *)s)->sin_port;
+		*(int *)&ip = ((const sockaddr_in *)s)->sin_addr.s_addr;
+		port = ((const sockaddr_in *)s)->sin_port;
 		return true;
 	}
 
@@ -349,9 +353,9 @@ bool netadr_t::SetFromString( const char *pch, bool bUseDNS )
 
 bool netadr_t::operator<(const netadr_t &netadr) const
 {
-	if ( *((uint *)netadr.ip) < *((uint *)ip) )
+	if ( *((const uint *)netadr.ip) < *((const uint *)ip) )
 		return true;
-	else if ( *((uint *)netadr.ip) > *((uint *)ip) )
+	else if ( *((const uint *)netadr.ip) > *((const uint *)ip) )
 		return false;
 	return ( netadr.port < port );
 }

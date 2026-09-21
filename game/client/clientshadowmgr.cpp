@@ -92,7 +92,8 @@ static ConVar r_shadowrendertotexture( "r_shadowrendertotexture", "0" );
 static ConVar r_flashlight_version2( "r_flashlight_version2", "0", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
 
 ConVar r_flashlightdepthtexture( "r_flashlightdepthtexture", "1", FCVAR_ALLOWED_IN_COMPETITIVE );
-ConVar r_flashlightdepthres( "r_flashlightdepthres", "1024" );
+// dimhotepus: Increase default flashlight depth resolution 1024 -> 2048.
+ConVar r_flashlightdepthres( "r_flashlightdepthres", "2048", 0, "Depth texture resolution (NxN)", true, 128, false, 0 );
 
 ConVar r_threaded_client_shadow_manager( "r_threaded_client_shadow_manager", "0" );
 
@@ -1001,7 +1002,7 @@ private:
 	void PrioritySort();
 
 	CUtlVector<VisibleShadowInfo_t> m_ShadowsInView;
-	CUtlVector<int>	m_PriorityIndex;
+	CUtlVector<intp>	m_PriorityIndex;
 };
 
 
@@ -1123,7 +1124,7 @@ void CVisibleShadowList::PrioritySort()
 		float flLargestArea = m_ShadowsInView[m_PriorityIndex[i]].m_flArea;
 		for ( j = i + 1; j < nCount; ++j )
 		{
-			int nIndex = m_PriorityIndex[j];
+			intp nIndex = m_PriorityIndex[j];
 			if ( flLargestArea < m_ShadowsInView[nIndex].m_flArea )
 			{
 				nLargestInd = j;
@@ -1277,13 +1278,13 @@ bool CClientShadowMgr::Init()
 	m_bRenderTargetNeedsClear = false;
 	m_SimpleShadow.Init( "decals/simpleshadow", TEXTURE_GROUP_DECAL );
 
-	Vector dir( 0.1, 0.1, -1 );
+	Vector dir( 0.1f, 0.1f, -1 );
 	SetShadowDirection(dir);
 	SetShadowDistance( 50 );
 
-	SetShadowBlobbyCutoffArea( 0.005 );
+	SetShadowBlobbyCutoffArea( 0.005f );
 
-	bool bTools = CommandLine()->CheckParm( "-tools" ) != NULL;
+	bool bTools = CommandLine()->HasParm( "-tools" );
 	// dimhotepus: Increase shadow depth textures count in game 1 -> 2.
 	m_nMaxDepthTextureShadows = bTools ? 4 : 2;	// Just two shadow depth texture in games, more in tools
 
@@ -2171,6 +2172,35 @@ void CClientShadowMgr::ComputeExtraClipPlanes( IClientRenderable* pRenderable,
 		}
 	}
 
+	// ---------------------------------------
+	// dimhotepus: Fix a case of dynamic shadows bleeding through thin surfaces (copperpixel).
+	class CTraceFilterShadowReceiversOnly : public CTraceFilter
+	{
+		bool ShouldHitEntity( IHandleEntity *pHandleEntity, int fContentsMask ) override
+		{
+			if ( !StandardFilterRules( pHandleEntity, fContentsMask ) )
+				return false;
+
+			C_BaseEntity *pEntity = EntityFromEntityHandle( pHandleEntity );
+			if ( pEntity && !pEntity->ShouldReceiveProjectedTextures( SHADOW_FLAGS_SHADOW ) )
+				return false;
+
+			return true;
+		}
+	};
+
+	// Do a trace to the bbox corner origin. If it hits a shadow receiving brush
+	// move the corner to be outside it so shadows won't poke-thru thin walls
+	CTraceFilterShadowReceiversOnly traceFilter;
+	trace_t tr;
+	UTIL_TraceLine( pRenderable->GetRenderOrigin(), origin, MASK_SOLID_BRUSHONLY, &traceFilter, &tr );
+	if ( tr.fraction < 1.f )
+	{
+		VectorAdd( tr.endpos, tr.plane.normal, origin );
+	}
+
+	// ---------------------------------------
+
 	// Now that we have it, create 3 planes...
 	Vector normal;
 	ClearExtraClipPlanes(handle);
@@ -2388,40 +2418,40 @@ void CClientShadowMgr::DrawRenderToTextureDebugInfo( IClientRenderable* pRendera
 
 	VectorMA( start, vecSize.x, vec[0], end );
 	VectorMA( end, vecSize.z, vec[2], end2 );
-	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01 ); 
-	debugoverlay->AddLineOverlay( end2, end, 255, 0, 0, true, 0.01 ); 
+	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01f ); 
+	debugoverlay->AddLineOverlay( end2, end, 255, 0, 0, true, 0.01f ); 
 
 	VectorMA( start, vecSize.y, vec[1], end );
 	VectorMA( end, vecSize.z, vec[2], end2 );
-	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01 ); 
-	debugoverlay->AddLineOverlay( end2, end, 255, 0, 0, true, 0.01 ); 
+	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01f ); 
+	debugoverlay->AddLineOverlay( end2, end, 255, 0, 0, true, 0.01f ); 
 
 	VectorMA( start, vecSize.z, vec[2], end );
-	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01 );
+	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01f );
 	
 	start = end;
 	VectorMA( start, vecSize.x, vec[0], end );
-	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01 ); 
+	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01f ); 
 
 	VectorMA( start, vecSize.y, vec[1], end );
-	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01 ); 
+	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01f ); 
 
 	VectorMA( end, vecSize.x, vec[0], start );
 	VectorMA( start, -vecSize.x, vec[0], end );
-	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01 ); 
+	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01f ); 
 
 	VectorMA( start, -vecSize.y, vec[1], end );
-	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01 ); 
+	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01f ); 
 
 	VectorMA( start, -vecSize.z, vec[2], end );
-	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01 );
+	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01f );
 
 	start = end;
 	VectorMA( start, -vecSize.x, vec[0], end );
-	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01 ); 
+	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01f ); 
 
 	VectorMA( start, -vecSize.y, vec[1], end );
-	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01 ); 
+	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01f ); 
 
 	C_BaseEntity *pEnt = pRenderable->GetIClientUnknown()->GetBaseEntity();
 	if ( pEnt )

@@ -153,9 +153,9 @@ Vector CAI_BasePhysicsFlyingBot::VelocityToAvoidObstacles(float flInterval)
 	if (tr.fraction < 1)
 	{
 		// Clamp veloctiy
-		if (tr.fraction < 0.1)
+		if (tr.fraction < 0.1f)
 		{
-			tr.fraction = 0.1;
+			tr.fraction = 0.1f;
 		}
 
 		return Vector(0, 0, 50/tr.fraction);

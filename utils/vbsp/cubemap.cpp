@@ -100,7 +100,7 @@ static const char *FindSkyboxMaterialName( void )
 	for( int i = 0; i < g_MainMap->num_entities; i++ )
 	{
 		const char* pEntity = ValueForKey(&g_MainMap->entities[i], "classname");
-		if (!strcmp(pEntity, "worldspawn"))
+		if (V_streq(pEntity, "worldspawn"))
 		{
 			return ValueForKey( &g_MainMap->entities[i], "skyname" );
 		}
@@ -147,7 +147,7 @@ static const char *FindDependentMaterial( const char *pMaterialName, const char 
 		if ( !GetValueFromMaterial( pMaterialName, s_pDependentMaterialVar[i], pDependentMaterialName, MAX_MATERIAL_NAME - 1 ) )
 			continue;
 
-		if ( !Q_stricmp( pDependentMaterialName, pMaterialName ) )
+		if ( V_strieq( pDependentMaterialName, pMaterialName ) )
 		{
 			Warning( "Material %s is depending on itself through materialvar %s! Ignoring...\n", pMaterialName, s_pDependentMaterialVar[i] );
 				continue;
@@ -1012,7 +1012,7 @@ void Cubemap_AddUnreferencedCubemaps()
 		// find or add
 		for ( j=0; j<s_DefaultCubemapNames.Count(); ++j )
 		{
-			if ( !stricmp( s_DefaultCubemapNames[j], pTextureName ) )
+			if ( V_strieq( s_DefaultCubemapNames[j], pTextureName ) )
 			{
 				// already added
 				break;

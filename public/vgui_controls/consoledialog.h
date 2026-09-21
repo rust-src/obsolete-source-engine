@@ -60,7 +60,7 @@ public:
 	void ColorPrint( const Color& clr, const char *pMessage ) override;
 	void Print( const char *pMessage ) override;
 	void DPrint( const char *pMessage ) override;
-	virtual void GetConsoleText( char *pchText, intp bufSize ) const;
+	virtual void GetConsoleText( char *pchText, int bufSize ) const;
 
 	// clears the console
 	void Clear();
@@ -86,12 +86,14 @@ private:
 	class CompletionItem
 	{
 	public:
-		CompletionItem( void );
-		CompletionItem( const CompletionItem& src );
-		CompletionItem& operator =( const CompletionItem& src );
-		~CompletionItem( void );
-		const char *GetItemText( void );
-		const char *GetCommand( void ) const;
+		CompletionItem();
+		// dimhotepus: Drop generated copy ctor / assignment
+		CompletionItem( const CompletionItem& src ) = delete;
+		CompletionItem& operator =( CompletionItem src ) = delete;
+		~CompletionItem();
+		// dimhotepus: Add const.
+		const char *GetItemText() const;
+		const char *GetCommand() const;
 		const char *GetName() const;
 
 		bool			m_bIsCommand;
@@ -129,7 +131,6 @@ protected:
 	char m_szPartialText[256];
 	char m_szPreviousPartialText[256];
 	bool m_bAutoCompleteMode;	// true if the user is currently tabbing through completion options
-	bool m_bWasBackspacing;
 	bool m_bStatusVersion;
 
 	CUtlVector< CompletionItem * > m_CompletionList;

@@ -212,7 +212,7 @@ static int FindSurfaceProp( const char* pSurfaceProp )
 {
 	for (int i = 0; i < physprop->SurfacePropCount(); ++i)
 	{
-		if (!stricmp( physprop->GetPropName( i ), pSurfaceProp ))
+		if (V_strieq( physprop->GetPropName( i ), pSurfaceProp ))
 			return i;
 	}
 	return -1;
@@ -1007,7 +1007,7 @@ bool CBoneControlWindow::SerializeQC( CUtlBuffer& buf )
 		// surface prop as the parent does
 		if (pBone->parent >= 0)
 		{
-			if (!stricmp( g_pStudioModel->m_SurfaceProps[i].String(), 
+			if (V_strieq( g_pStudioModel->m_SurfaceProps[i].String(), 
 							g_pStudioModel->m_SurfaceProps[pBone->parent].String() ))
 				continue;
 		}
@@ -1765,7 +1765,7 @@ void ControlPanel::BuildIKRuleQCString()
 	const char *pType = cIKType->getLabel();
 	V_strcat_safe( qcstr, pType );
 
-	if ( Q_strcmp( pType, "touch" ) == 0 )
+	if ( V_streq( pType, "touch" ) )
 	{
 		V_strcat_safe( qcstr, " \"" );
 		if ( cIKTouch->getSelectedIndex() > 0 )
@@ -1774,7 +1774,7 @@ void ControlPanel::BuildIKRuleQCString()
 		}
 		V_strcat_safe( qcstr, "\"" );
 	}
-	else if ( Q_strcmp( pType, "attachment" ) == 0 )
+	else if ( V_streq( pType, "attachment" ) )
 	{
 		V_strcat_safe( qcstr, " \"" );
 		V_strcat_safe( qcstr, leIKAttachment->getLabel() );
@@ -1827,8 +1827,8 @@ void ControlPanel::BuildIKRuleQCString()
 void ControlPanel::UpdateIKRuleWindow()
 {
 	const char *pIKType = cIKType->getLabel();
-	bool bIsTouch = Q_strcmp( pIKType, "touch" ) == 0;
-	bool bIsAttachment = Q_strcmp( pIKType, "attachment" ) == 0;
+	bool bIsTouch = V_streq( pIKType, "touch" );
+	bool bIsAttachment = V_streq( pIKType, "attachment" );
 
 	lIKTouch->setVisible( bIsTouch );
 	cIKTouch->setVisible( bIsTouch );
@@ -3010,11 +3010,11 @@ void ControlPanel::CreateSortedSequenceList( CStudioHdr* hdr, int *pSequence )
 			if ( pFacePoserKeys )
 			{
 				const char *pType = pFacePoserKeys->GetString( "type", "" );
-				if ( !Q_stricmp( pType, "posture" ) )
+				if ( V_strieq( pType, "posture" ) )
 				{
 					pSort[j].m_nType = 2;
 				}
-				else if ( !Q_stricmp( pType, "gesture" ) )
+				else if ( V_strieq( pType, "gesture" ) )
 				{
 					pSort[j].m_nType = 1;
 				}
@@ -3022,7 +3022,7 @@ void ControlPanel::CreateSortedSequenceList( CStudioHdr* hdr, int *pSequence )
 		}
 	}
 
-	if ( !CommandLine()->CheckParm( "-nosort" ) )
+	if ( !CommandLine()->HasParm( "-nosort" ) )
 	{
 		qsort( pSort, nSequenceCount, sizeof(SortInfo_t), SortSequenceFunc );
 	}
@@ -3424,7 +3424,7 @@ void ControlPanel::initMaterialChoices()
 			for (int i = 0; i < pStudioHdr->numtextures; i++)
 			{
 				char str[512];
-				V_sprintf_safe (str, "%s", pStudioHdr->pTexture(i)->pszName() );
+				V_strcpy_safe (str, pStudioHdr->pTexture(i)->pszName() );
 				cMaterials->add (str);
 			}
 
@@ -3451,7 +3451,7 @@ void ControlPanel::showActivityModifiers( intp sequence )
 	for (int i = 0; i < desc.numactivitymodifiers; i++)
 	{
 		char str[512];
-		V_sprintf_safe (str, "%s", desc.pActivityModifier( i )->pszName() );
+		V_strcpy_safe (str, desc.pActivityModifier( i )->pszName() );
 		cActivityModifiers->add (str);
 	}
 
@@ -3906,7 +3906,7 @@ void ControlPanel::setupPhysicsBone( int boneIndex )
 	for ( int i = 0; i < pHdr->numbones(); i++ )
 	{
 		mstudiobone_t* pBone = pHdr->pBone(i);
-		if (!stricmp(pBone->pszName(), solid.name ))
+		if (V_strieq(pBone->pszName(), solid.name ))
 		{
 			// Once found, set the surface property accordingly
 			lPhysicsMaterial->setLabel( g_pStudioModel->m_SurfaceProps[i].String() );

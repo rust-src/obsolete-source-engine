@@ -386,8 +386,8 @@ void CAI_RappelBehavior::CreateZipline()
 			CBeam *pBeam;
 			pBeam = CBeam::BeamCreate( "cable/cable.vmt", 1 );
 			pBeam->SetColor( 150, 150, 150 );
-			pBeam->SetWidth( 0.3 );
-			pBeam->SetEndWidth( 0.3 );
+			pBeam->SetWidth( 0.3f );
+			pBeam->SetEndWidth( 0.3f );
 
 			CAI_BaseNPC *pNPC = GetOuter();
 			pBeam->PointEntInit( pNPC->GetAbsOrigin() + Vector( 0, 0, 80 ), pNPC );

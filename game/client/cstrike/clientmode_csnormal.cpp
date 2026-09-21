@@ -287,6 +287,14 @@ ClientModeCSNormal::ClientModeCSNormal()
 	HOOK_MESSAGE( MatchEndConditions );
 }
 
+// dimhotepus: Correctly shut down.
+ClientModeCSNormal::~ClientModeCSNormal()
+{
+	// dimhotepus: Pair with constructor.
+	delete m_pViewport;
+	m_pViewport = nullptr;
+}
+
 void ClientModeCSNormal::Init()
 {
 	BaseClass::Init();
@@ -461,7 +469,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 	if ( !eventname || !eventname[0] )
 		return;
 
-	if ( Q_strcmp( "round_start", eventname ) == 0 )
+	if ( V_streq( "round_start", eventname ) )
 	{
 		// recreate all client side physics props
 		C_PhysPropClientside::RecreateAll();
@@ -770,7 +778,7 @@ bool ShouldRecreateClassImageEntity( C_BaseAnimating *pEnt, const char *pNewMode
 	// reload only if names are different
 	const char *pNameNoPath = V_UnqualifiedFileName( pName );
 	const char *pNewModelNameNoPath = V_UnqualifiedFileName( pNewModelName );
-	return( Q_stricmp( pNameNoPath, pNewModelNameNoPath ) != 0 );
+	return !V_strieq( pNameNoPath, pNewModelNameNoPath );
 }
 
 
@@ -791,7 +799,7 @@ void UpdateClassImageEntity(
 	int i;
 	for ( i=0; i<CTPlayerModels.Count(); ++i )
 	{
-		if ( Q_strcasecmp( pModelName, CTPlayerModels[i] ) == 0 )
+		if ( V_strieq( pModelName, CTPlayerModels[i] ) )
 		{
 			// give CTs a M4
 			pWeaponName = "models/weapons/w_rif_m4a1.mdl";

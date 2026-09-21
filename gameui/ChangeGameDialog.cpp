@@ -69,9 +69,10 @@ void CChangeGameDialog::LoadModList()
 	WIN32_FIND_DATA wfd;
 	BitwiseClear( wfd );
 	
-	HANDLE hResult = FindFirstFile(szSearchPath, &wfd);
-	if (hResult != INVALID_HANDLE_VALUE)
+	if (HANDLE hResult = FindFirstFile(szSearchPath, &wfd); hResult != INVALID_HANDLE_VALUE)
 	{
+		RunCodeAtScopeExit( FindClose( hResult ));
+
 		while (true)
 		{
 			if ((wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && (Q_strnicmp(wfd.cFileName, ".", 1)))
@@ -114,8 +115,6 @@ void CChangeGameDialog::LoadModList()
 			if (!FindNextFile(hResult, &wfd))
 				break;
 		}
-		
-		FindClose(hResult);
 	}
 }
 
@@ -124,7 +123,7 @@ void CChangeGameDialog::LoadModList()
 //-----------------------------------------------------------------------------
 void CChangeGameDialog::OnCommand(const char *command)
 {
-	if (!stricmp(command, "OK"))
+	if (V_strieq(command, "OK"))
 	{
 		if (m_pModList->GetSelectedItemsCount() > 0)
 		{
@@ -141,7 +140,7 @@ void CChangeGameDialog::OnCommand(const char *command)
 			}
 		}
 	}
-	else if (!stricmp(command, "Cancel"))
+	else if (V_strieq(command, "Cancel"))
 	{
 		Close();
 	}

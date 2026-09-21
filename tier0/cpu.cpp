@@ -85,7 +85,7 @@ const char* GetProcessorVendorId()
 	
 #ifndef OSX
 	unsigned int unused, regs[3];
-	memset( vendorId, 0, sizeof(vendorId) );
+	BitwiseClear( vendorId );
 
 	if ( !cpuid(0,unused, regs[0], regs[2], regs[1] ) )
 	{
@@ -126,7 +126,7 @@ void TrimSpaces( char (&in)[128], char (&out)[128] )
 {
 	size_t i{0};
 	// Trim leading space.
-	while (std::isspace( in[i] )) ++i;
+	while (std::isspace( static_cast<unsigned char>( in[i] ) )) ++i;
 	
 	if (in[i] == '\0')
 	{
@@ -136,8 +136,7 @@ void TrimSpaces( char (&in)[128], char (&out)[128] )
 	
 	// Trim trailing space.
 	char *end{in + strlen( in ) - 1};
-	
-	while (end > in && std::isspace( *end )) end--;
+	while (end > in && std::isspace( static_cast<unsigned char>( *end ) )) end--;
 	
 	// Write new null terminator character.
 	end[1] = '\0';
@@ -382,7 +381,7 @@ uint8 LogicalProcessorsPerPackage( unsigned ebx )
 	// EBX[23:16] indicate number of logical processors per package
 	constexpr unsigned NUM_LOGICAL_BITS = 0x00FF0000U;
 
-	return (uint8) ((ebx & NUM_LOGICAL_BITS) >> 16U);
+	return static_cast<uint8>((ebx & NUM_LOGICAL_BITS) >> 16U);
 }
 
 #ifdef _WIN32
@@ -495,6 +494,8 @@ uint64 CalculateCPUFreq(); // from cpu_linux.cpp
 
 }  // namespace
 
+int64 QueryCurrentCpuFrequency();
+
 // Measure the processor clock speed by sampling the cycle count, waiting for
 // some fraction of a second, then measuring the elapsed number of cycles.
 int64 QueryCurrentCpuFrequency()
@@ -603,13 +604,13 @@ const CPUInformation* GetCPUInformation()
 		{
 			if ( char *value = strchr( buf, ':' ) )
 			{
-				for ( char *p = value - 1; p > buf && isspace((unsigned char)*p); --p )
+				for ( char *p = value - 1; p > buf && std::isspace(static_cast<unsigned char>(*p)); --p )
 				{
 					*p = 0;
 				}
 				for ( char *p = buf; p < value && *p; ++p )
 				{
-					*p = tolower((unsigned char)*p);
+					*p = static_cast<char>(tolower((unsigned char)*p));
 				}
 				if ( !strcmp( buf, "processor" ) )
 				{

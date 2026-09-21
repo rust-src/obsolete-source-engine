@@ -295,7 +295,7 @@ bool FireSystem_IsFireInWall( Vector &position, fireType_e type )
 		return false;
 
 	trace_t tr;
-	UTIL_TraceHull( position, position+Vector(0,0,0.1), FIRE_MINS,FIRE_MAXS,MASK_SOLID, NULL, COLLISION_GROUP_NONE, &tr );
+	UTIL_TraceHull( position, position+Vector(0,0,0.1f), FIRE_MINS,FIRE_MAXS,MASK_SOLID, NULL, COLLISION_GROUP_NONE, &tr );
 	if (tr.fraction != 1.0 || tr.startsolid)
 	{
 		//NDebugOverlay::Box(position,FIRE_MINS,FIRE_MAXS,255,0,0,50,10);

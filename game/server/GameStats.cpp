@@ -626,14 +626,14 @@ bool CBaseGameStats_Driver::Init()
 	Q_strncpy( s_szStatUploadRegistryKeyName, "GameStatsUpload_", sizeof( s_szStatUploadRegistryKeyName ) );
 	Q_strncat( s_szStatUploadRegistryKeyName, szLoweredGameDir, sizeof( s_szStatUploadRegistryKeyName ) );
 
-	gamestats->m_bLoggingToFile = CommandLine()->FindParm( "-gamestatsloggingtofile" ) ? true : false;
+	gamestats->m_bLoggingToFile = CommandLine()->HasParm( "-gamestatsloggingtofile" );
 	if ( gamestats->m_bLoggingToFile )
 	{
 		gamestats->m_bLogging = true;
 	}
 	else
 	{
-		gamestats->m_bLogging = CommandLine()->FindParm( "-gamestatslogging" ) ? true : false;
+		gamestats->m_bLogging = CommandLine()->HasParm( "-gamestatslogging" );
 	}
 
 #if 0
@@ -733,7 +733,7 @@ void CBaseGameStats_Driver::LevelInitPreEntity()
 	m_bInLevel = true;
 	m_bFirstLevel = false;
 
-	if ( Q_stricmp( s_szPseudoUniqueID, "unknown" ) == 0 )
+	if ( V_strieq( s_szPseudoUniqueID, "unknown" ) )
 	{
 		// "unknown" means this is a dedicated server and we weren't able to generate a unique ID (e.g. Linux server).
 		// Change the unique ID to be a hash of IP & port.  We couldn't do this earlier because IP is not known until level
@@ -967,44 +967,48 @@ void CBaseGameStats::SetDXLevelStatistic( int iDXLevel )
 void CBaseGameStats::SetHL2UnlockedChapterStatistic( void )
 {
 	// Now grab the hl2/cfg/config.cfg and suss out the sv_unlockedchapters cvar to estimate how far they got in HL2
-	char const *relative = "cfg/config.cfg";
-	char fullpath[ 512 ];
-	char gamedir[256];
+	constexpr char relative[]{"cfg/config.cfg"};
+
+	char fullpath[512], gamedir[256];
+
 	engine->GetGameDir( gamedir );
-	Q_snprintf( fullpath, sizeof( fullpath ), "%s/../hl2/%s", gamedir, relative );
+	V_sprintf_safe( fullpath, "%s/../hl2/%s", gamedir, relative );
 
-	if ( filesystem->FileExists( fullpath ) )
+	if ( !filesystem->FileExists( fullpath ) )
 	{
-		FileHandle_t fh = filesystem->Open( fullpath, "rb" );
-		if ( FILESYSTEM_INVALID_HANDLE != fh )
-		{
-			// read file into memory
-			int size = filesystem->Size(fh);
-			char *configBuffer = new char[ size + 1 ];
-			filesystem->Read( configBuffer, size, fh );
-			configBuffer[size] = 0;
-			filesystem->Close( fh );
+		return;
+	}
 
-			// loop through looking for all the cvars to apply
-			const char *search = Q_stristr(configBuffer, "sv_unlockedchapters" );
-			if ( search )
-			{
-				// read over the token
-				search = strtok( (char *)search, " \n" );
-				search = strtok( NULL, " \n" );
+	FileHandle_t fh = filesystem->Open( fullpath, "rb" );
+	if ( !fh )
+	{
+		Warning( "Unable to open '%s' to read unlocked chapter statistic.\n", fullpath );
+		return;
+	}
+	RunCodeAtScopeExit(filesystem->Close( fh ));
 
-				if ( search[0]== '\"' )
-					++search;
+	// read file into memory
+	int size = filesystem->Size(fh);
+	auto configBuffer = std::make_unique<char[]>( size + 1 );
 
-				// read the value
-				int iChapter = Q_atoi( search );
-				m_BasicStats.m_nHL2ChaptureUnlocked = iChapter;
-			}
+	filesystem->Read( configBuffer, size, fh );
+	configBuffer[size] = '\0';
 
-			// free
-			delete [] configBuffer;
-		}
-	}	
+	// loop through looking for all the cvars to apply
+	const char *search = Q_stristr(configBuffer, "sv_unlockedchapters" );
+	if ( search )
+	{
+		// read over the token
+		search = strtok( (char *)search, " \n" );
+		search = strtok( NULL, " \n" );
+
+		if ( search[0]== '\"' )
+			++search;
+
+		// read the value
+		int iChapter = Q_atoi( search );
+		m_BasicStats.m_nHL2ChaptureUnlocked = iChapter;
+	}
 }
 
 static void CC_ResetGameStats( const CCommand &args )

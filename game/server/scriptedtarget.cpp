@@ -341,7 +341,7 @@ void CScriptedTarget::DrawDebugGeometryOverlays(void)
 		}
 		else
 		{
-			NDebugOverlay::Cross3D(m_vLastPosition,	Vector(-8,-8,-8),Vector(8,8,8),255,0,0,true,0.1);
+			NDebugOverlay::Cross3D(m_vLastPosition,	Vector(-8,-8,-8),Vector(8,8,8),255,0,0,true,0.1f);
 			NDebugOverlay::Box(GetAbsOrigin(), Vector(-5,-5,-5), Vector(5,5,5), 255,0,0, 0 ,0);
 			NDebugOverlay::Line(GetAbsOrigin(),m_vLastPosition,255,0,0,true,0.0);
 		}

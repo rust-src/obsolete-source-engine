@@ -259,7 +259,7 @@ void CTeam::RemovePlayer( CBasePlayer *pPlayer )
 //-----------------------------------------------------------------------------
 // Purpose: Return the number of players in this team.
 //-----------------------------------------------------------------------------
-int CTeam::GetNumPlayers( void ) const
+intp CTeam::GetNumPlayers( void ) const
 {
 	return m_aPlayers.Count();
 }
@@ -313,9 +313,9 @@ void CTeam::AwardAchievement( int iAchievement )
 
 	CRecipientFilter filter;
 
-	int iNumPlayers = GetNumPlayers();
+	intp iNumPlayers = GetNumPlayers();
 
-	for ( int i=0;i<iNumPlayers;i++ )
+	for ( intp i=0;i<iNumPlayers;i++ )
 	{
 		if ( GetPlayer(i) )
 		{
@@ -330,11 +330,11 @@ void CTeam::AwardAchievement( int iAchievement )
 
 int CTeam::GetAliveMembers( void ) const
 {
-	int iAlive = 0;
+	intp iAlive = 0;
 
-	int iNumPlayers = GetNumPlayers();
+	intp iNumPlayers = GetNumPlayers();
 
-	for ( int i=0;i<iNumPlayers;i++ )
+	for ( intp i=0;i<iNumPlayers;i++ )
 	{
 		if ( GetPlayer(i) && GetPlayer(i)->IsAlive() )
 		{

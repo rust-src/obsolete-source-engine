@@ -1393,7 +1393,7 @@ void CHudUpgradePanel::UpdateHighlights( void )
 			vgui::Panel *pTabPanel = pMouseOverPanel;
 
 			bool bIsUpgradeButton = StringHasPrefix( pMouseOverPanel->GetName(), "UpgradeButton" );
-			bool bIsPlayerUpgradeButton = V_strcmp( pMouseOverPanel->GetName(), "PlayerUpgradeButton" ) == 0;
+			bool bIsPlayerUpgradeButton = V_streq( pMouseOverPanel->GetName(), "PlayerUpgradeButton" );
 
 			if ( bIsPlayerUpgradeButton )
 			{
@@ -1973,7 +1973,7 @@ bool CHudUpgradePanel::QuickEquipBottle( void )
 //-----------------------------------------------------------------------------
 void CHudUpgradePanel::OnCommand( const char *command )
 {
-	if ( !Q_stricmp( command, "close" ) )
+	if ( V_strieq( command, "close" ) )
 	{
 		m_bShowUpgradeMenu = false;
 		m_bCancelUpgrades = false;
@@ -1991,7 +1991,7 @@ void CHudUpgradePanel::OnCommand( const char *command )
 
 		return;
 	}
-	else if ( !Q_stricmp( command, "cancel" ) )
+	else if ( V_strieq( command, "cancel" ) )
 	{
 		m_bShowUpgradeMenu = false;
 		m_bCancelUpgrades = true;
@@ -2000,7 +2000,7 @@ void CHudUpgradePanel::OnCommand( const char *command )
 		m_hPlayer = NULL;
 		return;
 	}
-	else if ( !Q_stricmp( command, "next" ) )
+	else if ( V_strieq( command, "next" ) )
 	{
 		int nPrevLoadoutSlot = -1;
 		int nLoadoutSlot = -1;
@@ -2035,7 +2035,7 @@ void CHudUpgradePanel::OnCommand( const char *command )
 			}
 		}
 	}
-	else if ( !Q_stricmp( command, "prev" ) )
+	else if ( V_strieq( command, "prev" ) )
 	{
 		int nPrevLoadoutSlot = -1;
 		int nLoadoutSlot = -1;
@@ -2070,20 +2070,20 @@ void CHudUpgradePanel::OnCommand( const char *command )
 			}
 		}
 	}
-	else if ( V_strcmp( command, "quick_equip_bottle" ) == 0 )
+	else if ( V_streq( command, "quick_equip_bottle" ) )
 	{
 		QuickEquipBottle();
 
 		return;
 	}
-	else if ( V_strcmp( command, "open_charinfo_direct" ) == 0 )
+	else if ( V_streq( command, "open_charinfo_direct" ) )
 	{
 		m_bShowUpgradeMenu = false;
 		m_bCancelUpgrades = true;
 		m_bOpenLoadout = true;
 		return;
 	}
-	else if ( !Q_stricmp( command, "PlayerUpgrade" ) )
+	else if ( V_strieq( command, "PlayerUpgrade" ) )
 	{
 		UpgradeItemInSlot( -1 );
 
@@ -2136,7 +2136,7 @@ void CHudUpgradePanel::OnCommand( const char *command )
 	{
 		UpdateTip();
 	}
-	else if ( V_strcmp( command, "respec" ) == 0 )
+	else if ( V_streq( command, "respec" ) )
 	{
 		if ( m_hPlayer )
 		{

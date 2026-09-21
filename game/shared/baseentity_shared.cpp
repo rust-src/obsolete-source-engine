@@ -66,14 +66,6 @@ ConVar hl2_episodic( "hl2_episodic", "0", FCVAR_REPLICATED );
 
 bool CBaseEntity::m_bAllowPrecache = false;
 
-// Set default max values for entities based on the existing constants from elsewhere
-float k_flMaxEntityPosCoord = MAX_COORD_FLOAT;
-float k_flMaxEntityEulerAngle = 360.0 * 1000.0f; // really should be restricted to +/-180, but some code doesn't adhere to this.  let's just trap NANs, etc
-// Sometimes the resulting computed speeds are legitimately above the original
-// constants; use bumped up versions for the downstream validation logic to
-// account for this.
-float k_flMaxEntitySpeed = k_flMaxVelocity * 2.0f;
-float k_flMaxEntitySpinRate = k_flMaxAngularVelocity * 10.0f;
 
 ConVar	ai_shot_bias_min( "ai_shot_bias_min", "-1.0", FCVAR_REPLICATED );
 ConVar	ai_shot_bias_max( "ai_shot_bias_max", "1.0", FCVAR_REPLICATED );
@@ -461,7 +453,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const char *szValue )
 		bool printKeyHits = false;
 		const char *debugName = "";
 
-		if ( *ent_debugkeys.GetString() && !Q_stricmp(ent_debugkeys.GetString(), STRING(m_iClassname)) )
+		if ( *ent_debugkeys.GetString() && V_strieq(ent_debugkeys.GetString(), STRING(m_iClassname)) )
 		{
 			// Msg( "-- found entity of type %s\n", STRING(m_iClassname) );
 			printKeyHits = true;
@@ -471,7 +463,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const char *szValue )
 		// loop through the data description, and try and place the keys in
 		for ( datamap_t *dmap = GetDataDescMap(); dmap != NULL; dmap = dmap->baseMap )
 		{
-			if ( !printKeyHits && *ent_debugkeys.GetString() && !Q_stricmp(dmap->dataClassName, ent_debugkeys.GetString()) )
+			if ( !printKeyHits && *ent_debugkeys.GetString() && V_strieq(dmap->dataClassName, ent_debugkeys.GetString()) )
 			{
 				// Msg( "-- found class of type %s\n", dmap->dataClassName );
 				printKeyHits = true;
@@ -1799,7 +1791,7 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 
 #ifdef GAME_DLL
 		if ( ai_debug_shoot_positions.GetBool() )
-			NDebugOverlay::Line(info.m_vecSrc, vecEnd, 255, 255, 255, false, .1 );
+			NDebugOverlay::Line(info.m_vecSrc, vecEnd, 255, 255, 255, false, .1f );
 #endif
 
 		if ( bStartedInWater )
@@ -2314,17 +2306,17 @@ void CBaseEntity::TraceBleed( float flDamage, const Vector &vecDir, trace_t *ptr
 
 	if (flDamage < 10)
 	{
-		flNoise = 0.1;
+		flNoise = 0.1f;
 		cCount = 1;
 	}
 	else if (flDamage < 25)
 	{
-		flNoise = 0.2;
+		flNoise = 0.2f;
 		cCount = 2;
 	}
 	else
 	{
-		flNoise = 0.3;
+		flNoise = 0.3f;
 		cCount = 4;
 	}
 

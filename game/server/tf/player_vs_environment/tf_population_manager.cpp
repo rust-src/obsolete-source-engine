@@ -344,7 +344,7 @@ void CPopulationManager::FireGameEvent( IGameEvent *event )
 {
 	const char *pEventName = event->GetName();
 
-	if ( V_strcmp( "pve_win_panel", pEventName ) == 0 )
+	if ( V_streq( "pve_win_panel", pEventName ) )
 	{
 		// Always release people even if the match isn't ending
 		// XXX(JohnS): This is just how the code was, but why wouldn't the match be ending?
@@ -579,6 +579,7 @@ void CPopulationManager::FindDefaultPopulationFileShortNames( CUtlVector< CUtlSt
 
 	FileFindHandle_t popHandle;
 	const char *pPopFileName = filesystem->FindFirstEx( szBaseName, "GAME", &popHandle );
+	RunCodeAtScopeExit( filesystem->FindClose( popHandle ) );
 
 	while ( pPopFileName && pPopFileName[ 0 ] != '\0' )
 	{
@@ -605,11 +606,10 @@ void CPopulationManager::FindDefaultPopulationFileShortNames( CUtlVector< CUtlSt
 		pPopFileName = filesystem->FindNext( popHandle );
 	}
 
-	filesystem->FindClose( popHandle );
-
 	// Search for all pop files in the BSP next. Note that loose files override these (by short name)
 	FileFindHandle_t popHandleBSP;
 	const char *pPopFileNameBSP = filesystem->FindFirstEx( MVM_POP_FILE_PATH "/*.pop", "BSP", &popHandleBSP );
+	RunCodeAtScopeExit( filesystem->FindClose( popHandleBSP ) );
 
 	while ( pPopFileNameBSP && pPopFileNameBSP[ 0 ] != '\0' )
 	{
@@ -626,7 +626,7 @@ void CPopulationManager::FindDefaultPopulationFileShortNames( CUtlVector< CUtlSt
 
 		// Legacy: Prior to proper support for in-BSP pop files, maps could jankily match their popfile to their exact
 		// map name in the BSP. Map this to "normal"
-		if ( V_stricmp( szShortName, STRING(gpGlobals->mapname) ) == 0 )
+		if ( V_strieq( szShortName, STRING(gpGlobals->mapname) ) )
 		{
 			V_strncpy( szShortName, "normal", sizeof( szShortName ) );
 		}
@@ -638,8 +638,6 @@ void CPopulationManager::FindDefaultPopulationFileShortNames( CUtlVector< CUtlSt
 
 		pPopFileNameBSP = filesystem->FindNext( popHandleBSP );
 	}
-
-	filesystem->FindClose( popHandleBSP );
 
 	// Always treat "normal" as the default pop-file
 	int normalIdx = outVecShortNames.Find( "normal" );
@@ -921,7 +919,7 @@ void CPopulationManager::CycleMission ( void )
 						const char * pMap = pMission->GetString( "map", "" );
 						const char * pPopfile = pMission->GetString( "popfile", "" );
 						
-						if ( !Q_strcmp( pCurrentMap, pMap ) && !Q_strcmp( szCurrentPopfile, pPopfile ) )
+						if ( V_streq( pCurrentMap, pMap ) && V_streq( szCurrentPopfile, pPopfile ) )
 						{
 							// match, advance to the next entry and use those values
 							int nextMap = (iMap % iMapCount) + 1;
@@ -1931,7 +1929,7 @@ void CPopulationManager::EndlessRollEscalation( void )
 		bool bUpgradeFound = false;
 		FOR_EACH_VEC( m_EndlessActiveBotUpgrades, iUpgrade )
 		{
-			if ( !V_strcmp( m_EndlessActiveBotUpgrades[iUpgrade].szAttrib, upgrade.szAttrib) )
+			if ( V_streq( m_EndlessActiveBotUpgrades[iUpgrade].szAttrib, upgrade.szAttrib) )
 			{
 				bUpgradeFound = true;
 				// increment the value
@@ -2103,22 +2101,22 @@ bool CPopulationManager::Parse( void )
 	{
 		const char *name = data->GetName();
 
-		if ( Q_strlen( name ) <= 0 )
+		if ( Q_isempty( name ) )
 		{
 			continue;
 		}
 
-		if ( !Q_stricmp( name, "StartingCurrency" ) )
+		if ( V_strieq( name, "StartingCurrency" ) )
 		{
 			m_nStartingCurrency = data->GetInt();
 		}
-		else if ( !Q_stricmp( name, "RespawnWaveTime" ) )
+		else if ( V_strieq( name, "RespawnWaveTime" ) )
 		{
 			m_nRespawnWaveTime = data->GetInt();
 		}
-		else if ( !Q_stricmp( name, "EventPopfile" ) )
+		else if ( V_strieq( name, "EventPopfile" ) )
 		{
-			if ( !Q_stricmp( data->GetString(), "Halloween" ) )
+			if ( V_strieq( data->GetString(), "Halloween" ) )
 			{
 				m_nMvMEventPopfileType = MVM_EVENT_POPFILE_HALLOWEEN;
 			}
@@ -2127,21 +2125,21 @@ bool CPopulationManager::Parse( void )
 				m_nMvMEventPopfileType = MVM_EVENT_POPFILE_NONE;
 			}
 		}
-		else if ( !Q_stricmp( name, "FixedRespawnWaveTime" ) )
+		else if ( V_strieq( name, "FixedRespawnWaveTime" ) )
 		{
 			m_bFixedRespawnWaveTime = true;
 		}
-		else if ( !Q_stricmp( name, "AddSentryBusterWhenDamageDealtExceeds" ) )
+		else if ( V_strieq( name, "AddSentryBusterWhenDamageDealtExceeds" ) )
 		{
 			m_sentryBusterDamageDealtThreshold = data->GetInt();
 		}
-		else if ( !Q_stricmp( name, "AddSentryBusterWhenKillCountExceeds" ) )
+		else if ( V_strieq( name, "AddSentryBusterWhenKillCountExceeds" ) )
 		{
 			m_sentryBusterKillThreshold = data->GetInt();
 		}
-		else if ( !Q_stricmp( name, "CanBotsAttackWhileInSpawnRoom" ) )
+		else if ( V_strieq( name, "CanBotsAttackWhileInSpawnRoom" ) )
 		{
-			if ( !Q_stricmp( data->GetString(), "no" ) || !Q_stricmp( data->GetString(), "false" ) )
+			if ( V_strieq( data->GetString(), "no" ) || V_strieq( data->GetString(), "false" ) )
 			{
 				m_canBotsAttackWhileInSpawnRoom = false;
 			}
@@ -2150,7 +2148,7 @@ bool CPopulationManager::Parse( void )
 				m_canBotsAttackWhileInSpawnRoom = true;
 			}
 		}
-		else if ( !Q_stricmp( name, "RandomPlacement" ) )
+		else if ( V_strieq( name, "RandomPlacement" ) )
 		{
 			CRandomPlacementPopulator *randomPopulator = new CRandomPlacementPopulator( this );
 
@@ -2162,7 +2160,7 @@ bool CPopulationManager::Parse( void )
 
 			m_populatorVector.AddToTail( randomPopulator );
 		}
-		else if ( !Q_stricmp( name, "PeriodicSpawn" ) )
+		else if ( V_strieq( name, "PeriodicSpawn" ) )
 		{
 			CPeriodicSpawnPopulator *periodicPopulator = new CPeriodicSpawnPopulator( this );
 
@@ -2174,7 +2172,7 @@ bool CPopulationManager::Parse( void )
 
 			m_populatorVector.AddToTail( periodicPopulator );
 		}
-		else if ( !Q_stricmp( name, "Wave" ) )
+		else if ( V_strieq( name, "Wave" ) )
 		{
 			CWave *wave = new CWave( this );
 
@@ -2188,7 +2186,7 @@ bool CPopulationManager::Parse( void )
 			// also keep vector of wave pointers for convenience
 			m_waveVector.AddToTail( wave );
 		}
-		else if ( !Q_stricmp( name, "Mission" ) )
+		else if ( V_strieq( name, "Mission" ) )
 		{
 			CMissionPopulator *missionPopulator = new CMissionPopulator( this );
 
@@ -2200,15 +2198,15 @@ bool CPopulationManager::Parse( void )
 
 			m_populatorVector.AddToTail( missionPopulator );
 		}
-		else if ( !Q_stricmp( name, "Templates" ) )
+		else if ( V_strieq( name, "Templates" ) )
 		{
 			// handled above
 		}
-		else if ( !Q_stricmp( name, "Advanced" ) )
+		else if ( V_strieq( name, "Advanced" ) )
 		{
 			m_bAdvancedPopFile = true;
 		}
-		else if ( !Q_stricmp( name, "IsEndless" ) )
+		else if ( V_strieq( name, "IsEndless" ) )
 		{
 			m_bEndlessOn = true;
 		}

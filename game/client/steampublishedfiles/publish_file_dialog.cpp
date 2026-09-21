@@ -52,7 +52,7 @@ public:
 	// Return 0 for success
 	virtual int Run()
 	{
-		if ( V_strcasecmp( V_GetFileExtension( m_strInput.Get() ), "bsp" ) == 0 )
+		if ( V_strieq( V_GetFileExtension( m_strInput.Get() ), "bsp" ) )
 		{
 			return BSP_SyncRepack( m_strInput.Get(), m_strOutput.Get() ) ? 0 : 1;
 		}
@@ -550,10 +550,12 @@ void CFilePublishDialog::Steam_OnPublishFile( SubmitItemUpdateResult_t *pResult,
 		switch ( universe )
 		{
 		case k_EUniversePublic:
-			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "http://steamcommunity.com/sharedfiles/filedetails/?id=%llu&requirelogin=true", m_nFileID ) );
+			// dimhotepus: http:// -> https://
+			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "https://steamcommunity.com/sharedfiles/filedetails/?id=%llu&requirelogin=true", m_nFileID ) );
 			break;
 		case k_EUniverseBeta:
-			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "http://beta.steamcommunity.com/sharedfiles/filedetails/?id=%llu&requirelogin=true", m_nFileID ) );
+			// dimhotepus: http:// -> https://
+			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "https://beta.steamcommunity.com/sharedfiles/filedetails/?id=%llu&requirelogin=true", m_nFileID ) );
 			break;
 		case k_EUniverseDev:
 			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "http://localhost/community/sharedfiles/filedetails/?id=%llu&requirelogin=true", m_nFileID ) );
@@ -579,7 +581,7 @@ bool CFilePublishDialog::PublishFile()
 	ErrorCode_t errorCode = ValidateFile( g_MapFilename );
 #ifdef TF_CLIENT_DLL
 	const char *pExt = V_GetFileExtension( g_MapFilename );
-	if ( errorCode == kNoError && pExt && V_strcmp( pExt, "bsp" ) == 0 )
+	if ( errorCode == kNoError && pExt && V_streq( pExt, "bsp" ) )
 	{
 		if ( !CTFMapsWorkshop::IsValidOriginalFileNameForMap( CUtlString( V_GetFileName( g_MapFilename ) ) ) )
 		{
@@ -802,7 +804,7 @@ void CFilePublishDialog::PerformLayout()
 //-----------------------------------------------------------------------------
 void CFilePublishDialog::OnCommand( const char *command )
 {
-	if ( Q_stricmp( command, "Publish" ) == 0 )
+	if ( V_strieq( command, "Publish" ) )
 	{
 		// Verify they've filled everything out properly
 		bool bHasTitle = ( m_pFileTitle->GetTextLength() > 0 );
@@ -833,11 +835,11 @@ void CFilePublishDialog::OnCommand( const char *command )
 
 		PublishFile();
 	}
-	else if ( Q_stricmp( command, "Update" ) == 0 )
+	else if ( V_strieq( command, "Update" ) )
 	{
 		UpdateFile();
 	}
-	else if ( Q_stricmp( command, "MainFileMaps" ) == 0 )
+	else if ( V_strieq( command, "MainFileMaps" ) )
 	{
 		m_fileOpenMode = FILEOPEN_MAIN_FILE;
 
@@ -855,8 +857,8 @@ void CFilePublishDialog::OnCommand( const char *command )
 		char szFilePath[MAX_PATH];
 		g_pFullFileSystem->GetCurrentDirectory( szFilePath, sizeof(szFilePath) );
 
-		strcat( szFilePath, "/" );
-		strcat( szFilePath, textBuffer );
+		V_strcat_safe( szFilePath, "/" );
+		V_strcat_safe( szFilePath, textBuffer );
 
 		// Get the currently set dir and use that as the start
 		// pDlg->ExpandTreeToPath( szFilePath );
@@ -866,7 +868,7 @@ void CFilePublishDialog::OnCommand( const char *command )
 		pDlg->DoModal();
 		pDlg->Activate();
 	}
-	else if ( Q_stricmp( command, "MainFileOther" ) == 0 )
+	else if ( V_strieq( command, "MainFileOther" ) )
 	{
 		m_fileOpenMode = FILEOPEN_MAIN_FILE;
 
@@ -884,8 +886,8 @@ void CFilePublishDialog::OnCommand( const char *command )
 		char szFilePath[MAX_PATH];
 		g_pFullFileSystem->GetCurrentDirectory( szFilePath, sizeof( szFilePath ) );
 
-		strcat( szFilePath, "/" );
-		strcat( szFilePath, textBuffer );
+		V_strcat_safe( szFilePath, "/" );
+		V_strcat_safe( szFilePath, textBuffer );
 
 		// Get the currently set dir and use that as the start
 		// pDlg->ExpandTreeToPath( szFilePath );
@@ -895,7 +897,7 @@ void CFilePublishDialog::OnCommand( const char *command )
 		pDlg->DoModal();
 		pDlg->Activate();
 	}
-	else if ( Q_stricmp( command, "PreviewBrowse" ) == 0 )
+	else if ( V_strieq( command, "PreviewBrowse" ) )
 	{
 		m_fileOpenMode = FILEOPEN_PREVIEW;
 		
@@ -910,8 +912,8 @@ void CFilePublishDialog::OnCommand( const char *command )
 		char szFilePath[MAX_PATH];
 		g_pFullFileSystem->GetCurrentDirectory( szFilePath, sizeof(szFilePath) );
 
-		strcat( szFilePath, "/" );
-		strcat( szFilePath, g_PreviewFilename );
+		V_strcat_safe( szFilePath, "/" );
+		V_strcat_safe( szFilePath, g_PreviewFilename );
 
 		// Get the currently set dir and use that as the start
 		// pDlg->ExpandTreeToPath( szFilePath );

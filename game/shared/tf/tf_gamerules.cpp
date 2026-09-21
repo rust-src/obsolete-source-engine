@@ -330,7 +330,7 @@ bool IsValveMap( const char *pMapName )
 {
 	for ( int i = 0; i < ARRAYSIZE( s_ValveMaps ); ++i )
 	{
-		if ( !Q_stricmp( s_ValveMaps[i].pDiskName, pMapName ) )
+		if ( V_strieq( s_ValveMaps[i].pDiskName, pMapName ) )
 		{
 			return true;
 		}
@@ -2865,10 +2865,10 @@ void CTFGameRules::PlayerReadyStatus_UpdatePlayerState( CTFPlayer *pTFPlayer, bo
 		CMatchInfo *pMatch = GTFGCClientSystem()->GetMatch();
 		if ( !pMatch && !IsMannVsMachineMode() )
 		{
-			int nRed = 0;
-			int nRedCount = 0;
-			int nBlue = 0;
-			int nBlueCount = 0;
+			intp nRed = 0;
+			intp nRedCount = 0;
+			intp nBlue = 0;
+			intp nBlueCount = 0;
 
 			for ( int iTeam = FIRST_GAME_TEAM; iTeam < TFTeamMgr()->GetTeamCount(); iTeam++ )
 			{
@@ -2877,7 +2877,7 @@ void CTFGameRules::PlayerReadyStatus_UpdatePlayerState( CTFPlayer *pTFPlayer, bo
 				{
 					Assert( pTeam->GetTeamNumber() == TF_TEAM_RED || pTeam->GetTeamNumber() == TF_TEAM_BLUE );
 
-					for ( int i = 0; i < pTeam->GetNumPlayers(); ++i )
+					for ( intp i = 0; i < pTeam->GetNumPlayers(); ++i )
 					{
 						if ( !pTeam->GetPlayer(i) )
 							continue;
@@ -3120,7 +3120,7 @@ CTFGameRules::CTFGameRules()
 	// Vision Filter Translations for swapping out particle effects and models
 	SetUpVisionFilterKeyValues();
 
-	m_bSillyGibs = CommandLine()->FindParm( "-sillygibs" ) ? true : false;
+	m_bSillyGibs = CommandLine()->HasParm( "-sillygibs" );
 	if ( m_bSillyGibs )
 	{
 		cl_burninggibs.SetValue( 0 );
@@ -3248,23 +3248,23 @@ CTFGameRules::CTFGameRules()
 		char szCurrentMap[MAX_MAP_NAME];
 		Q_strncpy( szCurrentMap, STRING( gpGlobals->mapname ), sizeof( szCurrentMap ) );
 
-		if ( !Q_stricmp( szCurrentMap, "cp_manor_event" ) )
+		if ( V_strieq( szCurrentMap, "cp_manor_event" ) )
 		{
 			m_halloweenScenario.Set( HALLOWEEN_SCENARIO_MANN_MANOR );
 		}
-		else if ( !Q_stricmp( szCurrentMap, "koth_viaduct_event" ) )
+		else if ( V_strieq( szCurrentMap, "koth_viaduct_event" ) )
 		{
 			m_halloweenScenario.Set( HALLOWEEN_SCENARIO_VIADUCT );
 		}
-		else if ( !Q_stricmp( szCurrentMap, "koth_lakeside_event" ) )
+		else if ( V_strieq( szCurrentMap, "koth_lakeside_event" ) )
 		{
 			m_halloweenScenario.Set( HALLOWEEN_SCENARIO_LAKESIDE );
 		}
-		else if( !Q_stricmp( szCurrentMap, "plr_hightower_event" ) )
+		else if( V_strieq( szCurrentMap, "plr_hightower_event" ) )
 		{
 			m_halloweenScenario.Set( HALLOWEEN_SCENARIO_HIGHTOWER );
 		}
-		else if ( !Q_stricmp( szCurrentMap, "sd_doomsday_event" ) )
+		else if ( V_strieq( szCurrentMap, "sd_doomsday_event" ) )
 		{
 			m_halloweenScenario.Set( HALLOWEEN_SCENARIO_DOOMSDAY );
 		}
@@ -4658,7 +4658,7 @@ void CTFGameRules::SetupOnRoundStart( void )
 	if ( IsBossBattleMode() )
 	{
 		CTFTeam *enemyTeam = GetGlobalTFTeam( TF_TEAM_RED );
-		for( int i=0; i<enemyTeam->GetNumPlayers(); ++i )
+		for( intp i=0; i<enemyTeam->GetNumPlayers(); ++i )
 		{
 			CTFPlayer *who = ToTFPlayer( enemyTeam->GetPlayer( i ) );
 
@@ -7530,7 +7530,7 @@ bool CTFGameRules::ClientCommand( CBaseEntity *pEdict, const CCommand &args )
 				}
 				else
 				{
-					Q_snprintf( szMinutes, sizeof(szMinutes), "%d", iTimeLeft / 60 );
+					V_to_chars( szMinutes, iTimeLeft / 60 );
 					Q_snprintf( szSeconds, sizeof(szSeconds), "%02d", iTimeLeft % 60 );
 				}
 
@@ -14135,7 +14135,7 @@ void CTFGameRules::Arena_SendPlayerNotifications( void )
 
 		if ( pTeam )
 		{
-			for ( int iPlayer = 0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
+			for ( intp iPlayer = 0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
 			{
 				CTFPlayer *pPlayer = ToTFPlayer( pTeam->GetPlayer( iPlayer ) );
 
@@ -14609,7 +14609,7 @@ void CTFGameRules::RoundRespawn( void )
 	{
 		// unspawn entire red team
 		CTeam *defendingTeam = GetGlobalTeam( TF_TEAM_RED );
-		int i;
+		intp i;
 		for( i=0; i<defendingTeam->GetNumPlayers(); ++i )
 		{
 			engine->ServerCommand( UTIL_VarArgs( "kickid %d\n", defendingTeam->GetPlayer(i)->GetUserID() ) );
@@ -17065,7 +17065,7 @@ bool CTFGameRules::CanPlayerChooseClass( CBasePlayer *pPlayer, int iClass )
 		return true;
 
 	int iTeamClassCount = 0;
-	for ( int iPlayer = 0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
+	for ( intp iPlayer = 0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
 	{
 		CTFPlayer *pTFPlayer = ToTFPlayer( pTeam->GetPlayer( iPlayer ) );
 		if ( pTFPlayer && pTFPlayer != pPlayer && pTFPlayer->GetPlayerClass()->GetClassIndex() == iClass )
@@ -17556,7 +17556,7 @@ void CTFGameRules::FireGameEvent( IGameEvent *event )
 	const char *eventName = event->GetName();
 
 #ifdef GAME_DLL
-	if ( !Q_strcmp( eventName, "teamplay_point_captured" ) )
+	if ( V_streq( eventName, "teamplay_point_captured" ) )
 	{
 		if ( IsMannVsMachineMode() )
 			return;
@@ -17602,7 +17602,7 @@ void CTFGameRules::FireGameEvent( IGameEvent *event )
 			BeginHaunting( 4, 25.f, 35.f );
 		}
 	}
-	else if ( !Q_strcmp( eventName, "teamplay_capture_blocked" ) )
+	else if ( V_streq( eventName, "teamplay_capture_blocked" ) )
 	{
 		int iPlayerIndex = event->GetInt( "blocker" );
 		CTFPlayer *pPlayer = ToTFPlayer( UTIL_PlayerByIndex( iPlayerIndex ) );
@@ -17610,7 +17610,7 @@ void CTFGameRules::FireGameEvent( IGameEvent *event )
 
 		pPlayer->m_Shared.CheckForAchievement( ACHIEVEMENT_TF_MEDIC_CHARGE_BLOCKER );
 	}	
-	else if ( !Q_strcmp( eventName, "teamplay_round_win" ) )
+	else if ( V_streq( eventName, "teamplay_round_win" ) )
 	{
 		int iWinningTeam = event->GetInt( "team" );
 		bool bFullRound = event->GetBool( "full_round" );
@@ -17618,14 +17618,14 @@ void CTFGameRules::FireGameEvent( IGameEvent *event )
 		bool bWasSuddenDeath = event->GetBool( "was_sudden_death" );
 		CTF_GameStats.Event_RoundEnd( iWinningTeam, bFullRound, flRoundTime, bWasSuddenDeath );
 	}
-	else if ( !Q_strcmp( eventName, "teamplay_setup_finished" ) )
+	else if ( V_streq( eventName, "teamplay_setup_finished" ) )
 	{
 		if ( IsHalloweenScenario( CTFGameRules::HALLOWEEN_SCENARIO_DOOMSDAY ) )
 		{
 			m_doomsdaySetupTimer.Start( 1 );
 		}
 	}
-	else if ( !Q_strcmp( eventName, "teamplay_flag_event" ) )
+	else if ( V_streq( eventName, "teamplay_flag_event" ) )
 	{
 		// if this is a capture event, remember the player who made the capture		
 		int iEventType = event->GetInt( "eventtype" );
@@ -17636,7 +17636,7 @@ void CTFGameRules::FireGameEvent( IGameEvent *event )
 			m_szMostRecentCappers[1] = 0;
 		}
 	}
-	else if ( !Q_strcmp( eventName, "player_escort_score" ) )
+	else if ( V_streq( eventName, "player_escort_score" ) )
 	{
 		int iPlayer = event->GetInt( "player", 0 );
 		int iPoints = event->GetInt( "points", 0 );
@@ -17667,7 +17667,7 @@ void CTFGameRules::FireGameEvent( IGameEvent *event )
 			}
 		}
 	}
-	else if ( !Q_strcmp( eventName, "player_disconnect" ) )
+	else if ( V_streq( eventName, "player_disconnect" ) )
 	{
 		CTFPlayer *pPlayer = ToTFPlayer( UTIL_PlayerByUserId( event->GetInt("userid") ) );
 
@@ -17681,7 +17681,7 @@ void CTFGameRules::FireGameEvent( IGameEvent *event )
 			}
 		}
 	}
-	else if ( !Q_strcmp( eventName, "teamplay_round_start" ) )
+	else if ( V_streq( eventName, "teamplay_round_start" ) )
 	{
 		if ( IsMannVsMachineMode() )
 		{
@@ -17700,16 +17700,16 @@ void CTFGameRules::FireGameEvent( IGameEvent *event )
 			}
 		}
 	}
-	else if ( !Q_strcmp( eventName, "recalculate_truce" ) )
+	else if ( V_streq( eventName, "recalculate_truce" ) )
 	{
 		RecalculateTruce();
 	}
 #else	// CLIENT_DLL
-	if ( !Q_strcmp( eventName, "overtime_nag" ) )
+	if ( V_streq( eventName, "overtime_nag" ) )
 	{
 		HandleOvertimeBegin();
 	}
-	else if ( !Q_strcmp( eventName, "recalculate_holidays" ) )
+	else if ( V_streq( eventName, "recalculate_holidays" ) )
 	{
 		UTIL_CalculateHolidays();
 	}
@@ -18341,7 +18341,7 @@ const char *GetMapDisplayName( const char *mapName )
 
 	for ( int i = 0; i < ARRAYSIZE( s_ValveMaps ); ++i )
 	{
-		if ( !Q_stricmp( s_ValveMaps[i].pDiskName, pszSrc ) )
+		if ( V_strieq( s_ValveMaps[i].pDiskName, pszSrc ) )
 		{
 			return s_ValveMaps[i].pDisplayName;
 		}
@@ -18350,7 +18350,7 @@ const char *GetMapDisplayName( const char *mapName )
 	// check the community maps that we've featured
 	for ( int i = 0; i < ARRAYSIZE( s_CommunityMaps ); ++i )
 	{
-		if ( !Q_stricmp( s_CommunityMaps[i].pDiskName, pszSrc ) )
+		if ( V_strieq( s_CommunityMaps[i].pDiskName, pszSrc ) )
 		{
 			return s_CommunityMaps[i].pDisplayName;
 		}
@@ -18459,7 +18459,7 @@ const char *GetMapType( const char *mapName )
 	{
 		for ( i = 0; i < ARRAYSIZE( s_ValveMaps ); ++i )
 		{
-			if ( !Q_stricmp( s_ValveMaps[i].pDiskName, mapName ) )
+			if ( V_strieq( s_ValveMaps[i].pDiskName, mapName ) )
 			{
 				return s_ValveMaps[i].pGameType;
 			}
@@ -18468,7 +18468,7 @@ const char *GetMapType( const char *mapName )
 		// check the community maps that we've featured
 		for ( i = 0; i < ARRAYSIZE( s_CommunityMaps ); ++i )
 		{
-			if ( !Q_stricmp( s_CommunityMaps[i].pDiskName, mapName ) )
+			if ( V_strieq( s_CommunityMaps[i].pDiskName, mapName ) )
 			{
 				return s_CommunityMaps[i].pGameType;
 			}
@@ -19178,9 +19178,9 @@ void CTFHolidayEntity::FireGameEvent( IGameEvent *event )
 	const char *eventName = event->GetName();
 
 #ifdef GAME_DLL
-	if ( !Q_strcmp( eventName, "player_turned_to_ghost" ) 
-		|| !Q_strcmp( eventName, "player_disconnect" )
-		|| !Q_strcmp( eventName, "player_team" ))
+	if ( V_streq( eventName, "player_turned_to_ghost" ) 
+		|| V_streq( eventName, "player_disconnect" )
+		|| V_streq( eventName, "player_team" ))
 	{
 		if ( TFGameRules()->ArePlayersInHell() )
 		{
@@ -21335,7 +21335,7 @@ bool CTFGameRules::IsUpgradeTierEnabled( CTFPlayer *pTFPlayer, int iItemSlot, in
 		CMannVsMachineUpgrades upgrade = g_MannVsMachineUpgrades.m_Upgrades[i];
 
 		// Same upgrade
-// 		if ( !V_strcmp( upgrade.szAttrib, g_MannVsMachineUpgrades.m_Upgrades[iUpgrade].szAttrib ) )
+// 		if ( V_streq( upgrade.szAttrib, g_MannVsMachineUpgrades.m_Upgrades[iUpgrade].szAttrib ) )
 // 			continue;
 
 		// Different tier

@@ -138,17 +138,17 @@ static void *ShaderFactory( const char *pName, int *pReturnCode )
 		*pReturnCode = IFACE_OK;
 	}
 	
-	if ( !Q_stricmp( pName, FILESYSTEM_INTERFACE_VERSION ))
+	if ( V_strieq( pName, FILESYSTEM_INTERFACE_VERSION ))
 		return g_pFullFileSystem;
 
-	if ( !Q_stricmp( pName, QUEUEDLOADER_INTERFACE_VERSION ))
+	if ( V_strieq( pName, QUEUEDLOADER_INTERFACE_VERSION ))
 		return g_pQueuedLoader;
 
-	if ( !Q_stricmp( pName, SHADER_UTIL_INTERFACE_VERSION ))
+	if ( V_strieq( pName, SHADER_UTIL_INTERFACE_VERSION ))
 		return g_pShaderUtil;
 
 #ifdef USE_SDL
-	if ( !Q_stricmp( pName, "SDLMgrInterface001" /*SDLMGR_INTERFACE_VERSION*/ ))
+	if ( V_strieq( pName, "SDLMgrInterface001" /*SDLMGR_INTERFACE_VERSION*/ ))
 		return g_pLauncherMgr;
 #endif
 
@@ -323,7 +323,7 @@ void CMaterialSystem::CleanUpErrorMaterial()
 //-----------------------------------------------------------------------------
 CMaterialSystem::CMaterialSystem()
 {
-	m_nRenderThreadID = std::numeric_limits<ThreadId_t>::max();
+	m_nRenderThreadID = INVALID_THREAD_ID;
 	m_hAsyncLoadFileCache = NULL;
 	m_ShaderHInst = NULL;
 	m_ShaderAPIFactory = NULL;
@@ -633,7 +633,7 @@ InitReturnVal_t CMaterialSystem::Init()
     {
 		char szRight[20];
 		V_StrRight( szExeName, 11, szRight );
-		if ( !Q_stricmp( szRight, "\\hammer.exe" ) )
+		if ( V_strieq( szRight, "\\hammer.exe" ) )
 		{
 			m_bRequestedEditorMaterials = true;
 		}
@@ -657,7 +657,7 @@ InitReturnVal_t CMaterialSystem::Init()
 
 	// JAY: Added this command line parameter to force creating <32x32 mips
 	// to test for reported performance regressions on some systems
-	if ( CommandLine()->FindParm("-forceallmips") )
+	if ( CommandLine()->HasParm("-forceallmips") )
 	{
 		extern bool g_bForceTextureAllMips;
 		g_bForceTextureAllMips = true;
@@ -1369,7 +1369,8 @@ int GetScreenAspectMode( int width, int height )
 	float flAspectRatio = (float)width / (float)height;
 
 	// Just find the closest ratio
-	float flClosestAspectRatioDist = 99999.0f;
+	// dimhotepus: Use float max as start.
+	float flClosestAspectRatioDist = std::numeric_limits<vec_t>::max();
 	int nClosestAspectCode = ASPECT_4x3;
 	for ( auto &&ram : g_RatioToAspectModes )
 	{
@@ -1738,7 +1739,7 @@ void CMaterialSystem::ReadConfigFromConVars( MaterialSystem_Config_t *pConfig )
 static bool WasConVarSpecifiedOnCommandLine( const char *pConfigName )
 {
 	// mat_dxlevel cannot be used on the command-line. Use -dxlevel instead.
-	if ( !Q_stricmp( pConfigName, "mat_dxlevel" ) )
+	if ( V_strieq( pConfigName, "mat_dxlevel" ) )
 		return false;
 
 	return ( g_pCVar->GetCommandLineValue( pConfigName ) != NULL);
@@ -1747,7 +1748,11 @@ static bool WasConVarSpecifiedOnCommandLine( const char *pConfigName )
 
 static const char *pConvarsAllowedInDXSupport[]={
 	"cl_detaildist",
+	// dimhotepus: Allow to force cl_detaildist even if map overrides it.
+	"cl_detaildist_force",
 	"cl_detailfade",
+	// dimhotepus: Allow to force cl_detailfade even if map overrides it.
+	"cl_detailfade_force",
 	"cl_ejectbrass",
 	"dsp_off",
 	"dsp_slow_cpu",
@@ -2374,8 +2379,8 @@ bool CMaterialSystem::IsMaterialLoaded( char const *pMaterialName )
 {
 	// We need lower-case symbols for this to work
 	intp nLen = Q_strlen( pMaterialName ) + 1;
-	char *pFixedNameTemp = (char*)stackalloc( nLen );
-	char *pTemp = (char*)stackalloc( nLen );
+	char *pFixedNameTemp = stackallocT( char, nLen );
+	char *pTemp = stackallocT( char, nLen );
 	Q_strncpy( pFixedNameTemp, pMaterialName, nLen );
 	Q_strlower( pFixedNameTemp );
 #ifdef POSIX
@@ -2460,7 +2465,7 @@ IMaterial* CMaterialSystem::FindMaterialEx( char const* pMaterialName, const cha
 		V_strncat( matNameWithExtension, ".vmt", nLen, COPY_ALL_CHARACTERS );
 
 		IMaterialInternal *pMat = NULL;
-		if ( !Q_stricmp( pKeyValues->GetName(), "subrect" ) )
+		if ( V_strieq( pKeyValues->GetName(), "subrect" ) )
 		{
 			pMat = m_MaterialDict.AddMaterialSubRect( matNameWithExtension, pTextureGroupName, pKeyValues, pPatchKeyValues );
 		}
@@ -2536,7 +2541,7 @@ ITexture *CMaterialSystem::FindTexture( char const *pTextureName, const char *pT
 	{
 		for ( intp i=0; i<ssize( TextureAliases ); i+=2 )
 		{
-			if ( !V_stricmp( pTextureName, TextureAliases[i] ) )
+			if ( V_strieq( pTextureName, TextureAliases[i] ) )
 			{
 				return FindTexture( TextureAliases[i+1], pTextureGroupName, bComplain, nAdditionalCreationFlags );
 			}
@@ -2703,7 +2708,7 @@ void CMaterialSystem::ResetTempHWMemory( bool bExitingLevel )
 //-----------------------------------------------------------------------------
 void CMaterialSystem::CacheUsedMaterials( )
 {
-	// dimhotepus: Call mateiralsystem EvictManagedResources which calls shaders
+	// dimhotepus: Call materialsystem EvictManagedResources which calls shaders
 	EvictManagedResources();
 	size_t count = 0;
 	for (MaterialHandle_t i = FirstMaterial(); i != InvalidMaterial(); i = NextMaterial(i) )
@@ -2850,9 +2855,9 @@ void CMaterialSystem::AllocateStandardTextures()
 
 	m_StandardTexturesAllocated = true;
 
-	float nominal_lightmap_value = 1.0;
+	float nominal_lightmap_value = 1.0f;
 	if ( HardwareConfig()->GetHDRType() == HDR_TYPE_INTEGER )
-		nominal_lightmap_value = 1.0/16.0;
+		nominal_lightmap_value = 1.0f/16.0f;
 
 	unsigned char texel[4];
 	texel[3] = 255;
@@ -3139,7 +3144,7 @@ void CMaterialSystem::ThreadExecuteQueuedContext( CMatQueuedRenderContext *pCont
 	m_pRenderContext.Set( &m_HardwareRenderContext );
 	pContext->EndQueue( true );
 	m_pRenderContext.Set( pSavedRenderContext );
-	m_nRenderThreadID = std::numeric_limits<ThreadId_t>::max(); 
+	m_nRenderThreadID = INVALID_THREAD_ID; 
 }
 
 IThreadPool *CMaterialSystem::CreateMatQueueThreadPool()
@@ -3711,7 +3716,7 @@ void CMaterialSystem::GetShaderFallback( const char *pShaderName, char *pFallbac
 		intp i;
 		for ( i = 0; i < nCount; ++i )
 		{
-			if ( !Q_stricmp( pShaderName, ppShaderList[i]->GetName() ) )
+			if ( V_strieq( pShaderName, ppShaderList[i]->GetName() ) )
 				break;
 		}
 
@@ -4525,7 +4530,7 @@ void CMaterialSystem::LoadReplacementMaterials()
 {
 	constexpr char cLocation[]{"materials"};
 
-	if ( CommandLine()->FindParm( "-matscan") )
+	if ( CommandLine()->HasParm( "-matscan") )
 	{
 		ScanDirForReplacements( cLocation );
 	}
@@ -4640,7 +4645,7 @@ IMaterialProxy *CMaterialSystem::DetermineProxyReplacements( IMaterial *pMateria
 
 	V_strcpy_safe( szLastPath, pszMaterialName );
 	intp nLength = V_strlen( szLastPath ) - (ssize( REPLACEMENT_NAME ) - 1);
-	if ( nLength > 0 && strcmpi( &szLastPath[ nLength ], REPLACEMENT_NAME ) == 0 )
+	if ( nLength > 0 && V_strieq( &szLastPath[ nLength ], REPLACEMENT_NAME ) )
 	{
 		return nullptr;
 	}

@@ -471,9 +471,7 @@ void CFlexAnimationTrack::RemoveSample( intp index, int type /*=0*/ )
 void CFlexAnimationTrack::SetFlexControllerName( const char *name )
 {
 	delete[] m_pControllerName;
-	intp len = Q_strlen( name ) + 1;
-	m_pControllerName = new char[ len ];
-	Q_strncpy( m_pControllerName, name, len );
+	m_pControllerName = V_strdup( name );
 }
 
 //-----------------------------------------------------------------------------
@@ -1194,12 +1192,14 @@ CChoreoEvent& CChoreoEvent::operator=( const CChoreoEvent& src )
 		ClearAllAbsoluteTags( (AbsTagType)t );
 	}
 
+	// copying.
 	for ( auto newtag : src.m_RelativeTags )
 	{	
 		newtag.SetOwner( this );
 		m_RelativeTags.AddToTail( newtag );
 	}
-
+	
+	// copying.
 	for ( auto newtag : src.m_TimingTags )
 	{	
 		newtag.SetOwner( this );
@@ -1207,6 +1207,7 @@ CChoreoEvent& CChoreoEvent::operator=( const CChoreoEvent& src )
 	}
 	for ( t = 0; t < NUM_ABS_TAG_TYPES; t++ )
 	{
+		// copying.
 		for ( auto newtag : src.m_AbsoluteTags[ t ] )
 		{
 			newtag.SetOwner( this );
@@ -2075,7 +2076,7 @@ CChoreoEvent::EVENTTYPE CChoreoEvent::TypeForName( const char *name )
 	for ( int i = 0; i < NUM_TYPES; ++i )
 	{
 		EventNameMap_t *slot = &g_NameMap[ i ];
-		if ( !Q_stricmp( name, slot->name ) )
+		if ( V_strieq( name, slot->name ) )
 			return slot->type;
 	}
 	
@@ -2153,7 +2154,7 @@ CChoreoEvent::CLOSECAPTION CChoreoEvent::CCTypeForName( const char *name )
 	for ( int i = 0; i < NUM_CC_TYPES; ++i )
 	{
 		CCNameMap_t *slot = &g_CCNameMap[ i ];
-		if ( !Q_stricmp( name, slot->name ) )
+		if ( V_strieq( name, slot->name ) )
 			return slot->type;
 	}
 	
@@ -2383,7 +2384,7 @@ void CChoreoEvent::RemoveRelativeTag( const char *tagname )
 	{
 		CEventRelativeTag &prt = m_RelativeTags[ i ];
 
-		if ( !stricmp( prt.GetName(), tagname ) )
+		if ( V_strieq( prt.GetName(), tagname ) )
 		{
 			m_RelativeTags.Remove( i );
 			return;
@@ -2400,7 +2401,7 @@ CEventRelativeTag * CChoreoEvent::FindRelativeTag( const char *tagname )
 {
 	for ( auto &prt : m_RelativeTags )
 	{
-		if ( !stricmp( prt.GetName(), tagname ) )
+		if ( V_strieq( prt.GetName(), tagname ) )
 		{
 			return &prt;
 		}
@@ -2529,7 +2530,7 @@ void CChoreoEvent::RemoveTimingTag( const char *tagname )
 	for ( intp i = 0; i < m_TimingTags.Count(); i++ )
 	{
 		CFlexTimingTag &ptt = m_TimingTags[ i ];
-		if ( !stricmp( ptt.GetName(), tagname ) )
+		if ( V_strieq( ptt.GetName(), tagname ) )
 		{
 			m_TimingTags.Remove( i );
 			return;
@@ -2546,7 +2547,7 @@ CFlexTimingTag * CChoreoEvent::FindTimingTag( const char *tagname )
 {
 	for ( auto &ptt : m_TimingTags )
 	{
-		if ( !stricmp( ptt.GetName(), tagname ) )
+		if ( V_strieq( ptt.GetName(), tagname ) )
 		{
 			return &ptt;
 		}
@@ -2642,7 +2643,7 @@ CFlexAnimationTrack *CChoreoEvent::FindTrack( const char *controllername )
 	for ( int i = 0; i < GetNumFlexAnimationTracks(); i++ )
 	{
 		CFlexAnimationTrack *t = GetFlexAnimationTrack( i );
-		if ( t && !stricmp( t->GetFlexControllerName(), controllername ) )
+		if ( t && V_strieq( t->GetFlexControllerName(), controllername ) )
 		{
 			return t;
 		}
@@ -2851,11 +2852,11 @@ const char *CChoreoEvent::NameForAbsoluteTagType( AbsTagType t )
 //-----------------------------------------------------------------------------
 CChoreoEvent::AbsTagType CChoreoEvent::TypeForAbsoluteTagName( const char *name )
 {
-	if ( !Q_strcasecmp( name, "playback_time" ) )
+	if ( V_strieq( name, "playback_time" ) )
 	{
 		return PLAYBACK;
 	}
-	else if ( !Q_strcasecmp( name, "shifted_time" ) )
+	else if ( V_strieq( name, "shifted_time" ) )
 	{
 		return ORIGINAL;
 	}
@@ -2905,7 +2906,7 @@ CEventAbsoluteTag *CChoreoEvent::FindAbsoluteTag( AbsTagType type, const char *t
 {
 	for ( auto &ptag : m_AbsoluteTags[ type ] )
 	{
-		if ( !stricmp( ptag.GetName(), tagname ) )
+		if ( V_strieq( ptag.GetName(), tagname ) )
 		{
 			return &ptag;
 		}
@@ -2953,7 +2954,7 @@ void CChoreoEvent::RemoveAbsoluteTag( AbsTagType type, const char *tagname )
 	for ( intp i = 0; i < m_AbsoluteTags[ type ].Count(); i++ )
 	{
 		auto &ptag = m_AbsoluteTags[ type ][ i ];
-		if ( !stricmp( ptag.GetName(), tagname ) )
+		if ( V_strieq( ptag.GetName(), tagname ) )
 		{
 			m_AbsoluteTags[ type ].Remove( i );
 			return;
@@ -3590,7 +3591,7 @@ bool CChoreoEvent::PreventTagOverlap( void )
 	bool bHadOverlap  = false;
 
 	// FIXME: limit to single frame?
-	float minDp = 0.01;
+	float minDp = 0.01f;
 
 	float minP = 1.00;
 

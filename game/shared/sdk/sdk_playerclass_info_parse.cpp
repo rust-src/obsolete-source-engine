@@ -61,11 +61,11 @@ void CSDKPlayerClassInfo::Parse( KeyValues *pKeyValuesData, const char *szWeapon
 	const char *pTeam = pKeyValuesData->GetString( "team", NULL );
 	if ( pTeam )
 	{
-		if ( Q_stricmp( pTeam, "BLUE" ) == 0 )
+		if ( V_strieq( pTeam, "BLUE" ) )
 		{
 			m_iTeam = SDK_TEAM_BLUE;
 		}
-		else if ( Q_stricmp( pTeam, "RED" ) == 0 )
+		else if ( V_strieq( pTeam, "RED" ) )
 		{
 			m_iTeam = SDK_TEAM_RED;
 		}
@@ -121,7 +121,7 @@ void CSDKPlayerClassInfo::Parse( KeyValues *pKeyValuesData, const char *szWeapon
 
 	Q_strncpy( m_szLimitCvar, pKeyValuesData->GetString( "limitcvar", "!! Missing limit cvar on Player Class" ), sizeof(m_szLimitCvar) );
 
-	Assert( Q_strlen( m_szLimitCvar ) > 0 && "Every class must specify a limitcvar" );
+	Assert( !Q_isempty( m_szLimitCvar ) && "Every class must specify a limitcvar" );
 
 	// HUD player status health images (when the player is hurt)
 	Q_strncpy( m_szClassImage, pKeyValuesData->GetString( "classimage", "white" ), sizeof( m_szClassImage ) );

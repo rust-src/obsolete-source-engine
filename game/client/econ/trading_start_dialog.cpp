@@ -183,7 +183,7 @@ void CTradingStartDialog::Close( void )
 //-----------------------------------------------------------------------------
 void CTradingStartDialog::OnCommand( const char *command )
 {
-	if ( !Q_stricmp( command, "cancel" ) )
+	if ( V_strieq( command, "cancel" ) )
 	{
 		if ( m_iCurrentState != TDS_SELECTING_PLAYER )
 		{
@@ -195,19 +195,19 @@ void CTradingStartDialog::OnCommand( const char *command )
 		Close();
 		return;
 	}
-	else if ( !Q_stricmp( command, "friends" ) )
+	else if ( V_strieq( command, "friends" ) )
 	{
 		m_iCurrentState = TDS_SELECTING_FROM_FRIENDS;
 		UpdateState();
 		return;
 	}
-	else if ( !Q_stricmp( command, "server" ) )
+	else if ( V_strieq( command, "server" ) )
 	{
 		m_iCurrentState = TDS_SELECTING_FROM_SERVER;
 		UpdateState();
 		return;
 	}
-	else if ( !Q_stricmp( command, "profile" ) )
+	else if ( V_strieq( command, "profile" ) )
 	{
 		m_iCurrentState = TDS_SELECTING_FROM_PROFILE;
 		UpdateState();
@@ -222,7 +222,7 @@ void CTradingStartDialog::OnCommand( const char *command )
 		}
 		return;
 	}
-	else if ( !Q_stricmp( command, "url_ok" ) )
+	else if ( V_strieq( command, "url_ok" ) )
 	{
 		vgui::TextEntry *pEntry = dynamic_cast<vgui::TextEntry*>( m_pStatePanels[m_iCurrentState]->FindChildByName("URLEntry") );
 		if ( pEntry )
@@ -290,7 +290,8 @@ bool CTradingStartDialog::ExtractSteamIDFromURL( char *inputURL )
 	int iLen = Q_strlen(inputURL);
 
 	// First, see if it's a profile link. If it is, clip the SteamID from it.
-	const char *pszProfilePrepend = ( localUniverse == k_EUniversePublic ) ? "http://steamcommunity.com/profiles/" : "http://beta.steamcommunity.com/profiles/";
+		// dimhotepus: http:// -> https://
+	const char *pszProfilePrepend = ( localUniverse == k_EUniversePublic ) ? "https://steamcommunity.com/profiles/" : "https://beta.steamcommunity.com/profiles/";
 	int iProfilePrependLen = Q_strlen(pszProfilePrepend);
 	if ( Q_strnicmp( pszProfilePrepend, inputURL, iProfilePrependLen ) == 0 )
 	{
@@ -308,7 +309,8 @@ bool CTradingStartDialog::ExtractSteamIDFromURL( char *inputURL )
 	else
 	{
 		// If it's an id link, we download it and extract the steam ID from it.
-		const char *pszIDPrepend = ( localUniverse == k_EUniversePublic ) ? "http://steamcommunity.com/id/" : "http://beta.steamcommunity.com/id/";
+		// dimhotepus: http:// -> https://
+		const char *pszIDPrepend = ( localUniverse == k_EUniversePublic ) ? "https://steamcommunity.com/id/" : "https://beta.steamcommunity.com/id/";
 		int iIDPrependLen = Q_strlen(pszIDPrepend);
 		if ( Q_strnicmp( pszIDPrepend, inputURL, iIDPrependLen ) == 0 )
 		{

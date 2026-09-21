@@ -19,7 +19,7 @@ CClass::CClass( const char *name )
 	m_nTDCount = 0;
 	m_nPredTDCount = 0;
 
-	strcpy( m_szName, name );
+	V_strcpy_safe( m_szName, name );
 	m_szBaseClass[0]=0;
 	m_pBaseClass = NULL;
 	m_szTypedefBaseClass[0]=0;
@@ -64,7 +64,7 @@ CTypeDescriptionField *CClass::FindTD( const char *name )
 {
 	for ( int i = 0; i < m_nTDCount; i++ )
 	{
-		if ( !strcmp( m_TDFields[ i ]->m_szVariableName, name ) )
+		if ( V_streq( m_TDFields[ i ]->m_szVariableName, name ) )
 			return m_TDFields[ i ];
 	}
 	return NULL;
@@ -74,7 +74,7 @@ CTypeDescriptionField *CClass::FindPredTD( const char *name )
 {
 	for ( int i = 0; i < m_nPredTDCount; i++ )
 	{
-		if ( !strcmp( m_PredTDFields[ i ]->m_szVariableName, name ) )
+		if ( V_streq( m_PredTDFields[ i ]->m_szVariableName, name ) )
 			return m_PredTDFields[ i ];
 	}
 	return NULL;
@@ -87,7 +87,7 @@ CClassVariable	*CClass::FindVar( const char *name, bool checkbaseclasses /*= fal
 	{
 		for ( int i = 0; i < cl->m_nVarCount; i++ )
 		{
-			if ( !strcmp( cl->m_Variables[ i ]->m_szName, name ) )
+			if ( V_streq( cl->m_Variables[ i ]->m_szName, name ) )
 				return cl->m_Variables[ i ];
 		}
 
@@ -110,7 +110,7 @@ CClassMemberFunction *CClass::FindMember( const char *name )
 {
 	for ( int i = 0; i < m_nMemberCount; i++ )
 	{
-		if ( !strcmp( m_Members[ i ]->m_szName, name ) )
+		if ( V_streq( m_Members[ i ]->m_szName, name ) )
 			return m_Members[ i ];
 	}
 	return NULL;
@@ -122,9 +122,9 @@ CTypeDescriptionField	*CClass::AddTD( const char *name, const char *type, const 
 	if ( !td )
 	{
 		td = new CTypeDescriptionField();
-		strcpy( td->m_szVariableName, name );
-		strcpy( td->m_szType, type );
-		strcpy( td->m_szDefineType, definetype );
+		V_strcpy_safe( td->m_szVariableName, name );
+		V_strcpy_safe( td->m_szType, type );
+		V_strcpy_safe( td->m_szDefineType, definetype );
 		td->m_bCommentedOut = incomments;
 
 		m_TDFields[ m_nTDCount++ ] = td;
@@ -143,9 +143,9 @@ CTypeDescriptionField	*CClass::AddPredTD( const char *name, const char *type, co
 	if ( !td )
 	{
 		td = new CTypeDescriptionField();
-		strcpy( td->m_szVariableName, name );
-		strcpy( td->m_szType, type );
-		strcpy( td->m_szDefineType, definetype );
+		V_strcpy_safe( td->m_szVariableName, name );
+		V_strcpy_safe( td->m_szType, type );
+		V_strcpy_safe( td->m_szDefineType, definetype );
 		td->m_bCommentedOut = incomments;
 		td->m_bRepresentedInRecvTable = inrecvtable;
 
@@ -165,7 +165,7 @@ CClassVariable	*CClass::AddVar( const char *name )
 	if ( !var )
 	{
 		var = new CClassVariable();
-		strcpy( var->m_szName, name );
+		V_strcpy_safe( var->m_szName, name );
 
 		m_Variables[ m_nVarCount++ ] = var;
 		if ( m_nVarCount >= MAX_VARIABLES )
@@ -183,7 +183,7 @@ CClassMemberFunction *CClass::AddMember( const char *name )
 	if ( !member )
 	{
 		member = new CClassMemberFunction();
-		strcpy( member->m_szName, name );
+		V_strcpy_safe( member->m_szName, name );
 
 		m_Members[ m_nMemberCount++ ] = member;
 		if ( m_nMemberCount >= MAX_MEMBERS )
@@ -199,7 +199,7 @@ void CClass::SetBaseClass( const char *name )
 {
 	if ( !m_szBaseClass[ 0 ] )
 	{
-		strcpy( m_szBaseClass, name );
+		V_strcpy_safe( m_szBaseClass, name );
 	}
 	else if ( stricmp( m_szBaseClass, name ) )
 	{
@@ -211,7 +211,7 @@ void CClass::CheckChildOfBaseEntity( const char *baseentityclass )
 {
 	m_bDerivedFromCBaseEntity = false;
 
-	if ( !stricmp( m_szName, baseentityclass ) )
+	if ( V_strieq( m_szName, baseentityclass ) )
 	{
 		m_bDerivedFromCBaseEntity = true;
 		return;
@@ -228,7 +228,7 @@ void CClass::CheckChildOfBaseEntity( const char *baseentityclass )
 		}
 
 		// Check name
-		if ( !stricmp( base->m_szName, baseentityclass ) )
+		if ( V_strieq( base->m_szName, baseentityclass ) )
 		{
 			m_bDerivedFromCBaseEntity = true;
 			return;
@@ -330,39 +330,39 @@ void CClass::ReportTypeMismatches( CClassVariable *var, CTypeDescriptionField *t
 	if ( td->m_bCommentedOut )
 		return;
 
-	if ( !strcmp( td->m_szType, "FIELD_TIME" ) )
+	if ( V_streq( td->m_szType, "FIELD_TIME" ) )
 	{
-		if ( !strcmp( t, "FIELD_FLOAT" ) )
+		if ( V_streq( t, "FIELD_FLOAT" ) )
 			return;
 	}
 
-	if ( !strcmp( td->m_szType, "FIELD_TICK" ) )
+	if ( V_streq( td->m_szType, "FIELD_TICK" ) )
 	{
-		if ( !strcmp( t, "FIELD_INTEGER" ) )
+		if ( V_streq( t, "FIELD_INTEGER" ) )
 			return;
 	}
 
-	if ( !strcmp( td->m_szType, "FIELD_MODELNAME" ) || !strcmp( td->m_szType, "FIELD_SOUNDNAME" ) )
+	if ( V_streq( td->m_szType, "FIELD_MODELNAME" ) || V_streq( td->m_szType, "FIELD_SOUNDNAME" ) )
 	{
-		if ( !strcmp( t, "FIELD_STRING" ) )
+		if ( V_streq( t, "FIELD_STRING" ) )
 			return;
 	}
 
-	if ( !strcmp( td->m_szType, "FIELD_MODELINDEX" ) || !strcmp( td->m_szType, "FIELD_MATERIALINDEX" ) )
+	if ( V_streq( td->m_szType, "FIELD_MODELINDEX" ) || V_streq( td->m_szType, "FIELD_MATERIALINDEX" ) )
 	{
-		if ( !strcmp( t, "FIELD_INTEGER" ) )
+		if ( V_streq( t, "FIELD_INTEGER" ) )
 			return;
 	}
 
-	if ( !strcmp( td->m_szType, "FIELD_POSITION_VECTOR" ) )
+	if ( V_streq( td->m_szType, "FIELD_POSITION_VECTOR" ) )
 	{
-		if ( !strcmp( t, "FIELD_VECTOR" ) )
+		if ( V_streq( t, "FIELD_VECTOR" ) )
 			return;
 	}
 
-	if ( !strcmp( td->m_szType, "FIELD_VMATRIX_WORLDSPACE" ) )
+	if ( V_streq( td->m_szType, "FIELD_VMATRIX_WORLDSPACE" ) )
 	{
-		if ( !strcmp( t, "FIELD_VMATRIX" ) )
+		if ( V_streq( t, "FIELD_VMATRIX" ) )
 			return;
 	}
 
@@ -391,9 +391,9 @@ bool CClass::CheckForMissingTypeDescriptionFields( int& missingcount, bool creat
 		while ( 1 )
 		{
 			p = CC_ParseToken( p );
-			if ( strlen( com_token ) <= 0 )
+			if ( Q_isempty( com_token ) )
 				break;
-			if ( !stricmp( com_token, "static" ) )
+			if ( V_strieq( com_token, "static" ) )
 			{
 				isstatic = true;
 				break;
@@ -484,9 +484,9 @@ bool CClass::CheckForPredictionFieldsInRecvTableNotMarkedAsSuchCorrectly( int &m
 		while ( 1 )
 		{
 			p = CC_ParseToken( p );
-			if ( strlen( com_token ) <= 0 )
+			if ( Q_isempty( com_token ) )
 				break;
-			if ( !stricmp( com_token, "static" ) )
+			if ( V_strieq( com_token, "static" ) )
 			{
 				isstatic = true;
 				break;
@@ -510,7 +510,7 @@ bool CClass::CheckForPredictionFieldsInRecvTableNotMarkedAsSuchCorrectly( int &m
 			continue;
 		
 		// These are implicitly ok
-		if ( !strcmp( td->m_szDefineType, "DEFINE_PRED_TYPEDESCRIPTION" ) )
+		if ( V_streq( td->m_szDefineType, "DEFINE_PRED_TYPEDESCRIPTION" ) )
 		{
 			CClass *cl2 = processor->FindClass( td->m_szType );
 			if ( cl2 )
@@ -562,9 +562,9 @@ bool CClass::CheckForMissingPredictionFields( int& missingcount, bool createtds 
 		while ( 1 )
 		{
 			p = CC_ParseToken( p );
-			if ( strlen( com_token ) <= 0 )
+			if ( Q_isempty( com_token ) )
 				break;
-			if ( !stricmp( com_token, "static" ) )
+			if ( V_strieq( com_token, "static" ) )
 			{
 				isstatic = true;
 				break;
@@ -760,7 +760,7 @@ static int GetTypeSize( CClass *cl, CClassVariable *var )
 	{
 		return sizeof( char );
 	}
-	else if ( !strcmp( input, "unsigned" ) )
+	else if ( V_streq( input, "unsigned" ) )
 	{
 		return sizeof(unsigned int);
 	}
@@ -803,7 +803,7 @@ void CClass::AddVariable( int protection, char *type, char *name, bool array, ch
 	if ( !var )
 		return;
 
-	strcpy( var->m_szType, type );
+	V_strcpy_safe( var->m_szType, type );
 	var->m_Type = (CClassVariable::VARTYPE)protection;
 	var->m_TypeSize = GetTypeSize( this, var );
 
@@ -812,7 +812,7 @@ void CClass::AddVariable( int protection, char *type, char *name, bool array, ch
 	if ( array )
 	{
 		var->m_bIsArray = true;
-		strcpy( var->m_szArraySize, arraysize );
+		V_strcpy_safe( var->m_szArraySize, arraysize );
 	}
 	else
 	{
@@ -826,12 +826,12 @@ void CClass::AddVariable( int protection, char *type, char *name, bool array, ch
 //-----------------------------------------------------------------------------
 bool CClass::ParseBaseClass( char *&input )
 {
-	if ( !strcmp( com_token, "DECLARE_CLASS" ) 
-			|| !strcmp( com_token, "DECLARE_CLASS_GAMEROOT" ) 
-			|| !strcmp( com_token, "DECLARE_CLASS_NOFRIEND" ) )
+	if ( V_streq( com_token, "DECLARE_CLASS" ) 
+			|| V_streq( com_token, "DECLARE_CLASS_GAMEROOT" ) 
+			|| V_streq( com_token, "DECLARE_CLASS_NOFRIEND" ) )
 	{
 		input = CC_ParseToken( input );
-		Assert( !strcmp( com_token, "(") );
+		Assert( V_streq( com_token, "(") );
 		input = CC_ParseToken( input );
 
 		do
@@ -843,15 +843,15 @@ bool CClass::ParseBaseClass( char *&input )
 		input = CC_ParseToken( input );
 		do
 		{
-			strcat( m_szTypedefBaseClass, com_token );
+			V_strcat_safe( m_szTypedefBaseClass, com_token );
 			input = CC_ParseToken( input );
 		} while( strcmp( com_token, ")") );
 		return true;
 	}
-	else if ( !strcmp( com_token, "DECLARE_CLASS_NOBASE" ) )
+	else if ( V_streq( com_token, "DECLARE_CLASS_NOBASE" ) )
 	{
 		input = CC_ParseToken( input );
-		Assert( !strcmp( com_token, "(") );
+		Assert( V_streq( com_token, "(") );
 		input = CC_DiscardUntilMatchingCharIncludingNesting( input, "()" );
 		return true;
 	}
@@ -867,25 +867,25 @@ bool CClass::ParseNetworkVar( char *&input, int protection )
 {
 	MemberVarParse_t var;
 
-	if ( !strcmp( com_token, "CNetworkVar" ) || 
-		!strcmp( com_token, "CNetworkVarForDerived" ) || 
-		!strcmp( com_token, "CNetworkVarEmbedded" ) )
+	if ( V_streq( com_token, "CNetworkVar" ) || 
+		V_streq( com_token, "CNetworkVarForDerived" ) || 
+		V_streq( com_token, "CNetworkVarEmbedded" ) )
 	{
 		input = CC_ParseToken( input );
-		Assert( !strcmp( com_token, "(") );
+		Assert( V_streq( com_token, "(") );
 
 		input = CC_ParseToken( input );
 		do
 		{
-			strcat( var.m_pType, com_token );
-			strcat( var.m_pType, " " );
+			V_strcat_safe( var.m_pType, com_token );
+			V_strcat_safe( var.m_pType, " " );
 			input = CC_ParseToken( input );
 		} while( strcmp( com_token, ",") );
 
 		input = CC_ParseToken( input );
 		do
 		{
-			strcat( var.m_pName, com_token );
+			V_strcat_safe( var.m_pName, com_token );
 			input = CC_ParseToken( input );
 		} while( strcmp( com_token, ")") );
 
@@ -893,25 +893,25 @@ bool CClass::ParseNetworkVar( char *&input, int protection )
 		return true;
 	}
 
-	if ( !strcmp( com_token, "CNetworkHandle" ) || !strcmp( com_token, "CNetworkHandleForDerived" ) )
+	if ( V_streq( com_token, "CNetworkHandle" ) || V_streq( com_token, "CNetworkHandleForDerived" ) )
 	{
 		input = CC_ParseToken( input );
-		Assert( !strcmp( com_token, "(") );
+		Assert( V_streq( com_token, "(") );
 
 		input = CC_ParseToken( input );
-		strcpy( var.m_pType, "CHandle<" );
+		V_strcpy_safe( var.m_pType, "CHandle<" );
 		do
 		{
-			strcat( var.m_pType, com_token );
-			strcat( var.m_pType, " " );
+			V_strcat_safe( var.m_pType, com_token );
+			V_strcat_safe( var.m_pType, " " );
 			input = CC_ParseToken( input );
 		} while( strcmp( com_token, ",") );
-		strcat( var.m_pType, ">" );
+		V_strcat_safe( var.m_pType, ">" );
 
 		input = CC_ParseToken( input );
 		do
 		{
-			strcat( var.m_pName, com_token );
+			V_strcat_safe( var.m_pName, com_token );
 			input = CC_ParseToken( input );
 		} while( strcmp( com_token, ")") );
 
@@ -919,17 +919,17 @@ bool CClass::ParseNetworkVar( char *&input, int protection )
 		return true;
 	}
 
-	if ( !strcmp( com_token, "CNetworkVector" ) || 
-		!strcmp( com_token, "CNetworkVectorForDerived" ) || 
-		!strcmp( com_token, "CNetworkQAngle" ) )
+	if ( V_streq( com_token, "CNetworkVector" ) || 
+		V_streq( com_token, "CNetworkVectorForDerived" ) || 
+		V_streq( com_token, "CNetworkQAngle" ) )
 	{
 		input = CC_ParseToken( input );
-		Assert( !strcmp( com_token, "(") );
+		Assert( V_streq( com_token, "(") );
 
 		input = CC_ParseToken( input );
 		do
 		{
-			strcat( var.m_pName, com_token );
+			V_strcat_safe( var.m_pName, com_token );
 			input = CC_ParseToken( input );
 		} while( strcmp( com_token, ")") );
 
@@ -937,15 +937,15 @@ bool CClass::ParseNetworkVar( char *&input, int protection )
 		return true;
 	}
 
-	if ( !strcmp( com_token, "CNetworkColor32" ) )
+	if ( V_streq( com_token, "CNetworkColor32" ) )
 	{
 		input = CC_ParseToken( input );
-		Assert( !strcmp( com_token, "(") );
+		Assert( V_streq( com_token, "(") );
 
 		input = CC_ParseToken( input );
 		do
 		{
-			strcat( var.m_pName, com_token );
+			V_strcat_safe( var.m_pName, com_token );
 			input = CC_ParseToken( input );
 		} while( strcmp( com_token, ")") );
 
@@ -953,22 +953,22 @@ bool CClass::ParseNetworkVar( char *&input, int protection )
 		return true;
 	}
 
-	if ( !strcmp( com_token, "CNetworkString" ) )
+	if ( V_streq( com_token, "CNetworkString" ) )
 	{
 		input = CC_ParseToken( input );
-		Assert( !strcmp( com_token, "(") );
+		Assert( V_streq( com_token, "(") );
 
 		input = CC_ParseToken( input );
 		do
 		{
-			strcat( var.m_pName, com_token );
+			V_strcat_safe( var.m_pName, com_token );
 			input = CC_ParseToken( input );
 		} while( strcmp( com_token, ",") );
 
 		input = CC_ParseToken( input );
 		do
 		{
-			strcat( var.m_pArraySize, com_token );
+			V_strcat_safe( var.m_pArraySize, com_token );
 			input = CC_ParseToken( input );
 		} while( strcmp( com_token, ")") );
 
@@ -976,30 +976,30 @@ bool CClass::ParseNetworkVar( char *&input, int protection )
 		return true;
 	}
 
-	if ( !strcmp( com_token, "CNetworkArray" ) || !strcmp( com_token, "CNetworkArrayForDerived" ) )
+	if ( V_streq( com_token, "CNetworkArray" ) || V_streq( com_token, "CNetworkArrayForDerived" ) )
 	{
 		input = CC_ParseToken( input );
-		Assert( !strcmp( com_token, "(") );
+		Assert( V_streq( com_token, "(") );
 
 		input = CC_ParseToken( input );
 		do
 		{
-			strcat( var.m_pType, com_token );
-			strcat( var.m_pType, " " );
+			V_strcat_safe( var.m_pType, com_token );
+			V_strcat_safe( var.m_pType, " " );
 			input = CC_ParseToken( input );
 		} while( strcmp( com_token, ",") );
 
 		input = CC_ParseToken( input );
 		do
 		{
-			strcat( var.m_pName, com_token );
+			V_strcat_safe( var.m_pName, com_token );
 			input = CC_ParseToken( input );
 		} while( strcmp( com_token, ",") );
 
 		input = CC_ParseToken( input );
 		do
 		{
-			strcat( var.m_pArraySize, com_token );
+			V_strcat_safe( var.m_pArraySize, com_token );
 			input = CC_ParseToken( input );
 		} while( strcmp( com_token, ")") );
 
@@ -1025,11 +1025,11 @@ bool CClass::ParseClassMember( char *&input, int protection )
 	if ( ParseNetworkVar( input, protection ) )
 		return true;
 
-	strcpy( var.m_pName, com_token );
-	if ( !stricmp( var.m_pName, "SHARED_CLASSNAME" ) )
+	V_strcpy_safe( var.m_pName, com_token );
+	if ( V_strieq( var.m_pName, "SHARED_CLASSNAME" ) )
 	{
 		input = CC_ParseToken( input );
-		if ( !stricmp( com_token, "(" ) )
+		if ( V_streq( com_token, "(" ) )
 		{
 			char inside[ 256 ];
 			char *saveinput = input;
@@ -1039,18 +1039,18 @@ bool CClass::ParseClassMember( char *&input, int protection )
 			strncpy( inside, saveinput, len );
 			inside[ len ] =0;
 
-			strcat( var.m_pName, "(" );
-			strcat( var.m_pName, inside );
+			V_strcat_safe( var.m_pName, "(" );
+			V_strcat_safe( var.m_pName, inside );
 		}
 	}
 
 	do
 	{
 		input = CC_ParseToken( input );
-		if ( strlen( com_token ) <= 0 )
+		if ( Q_isempty( com_token ) )
 			break;
 
-		if ( !stricmp( com_token, "(" ) )
+		if ( V_streq( com_token, "(" ) )
 		{
 			char *saveinput = input;
 
@@ -1061,24 +1061,24 @@ bool CClass::ParseClassMember( char *&input, int protection )
 			// see if the function is being declared in line here
 			input = CC_ParseToken( input );
 
-			if ( !stricmp( com_token, "const" ) )
+			if ( V_strieq( com_token, "const" ) )
 			{
 				// Swallow const if we see it
 				input = CC_ParseToken( input );
 			}
 
-			if ( !stricmp( com_token, "{" ) )
+			if ( V_streq( com_token, "{" ) )
 			{
 				input = CC_DiscardUntilMatchingCharIncludingNesting( input, "{}" );
 			}
 			// pure virtual function?
-			else if ( !stricmp( com_token, "=" ) )
+			else if ( V_streq( com_token, "=" ) )
 			{
 				char ch;
 				input = CC_RawParseChar( input, ";", &ch );
 			}
 			// this was a pointer to a base function
-			else if ( !stricmp( com_token, "(" ) )
+			else if ( V_streq( com_token, "(" ) )
 			{
 				char *end = input - 2;
 				input = saveinput;
@@ -1091,7 +1091,7 @@ bool CClass::ParseClassMember( char *&input, int protection )
 				do
 				{ 
 					input = CC_ParseToken( input );
-					if ( strlen( com_token ) <= 0 )
+					if ( Q_isempty( com_token ) )
 						break;
 
 					if ( com_token[0] == '*' )
@@ -1103,8 +1103,8 @@ bool CClass::ParseClassMember( char *&input, int protection )
 				if ( com_token[0] == '*' )
 				{
 					// com_token is the variable name
-					sprintf( var.m_pType, "%s (%s)", var.m_pName, pfn );
-					strcpy( var.m_pName, com_token );
+					V_sprintf_safe( var.m_pType, "%s (%s)", var.m_pName, pfn );
+					V_strcpy_safe( var.m_pName, com_token );
 					input = end + 1;
 				}
 
@@ -1117,7 +1117,7 @@ bool CClass::ParseClassMember( char *&input, int protection )
 
 			break;
 		}
-		else if ( !stricmp( com_token, "[" ) )
+		else if ( V_streq( com_token, "[" ) )
 		{
 			// It's an array
 			var.m_bArray = true;
@@ -1142,17 +1142,17 @@ bool CClass::ParseClassMember( char *&input, int protection )
 			var.m_pArraySize[ len ] = 0;
 			break;
 		}
-		else if ( !stricmp( com_token, ";" ) )
+		else if ( V_streq( com_token, ";" ) )
 		{
 			break;
 		}
-		else if ( !stricmp( com_token, ":" ) && !isfunction )
+		else if ( V_streq( com_token, ":" ) && !isfunction )
 		{
 			// Eliminate the length specification
 			input = CC_ParseToken( input );
 			continue;
 		}
-		else if ( !stricmp( com_token, "," ) )
+		else if ( V_streq( com_token, "," ) )
 		{
 			wascomma = true;
 			break;
@@ -1163,27 +1163,27 @@ bool CClass::ParseClassMember( char *&input, int protection )
 			do
 			{
 				AppendType( var.m_pName, var.m_pType );
-				strcpy( var.m_pName, com_token );
+				V_strcpy_safe( var.m_pName, com_token );
 
 				input = CC_ParseToken( input );
-				if ( strlen( com_token ) <= 0 )
+				if ( Q_isempty( com_token ) )
 					break;
 			}
 			while ( strcmp( com_token, ">" ) );
 
 			AppendType( var.m_pName, var.m_pType );
-			strcpy( var.m_pName, com_token );
+			V_strcpy_safe( var.m_pName, com_token );
 		}
 		else
 		{
-			if ( !stricmp( var.m_pName, "typedef" ) ||
-				 !stricmp( var.m_pName, "enum" ) ||
-				 !stricmp( var.m_pName, "friend" ) )
+			if ( V_strieq( var.m_pName, "typedef" ) ||
+				 V_strieq( var.m_pName, "enum" ) ||
+				 V_strieq( var.m_pName, "friend" ) )
 			{
 				skipvar = true;
 			}
 			AppendType( var.m_pName, var.m_pType );
-			strcpy( var.m_pName, com_token );
+			V_strcpy_safe( var.m_pName, com_token );
 			continue;
 		}
 
@@ -1195,23 +1195,23 @@ bool CClass::ParseClassMember( char *&input, int protection )
 	}
 
 	if ( var.m_pType[0]==0 && 
-		( !strcmp( var.m_pName, "CUSTOM_SCHEDULES" ) ||
-		  !strcmp( var.m_pName, "DEFINE_CUSTOM_SCHEDULE_PROVIDER" ) ||
-		  !strcmp( var.m_pName, "DEFINE_CUSTOM_AI" ) ||
-		  !strcmp( var.m_pName, "DECLARE_DATADESC" ) ||
-		  !strcmp( var.m_pName, "DECLARE_EMBEDDED_DATADESC" ) ||
-		  !strcmp( var.m_pName, "DECLARE_SERVERCLASS" ) ||
-		  !strcmp( var.m_pName, "DECLARE_CLIENTCLASS" ) ||
-		  !strcmp( var.m_pName, "DECLARE_ENTITY_PANEL" ) ||
-		  !strcmp( var.m_pName, "DECLARE_MINIMAP_PANEL" ) ||
-		  !strcmp( var.m_pName, "MANUALMODE_GETSET_PROP" ) ) )
+		( V_streq( var.m_pName, "CUSTOM_SCHEDULES" ) ||
+		  V_streq( var.m_pName, "DEFINE_CUSTOM_SCHEDULE_PROVIDER" ) ||
+		  V_streq( var.m_pName, "DEFINE_CUSTOM_AI" ) ||
+		  V_streq( var.m_pName, "DECLARE_DATADESC" ) ||
+		  V_streq( var.m_pName, "DECLARE_EMBEDDED_DATADESC" ) ||
+		  V_streq( var.m_pName, "DECLARE_SERVERCLASS" ) ||
+		  V_streq( var.m_pName, "DECLARE_CLIENTCLASS" ) ||
+		  V_streq( var.m_pName, "DECLARE_ENTITY_PANEL" ) ||
+		  V_streq( var.m_pName, "DECLARE_MINIMAP_PANEL" ) ||
+		  V_streq( var.m_pName, "MANUALMODE_GETSET_PROP" ) ) )
 	{
 		return true;
 	}
 
 	if ( var.m_pType[0]==0 && 
-		( !strcmp( var.m_pName, "DECLARE_PREDICTABLE" ) ||
-		 !strcmp( var.m_pName, "DECLARE_EMBEDDED_PREDDESC" ) ) )
+		( V_streq( var.m_pName, "DECLARE_PREDICTABLE" ) ||
+		 V_streq( var.m_pName, "DECLARE_EMBEDDED_PREDDESC" ) ) )
 	{
 		m_bHasPredictionData = true;
 		return true;
@@ -1220,11 +1220,11 @@ bool CClass::ParseClassMember( char *&input, int protection )
 	/*
 	if ( var.m_pName[0] == '*' )
 	{
-		strcat( type, " *" );
+		V_strcat_safe( type, " *" );
 
 		char newname[ 256 ];
-		strcpy( newname, &var.m_pName[1] );
-		strcpy( var.m_pName, newname );
+		V_strcpy_safe( newname, &var.m_pName[1] );
+		V_strcpy_safe( var.m_pName, newname );
 	}
 	*/
 
@@ -1233,7 +1233,7 @@ bool CClass::ParseClassMember( char *&input, int protection )
 		CClassMemberFunction *member = AddMember( var.m_pName );
 		if ( member )
 		{
-			strcpy( member->m_szType, var.m_pType );
+			V_strcpy_safe( member->m_szType, var.m_pType );
 			member->m_Type = (CClassMemberFunction::MEMBERTYPE)protection;
 		}
 	}
@@ -1246,14 +1246,14 @@ bool CClass::ParseClassMember( char *&input, int protection )
 			{
 				AddVariable( protection, var.m_pType, var.m_pName, var.m_bArray, var.m_pArraySize );
 			}
-			else if ( !stricmp( var.m_pName, "BaseClass" ) )
+			else if ( V_strieq( var.m_pName, "BaseClass" ) )
 			{
 				if ( !m_szTypedefBaseClass[0] )
 				{
 					char *p = var.m_pType;
 					p = CC_ParseToken( p );
 					p = CC_ParseToken( p );
-					strcpy( m_szTypedefBaseClass, com_token );
+					V_strcpy_safe( m_szTypedefBaseClass, com_token );
 				}
 			}
 
@@ -1261,25 +1261,25 @@ bool CClass::ParseClassMember( char *&input, int protection )
 				break;
 
 			input = CC_ParseToken( input );
-			if ( strlen( com_token ) <= 0 )
+			if ( Q_isempty( com_token ) )
 				break;
 
 			// Remove length specifiers
-			if ( !stricmp( com_token, ":" ) )
+			if ( V_streq( com_token, ":" ) )
 			{
 				input = CC_ParseToken( input );
 				input = CC_ParseToken( input );
 			}
 
-			if ( !stricmp( com_token, "," ) )
+			if ( V_streq( com_token, "," ) )
 			{
 				input = CC_ParseToken( input );
 			}
 
-			if ( !stricmp( com_token, ";" ) )
+			if ( V_streq( com_token, ";" ) )
 				break;
 			
-			strcpy( var.m_pName, com_token );
+			V_strcpy_safe( var.m_pName, com_token );
 
 		} while ( 1 );
 	}
@@ -1297,24 +1297,24 @@ bool CClass::ParseNestedClass( char *&input )
 		return false;
 	
 	input = CC_ParseToken( input );
-	if ( strlen( com_token ) > 0 )
+	if ( !Q_isempty( com_token ) )
 	{
 		//vprint( depth, "class %s\n", com_token );
 		char decorated[ 256 ];
-		sprintf( decorated, "%s::%s", m_szName, com_token );
+		V_sprintf_safe( decorated, "%s::%s", m_szName, com_token );
 
 		CClass *cl = processor->AddClass( decorated );
 
 		// Now see if there's a base class
 		input = CC_ParseToken( input );
-		if ( !stricmp( com_token, ":" ) )
+		if ( V_streq( com_token, ":" ) )
 		{
 			// Parse out public and then classname an
 			input = CC_ParseToken( input );
-			if ( !stricmp( com_token, "public" ) )
+			if ( V_strieq( com_token, "public" ) )
 			{
 				input = CC_ParseToken( input );
-				if ( strlen( com_token ) > 0 )
+				if ( !Q_isempty( com_token ) )
 				{
 					cl->SetBaseClass( com_token );
 
@@ -1323,14 +1323,14 @@ bool CClass::ParseNestedClass( char *&input )
 						input = CC_ParseToken( input );
 					} while ( strlen( com_token ) && stricmp( com_token, "{" ) );
 
-					if ( !stricmp( com_token, "{" ) )
+					if ( V_streq( com_token, "{" ) )
 					{
 						input = cl->ParseClassDeclaration( input );
 					}
 				}
 			}
 		}
-		else if ( !stricmp( com_token, "{" ) )
+		else if ( V_streq( com_token, "{" ) )
 		{
 			input = cl->ParseClassDeclaration( input );
 		}
@@ -1345,25 +1345,25 @@ bool CClass::ParseNestedClass( char *&input )
 //-----------------------------------------------------------------------------
 bool CClass::ParseProtection( char *&input, int &protection )
 {
-	if ( !stricmp( com_token, "public" ) )
+	if ( V_strieq( com_token, "public" ) )
 	{
 		protection = 0;
 		input = CC_ParseToken( input );
-		Assert( !stricmp( com_token, ":" ) );
+		Assert( V_streq( com_token, ":" ) );
 		return true;
 	}
-	else if ( !stricmp( com_token, "protected" ) )
+	else if ( V_strieq( com_token, "protected" ) )
 	{
 		protection = 1;
 		input = CC_ParseToken( input );
-		Assert( !stricmp( com_token, ":" ) );
+		Assert( V_streq( com_token, ":" ) );
 		return true;
 	}
-	else if ( !stricmp( com_token, "private" ) )
+	else if ( V_strieq( com_token, "private" ) )
 	{
 		protection = 2;
 		input = CC_ParseToken( input );
-		Assert( !stricmp( com_token, ":" ) );
+		Assert( V_streq( com_token, ":" ) );
 		return true;
 	}
 
@@ -1387,7 +1387,7 @@ char *CClass::ParseClassDeclaration( char *input )
 	do
 	{
 		input = CC_ParseToken( input );
-		if ( strlen( com_token ) <= 0 )
+		if ( Q_isempty( com_token ) )
 			break;
 
 		if ( com_token[ 1 ] == 0 )
@@ -1405,7 +1405,7 @@ char *CClass::ParseClassDeclaration( char *input )
 		if ( ParseProtection( input, protection ) )
 			continue;
 
-		if ( !stricmp( com_token, ";" ) )
+		if ( V_streq( com_token, ";" ) )
 			continue;
 
 		if ( com_token[0] == '#' )
@@ -1505,9 +1505,9 @@ void CClass::CheckForHungarianErrors( int& warnings )
 		while ( 1 )
 		{
 			p = CC_ParseToken( p );
-			if ( strlen( com_token ) <= 0 )
+			if ( Q_isempty( com_token ) )
 				break;
-			if ( !stricmp( com_token, "static" ) )
+			if ( V_strieq( com_token, "static" ) )
 			{
 				isstatic = true;
 				break;
@@ -1526,7 +1526,8 @@ void CClass::CheckForHungarianErrors( int& warnings )
 			// The first character after the prefix must be upper case or we skip...
 			int nextchar = 2 + Q_strlen( tst->prefix );
 
-			if ( !isupper( var->m_szName[ nextchar ] ) )
+			// dimhotepus: isupper -> V_isupper.
+			if ( !V_isupper( var->m_szName[ nextchar ] ) )
 				continue;
 
 			bool typeFound = Q_stristr( var->m_szType, tst->mustinclude ) ? true : false;
@@ -1565,7 +1566,8 @@ void CClass::CheckForHungarianErrors( int& warnings )
 
 
 		if ( !Q_strncmp( var->m_szName, "m_f", 3 ) &&
-			 Q_strncmp( var->m_szName, "m_fl", 4 ) && isupper( var->m_szName[3] ) )
+			 // dimhotepus: isupper->V_isupper.
+			 Q_strncmp( var->m_szName, "m_fl", 4 ) && V_isupper( var->m_szName[3] ) )
 		{
 			// If it's a "flag" and not a "float" type, it better be a bool or an int
 			if ( !Q_stristr( var->m_szType, "bool" ) &&

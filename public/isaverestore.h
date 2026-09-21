@@ -376,8 +376,8 @@ public:
 	bool IsEmpty( const SaveRestoreFieldInfo_t &fieldInfo ) override
 	{
 		void **ppClassPtr = (void **)fieldInfo.pField;
-		int nObjects = fieldInfo.pTypeDesc->fieldSize;
-		for ( int i = 0; i < nObjects; i++ )
+		const unsigned short nObjects{fieldInfo.pTypeDesc->fieldSize};
+		for ( unsigned short i = 0; i < nObjects; i++ )
 		{
 			if ( ppClassPtr[i] != NULL )
 				return false;

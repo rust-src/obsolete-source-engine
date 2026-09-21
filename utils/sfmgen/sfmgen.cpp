@@ -211,8 +211,15 @@ static SpewRetval_t SpewStdout( SpewType_t spewType, char const *pMsg )
 	OutputDebugString( pMsg );
 #endif
 
-	printf( pMsg );
-	fflush( stdout );
+	if ( spewType == SPEW_WARNING || spewType == SPEW_ERROR )
+	{
+		fprintf( stderr, "%s", pMsg );
+	}
+	else
+	{
+		printf( "%s", pMsg );
+		fflush( stdout );
+	}
 
 	return ( spewType == SPEW_ASSERT ) ? SPEW_DEBUGGER : SPEW_CONTINUE; 
 }
@@ -516,13 +523,15 @@ void CSFMGenApp::UniqueifyNames( CUtlVector< SFMInfo_t > &infoList )
 		char *pTemp = (char*)_alloca( nLen + nDigits + 1 );
 		for ( int j = 0; j < nLen; ++j )
 		{
-			if ( isspace( pName[j] ) )
+			// dimhotepus: isspace -> V_isspace.
+			if ( V_isspace( pName[j] ) )
 			{
 				pTemp[j] = '_';
 			}
 			else
 			{
-				pTemp[j] = tolower( pName[j] );
+				// dimhotepus: tolower -> V_tolower.
+				pTemp[j] = V_tolower( pName[j] );
 			}
 		}
 		if ( nFoundCount > 1 )
@@ -889,8 +898,8 @@ void CSFMGenApp::GenerateSFMFiles( SFMGenInfo_t& info )
 			FileHandle_t fh = g_pFullFileSystem->Open("tf_PhonemeData.txt", "wb");
 			if (fh)
 			{
+				RunCodeAtScopeExit(g_pFullFileSystem->Close(fh));
 				g_pFullFileSystem->Write(bufOutput.Base(), bufOutput.TellPut(), fh);
-				g_pFullFileSystem->Close(fh);
 			}
 		}
 
@@ -899,8 +908,8 @@ void CSFMGenApp::GenerateSFMFiles( SFMGenInfo_t& info )
 			FileHandle_t fh = g_pFullFileSystem->Open("tf_PhonemeFiles.txt", "wb");
 			if (fh)
 			{
+				RunCodeAtScopeExit(g_pFullFileSystem->Close(fh));
 				g_pFullFileSystem->Write(bufFilenames.Base(), bufFilenames.TellPut(), fh);
-				g_pFullFileSystem->Close(fh);
 			}
 		}
 	}
@@ -915,14 +924,14 @@ int CSFMGenApp::Main()
 	// This bit of hackery allows us to access files on the harddrive
 	g_pFullFileSystem->AddSearchPath( "", "LOCAL", PATH_ADD_TO_HEAD ); 
 
-	if ( CommandLine()->CheckParm( "-h" ) || CommandLine()->CheckParm( "-help" ) )
+	if ( CommandLine()->HasParm( "-h" ) || CommandLine()->HasParm( "-help" ) )
 	{
 		PrintHelp();
 		return 0;
 	}
 
 	// Do Perforce Stuff
-	if ( CommandLine()->FindParm( "-nop4" ) )
+	if ( CommandLine()->HasParm( "-nop4" ) )
 	{
 		g_p4factory->SetDummyMode( true );
 	}
@@ -934,12 +943,12 @@ int CSFMGenApp::Main()
 	info.m_pModelName = CommandLine()->ParmValue( "-m" );
 	info.m_pOutputDirectory = CommandLine()->ParmValue( "-o" );
 	info.m_pExportFacDirectory = CommandLine()->ParmValue( "-f" );
-	info.m_bWritePhonemesInWavs = CommandLine()->FindParm( "-p" ) != 0;
-	info.m_bUsePhonemesInWavs = CommandLine()->FindParm( "-w" ) != 0;
+	info.m_bWritePhonemesInWavs = CommandLine()->HasParm( "-p" );
+	info.m_bUsePhonemesInWavs = CommandLine()->HasParm( "-w" );
 	info.m_flSampleRateHz = CommandLine()->ParmValue( "-r", 20.0f );
 	info.m_flSampleFilterSize = CommandLine()->ParmValue( "-s", 0.08f );
-	info.m_bGenerateSFMFiles = CommandLine()->FindParm( "-nosfm" ) == 0;
-	info.m_bExtractPhonemeFromWavsForMp3 = CommandLine()->FindParm("-mp3");
+	info.m_bGenerateSFMFiles = !CommandLine()->HasParm( "-nosfm" );
+	info.m_bExtractPhonemeFromWavsForMp3 = CommandLine()->HasParm("-mp3");
 
 	if ( !info.m_pCSVFile || !info.m_pModelName )
 	{
@@ -959,7 +968,7 @@ int CSFMGenApp::Main()
 		return 0;
 	}
 
-	if ( info.m_pExportFacDirectory && !Q_stricmp( info.m_pExportFacDirectory, info.m_pOutputDirectory ) )
+	if ( info.m_pExportFacDirectory && V_strieq( info.m_pExportFacDirectory, info.m_pOutputDirectory ) )
 	{
 		Warning( "Must specify different directories for output + facial export!\n" );
 		return 0;
