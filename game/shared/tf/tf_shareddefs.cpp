@@ -449,7 +449,7 @@ ETFCond GetTFConditionFromName( const char *pszCondName )
 	for( uint i=0; i<TF_COND_LAST; i++ )
 	{ 
 		ETFCond eCond = (ETFCond)i;
-		if ( !V_stricmp( GetTFConditionName( eCond ), pszCondName ) ) 
+		if ( V_strieq( GetTFConditionName( eCond ), pszCondName ) ) 
 			return eCond;
 	} 
 
@@ -915,7 +915,7 @@ ETFDmgCustom GetCustomDamageFromName( const char *pszCustomDmgName )
 	for( uint i=0; i<TF_DMG_CUSTOM_END; i++ )
 	{ 
 		ETFDmgCustom eDmgCustom = (ETFDmgCustom)i;
-		if ( !V_stricmp( GetCustomDamageName( eDmgCustom ), pszCustomDmgName ) ) 
+		if ( V_strieq( GetCustomDamageName( eDmgCustom ), pszCustomDmgName ) ) 
 			return eDmgCustom;
 	} 
 
@@ -1066,7 +1066,7 @@ taunt_attack_t GetTauntAttackByName( const char* pszTauntAttackName )
 	{
 		for ( int i=0; i<ARRAYSIZE( taunt_attack_name ); ++i )
 		{
-			if ( !V_stricmp( pszTauntAttackName, taunt_attack_name[i] ) )
+			if ( V_strieq( pszTauntAttackName, taunt_attack_name[i] ) )
 			{
 				return (taunt_attack_t)i;
 			}
@@ -1211,7 +1211,7 @@ int GetWeaponId( const char *pszWeaponName )
 
 	for ( int iWeapon = 0; iWeapon < ARRAYSIZE( g_aWeaponNames ); ++iWeapon )
 	{
-		if ( !Q_stricmp( pszWeaponName, g_aWeaponNames[iWeapon] ) )
+		if ( V_strieq( pszWeaponName, g_aWeaponNames[iWeapon] ) )
 			return iWeapon;
 	}
 
@@ -1278,7 +1278,7 @@ int GetWeaponFromDamage( const CTakeDamageInfo &info )
 	{
 		for( int i = 0; i < ARRAYSIZE( g_szProjectileNames ); i++ )
 		{
-			if ( !Q_stricmp( &killer_weapon_name[ 3 ], g_szProjectileNames[ i ] ) )
+			if ( V_strieq( &killer_weapon_name[ 3 ], g_szProjectileNames[ i ] ) )
 			{
 				iWeapon = g_iProjectileWeapons[ i ];
 				break;
@@ -1290,7 +1290,7 @@ int GetWeaponFromDamage( const CTakeDamageInfo &info )
 		int iLen = Q_strlen( killer_weapon_name );
 
 		// strip off _projectile from projectiles shot from other projectiles
-		if ( ( iLen < 256 ) && ( iLen > 11 ) && !Q_stricmp( &killer_weapon_name[ iLen - 11 ], "_projectile" ) )
+		if ( ( iLen < 256 ) && ( iLen > 11 ) && V_strieq( &killer_weapon_name[ iLen - 11 ], "_projectile" ) )
 		{
 			char temp[ 256 ];
 			V_strcpy_safe( temp, killer_weapon_name );
@@ -1385,7 +1385,7 @@ int GetBuildableId( const char *pszBuildableName )
 {
 	for ( int iBuildable = 0; iBuildable < OBJ_LAST; ++iBuildable )
 	{
-		if ( !Q_stricmp( pszBuildableName, g_ObjectInfos[iBuildable].m_pObjectName ) )
+		if ( V_strieq( pszBuildableName, g_ObjectInfos[iBuildable].m_pObjectName ) )
 			return iBuildable;
 	}
 
@@ -1467,7 +1467,7 @@ void LoadObjectInfos( IBaseFileSystem *pFileSystem )
 			// Does it make sense to call the below Steam API so it'll force a validation next startup time?
 			// Need to verify it's real corruption and not someone dorking around with their objects.txt file...
 			//
-			// From Martin Otten: If you have a file on disc and you’re 100% sure it’s
+			// From Martin Otten: If you have a file on disc and you're 100% sure it's
 			//  corrupt, call ISteamApps::MarkContentCorrupt( false ), before you shutdown
 			//  the game. This will cause a content validation in Steam.
 
@@ -1767,7 +1767,7 @@ const char *TranslateWeaponEntForClass( const char *pszName, int iClass )
 	{
 		for ( int i = 0; i < ARRAYSIZE(pszWpnEntTranslationList); i++ )
 		{
-			if ( !Q_stricmp( pszName, pszWpnEntTranslationList[i].pszWpnString ) )
+			if ( V_strieq( pszName, pszWpnEntTranslationList[i].pszWpnString ) )
 			{
 				const char *pTransName = pszWpnEntTranslationList[i].pszClassWpn[ iClass ];
 				Assert( pTransName && pTransName[0] );

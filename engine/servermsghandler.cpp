@@ -74,20 +74,20 @@ void CClientState::ConnectionClosing( const char * reason )
 	if ( m_nSignonState > SIGNONSTATE_NONE )
 	{
 		ConMsg( "Disconnect: %s.\n", reason );
-		if ( !Q_stricmp( reason, INVALID_STEAM_TICKET )
-			|| !Q_stricmp( reason, INVALID_STEAM_LOGON_TICKET_CANCELED ) )
+		if ( V_strieq( reason, INVALID_STEAM_TICKET )
+			|| V_strieq( reason, INVALID_STEAM_LOGON_TICKET_CANCELED ) )
 		{
 			g_eSteamLoginFailure = STEAMLOGINFAILURE_BADTICKET;
 		}
-		else if ( !Q_stricmp( reason, INVALID_STEAM_LOGON_NOT_CONNECTED ) )
+		else if ( V_strieq( reason, INVALID_STEAM_LOGON_NOT_CONNECTED ) )
 		{
 			g_eSteamLoginFailure = STEAMLOGINFAILURE_NOSTEAMLOGIN;
 		}
-		else if ( !Q_stricmp( reason, INVALID_STEAM_LOGGED_IN_ELSEWHERE ) )
+		else if ( V_strieq( reason, INVALID_STEAM_LOGGED_IN_ELSEWHERE ) )
 		{
 			g_eSteamLoginFailure = STEAMLOGINFAILURE_LOGGED_IN_ELSEWHERE;
 		}
-		else if ( !Q_stricmp( reason, INVALID_STEAM_VACBANSTATE ) )
+		else if ( V_strieq( reason, INVALID_STEAM_VACBANSTATE ) )
 		{
 			g_eSteamLoginFailure = STEAMLOGINFAILURE_VACBANNED;
 		}
@@ -465,7 +465,7 @@ bool CClientState::ProcessSetPauseTimed( SVC_SetPauseTimed *msg )
 bool CClientState::ProcessVoiceInit( SVC_VoiceInit *msg )
 {
 #if !defined( NO_VOICE )//#ifndef _XBOX
-	if ( msg->m_szVoiceCodec[0] == 0 )
+	if ( Q_isempty( msg->m_szVoiceCodec ) )
 	{
 		Voice_Deinit();
 	}
@@ -773,8 +773,9 @@ bool CClientState::ProcessGameEvent(SVC_GameEvent *msg)
 bool CClientState::ProcessUserMessage(SVC_UserMessage *msg)
 {
 	// buffer for incoming user message
-	ALIGN4 byte userdata[ MAX_USER_MSG_DATA ] ALIGN4_POST = { 0 };
-	bf_read userMsg( "UserMessage(read)", userdata, sizeof( userdata ) );
+	alignas(4) byte userdata[ MAX_USER_MSG_DATA ];
+	BitwiseClear( userdata );
+	bf_read userMsg( "UserMessage(read)", userdata );
 	intp bitsRead = msg->m_DataIn.ReadBitsClamped( userdata, msg->m_nLength );
 	userMsg.StartReading( userdata, Bits2Bytes( bitsRead ) );
 
@@ -804,8 +805,10 @@ bool CClientState::ProcessEntityMessage(SVC_EntityMessage *msg)
 	MDLCACHE_CRITICAL_SECTION_( g_pMDLCache );
 
 	// buffer for incoming user message
-	ALIGN4 byte entityData[ MAX_ENTITY_MSG_DATA ] ALIGN4_POST = { 0 };
-	bf_read entMsg( "EntityMessage(read)", entityData, sizeof( entityData ) );
+	alignas(4) byte entityData[ MAX_ENTITY_MSG_DATA ];
+	BitwiseClear( entityData );
+
+	bf_read entMsg( "EntityMessage(read)", entityData );
 	intp bitsRead = msg->m_DataIn.ReadBitsClamped( entityData, msg->m_nLength );
 	entMsg.StartReading( entityData, Bits2Bytes( bitsRead ) );
 
@@ -899,11 +902,10 @@ bool CClientState::ProcessTempEntities( SVC_TempEntities *msg )
 	bf_read &buffer = msg->m_DataIn; // shortcut
 
 	int classID = -1;
-	void *from = NULL;
 	C_ServerClassInfo *pServerClass = NULL;
 	ClientClass *pClientClass = NULL;
 	alignas(4) unsigned char data[CEventInfo::MAX_EVENT_DATA];
-	bf_write toBuf( data, sizeof(data) );
+	bf_write toBuf( data );
 	CEventInfo *ei = NULL;
 	
 	for (int i = 0; i < msg->m_nNumEntries; i++ )
@@ -919,8 +921,6 @@ bool CClientState::ProcessTempEntities( SVC_TempEntities *msg )
 
 		if ( buffer.ReadOneBit() )
 		{
-			from = NULL; // full update
-
 			classID = buffer.ReadUBitLong( m_nServerClassBits ); // classID 
 		
 			// Look up the client class, etc.

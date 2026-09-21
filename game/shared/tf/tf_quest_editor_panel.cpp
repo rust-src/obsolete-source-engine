@@ -109,7 +109,7 @@ IEditorObject::IEditorObject( EditorObjectInitStruct init )
 	memset( m_szKeyName, 0, sizeof( m_szKeyName ) );
 	if ( init.m_pszKeyName )
 	{
-		V_sprintf_safe( m_szKeyName, "%s", init.m_pszKeyName );
+		V_strcpy_safe( m_szKeyName, init.m_pszKeyName );
 	}
 
 	SetWide( init.pParent->GetWide() );
@@ -435,7 +435,7 @@ void CEditorObjectNode::PerformLayout()
 //-----------------------------------------------------------------------------
 void CEditorObjectNode::OnCommand( const char *command )
 {
-	if ( V_stricmp( "togglecollapse", command ) == 0 )
+	if ( V_strieq( "togglecollapse", command ) )
 	{
 		if ( IsFlagSet( FLAG_COLLAPSED ) )
 		{
@@ -451,7 +451,7 @@ void CEditorObjectNode::OnCommand( const char *command )
 
 		return;
 	}
-	if ( V_stricmp( command, "delete" ) == 0 )
+	if ( V_strieq( command, "delete" ) )
 	{
 		RemoveNode();
 		return;
@@ -557,7 +557,7 @@ void IEditorObjectParameter::UpdateSavedValue( const char* pszNewValue ) const
 {
 	// Update saved string
 	memset( m_szSavedValueBuff, 0, sizeof( m_szSavedValueBuff ) );
-	V_sprintf_safe( m_szSavedValueBuff, "%s", pszNewValue );
+	V_strcpy_safe( m_szSavedValueBuff, pszNewValue );
 }
 
 //-----------------------------------------------------------------------------
@@ -651,7 +651,7 @@ CLocalizationEditorParam::CLocalizationEditorParam( EditorObjectInitStruct init,
 	SetTextEntryValue( szBuff );
 	UpdateSavedValue( szBuff );
 
-	V_sprintf_safe( m_szLocalizationToken, "%s", pszLocalizationToken );
+	V_strcpy_safe( m_szLocalizationToken, pszLocalizationToken );
 }
 
 
@@ -755,11 +755,11 @@ void CComboBoxEditorParam::OnTextChanged( KeyValues *data )
 			const char* pszCommand = m_pComboBox->GetActiveItemUserData()->GetString( "command" );
 			// What to write
 			const char* pszWriteValue = m_pComboBox->GetActiveItemUserData()->GetString( "write" );
-			if ( V_stricmp( pszCommand, "changetype" ) == 0 )
+			if ( V_strieq( pszCommand, "changetype" ) )
 			{
 				pParent->SetNewType( pszWriteValue );
 			}
-			else if ( V_stricmp( pszCommand, "changeevent" ) == 0 )
+			else if ( V_strieq( pszCommand, "changeevent" ) )
 			{
 				pParent->SetNewEvent( pszWriteValue );
 			}
@@ -1347,7 +1347,7 @@ void CQuestObjectiveRestrictionNode::SetNewEvent( const char *pszEvent )
 	m_pNewCondition = NULL;
 
 	char szType[256];
-	V_sprintf_safe( szType, "%s", m_pCondition->GetConditionName() );
+	V_strcpy_safe( szType, m_pCondition->GetConditionName() );
 
 	// Create new restriction
 	CTFQuestCondition* pParent = m_pCondition->GetParent();
@@ -1361,7 +1361,7 @@ void CQuestObjectiveRestrictionNode::SetNewEvent( const char *pszEvent )
 		m_pCondition = CreateEvaluatorByName( szType, NULL );
 	}
 
-	V_sprintf_safe( m_szEventName, "%s", pszEvent );
+	V_strcpy_safe( m_szEventName, pszEvent );
 
 	m_pCondition->SetEventName( m_szEventName );
 	CreateControlsForCondition();
@@ -2074,7 +2074,7 @@ void CQuestEditorPanel::OnCommand( const char *command )
 
 		return;
 	}
-	else if ( Q_stricmp( "revert", command ) == 0 )
+	else if ( V_strieq( "revert", command ) )
 	{
 		if ( m_pCurrentOpenEdit )
 		{
@@ -2083,7 +2083,7 @@ void CQuestEditorPanel::OnCommand( const char *command )
 
 		ResetQuestSelectionState();
 	}
-	else if ( Q_stricmp( "save", command ) == 0 )
+	else if ( V_strieq( "save", command ) )
 	{
 		WriteLocalizationData();
 
@@ -2096,7 +2096,7 @@ void CQuestEditorPanel::OnCommand( const char *command )
 
 		return;
 	}
-	else if ( Q_stricmp( "newquest", command ) == 0 )
+	else if ( V_strieq( "newquest", command ) )
 	{
 		CloseEdit( m_pCurrentOpenEdit );
 		m_pEditingPanel->ResetScrollAmount();
@@ -2104,7 +2104,7 @@ void CQuestEditorPanel::OnCommand( const char *command )
 		m_pCurrentOpenEdit = OpenForEdit( IEditableDataType::TYPE_QUEST, CFmtStr( "%s", pNewEditable->GetLiveData()->GetName() ), m_pEditingPanel );
 		ResetQuestSelectionState();
 	}
-	else if ( Q_stricmp( "newobjcond", command ) == 0 )
+	else if ( V_strieq( "newobjcond", command ) )
 	{
 		CloseEdit( m_pCurrentOpenEdit );
 		m_pEditingPanel->ResetScrollAmount();
@@ -2112,7 +2112,7 @@ void CQuestEditorPanel::OnCommand( const char *command )
 		m_pCurrentOpenEdit = OpenForEdit( IEditableDataType::TYPE_OBJECTIVE_CONDITIONS, CFmtStr( "%s", pNewEditable->GetLiveData()->GetName() ), m_pEditingPanel );
 		ResetQuestSelectionState();
 	}
-	else if ( Q_stricmp( "delete", command ) == 0 )
+	else if ( V_strieq( "delete", command ) )
 	{
 		if ( m_pCurrentOpenEdit )
 		{
@@ -2143,7 +2143,7 @@ void CQuestEditorPanel::OnCommand( const char *command )
 		}
 		ResetQuestSelectionState();
 	}
-	else if ( Q_stricmp( "open_edit_context", command ) == 0 )
+	else if ( V_strieq( "open_edit_context", command ) )
 	{
 		OpenEditContextMenu();
 		ResetQuestSelectionState();

@@ -83,8 +83,8 @@ CPhysicsObject::CPhysicsObject( void )
 	m_hingedAxis{0},
 	m_collideType{0},
 	m_gameIndex{0},
-	m_materialIndex{0},
 	m_activeIndex{0},
+	m_materialIndex{0},
 	m_callbacks{0},
 	m_gameFlags{0},
 	m_contentsMask{0},
@@ -1558,11 +1558,14 @@ CPhysicsObject *CreatePhysicsObject( CPhysicsEnvironment *pEnvironment, const CP
 		objectTemplate.mass_center_override = &massCenterMatrix;
 	}
 
-	CPhysicsObject *pObject = new CPhysicsObject();
 	short collideType;
 	IVP_SurfaceManager *pSurman = CreateSurfaceManager( pCollisionModel, collideType );
 	if ( !pSurman )
+	{
 		return NULL;
+	}
+	// dimhotepus: Do not leak physics object if surface manager fails to create.
+	CPhysicsObject *pObject = new CPhysicsObject();
 	pObject->m_collideType = collideType;
 	pObject->m_asleepSinceCreation = true;
 

@@ -161,7 +161,7 @@ bool CTFAutobalance::AreTeamsUnbalanced()
 
 		for ( CTeam *pTeam = GetGlobalTeam( i ); pTeam != NULL; pTeam = GetGlobalTeam( ++i ) )
 		{
-			int iNumPlayers = pTeam->GetNumPlayers();
+			intp iNumPlayers = pTeam->GetNumPlayers();
 
 			if ( iNumPlayers < iLeastPlayers )
 			{
@@ -247,7 +247,7 @@ int CTFAutobalance::GetTeamAutoBalanceScore( int nTeam ) const
 		CTeam *pTeam = GetGlobalTeam( nTeam );
 		if ( pTeam )
 		{
-			for ( int i = 0; i < pTeam->GetNumPlayers(); i++ )
+			for ( intp i = 0; i < pTeam->GetNumPlayers(); i++ )
 			{
 				CTFPlayer *pTFPlayer = ToTFPlayer( pTeam->GetPlayer( i ) );
 				if ( pTFPlayer )
@@ -309,7 +309,7 @@ CTFPlayer *CTFAutobalance::FindPlayerToAsk()
 	if ( pTeam )
 	{
 		// loop through and get a list of possible candidates
-		for ( int i = 0; i < pTeam->GetNumPlayers(); i++ )
+		for ( intp i = 0; i < pTeam->GetNumPlayers(); i++ )
 		{
 			CTFPlayer *pTFPlayer = ToTFPlayer( pTeam->GetPlayer( i ) );
 			if ( pTFPlayer && !HaveAlreadyAskedPlayer( pTFPlayer ) && pTFPlayer->CanBeAutobalanced() )

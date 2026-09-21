@@ -184,22 +184,22 @@ e.g.:  kvc -l u:/xbox/game/hl2x/materials/*.vmt u:/xbox/game/hl2x/kvc/vmt.kv\n\
 
 void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char const *extension )
 {
-	WIN32_FIND_DATA wfd;
-
-	char directory[ 256 ];
-	char filename[ 256 ];
-	HANDLE ff;
-
-	sprintf( directory, "%s\\*.*", dir );
+	char directory[ MAX_PATH ];
+	V_sprintf_safe( directory, "%s\\*.*", dir );
 
 #if defined( TESTING )
 	if ( files.Count() > 100 )
 		return;
 #endif
 
+	HANDLE ff;
+	WIN32_FIND_DATA wfd;
 	if ( ( ff = FindFirstFile( directory, &wfd ) ) == INVALID_HANDLE_VALUE )
 		return;
 
+	RunCodeAtScopeExit(FindClose( ff ));
+
+	char filename[ MAX_PATH ];
 	int extlen = strlen( extension );
 
 	do
@@ -215,7 +215,7 @@ void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char con
 				continue;
 
 			// Recurse down directory
-			sprintf( filename, "%s\\%s", dir, wfd.cFileName );
+			V_sprintf_safe( filename, "%s\\%s", dir, wfd.cFileName );
 			BuildFileList_R( files, filename, extension );
 		}
 		else
@@ -223,7 +223,7 @@ void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char con
 			int len = strlen( wfd.cFileName );
 			if ( len > extlen )
 			{
-				if ( !stricmp( &wfd.cFileName[ len - extlen ], extension ) )
+				if ( V_strieq( &wfd.cFileName[ len - extlen ], extension ) )
 				{
 					char filename[ MAX_PATH ];
 					Q_snprintf( filename, sizeof( filename ), "%s\\%s", dir, wfd.cFileName );
@@ -253,15 +253,15 @@ void BuildFileList( CUtlVector< CUtlSymbol >& files, char const *rootdir, char c
 
 void BuildFileListWildcard_R( CUtlVector< CUtlSymbol >& files, char const *dir, char const *wildcard )
 {
-	// Match files in current directory againsxt the wildcard
-	char filesearch[ 256 ];
+	// Match files in current directory against the wildcard
+	char filesearch[ MAX_PATH ];
+	V_sprintf_safe( filesearch, "%s\\%s", dir, wildcard );
+
 	WIN32_FIND_DATA filedata;
-	HANDLE h;
-
-	Q_snprintf( filesearch, sizeof( filesearch ), "%s\\%s", dir, wildcard );
-
-	if ( ( h = FindFirstFile( filesearch, &filedata ) ) != INVALID_HANDLE_VALUE )
+	if ( HANDLE h; ( h = FindFirstFile( filesearch, &filedata ) ) != INVALID_HANDLE_VALUE )
 	{
+		RunCodeAtScopeExit(FindClose( h ));
+
 		do
 		{
 	#if defined( TESTING )
@@ -290,22 +290,23 @@ void BuildFileListWildcard_R( CUtlVector< CUtlSymbol >& files, char const *dir, 
 		} while ( FindNextFile( h, &filedata ) );
 	}
 
-	// Now iterate the subdirectories and try them, too
-	WIN32_FIND_DATA wfd;
-
-	char directory[ 256 ];
-	char filename[ 256 ];
-	HANDLE ff;
-
-	sprintf( directory, "%s\\*.*", dir );
+	char directory[ MAX_PATH ];
+	V_sprintf_safe( directory, "%s\\*.*", dir );
 
 #if defined( TESTING )
 	if ( files.Count() > 100 )
 		return;
 #endif
 
+	// Now iterate the subdirectories and try them, too
+	WIN32_FIND_DATA wfd;
+	HANDLE ff;
 	if ( ( ff = FindFirstFile( directory, &wfd ) ) == INVALID_HANDLE_VALUE )
 		return;
+
+	RunCodeAtScopeExit(FindClose( ff ));
+
+	char filename[ MAX_PATH ];
 
 	do
 	{
@@ -319,7 +320,7 @@ void BuildFileListWildcard_R( CUtlVector< CUtlSymbol >& files, char const *dir, 
 				continue;
 
 			// Recurse down directory
-			sprintf( filename, "%s\\%s", dir, wfd.cFileName );
+			V_sprintf_safe( filename, "%s\\%s", dir, wfd.cFileName );
 			BuildFileListWildcard_R( files, filename, wildcard );
 		}
 	} while ( FindNextFile( ff, &wfd ) );
@@ -666,7 +667,7 @@ int CCompileKeyValuesApp::Main()
 	for ( i = 0; i < worklist.Count() - 1; ++i )
 	{
         char workdir[ 256 ];
-		Q_snprintf( workdir, sizeof( workdir ), "%s", worklist[ i ].String() );
+		V_strcpy_safe( workdir, worklist[ i ].String() );
 
 		Q_StripTrailingSlash( workdir );
 

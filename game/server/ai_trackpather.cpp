@@ -470,10 +470,10 @@ void CAI_TrackPather::VisualizeDebugInfo( const Vector &vecNearestPoint, const V
 			CPathTrack *pPathTrack = m_pCurrentPathTarget;
 			for ( ; CPathTrack::ValidPath( pPathTrack ); pPathTrack = pPathTrack->GetNext() )
 			{
-				NDebugOverlay::Box( pPathTrack->GetAbsOrigin(), -Vector(2,2,2), Vector(2,2,2), 0,255, 0, 8, 0.1 );
+				NDebugOverlay::Box( pPathTrack->GetAbsOrigin(), -Vector(2,2,2), Vector(2,2,2), 0,255, 0, 8, 0.1f );
 				if ( CPathTrack::ValidPath( pPathTrack->GetNext() ) )
 				{
-					NDebugOverlay::Line( pPathTrack->GetAbsOrigin(), pPathTrack->GetNext()->GetAbsOrigin(), 0,255,0, true, 0.1 );
+					NDebugOverlay::Line( pPathTrack->GetAbsOrigin(), pPathTrack->GetNext()->GetAbsOrigin(), 0,255,0, true, 0.1f );
 				}
 
 				if ( pPathTrack->GetNext() == m_pCurrentPathTarget )

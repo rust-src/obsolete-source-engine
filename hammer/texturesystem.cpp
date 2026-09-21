@@ -293,7 +293,7 @@ IEditorTexture *CTextureSystem::FindActiveTexture(LPCSTR pszInputName, int *piIn
 	//
 	// Check the cache first.
 	//
-	if (m_pLastTex && !stricmp(pszName, m_pLastTex->GetName()))
+	if (m_pLastTex && V_strieq(pszName, m_pLastTex->GetName()))
 	{
 		if (piIndex)
 		{
@@ -373,7 +373,7 @@ IEditorTexture *CTextureSystem::FindActiveTexture(LPCSTR pszInputName, int *piIn
 		for (intp nDummy = 0; nDummy < nDummyCount; nDummy++)
 		{
 			IEditorTexture *pTexDummy = m_pActiveContext->Dummies.Element(nDummy);
-			if (!strcmpi(pszName, pTexDummy->GetName()))
+			if (V_strieq(pszName, pTexDummy->GetName()))
 			{
 				m_pLastTex = pTexDummy;
 				m_nLastIndex = -1;
@@ -487,7 +487,7 @@ void CTextureSystem::SetActiveGroup(const char *pcszName)
 	for (intp i = 0; i < iCount; i++)
 	{
 		CTextureGroup *pGroup = m_pActiveContext->Groups.Element(i);
-		if (!strcmpi(pGroup->GetName(), pcszName))
+		if (V_strieq(pGroup->GetName(), pcszName))
 		{
 			m_pActiveGroup = pGroup;
 			return;
@@ -635,7 +635,7 @@ void CTextureSystem::LoadMaterials(CGameConfig *pConfig)
 	m_pNoDrawTexture = NULL;
 	for ( intp i=0; i < m_Textures.Count(); i++ )
 	{
-		if ( V_stricmp( m_Textures[i]->GetName(), "tools/toolsnodraw" ) == 0 )
+		if ( V_strieq( m_Textures[i]->GetName(), "tools/toolsnodraw" ) )
 		{
 			m_pNoDrawTexture = m_Textures[i];
 			break;
@@ -751,12 +751,12 @@ bool CTextureSystem::GetFileTypeFromFilename( const char *pFilename, CTextureSys
 {
 	char strRight[16];
 	V_StrRight( pFilename, 4, strRight );
-	if ( V_stricmp( strRight, ".vmt" ) == 0 )
+	if ( V_strieq( strRight, ".vmt" ) )
 	{
 		*pFileType = CTextureSystem::k_eFileTypeVMT;
 		return true;
 	}
-	else if ( V_stricmp( strRight, ".vtf" ) == 0 )
+	else if ( V_strieq( strRight, ".vtf" ) )
 	{
 		*pFileType = CTextureSystem::k_eFileTypeVTF;
 		return true;
@@ -814,7 +814,7 @@ static int __cdecl SortTexturesProc(IEditorTexture * const *elem1, IEditorTextur
 	Assert((pElem1 != NULL) && (pElem2 != NULL));
 	if ((pElem1 == NULL) || (pElem2 == NULL))
 	{
-		return(0);
+		return 0;
 	}
 
 	const char *pszName1 = pElem1->GetName();
@@ -829,9 +829,9 @@ static int __cdecl SortTexturesProc(IEditorTexture * const *elem1, IEditorTextur
 		int iFamily = strnicmp(pszName1+2, pszName2, iFamilyLen);
 		if (!iFamily)
 		{
-			return(-1);	// same family - put elem1 before elem2
+			return -1;	// same family - put elem1 before elem2
 		}
-		return(iFamily);	// sort normally
+		return iFamily;	// sort normally
 	}
 	else if (!IsSortChr(ch1) && IsSortChr(ch2))
 	{
@@ -839,9 +839,9 @@ static int __cdecl SortTexturesProc(IEditorTexture * const *elem1, IEditorTextur
 		int iFamily = strnicmp(pszName1, pszName2+2, iFamilyLen);
 		if (!iFamily)
 		{
-			return(1);	// same family - put elem2 before elem1
+			return 1;	// same family - put elem2 before elem1
 		}
-		return(iFamily);	// sort normally
+		return iFamily;	// sort normally
 	}
 	else if (IsSortChr(ch1) && IsSortChr(ch2))
 	{
@@ -855,10 +855,10 @@ static int __cdecl SortTexturesProc(IEditorTexture * const *elem1, IEditorTextur
 		}
 
 		// different family
-		return(iFamily);
+		return iFamily;
 	}
 
-	return(strcmpi(pszName1, pszName2));
+	return strcmpi(pszName1, pszName2);
 }
 
 
@@ -1023,7 +1023,7 @@ DWORD CTextureSystem::LoadGraphicsFile(const char *pFilename)
 	intp i = m_GraphicsFiles.Count() - 1;
 	while (i > -1)
 	{
-		if (!strcmp(m_GraphicsFiles[i].filename, pFilename))
+		if (V_streq(m_GraphicsFiles[i].filename, pFilename))
 		{
 			return(m_GraphicsFiles[i].id);
 		}
@@ -1180,7 +1180,7 @@ void CTextureSystem::RegisterTextureKeywords( IEditorTexture *pTexture )
 			for( intp pos=0; pos < m_Keywords.Count(); pos++ )
 			{
 				const char *pszTest = m_Keywords.Element(pos);
-				if (!stricmp(pszTest, pch))
+				if (V_strieq(pszTest, pch))
 				{
 					bFound = true;
 					break;
@@ -1315,7 +1315,7 @@ IEditorTexture *CTextureGroup::GetTexture( char const* pName )
 {
 	for (intp i = 0; i < m_Textures.Count(); i++)
 	{
-		if (!strcmp(pName, m_Textures[i]->GetName()))
+		if (V_streq(pName, m_Textures[i]->GetName()))
 			return m_Textures[i];
 	}
 

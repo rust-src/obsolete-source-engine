@@ -270,9 +270,9 @@ struct NodeToVisit {
 };
 
 
-static fltx4 FourEpsilons={1.0e-10f,1.0e-10f,1.0e-10f,1.0e-10f};
-static fltx4 FourZeros={1.0e-10f,1.0e-10f,1.0e-10f,1.0e-10f};
-static fltx4 FourNegativeEpsilons={-1.0e-10f,-1.0e-10f,-1.0e-10f,-1.0e-10f};
+static constexpr fltx4 FourEpsilons={1.0e-10f,1.0e-10f,1.0e-10f,1.0e-10f};
+static constexpr fltx4 FourZeros={1.0e-10f,1.0e-10f,1.0e-10f,1.0e-10f};
+static constexpr fltx4 FourNegativeEpsilons={-1.0e-10f,-1.0e-10f,-1.0e-10f,-1.0e-10f};
 
 static float BoxSurfaceArea(Vector const &boxmin, Vector const &boxmax)
 {
@@ -354,7 +354,7 @@ void RayTracingEnvironment::Trace4Rays(const FourRays &rays, fltx4 TMin, fltx4 T
 {
 	rays.Check();
 
-	memset(rslt_out->HitIds,0xff,sizeof(rslt_out->HitIds));
+	BitwiseSet(rslt_out->HitIds,0xff);
 
 	rslt_out->HitDistance=ReplicateX4(1.0e23f);
 
@@ -377,7 +377,7 @@ void RayTracingEnvironment::Trace4Rays(const FourRays &rays, fltx4 TMin, fltx4 T
 		return;												// missed bounding box
 
 	int32 mailboxids[MAILBOX_HASH_SIZE];					// used to avoid redundant triangle tests
-	memset(mailboxids,0xff,sizeof(mailboxids));				// !!speed!! keep around?
+	BitwiseSet(mailboxids,0xff);				// !!speed!! keep around?
 
 	int front_idx[3],back_idx[3];							// based on ray direction, whether to
 															// visit left or right node first

@@ -92,7 +92,7 @@ void CTESmoke::Test( const Vector& current_origin, const QAngle& current_angles 
 IMPLEMENT_SERVERCLASS_ST(CTESmoke, DT_TESmoke)
 	SendPropVector( SENDINFO(m_vecOrigin), -1, SPROP_COORD),
 	SendPropModelIndex( SENDINFO(m_nModelIndex) ),
-	SendPropFloat( SENDINFO(m_fScale ), 8, SPROP_ROUNDDOWN, 0.0, 25.6 ),
+	SendPropFloat( SENDINFO(m_fScale ), 8, SPROP_ROUNDDOWN, 0.0f, 25.6f ),
 	SendPropInt( SENDINFO(m_nFrameRate), 8, SPROP_UNSIGNED ),
 END_SEND_TABLE()
 

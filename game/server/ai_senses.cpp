@@ -30,10 +30,10 @@
 #define AI_PROFILE_SENSES(tag) ((void)0)
 #endif
 
-constexpr inline float AI_STANDARD_NPC_SEARCH_TIME = .25;
-constexpr inline float AI_EFFICIENT_NPC_SEARCH_TIME = .35;
-constexpr inline float AI_HIGH_PRIORITY_SEARCH_TIME = 0.15;
-constexpr inline float AI_MISC_SEARCH_TIME  = 0.45;
+constexpr inline float AI_STANDARD_NPC_SEARCH_TIME = .25f;
+constexpr inline float AI_EFFICIENT_NPC_SEARCH_TIME = .35f;
+constexpr inline float AI_HIGH_PRIORITY_SEARCH_TIME = 0.15f;
+constexpr inline float AI_MISC_SEARCH_TIME  = 0.45f;
 
 //-----------------------------------------------------------------------------
 

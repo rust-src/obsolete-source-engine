@@ -35,48 +35,48 @@ struct MaterialVarMatrix_t
 	bool m_bIsIdent;
 };
 
-class CMaterialVar : public IMaterialVar
+class CMaterialVar final : public IMaterialVar
 {
 public:
 	// stuff from IMaterialVar
-	virtual const char *		GetName( void ) const;
-	virtual MaterialVarSym_t	GetNameAsSymbol() const;
-	virtual void				SetFloatValue( float val );
-	virtual void				SetIntValue( int val );
-	virtual void				SetStringValue( const char *val );
-	virtual const char *		GetStringValue( void ) const;
-	virtual void				SetMatrixValue( VMatrix const& matrix );
-	virtual VMatrix const&		GetMatrixValue( );
-	virtual bool				MatrixIsIdentity( void ) const;
-	virtual void				SetVecValue( const float* pVal, int numComps );
-	virtual void				SetVecValue( float x, float y );
-	virtual void				SetVecValue( float x, float y, float z );
-	virtual void				SetVecValue( float x, float y, float z, float w );
-	void						SetVecValueInternal( const Vector4D &vec, int nComps );
-	virtual void				SetVecComponentValue( float fVal, int nComponent );
-	virtual void				GetLinearVecValue( float *val, int numComps ) const;
-	virtual void				SetFourCCValue( FourCC type, void *pData );
-	virtual void				GetFourCCValue( FourCC *type, void **ppData );
-	virtual int					GetIntValueInternal( void ) const;
-	virtual float				GetFloatValueInternal( void ) const;
-	virtual float const*		GetVecValueInternal( ) const;
-	virtual void				GetVecValueInternal( float *val, int numcomps ) const;
-	virtual int					VectorSizeInternal() const;
+	const char *		GetName( void ) const override;
+	MaterialVarSym_t	GetNameAsSymbol() const override;
+	void				SetFloatValue( float val ) override;
+	void				SetIntValue( int val ) override;
+	void				SetStringValue( const char *val ) override;
+	const char *		GetStringValue( void ) const override;
+	void				SetMatrixValue( VMatrix const& matrix ) override;
+	VMatrix const&		GetMatrixValue( ) override;
+	bool				MatrixIsIdentity( void ) const override;
+	void				SetVecValue( const float* pVal, int numComps ) override;
+	void				SetVecValue( float x, float y ) override;
+	void				SetVecValue( float x, float y, float z ) override;
+	void				SetVecValue( float x, float y, float z, float w ) override;
+	void				SetVecValueInternal( const Vector4D &vec, int nComps );
+	void				SetVecComponentValue( float fVal, int nComponent ) override;
+	void				GetLinearVecValue( float *val, int numComps ) const override;
+	void				SetFourCCValue( FourCC type, void *pData ) override;
+	void				GetFourCCValue( FourCC *type, void **ppData ) override;
+	int					GetIntValueInternal( void ) const override;
+	float				GetFloatValueInternal( void ) const override;
+	float const*		GetVecValueInternal( ) const override;
+	void				GetVecValueInternal( float *val, int numcomps ) const override;
+	int					VectorSizeInternal() const override;
 
 	// revisit: is this a good interface for textures?
 
-	virtual ITexture *			GetTextureValue( void );
-	virtual void				SetTextureValue( ITexture * );
-	void						SetTextureValueQueued( ITexture *texture );
+	ITexture *			GetTextureValue( void ) override;
+	void				SetTextureValue( ITexture * ) override;
+	void				SetTextureValueQueued( ITexture *texture );
 
-	virtual IMaterial *			GetMaterialValue( void );
-	virtual void				SetMaterialValue( IMaterial * );
+	IMaterial *			GetMaterialValue( void ) override;
+	void				SetMaterialValue( IMaterial * ) override;
 
-	virtual 					operator ITexture *() { return GetTextureValue(); }
-	virtual bool				IsDefined() const;
-	virtual void				SetUndefined();
+	virtual 			operator ITexture *() { return GetTextureValue(); }
+	bool				IsDefined() const override;
+	void				SetUndefined() override;
 
-	virtual void				CopyFrom( IMaterialVar *pMaterialVar );
+	void				CopyFrom( IMaterialVar *pMaterialVar ) override;
 
 	FORCEINLINE void Init( void )
 	{
@@ -99,9 +99,9 @@ public:
 	CMaterialVar( IMaterial* pMaterial, const char *key );
 	virtual ~CMaterialVar();
 
-	virtual void			SetValueAutodetectType( const char *val );
+	void			SetValueAutodetectType( const char *val ) override;
 
-	virtual IMaterial *		GetOwningMaterial() { return m_pMaterial; }
+	IMaterial *		GetOwningMaterial() override { return m_pMaterial; }
 
 private:
 	// Cleans up material var data
@@ -290,7 +290,7 @@ MaterialVarSym_t IMaterialVar::FindSymbol( const char* pName )
 
 bool IMaterialVar::SymbolMatches( const char* pName, MaterialVarSym_t symbol )
 {
-	return !Q_stricmp( s_MaterialVarSymbols.String(symbol), pName );
+	return V_strieq( s_MaterialVarSymbols.String(symbol), pName );
 }
 
 
@@ -348,9 +348,7 @@ CMaterialVar::CMaterialVar( IMaterial* pMaterial, const char *pKey, const char *
 	m_pMaterial = static_cast<IMaterialInternal*>(pMaterial);
 	m_Name = GetSymbol( pKey );
 	Assert( m_Name != UTL_INVAL_SYMBOL );
-	intp len = Q_strlen( pVal ) + 1;
-	m_pStringVal = new char[ len ];
-	Q_strncpy( m_pStringVal, pVal, len );
+	m_pStringVal = V_strdup( pVal );
 	m_Type = MATERIAL_VAR_TYPE_STRING;
 	// dimhotepus: atof -> V_atof.
 	m_VecVal[0] = m_VecVal[1] = m_VecVal[2] = m_VecVal[3] = V_atof( m_pStringVal );
@@ -584,7 +582,7 @@ int	CMaterialVar::VectorSizeInternal() const
 }
 
 // Don't want to be grabbing the dummy var and changing it's value.  That usually means badness.
-#define ASSERT_NOT_DUMMY_VAR()	AssertMsg( m_bFakeMaterialVar || ( V_stricmp( GetName(), "$dummyvar" ) != 0 ), "TRYING TO MODIFY $dummyvar, WHICH IS BAD, MMMKAY!" )
+#define ASSERT_NOT_DUMMY_VAR()	AssertMsg( m_bFakeMaterialVar || !V_strieq( GetName(), "$dummyvar" ), "TRYING TO MODIFY $dummyvar, WHICH IS BAD, MMMKAY!" )
 
 //-----------------------------------------------------------------------------
 // float
@@ -736,17 +734,24 @@ const char *CMaterialVar::GetStringValue( void ) const
 
 	case MATERIAL_VAR_TYPE_TEXTURE:
 		// check for env_cubemap
-		if( IsTextureInternalEnvCubemap( m_pTexture ) )
+		if ( IsTextureInternalEnvCubemap( m_pTexture ) )
 		{
 			return "env_cubemap";
 		}
 		else
 		{
-			Q_snprintf( s_CharBuf, sizeof( s_CharBuf ), "%s", m_pTexture->GetName() );
+			V_strcpy_safe( s_CharBuf, m_pTexture->GetName() );
 			return s_CharBuf;
 		}
 	case MATERIAL_VAR_TYPE_MATERIAL:
-		Q_snprintf( s_CharBuf, sizeof( s_CharBuf ), "%s", ( m_pMaterialValue ? m_pMaterialValue->GetName() : "" ) );
+		if ( m_pMaterialValue )
+		{
+			V_strcpy_safe( s_CharBuf, m_pMaterialValue->GetName() );
+		}
+		else
+		{
+			s_CharBuf[0] = '\0';
+		}
 		return s_CharBuf;
 
 	case MATERIAL_VAR_TYPE_UNDEFINED:
@@ -779,11 +784,10 @@ void CMaterialVar::SetStringValue( const char *val )
 		g_pShaderAPI->FlushBufferedPrimitives();
 
 	CleanUpData();
-	intp len = Q_strlen( val ) + 1;
-	m_pStringVal = new char[len];
-	Q_strncpy( m_pStringVal, val, len );
+	m_pStringVal = V_strdup( val );
 	m_Type = MATERIAL_VAR_TYPE_STRING;
-	m_intVal = atoi( val );
+	// dimhotepus: atoi -> V_atoi.
+	m_intVal = V_atoi( val );
 	// dimhotepus: atof -> V_atof.
 	m_VecVal[0] = m_VecVal[1] = m_VecVal[2] = m_VecVal[3] = V_atof( m_pStringVal );
 	VarChanged();

@@ -140,7 +140,7 @@ bool CVGuiSystemModuleLoader::LoadPlatformModules(CreateInterfaceFn *factorylist
 		const char *pchInterface = it->GetString("interface");
 
 		// don't load friends if we are using Steam Community
-		if ( !Q_stricmp( pchInterface, "VGuiModuleTracker001" ) && bSteamCommunityFriendsVersion )
+		if ( V_strieq( pchInterface, "VGuiModuleTracker001" ) && bSteamCommunityFriendsVersion )
 			continue;
 
 		// get copy out of steam cache
@@ -207,6 +207,10 @@ void CVGuiSystemModuleLoader::ShutdownPlatformModules()
 	{
 		vgui::ivgui()->PostMessage(m.moduleInterface->GetPanel(), new KeyValues("Command", "command", "Quit"), NULL);
 	}
+
+	// dimhotepus: Give panels a chance to settle so things
+	//  Marked for deletion will actually get deleted
+	vgui::ivgui()->RunFrame();
 
 	for ( auto &m : m_Modules )
 	{
@@ -316,7 +320,7 @@ bool CVGuiSystemModuleLoader::ActivateModule(const char *moduleName)
 {
 	for (int i = 0; i < GetModuleCount(); i++)
 	{
-		if (!stricmp(GetModuleLabel(i), moduleName) || !stricmp(m_Modules[i].data->GetName(), moduleName))
+		if (V_strieq(GetModuleLabel(i), moduleName) || V_strieq(m_Modules[i].data->GetName(), moduleName))
 		{
 			ActivateModule(i);
 			return true;

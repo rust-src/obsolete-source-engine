@@ -170,7 +170,7 @@ static RecvTable* FindRecvTable( const char *pName, RecvTable **pRecvTables, int
 {
 	for ( int i=0; i< nRecvTables; i++ )
 	{
-		if ( !Q_strcmp( pName, pRecvTables[i]->GetName() ) )
+		if ( V_streq( pName, pRecvTables[i]->GetName() ) )
 			return pRecvTables[i];
 	}
 
@@ -192,7 +192,7 @@ static RecvTable* AddRecvTableR( SendTable *sendt, RecvTable **pRecvTables, int 
 		{
 			// copy property data
 
-			SendProp * sp = sendt->GetProp( i );
+			const SendProp * sp = sendt->GetProp( i );
 			RecvProp * rp = &receiveProps[i];
 
 			rp->m_pVarName	= sp->m_pVarName;
@@ -687,7 +687,7 @@ Vector CReplayServer::GetOriginFromPackedEntity(PackedEntity* pe)
 	{
 		SendProp *pProp = pSendTable->GetProp( i );
 
-		if ( Q_strcmp( pProp->GetName(), "m_vecOrigin" ) == 0 )
+		if ( V_streq( pProp->GetName(), "m_vecOrigin" ) )
 		{
 			Assert( pProp->GetType() == DPT_Vector );
 		

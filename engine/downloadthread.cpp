@@ -549,7 +549,8 @@ int Q_StrTrim( char *pStr )
 	char *pDest = pStr;
 	
 	// skip white space at the beginning
-	while ( *pSource != 0 && isspace( *pSource ) )
+	// dimhotepus: isspace -> V_isspace.
+	while ( *pSource != 0 && V_isspace( *pSource ) )
 	{
 		pSource++;
 	}
@@ -560,7 +561,8 @@ int Q_StrTrim( char *pStr )
 	while ( *pSource != 0 )
 	{
 		*pDest = *pSource++;
-		if ( isspace( *pDest ) )
+		// dimhotepus: isspace -> V_isspace.
+		if ( V_isspace( *pDest ) )
 		{
 			if ( pLastWhiteBlock == NULL )
 				pLastWhiteBlock = pDest;
@@ -796,7 +798,7 @@ void SetProxiesForURL( CURL *hMasterCURL, const char *pszURL )
 #warning "CHTTPDownloadThread doesn't know how to set proxy config"
 #endif
 	
-	if ( rgchProxyHost[0] == '\0' || uProxyPort <= 0 )
+	if ( Q_isempty( rgchProxyHost ) || uProxyPort <= 0 )
 	{
 		if ( pszProxyExceptionList )
 			free( pszProxyExceptionList );

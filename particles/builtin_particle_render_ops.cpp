@@ -164,7 +164,8 @@ void C_OP_RenderPoints::Render( IMatRenderContext *pRenderContext, CParticleColl
 		for( int i = 0; i < nParticlesInBatch; i++ )
 		{
 			int hParticle = (--pRenderList)->m_nIndex;
-			int nIndex = ( hParticle / 4 ) * xyz_stride;
+			// dimhotepus: int -> size_t.
+			size_t nIndex = ( hParticle / 4 ) * xyz_stride;
 			int nOffset = hParticle & 0x3;
 			meshBuilder.Position3f( SubFloat( xyz[nIndex], nOffset ), SubFloat( xyz[nIndex+1], nOffset ), SubFloat( xyz[nIndex+2], nOffset ) );
 			meshBuilder.Color4ub( 255, 255, 255, 255 );
@@ -274,7 +275,8 @@ class C_OP_RenderSprites : public C_OP_RenderPoints
 	virtual void InitParams( CParticleSystemDefinition *pDef, CDmxElement *pElement );
 	virtual int GetParticlesToRender( CParticleCollection *pParticles, void *pContext, int nFirstParticle, int nRemainingVertices, int nRemainingIndices, int *pVertsUsed, int *pIndicesUsed ) const;
 	virtual void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, void *pContext ) const;
-	virtual void RenderUnsorted( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, int nVertexOffset, int nFirstParticle, int nParticleCount ) const;
+	// dimhotepus: int -> unsigned short.
+	virtual void RenderUnsorted( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, unsigned short nVertexOffset, int nFirstParticle, int nParticleCount ) const;
 	void RenderSpriteCard( CMeshBuilder &meshBuilder, C_OP_RenderSpritesContext_t *pCtx, SpriteRenderInfo_t& info, int hParticle, ParticleRenderData_t const *pSortList, Vector *pCamera ) const;
 	void RenderTwoSequenceSpriteCard( CMeshBuilder &meshBuilder, C_OP_RenderSpritesContext_t *pCtx, SpriteRenderInfo_t& info, int hParticle, ParticleRenderData_t const *pSortList, Vector *pCamera ) const;
 
@@ -282,11 +284,13 @@ class C_OP_RenderSprites : public C_OP_RenderPoints
 
 	void RenderNonSpriteCardZRotating( CMeshBuilder &meshBuilder, C_OP_RenderSpritesContext_t *pCtx, SpriteRenderInfo_t& info, int hParticle, const Vector& vecCameraPos, ParticleRenderData_t const *pSortList ) const;
 	void RenderNonSpriteCardZRotating( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, IMaterial *pMaterial ) const;
-	void RenderUnsortedNonSpriteCardZRotating( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, int nVertexOffset, int nFirstParticle, int nParticleCount ) const;
+	// dimhotepus: int -> unsigned short.
+	void RenderUnsortedNonSpriteCardZRotating( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, unsigned short nVertexOffset, int nFirstParticle, int nParticleCount ) const;
 
 	void RenderNonSpriteCardOriented( CMeshBuilder &meshBuilder, C_OP_RenderSpritesContext_t *pCtx, SpriteRenderInfo_t& info, int hParticle, const Vector& vecCameraPos, ParticleRenderData_t const *pSortList, bool bUseYaw ) const;
 	void RenderNonSpriteCardOriented( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, IMaterial *pMaterial, bool bUseYaw ) const;
-	void RenderUnsortedNonSpriteCardOriented( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, int nVertexOffset, int nFirstParticle, int nParticleCount ) const;
+	// dimhotepus: int -> unsigned short.
+	void RenderUnsortedNonSpriteCardOriented( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, unsigned short nVertexOffset, int nFirstParticle, int nParticleCount ) const;
 
 	// cycles per second
 	float	m_flAnimationRate;
@@ -427,7 +431,8 @@ void C_OP_RenderSprites::RenderNonSpriteCardCameraFacing( CParticleCollection *p
 			if ( ac == 0 )
 				continue;
 
-			int nColorIndex = nGroup * rgb_stride;
+			// dimhotepus: int -> size_t.
+			size_t nColorIndex = nGroup * rgb_stride;
 			float r = SubFloat( pRGB[nColorIndex], nOffset );
 			float g = SubFloat( pRGB[nColorIndex+1], nOffset );
 			float b = SubFloat( pRGB[nColorIndex+2], nOffset );
@@ -442,7 +447,8 @@ void C_OP_RenderSprites::RenderNonSpriteCardCameraFacing( CParticleCollection *p
 
 			float rad = pSortList->m_flRadius;
 
-			int nXYZIndex = nGroup * xyz_stride;
+			// dimhotepus: int -> size_t.
+			size_t nXYZIndex = nGroup * xyz_stride;
 			Vector vecWorldPos( SubFloat( xyz[ nXYZIndex ], nOffset ), SubFloat( xyz[ nXYZIndex+1 ], nOffset ), SubFloat( xyz[ nXYZIndex+2 ], nOffset ) );
 
 			// Move the Particle if their is a camerabias
@@ -538,7 +544,8 @@ void C_OP_RenderSprites::RenderNonSpriteCardZRotating( CMeshBuilder &meshBuilder
 	bool bCameraBias = ( &pCtx->m_VisibilityData )->m_flCameraBias != 0.0f;
 	float flCameraBias = ( &pCtx->m_VisibilityData )->m_flCameraBias;
 
-	int nColorIndex = nGroup * info.m_nRGBStride;
+	// dimhotepus: int -> size_t.
+	size_t nColorIndex = nGroup * info.m_nRGBStride;
 	float r = SubFloat( info.m_pRGB[nColorIndex], nOffset );
 	float g = SubFloat( info.m_pRGB[nColorIndex+1], nOffset );
 	float b = SubFloat( info.m_pRGB[nColorIndex+2], nOffset );
@@ -557,7 +564,8 @@ void C_OP_RenderSprites::RenderNonSpriteCardZRotating( CMeshBuilder &meshBuilder
 	float ca = (float)cos(-rot);
 	float sa = (float)sin(-rot);
 
-	int nXYZIndex = nGroup * info.m_nXYZStride;
+	// dimhotepus: int -> size_t.
+	size_t nXYZIndex = nGroup * info.m_nXYZStride;
 	Vector vecWorldPos( SubFloat( info.m_pXYZ[ nXYZIndex ], nOffset ), SubFloat( info.m_pXYZ[ nXYZIndex+1 ], nOffset ), SubFloat( info.m_pXYZ[ nXYZIndex+2 ], nOffset ) );
 
 	// Move the Particle if their is a camerabias
@@ -677,7 +685,8 @@ void C_OP_RenderSprites::RenderNonSpriteCardZRotating( CParticleCollection *pPar
 	}
 }
 
-void C_OP_RenderSprites::RenderUnsortedNonSpriteCardZRotating( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, int nVertexOffset, int nFirstParticle, int nParticleCount ) const
+// dimhotepus: int -> unsigned short.
+void C_OP_RenderSprites::RenderUnsortedNonSpriteCardZRotating( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, unsigned short nVertexOffset, int nFirstParticle, int nParticleCount ) const
 {
 	C_OP_RenderSpritesContext_t *pCtx = reinterpret_cast<C_OP_RenderSpritesContext_t *>( pContext );
 	// NOTE: This is interesting to support because at first we won't have all the various
@@ -717,7 +726,8 @@ void C_OP_RenderSprites::RenderNonSpriteCardOriented(
 	bool bCameraBias = ( &pCtx->m_VisibilityData )->m_flCameraBias != 0.0f;
 	float flCameraBias = ( &pCtx->m_VisibilityData )->m_flCameraBias;
 
-	int nColorIndex = nGroup * info.m_nRGBStride;
+	// dimhotepus: int -> size_t.
+	size_t nColorIndex = nGroup * info.m_nRGBStride;
 	float r = SubFloat( info.m_pRGB[nColorIndex], nOffset );
 	float g = SubFloat( info.m_pRGB[nColorIndex+1], nOffset );
 	float b = SubFloat( info.m_pRGB[nColorIndex+2], nOffset );
@@ -736,7 +746,8 @@ void C_OP_RenderSprites::RenderNonSpriteCardOriented(
 	float ca = (float)cos(-rot);
 	float sa = (float)sin(-rot);
 
-	int nXYZIndex = nGroup * info.m_nXYZStride;
+	// dimhotepus: int -> size_t.
+	size_t nXYZIndex = nGroup * info.m_nXYZStride;
 	Vector vecWorldPos( SubFloat( info.m_pXYZ[ nXYZIndex ], nOffset ), SubFloat( info.m_pXYZ[ nXYZIndex+1 ], nOffset ), SubFloat( info.m_pXYZ[ nXYZIndex+2 ], nOffset ) );
 
 	// Move the Particle if their is a camerabias
@@ -880,8 +891,8 @@ void C_OP_RenderSprites::RenderNonSpriteCardOriented( CParticleCollection *pPart
 		pMesh->Draw();
 	}
 }
-
-void C_OP_RenderSprites::RenderUnsortedNonSpriteCardOriented( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, int nVertexOffset, int nFirstParticle, int nParticleCount ) const
+// dimhotepus: int -> unsigned short.
+void C_OP_RenderSprites::RenderUnsortedNonSpriteCardOriented( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, unsigned short nVertexOffset, int nFirstParticle, int nParticleCount ) const
 {
 	C_OP_RenderSpritesContext_t *pCtx = reinterpret_cast<C_OP_RenderSpritesContext_t *>( pContext );
 	// NOTE: This is interesting to support because at first we won't have all the various
@@ -909,7 +920,8 @@ void C_OP_RenderSprites::RenderSpriteCard( CMeshBuilder &meshBuilder, C_OP_Rende
 	int nGroup = hParticle / 4;
 	int nOffset = hParticle & 0x3;
 
-	int nColorIndex = nGroup * info.m_nRGBStride;
+	// dimhotepus: int -> size_t.
+	size_t nColorIndex = nGroup * info.m_nRGBStride;
 	float r = SubFloat( info.m_pRGB[nColorIndex], nOffset );
 	float g = SubFloat( info.m_pRGB[nColorIndex+1], nOffset );
 	float b = SubFloat( info.m_pRGB[nColorIndex+2], nOffset );
@@ -936,7 +948,8 @@ void C_OP_RenderSprites::RenderSpriteCard( CMeshBuilder &meshBuilder, C_OP_Rende
 	float rot = SubFloat( info.m_pRot[ nGroup * info.m_nRotStride ], nOffset );
 	float yaw = SubFloat( info.m_pYaw[ nGroup * info.m_nYawStride ], nOffset );
 
-	int nXYZIndex = nGroup * info.m_nXYZStride;
+	// dimhotepus: int -> size_t.
+	size_t nXYZIndex = nGroup * info.m_nXYZStride;
 	Vector vecWorldPos;
 	vecWorldPos.x = SubFloat( info.m_pXYZ[ nXYZIndex ], nOffset );
 	vecWorldPos.y = SubFloat( info.m_pXYZ[ nXYZIndex+1 ], nOffset );
@@ -1032,7 +1045,8 @@ void C_OP_RenderSprites::RenderTwoSequenceSpriteCard( CMeshBuilder &meshBuilder,
 	int nGroup = hParticle / 4;
 	int nOffset = hParticle & 0x3;
 
-	int nColorIndex = nGroup * info.m_nRGBStride;
+	// dimhotepus: int -> size_t.
+	size_t nColorIndex = nGroup * info.m_nRGBStride;
 	float r = SubFloat( info.m_pRGB[nColorIndex], nOffset );
 	float g = SubFloat( info.m_pRGB[nColorIndex+1], nOffset );
 	float b = SubFloat( info.m_pRGB[nColorIndex+2], nOffset );
@@ -1053,7 +1067,8 @@ void C_OP_RenderSprites::RenderTwoSequenceSpriteCard( CMeshBuilder &meshBuilder,
 	float rot = SubFloat( info.m_pRot[ nGroup * info.m_nRotStride ], nOffset );
 	float yaw = SubFloat( info.m_pYaw[ nGroup * info.m_nYawStride ], nOffset );
 
-	int nXYZIndex = nGroup * info.m_nXYZStride;
+	// dimhotepus: int -> size_t.
+	size_t nXYZIndex = nGroup * info.m_nXYZStride;
 	Vector vecWorldPos;
 	vecWorldPos.x = SubFloat( info.m_pXYZ[ nXYZIndex ], nOffset );
 	vecWorldPos.y = SubFloat( info.m_pXYZ[ nXYZIndex+1 ], nOffset );
@@ -1277,8 +1292,8 @@ void C_OP_RenderSprites::Render( IMatRenderContext *pRenderContext, CParticleCol
 	}
 }
 
-
-void C_OP_RenderSprites::RenderUnsorted( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, int nVertexOffset, int nFirstParticle, int nParticleCount ) const
+// dimhotepus: int -> unsigned short.
+void C_OP_RenderSprites::RenderUnsorted( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, unsigned short nVertexOffset, int nFirstParticle, int nParticleCount ) const
 {
 	if ( !pParticles->m_pDef->GetMaterial()->IsSpriteCard() )
 	{
@@ -1342,7 +1357,8 @@ struct SpriteTrailRenderInfo_t : public SpriteRenderInfo_t
 	// size_t m_nCreationTimeStride;
 
 
-	void Init( CParticleCollection *pParticles, int nVertexOffset, float flAgeScale, CSheet *pSheet )
+	// dimhotepus: int -> unsigned short.
+	void Init( CParticleCollection *pParticles, unsigned short nVertexOffset, float flAgeScale, CSheet *pSheet )
 	{
 		SpriteRenderInfo_t::Init( pParticles, nVertexOffset, flAgeScale, 0, pSheet );
 		m_pParticles = pParticles;
@@ -1396,7 +1412,8 @@ class C_OP_RenderSpritesTrail : public CParticleRenderOperatorInstance
 
 	virtual int GetParticlesToRender( CParticleCollection *pParticles, void *pContext, int nFirstParticle, int nRemainingVertices, int nRemainingIndices, int *pVertsUsed, int *pIndicesUsed ) const ;
 	virtual void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, void *pContext ) const;
-	virtual void RenderUnsorted( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, int nVertexOffset, int nFirstParticle, int nParticleCount ) const;
+	// dimhotepus: int -> unsigned short.
+	virtual void RenderUnsorted( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, unsigned short nVertexOffset, int nFirstParticle, int nParticleCount ) const;
 
 	void RenderSpriteTrail( CMeshBuilder &meshBuilder, SpriteTrailRenderInfo_t& info, int hParticle, const Vector &vecCameraPos, float flOODt, ParticleRenderData_t const *pSortlist ) const;
 
@@ -1446,7 +1463,8 @@ void C_OP_RenderSpritesTrail::RenderSpriteTrail( CMeshBuilder &meshBuilder,
 		return;
 
 	// Setup our colors
-	int nColorIndex = nGroup * info.m_nRGBStride;
+	// dimhotepus: int -> size_t.
+	size_t nColorIndex = nGroup * info.m_nRGBStride;
 	float r = SubFloat( info.m_pRGB[nColorIndex], nOffset );
 	float g = SubFloat( info.m_pRGB[nColorIndex+1], nOffset );
 	float b = SubFloat( info.m_pRGB[nColorIndex+2], nOffset );
@@ -1475,17 +1493,20 @@ void C_OP_RenderSpritesTrail::RenderSpriteTrail( CMeshBuilder &meshBuilder,
 
 	const SequenceSampleTextureCoords_t *pSample0 = &(pSample->m_TextureCoordData[0]);
 
-	int nCreationTimeIndex = nGroup * info.m_nCreationTimeStride;
+	// dimhotepus: int -> size_t.
+	size_t nCreationTimeIndex = nGroup * info.m_nCreationTimeStride;
 	float flAge = info.m_pParticles->m_flCurTime - SubFloat( info.m_pCreationTimeStamp[ nCreationTimeIndex ], nOffset );
 
 	float flLengthScale = ( flAge >= m_flLengthFadeInTime ) ? 1.0f : ( flAge / m_flLengthFadeInTime );
 
-	int nXYZIndex = nGroup * info.m_nXYZStride;
+	// dimhotepus: int -> size_t.
+	size_t nXYZIndex = nGroup * info.m_nXYZStride;
 	Vector vecWorldPos( SubFloat( info.m_pXYZ[ nXYZIndex ], nOffset ), SubFloat( info.m_pXYZ[ nXYZIndex+1 ], nOffset ), SubFloat( info.m_pXYZ[ nXYZIndex+2 ], nOffset ) );
 	Vector vecViewPos = vecWorldPos;
 
 	// Get our screenspace last position
-	int nPrevXYZIndex = nGroup * info.m_nPrevXYZStride;
+	// dimhotepus: int -> size_t.
+	size_t nPrevXYZIndex = nGroup * info.m_nPrevXYZStride;
 	Vector vecPrevWorldPos( SubFloat( info.m_pPrevXYZ[ nPrevXYZIndex ], nOffset ), SubFloat( info.m_pPrevXYZ[ nPrevXYZIndex+1 ], nOffset ), SubFloat( info.m_pPrevXYZ[ nPrevXYZIndex+2 ], nOffset ) );
 	Vector vecPrevViewPos = vecPrevWorldPos;
 
@@ -1604,8 +1625,8 @@ void C_OP_RenderSpritesTrail::Render( IMatRenderContext *pRenderContext, CPartic
 		pMesh->Draw();
 	}
 }
-
-void C_OP_RenderSpritesTrail::RenderUnsorted( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, int nVertexOffset, int nFirstParticle, int nParticleCount ) const
+// dimhotepus: int -> unsigned short.
+void C_OP_RenderSpritesTrail::RenderUnsorted( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, unsigned short nVertexOffset, int nFirstParticle, int nParticleCount ) const
 {
 	C_OP_RenderSpriteTrailContext_t *pCtx = reinterpret_cast<C_OP_RenderSpriteTrailContext_t *>( pContext );
 	// NOTE: This is interesting to support because at first we won't have all the various
@@ -1660,8 +1681,9 @@ struct RopeRenderInfo_t
 		int nGroup = hParticle / 4;
 		int nOffset = hParticle & 0x3;
 
-		int nXYZIndex = nGroup * m_nXYZStride;
-		int nColorIndex = nGroup * m_nRGBStride;
+		// dimhotepus: int -> size_t.
+		size_t nXYZIndex = nGroup * m_nXYZStride;
+		size_t nColorIndex = nGroup * m_nRGBStride;
 		seg.m_vPos.Init( SubFloat( m_pXYZ[ nXYZIndex ], nOffset ), SubFloat( m_pXYZ[ nXYZIndex+1 ], nOffset ), SubFloat( m_pXYZ[ nXYZIndex+2 ], nOffset ) );
 		seg.m_vColor.Init( SubFloat( m_pRGB[ nColorIndex ], nOffset ), SubFloat( m_pRGB[ nColorIndex+1 ], nOffset ), SubFloat( m_pRGB[nColorIndex+2], nOffset ) );
 		seg.m_flAlpha = SubFloat( m_pAlpha[ nGroup * m_nAlphaStride ], nOffset );
@@ -1876,7 +1898,8 @@ void C_OP_RenderRope::RenderSpriteCard( CParticleCollection *pParticles, void *p
 		vecP3.Init( pXYZ[2], pXYZ[6], pXYZ[10], pRadius[2] );
 	}
 	int nPnt = 3;
-	int nCurIDX = 0;
+	// dimhotepus: int -> unsigned short.
+	unsigned short nCurIDX = 0;
 
 	int nSegmentsAvailableInBuffer = nNumSegmentsIWillRenderPerBatch;
 
@@ -2059,7 +2082,8 @@ void C_OP_RenderRope::RenderUnsorted( CParticleCollection *pParticles, void *pCo
 	{
 		int nGroup = ( nFirstParticle-1 ) / 4;
 		int nOffset = ( nFirstParticle-1 ) & 0x3;
-		int nXYZIndex = nGroup * info.m_nXYZStride;
+		// dimhotepus: int -> size_t.
+		size_t nXYZIndex = nGroup * info.m_nXYZStride;
 		vecCatmullRom[0].Init( SubFloat( info.m_pXYZ[ nXYZIndex ], nOffset ), SubFloat( info.m_pXYZ[ nXYZIndex+1 ], nOffset ), SubFloat( info.m_pXYZ[ nXYZIndex+2 ], nOffset ) );
 	}
 
@@ -2080,7 +2104,8 @@ void C_OP_RenderRope::RenderUnsorted( CParticleCollection *pParticles, void *pCo
 			{
 				int nGroup = ( hParticle+1 ) / 4;
 				int nOffset = ( hParticle+1 ) & 0x3;
-				int nXYZIndex = nGroup * info.m_nXYZStride;
+				// dimhotepus: int -> size_t.
+				size_t nXYZIndex = nGroup * info.m_nXYZStride;
 				vecCatmullRom[ (i+2) & 0x3 ].Init( SubFloat( info.m_pXYZ[ nXYZIndex ], nOffset ), SubFloat( info.m_pXYZ[ nXYZIndex+1 ], nOffset ), SubFloat( info.m_pXYZ[ nXYZIndex+2 ], nOffset ) );
 			}
 			else
@@ -2379,7 +2404,8 @@ void C_OP_RenderScreenVelocityRotate::Render( IMatRenderContext *pRenderContext,
 		int nGroup = ( hParticle / 4 );
 		int nOffset = hParticle & 0x3;
 
-		int nXYZIndex = nGroup * xyz_stride;
+		// dimhotepus: int -> size_t.
+		size_t nXYZIndex = nGroup * xyz_stride;
 		Vector vecWorldPos( SubFloat( xyz[ nXYZIndex ], nOffset ), SubFloat( xyz[ nXYZIndex+1 ], nOffset ), SubFloat( xyz[ nXYZIndex+2 ], nOffset ) );
 		Vector vecViewPos;
 		Vector3DMultiplyPosition( tempView, vecWorldPos, vecViewPos );
@@ -2387,7 +2413,8 @@ void C_OP_RenderScreenVelocityRotate::Render( IMatRenderContext *pRenderContext,
 		if (!IsFinite(vecViewPos.x))
 			continue;
 
-		int nPrevXYZIndex = nGroup * prev_xyz_stride;
+		// dimhotepus: int -> size_t.
+		size_t nPrevXYZIndex = nGroup * prev_xyz_stride;
 		Vector vecPrevWorldPos( SubFloat( prev_xyz[ nPrevXYZIndex ], nOffset ), SubFloat( prev_xyz[ nPrevXYZIndex+1 ], nOffset ), SubFloat( prev_xyz[ nPrevXYZIndex+2 ], nOffset ) );
 		Vector vecPrevViewPos;
 		Vector3DMultiplyPosition( tempView, vecPrevWorldPos, vecPrevViewPos );

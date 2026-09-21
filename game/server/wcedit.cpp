@@ -252,7 +252,7 @@ DoneCreate:
 	// ----------------------------------------------------------
 	if (!bPositionValid)
 	{
-		NDebugOverlay::Box(vNewNodePos, NAI_Hull::Mins(hullType), NAI_Hull::Maxs(hullType), 255,0,0,0,0.1);
+		NDebugOverlay::Box(vNewNodePos, NAI_Hull::Mins(hullType), NAI_Hull::Maxs(hullType), 255,0,0,0,0.1f);
 	}
 
 	// Restore player collidability

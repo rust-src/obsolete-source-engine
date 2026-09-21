@@ -498,7 +498,7 @@ void CTFGameStats::SendStatsToPlayer( CTFPlayer *pPlayer, bool bIsAlive )
 	for ( int i = 0; i < GetItemSchema()->GetMapCount(); i++ )
 	{
 		const MapDef_t *pMapDef = GetItemSchema()->GetMasterMapDefByIndex( i );
-		if ( V_strcmp( pMapDef->pszMapName, gpGlobals->mapname.ToCStr() ) == 0 )
+		if ( V_streq( pMapDef->pszMapName, gpGlobals->mapname.ToCStr() ) )
 		{
 			iStat = 0;
 			iSendBits = 0;
@@ -639,7 +639,7 @@ void CTFGameStats::Event_PlayerSpawned( CTFPlayer *pPlayer )
 	// calculate peak player count on each team
 	for ( iTeam = FIRST_GAME_TEAM; iTeam < TF_TEAM_COUNT; iTeam++ )
 	{
-		int iPlayerCount = GetGlobalTeam( iTeam )->GetNumPlayers();
+		intp iPlayerCount = GetGlobalTeam( iTeam )->GetNumPlayers();
 		if ( iPlayerCount > map->m_iPeakPlayerCount[iTeam] )
 		{
 			map->m_iPeakPlayerCount[iTeam] = iPlayerCount;
@@ -1804,10 +1804,10 @@ bool CTFGameStats::GetVoteData( const char *szIssueName, int nNumOptions, CUtlVe
 			const char *szItemName = m_MapsPlaytime.Key( iIndex ).Get();
 			int nItemTime = m_MapsPlaytime.Element( iIndex );
 			// Exclude the next map (already added) and the current map (omitted)
-			if ( Q_strcmp( szItemName, m_szNextMap ) != 0 &&
-				 Q_strcmp( szItemName, STRING( gpGlobals->mapname ) ) != 0 )
+			if ( !V_streq( szItemName, m_szNextMap ) &&
+				 !V_streq( szItemName, STRING( gpGlobals->mapname ) ) )
 			{
-				int iVec = vecMapsAndPlaytime.AddToTail();
+				intp iVec = vecMapsAndPlaytime.AddToTail();
 				vecMapsAndPlaytime[ iVec ].szName = szItemName;
 				vecMapsAndPlaytime[ iVec ].nTime = nItemTime;
 			}
@@ -2107,7 +2107,7 @@ void CTFGameStats::SW_GameStats_WriteRound( int iWinningTeam, bool bFullRound, i
 
 	for ( int iTeam = FIRST_GAME_TEAM; iTeam < TF_TEAM_COUNT; iTeam++ )
 	{
-		int iPlayerCount = GetGlobalTeam( iTeam )->GetNumPlayers();
+		intp iPlayerCount = GetGlobalTeam( iTeam )->GetNumPlayers();
 		if ( iPlayerCount == 0 )
 			continue;
 		switch ( iTeam )

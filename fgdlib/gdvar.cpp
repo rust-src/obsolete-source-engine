@@ -241,7 +241,7 @@ BOOL GDinputvariable::InitFromTokens(TokenReader& tr)
 	trtoken_t ttype = tr.NextToken(szToken);
 	if (ttype == OPERATOR)
 	{
-		if (!strcmp(szToken, "*"))
+		if (V_streq(szToken, "*"))
 		{
 			m_bReportable = true;
 		}
@@ -759,7 +759,7 @@ const char *GDinputvariable::ItemStringForValue(const char *szValue) const
 {
 	for (const auto &i : m_Items)
 	{
-		if (!stricmp(i.szValue, szValue))
+		if (V_strieq(i.szValue, szValue))
 		{
 			return(i.szCaption);
 		}
@@ -779,7 +779,7 @@ const char *GDinputvariable::ItemValueForString(const char *szString) const
 {
 	for (const auto &i : m_Items)
 	{
-		if (!strcmpi(i.szCaption, szString))
+		if (V_strieq(i.szCaption, szString))
 		{
 			return(i.szValue);
 		}

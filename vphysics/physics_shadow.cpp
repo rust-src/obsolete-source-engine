@@ -784,7 +784,7 @@ void GetObjectPosition_IVP( IVP_U_Point &origin, IVP_Real_Object *pivp )
 }
 
 
-bool IsZeroVector( const IVP_U_Point &vec )
+static bool IsZeroVector( const IVP_U_Point &vec )
 {
 	return (vec.k[0] == 0.0 && vec.k[1] == 0.0 && vec.k[2] == 0.0 ) ? true : false;
 }
@@ -793,7 +793,7 @@ float ComputeShadowControllerIVP( IVP_Real_Object *pivp, shadowcontrol_params_t 
 {
 	// resample fraction
 	// This allows us to arrive at the target at the requested time
-	float fraction = 1.0;
+	float fraction = 1.0f;
 	if ( secondsToArrival > 0 )
 	{
 		fraction = dt / secondsToArrival;
@@ -885,7 +885,7 @@ float ComputeShadowControllerIVP( IVP_Real_Object *pivp, shadowcontrol_params_t 
 	return secondsToArrival;
 }
 
-void ConvertShadowControllerToIVP( const hlshadowcontrol_params_t &in, shadowcontrol_params_t &out )
+static void ConvertShadowControllerToIVP( const hlshadowcontrol_params_t &in, shadowcontrol_params_t &out )
 {
 	ConvertPositionToIVP( in.targetPosition, out.targetPosition );
 	ConvertRotationToIVP( in.targetRotation, out.targetRotation );
@@ -899,7 +899,7 @@ void ConvertShadowControllerToIVP( const hlshadowcontrol_params_t &in, shadowcon
 	out.dampFactor = in.dampFactor;
 }
 
-void ConvertShadowControllerToHL( const shadowcontrol_params_t &in, hlshadowcontrol_params_t &out )
+static void ConvertShadowControllerToHL( const shadowcontrol_params_t &in, hlshadowcontrol_params_t &out )
 {
 	ConvertPositionToHL( in.targetPosition, out.targetPosition );
 	ConvertRotationToHL( in.targetRotation, out.targetRotation );
@@ -920,7 +920,7 @@ float ComputeShadowControllerHL( CPhysicsObject *pObject, const hlshadowcontrol_
 	return ComputeShadowControllerIVP( pObject->GetObject(), ivpParams, secondsToArrival, dt );
 }
 
-class CShadowController : public IVP_Controller_Independent, public IPhysicsShadowController, public CAlignedNewDelete<16>
+class CShadowController final : public IVP_Controller_Independent, public IPhysicsShadowController, public CAlignedNewDelete<16>
 {
 public:
 	CShadowController();
@@ -1148,7 +1148,8 @@ void CShadowController::do_simulation_controller( IVP_Event_Sim *es,IVP_U_Vector
 		IVP_Real_Object *pivp = m_pObject->GetObject();
 		Assert(!pivp->get_core()->pinned && !pivp->get_core()->physical_unmoveable);
 
-		ComputeShadowControllerIVP( pivp, m_shadow, m_secondsToArrival, es->delta_time );
+		// dimhotepus: Directly assign m_secondsToArrival as we recomputed it inside.
+		m_secondsToArrival = ComputeShadowControllerIVP( pivp, m_shadow, m_secondsToArrival, es->delta_time );
 		if ( m_allowsTranslation )
 		{
 			// UNDONE: Assumes gravity points down
@@ -1164,13 +1165,6 @@ void CShadowController::do_simulation_controller( IVP_Event_Sim *es,IVP_U_Vector
 					m_shadow.lastImpulse.k[1] += delta;
 				}
 			}
-		}
-
-		// if we have time left, subtract it off
-		m_secondsToArrival -= es->delta_time;
-		if ( m_secondsToArrival < 0 )
-		{
-			m_secondsToArrival = 0;
 		}
 	}
 	else
@@ -1383,8 +1377,8 @@ bool RestorePhysicsShadowController( const physrestoreparams_t &, IPhysicsShadow
 bool RestorePhysicsShadowControllerInternal( const physrestoreparams_t &params, IPhysicsShadowController **ppShadowController, CPhysicsObject *pObject )
 {
 	vphysics_save_cshadowcontroller_t controllerTemplate;
-
 	memset( &controllerTemplate, 0, sizeof(controllerTemplate) );
+
 	params.pRestore->ReadAll( &controllerTemplate );
 	
 	// HACKHACK: pass this in

@@ -23,49 +23,38 @@ void DownloadFile( const char *pCachePath, const char *pRemoteFileBase, const ch
 {
 	// Setup local and remote filenames.
 	char remoteFilename[MAX_PATH];
+	V_ComposeFileName( pRemoteFileBase, pFilename, remoteFilename );
+	
 	char localFilename[MAX_PATH];
-	V_ComposeFileName( pRemoteFileBase, pFilename, remoteFilename, sizeof( remoteFilename ) );
-	V_ComposeFileName( pCachePath, pFilename, localFilename, sizeof( localFilename ) );
+	V_ComposeFileName( pCachePath, pFilename, localFilename );
 
 	// Read the file in.
 	FileHandle_t fpSrc = g_pFileSystem->Open( remoteFilename, "rb" );
-	if ( fpSrc == FILESYSTEM_INVALID_HANDLE )
+	if ( !fpSrc )
 	{
 		Error( "Unable to open %s on master.\n", remoteFilename );
 	}
-	
+	RunCodeAtScopeExit(g_pFileSystem->Close( fpSrc ));
+
 	unsigned int fileSize = g_pFileSystem->Size( fpSrc );
+
 	CUtlVector<char> data;
 	data.SetSize( fileSize );
+
 	g_pFileSystem->Read( data.Base(), fileSize, fpSrc );
-	g_pFileSystem->Close( fpSrc );
-	
+
 	// Now write the file to disk.
 	FILE *fpDest = fopen( localFilename, "wb" );
 	if ( !fpDest )
 	{
 		Error( "Can't open %s for writing.\n", localFilename );
 	}
+	RunCodeAtScopeExit(fclose( fpDest ));
+
 	fwrite( data.Base(), 1, data.Count(), fpDest );
-	fclose( fpDest );
 
-Warning( "Got file: %s\n", pFilename );
+	Warning( "Got file: %s\n", pFilename );
 }
-
-#if 0
-SpewRetval_t MySpewFunc( SpewType_t spewType, const tchar *pMsg )
-{
-	printf( "%s", pMsg );
-	if ( spewType == SPEW_ERROR )
-	{
-		printf( "\nWaiting for keypress to quit...\n" );
-		getch();
-		TerminateProcess( GetCurrentProcess(), 1 );
-	}
-
-	return SPEW_CONTINUE;
-}
-#endif
 
 int RunVMPITransferWorker( int argc, char  **argv )
 {
@@ -94,7 +83,7 @@ int RunVMPITransferWorker( int argc, char  **argv )
 	for ( int i=1; i < pCommandLine->ParmCount()-1; i++ )
 	{
 		const char *pParm = pCommandLine->GetParm( i );
-		if ( V_stricmp( pParm, "-mpi_file" ) == 0 )
+		if ( V_strieq( pParm, "-mpi_file" ) )
 		{
 			const char *pNextParm = pCommandLine->GetParm( i+1 );
 			DownloadFile( pCachePath, pRemoteFileBase, pNextParm );
@@ -156,7 +145,7 @@ int main( int argc, char **argv )
 	CommandLine()->CreateCmdLine( argc, argv );
 
 	int ret;
-	if ( CommandLine()->FindParm( "-PatchHost" ) == 0 )
+	if ( !CommandLine()->HasParm( "-PatchHost" ) )
 	{
 		ret = RunVMPITransferWorker( argc, argv );
 	}

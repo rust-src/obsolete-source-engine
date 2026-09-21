@@ -373,7 +373,7 @@ public:
 
 	void OnCommand( char const *cmd ) override
 	{
-		if ( !Q_stricmp( cmd, "ShowContextMenu" ) )
+		if ( V_strieq( cmd, "ShowContextMenu" ) )
 		{
 			KeyValues *kv = new KeyValues("OpenContextMenu");
 			kv->SetPtr( "page", m_pPage );
@@ -1488,7 +1488,7 @@ void PropertySheet::OnTextChanged(Panel *panel,const wchar_t *wszText)
 void PropertySheet::OnCommand(const char *command)
 {
     // propogate the close command to our parent
-	if (!stricmp(command, "Close") && GetVParent())
+	if (V_strieq(command, "Close") && GetVParent())
     {
 		CallParentFunction(new KeyValues("Command", "command", command));
     }

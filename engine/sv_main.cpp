@@ -279,15 +279,6 @@ void SV_ForceSend()
 	s_bForceSend = true;
 }
 
-bool g_FlushMemoryOnNextServer;
-int g_FlushMemoryOnNextServerCounter;
-
-void SV_FlushMemoryOnNextServer()
-{
-	g_FlushMemoryOnNextServer = true;
-	g_FlushMemoryOnNextServerCounter++;
-}
-
 // Prints important entity creation/deletion events to console
 #if defined( _DEBUG )
 ConVar  sv_deltatrace( "sv_deltatrace", "0", 0, "For debugging, print entity creation/deletion info to console." );
@@ -309,7 +300,7 @@ void CGameServer::Clear( void )
 	
 	host_state.SetWorldModel( NULL );	
 
-	Q_memset( m_szStartspot, 0, sizeof( m_szStartspot ) );
+	BitwiseClear( m_szStartspot );
 	
 	num_edicts = 0;
 	max_edicts = 0;
@@ -540,7 +531,7 @@ CON_COMMAND( user, "Show user data." )
 		if ( !pClient->IsConnected() )
 			continue;
 
-		if ( (pClient->GetPlayerSlot()== uid ) || !Q_strcmp( pClient->GetClientName(), args[1]) )
+		if ( (pClient->GetPlayerSlot()== uid ) || V_streq( pClient->GetClientName(), args[1]) )
 		{
 			ConMsg ("TODO: SV_User_f.\n");
 			return;
@@ -631,7 +622,7 @@ void SetupMaxPlayers( int iDesiredMaxPlayers )
 	}
 
 #if defined( REPLAY_ENABLED )
-	if ( Replay_IsSupportedModAndPlatform() && CommandLine()->CheckParm( "-replay" ) )
+	if ( Replay_IsSupportedModAndPlatform() && CommandLine()->HasParm( "-replay" ) )
 	{
 		newmaxplayers += 1;
 		sv.m_nMaxClientsLimit += 1;
@@ -742,6 +733,7 @@ bool ServerDLL_Load( bool bIsServerOnly )
 {
 	// Load in the game .dll
 	LoadEntityDLLs( GetBaseDirectory(), bIsServerOnly );
+	// dimhotepus: Correctly report server game DLL loaded or not.
 	return serverGameDLL != nullptr;
 }
 
@@ -774,7 +766,7 @@ void SV_InitGameDLL( void )
         // find the game dir we're running
 		for ( const auto &p : g_ModDirPermissions )
 		{
-			if ( !Q_stricmp( COM_GetModDirectory(), p.m_pchGameDir ) )
+			if ( V_strieq( COM_GetModDirectory(), p.m_pchGameDir ) )
 			{
 				// we've found the mod, make sure we own the app
 				if ( Steam3Client().SteamApps()->BIsSubscribedApp( p.m_iAppID ) )
@@ -824,12 +816,12 @@ void SV_InitGameDLL( void )
 		Host_Error("IDLLFunctions::DLLInit returned false.\n");
 	}
 
-	if ( CommandLine()->FindParm( "-NoLoadPluginsForClient" ) == 0 )
+	if ( !CommandLine()->HasParm( "-NoLoadPluginsForClient" ) )
 		g_pServerPluginHandler->LoadPlugins(); // load 3rd party plugins
 	
 
 	// let's not have any servers with no name
-	if ( host_name.GetString()[0] == 0 )
+	if ( Q_isempty( host_name.GetString() ) )
 	{
 		host_name.SetValue( serverGameDLL->GetGameDescription() );
 	}
@@ -903,7 +895,7 @@ ServerClass* SV_FindServerClass( const char *pName )
 	ServerClass *pCur = serverGameDLL->GetAllServerClasses();
 	while ( pCur )
 	{
-		if ( Q_stricmp( pCur->GetName(), pName ) == 0 )
+		if ( V_strieq( pCur->GetName(), pName ) )
 			return pCur;
 
 		pCur = pCur->m_pNext;
@@ -1189,12 +1181,24 @@ CLIENT SPAWNING
 
 CGameServer::CGameServer()
 {
+	m_szStartspot[0] = '\0';
+	edicts = nullptr;
+	edictchangeinfo = nullptr;
 	m_nMaxClientsLimit = 0;
-	m_pPureServerWhitelist = NULL;
-	m_bHibernating = false;
+	m_pPureServerWhitelist = nullptr;
 	m_bLoadedPlugins = false;
-	V_memset( m_szMapname, 0, sizeof( m_szMapname ) );
-	V_memset( m_szMapFilename, 0, sizeof( m_szMapFilename ) );
+	BitwiseClear( m_szMapname );
+	BitwiseClear( m_szMapFilename );
+	
+	m_pModelPrecacheTable = nullptr;
+	m_pSoundPrecacheTable = nullptr;
+	m_pGenericPrecacheTable = nullptr;
+	m_pDecalPrecacheTable = nullptr;
+
+	m_pDynamicModelsTable = nullptr;
+
+	m_pPureServerWhitelist = nullptr;
+	m_bHibernating = false;
 }
 
 
@@ -1458,17 +1462,6 @@ static ConVar sv_minuptimelimit(  "sv_minuptimelimit", "0", 0,
 static ConVar sv_maxuptimelimit(  "sv_maxuptimelimit", "0", 0, 
 	"If set, whenever a game ends, if the server uptime exceeds "
 	"this number of hours, the server will exit."	);
-
-#if 0
-static void sv_WasteMemory( void )
-{
-	uint8 *pWastedRam = new uint8[ 100 * 1024 * 1024 ];
-	memset( pWastedRam, 0xff, 100 * 1024 * 1024 );			// make sure it gets committed
-	Msg( "waste 100mb. using %zuMB with an sv_memory_limit of %dMB\n", ApproximateProcessMemoryUsage() / ( 1024 * 1024 ), sv_memlimit.GetInt() );
-}
-
-static ConCommand sv_wastememory( "sv_wastememory", sv_WasteMemory, "Causes the server to allocate 100MB of ram and never free it", FCVAR_CHEAT );
-#endif
 
 
 static void sv_ShutDownCancel( void )
@@ -1900,10 +1893,10 @@ void SV_BroadcastVoiceData(IClient * pClient, intp nBytes, char * data, int64 xu
 		bool bHearsPlayer = pDestClient->IsHearingClient( voiceData.m_nFromClient );
 		voiceData.m_bProximity = pDestClient->IsProximityHearingClient( voiceData.m_nFromClient );
 
-		if ( bSelf == true )			
+		if ( bSelf == true )
 			continue;
 			
-		if ( !bHearsPlayer && !bSelf )
+		if ( !bHearsPlayer )
 			continue;	
 
 		voiceData.m_nLength = nBytes * CHAR_BIT;
@@ -1992,8 +1985,8 @@ void SV_CreateBaseline (void)
 			// create entity baseline
 			//
 			
-			ALIGN4 char packedData[MAX_PACKEDENTITY_DATA] ALIGN4_POST;
-			bf_write writeBuf( "SV_CreateBaseline->writeBuf", packedData, sizeof( packedData ) );
+			alignas(4) char packedData[MAX_PACKEDENTITY_DATA];
+			bf_write writeBuf( "SV_CreateBaseline->writeBuf", packedData );
 
 
 			// create basline from zero values
@@ -2144,7 +2137,7 @@ bool SV_ActivateServer()
 	// HLTV setup
 	if ( tv_enable.GetBool() )
 	{
-		if ( CommandLine()->FindParm("-nohltv") )
+		if ( CommandLine()->HasParm("-nohltv") )
 		{
 			// let user know that SourceTV will not work
 			ConMsg ("SourceTV is disabled on this server.\n");
@@ -2245,7 +2238,7 @@ void CGameServer::ReloadWhitelist( const char *pMapName )
 	// There's a magic number we use in the steam.inf in P4 that we don't update.
 	// We can use this to detect if they are running out of P4, and if so, don't use the whitelist
 	constexpr char pszVersionInP4[]{"2000"};
-	if ( !Q_strcmp( GetSteamInfIDVersionInfo().szVersionString, pszVersionInP4 ) )
+	if ( V_streq( GetSteamInfIDVersionInfo().szVersionString, pszVersionInP4 ) )
 		return;
 
 	m_pPureServerWhitelist = CPureServerWhitelist::Create( g_pFileSystem );
@@ -2280,11 +2273,9 @@ This is called at the start of each level
 */
 bool CGameServer::SpawnServer( const char *szMapName, const char *szMapFile, const char *startspot )
 {
-	int		i;
-
 	Assert( serverGameClients );
 
-	if ( CommandLine()->FindParm( "-NoLoadPluginsForClient" ) != 0 )
+	if ( CommandLine()->HasParm( "-NoLoadPluginsForClient" ) )
 	{
 		if ( !m_bLoadedPlugins )
 		{
@@ -2385,24 +2376,6 @@ bool CGameServer::SpawnServer( const char *szMapName, const char *szMapFile, con
 		m_szStartspot[0] = '\0';
 	}
 
-	if ( g_FlushMemoryOnNextServer )
-	{
-		g_FlushMemoryOnNextServer = false;
-		g_pDataCache->Flush();
-		g_pMaterialSystem->CompactMemory();
-		g_pFileSystem->AsyncFinishAll();
-
-#if !defined( SWDS )
-		extern CThreadMutex g_SndMutex;
-		AUTO_LOCK(g_SndMutex); // dimhotepus: Why?
-		g_pFileSystem->AsyncSuspend();
-		g_pThreadPool->SuspendExecution();
-		MemAlloc_CompactHeap();
-		g_pThreadPool->ResumeExecution();
-		g_pFileSystem->AsyncResume();
-#endif // SWDS
-	}
-
 	// Preload any necessary data from the xzps:
 	g_pFileSystem->SetupPreloadData();
 	g_pMDLCache->InitPreloadData( false );
@@ -2438,7 +2411,7 @@ bool CGameServer::SpawnServer( const char *szMapName, const char *szMapFile, con
 	COM_TimestampedLog( "Set up players" );
 
 	// allocate player data, and assign the values into the edicts
-	for ( i=0 ; i< GetClientCount() ; i++ )
+	for ( int i=0 ; i< GetClientCount() ; i++ )
 	{
 		CGameClient * pClient = Client(i);
 
@@ -2463,8 +2436,9 @@ bool CGameServer::SpawnServer( const char *szMapName, const char *szMapFile, con
 	// Load the world model.
 	g_pFileSystem->AddSearchPath( szMapFile, "GAME", PATH_ADD_TO_HEAD );
 	g_pFileSystem->BeginMapAccess();
+	RunCodeAtScopeExit(g_pFileSystem->EndMapAccess());
 
-	if ( !CommandLine()->FindParm( "-allowstalezip" ) )
+	if ( !CommandLine()->HasParm( "-allowstalezip" ) )
 	{
 		if ( g_pFileSystem->FileExists( "stale.txt", "GAME" ) )
 		{
@@ -2479,24 +2453,22 @@ bool CGameServer::SpawnServer( const char *szMapName, const char *szMapFile, con
 	{
 		ConMsg( "Couldn't spawn server %s\n", szMapFile );
 		m_State = ss_dead;
-		g_pFileSystem->EndMapAccess();
 		return false;
 	}
 
 	COM_TimestampedLog( "modelloader->GetModelForName(%s) -- Finished", szMapFile );
 
-	if ( IsMultiplayer() && !IsX360() )
+	if ( IsMultiplayer() )
 	{
 #ifndef SWDS
 		EngineVGui()->UpdateProgressBar(PROGRESS_CRCMAP);
 #endif
 		// Server map CRC check.
-		V_memset( worldmapMD5.bits, 0, MD5_DIGEST_LENGTH );
+		BitwiseClear( worldmapMD5.bits );
 		if ( !MD5_MapFile( &worldmapMD5, szMapFile ) )
 		{
 			ConMsg( "Couldn't CRC server map: %s\n", szMapFile );
 			m_State = ss_dead;
-			g_pFileSystem->EndMapAccess();
 			return false;
 		}
 
@@ -2506,7 +2478,7 @@ bool CGameServer::SpawnServer( const char *szMapName, const char *szMapFile, con
 	}
 	else
 	{
-		V_memset( worldmapMD5.bits, 0, MD5_DIGEST_LENGTH );
+		BitwiseClear( worldmapMD5.bits );
 	}
 
 	m_StringTables = networkStringTableContainerServer;
@@ -2536,11 +2508,11 @@ bool CGameServer::SpawnServer( const char *szMapName, const char *szMapFile, con
 	COM_TimestampedLog( "Precache brush models" );
 
 	// Add world submodels to the model cache
-	for ( i = 1 ; i < host_state.worldbrush->numsubmodels ; i++ )
+	for ( int i = 1 ; i < host_state.worldbrush->numsubmodels ; i++ )
 	{
 		// Add in world brush models
 		char localmodel[5]; // inline model names "*1", "*2" etc
-		Q_snprintf( localmodel, sizeof( localmodel ), "*%i", i );
+		V_sprintf_safe( localmodel, "*%i", i );
 
 		PrecacheModel( localmodel, RES_FATALIFMISSING | RES_PRELOAD, modelloader->GetModelForName( localmodel, IModelLoader::FMODELLOADER_SERVER ) );
 	}
@@ -2583,8 +2555,9 @@ bool CGameServer::SpawnServer( const char *szMapName, const char *szMapFile, con
 	IGameEvent *event = g_GameEventManager.CreateEvent( "server_spawn" );
 	if ( event )
 	{
+		char buffer[32];
 		event->SetString( "hostname", host_name.GetString() );
-		event->SetString( "address", net_local_adr.ToString( false ) );
+		event->SetString( "address", net_local_adr.ToString_safe( buffer, false ) );
 		event->SetInt(    "port", GetUDPPort() );
 		event->SetString( "game", com_gamedir );
 		event->SetString( "mapname", GetMapName() );
@@ -2606,7 +2579,6 @@ bool CGameServer::SpawnServer( const char *szMapName, const char *szMapFile, con
 
 	COM_TimestampedLog( "SV_SpawnServer -- Finished" );
 
-	g_pFileSystem->EndMapAccess();
 	return true;
 }
 

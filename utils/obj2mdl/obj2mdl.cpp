@@ -31,9 +31,9 @@ SpewRetval_t SpewFunc( SpewType_t type, char const *pMsg )
 //-----------------------------------------------------------------------------
 void printusage( )
 {
-	printf( "usage:  obj2mdl <modelname.obj file> \n\n" );
-	printf( "The directory containing the <modelname>.obj file must also contain a\n" );
-	printf( "<modelname>.mtl file.\n" );
+	fprintf( stderr, "usage:  obj2mdl <modelname.obj file> \n\n" );
+	fprintf( stderr, "The directory containing the <modelname>.obj file must also contain a\n" );
+	fprintf( stderr, "<modelname>.mtl file.\n" );
 }
 
 void CreateTemplateQC( const char *pcDirectory, const char *pcBaseName, const char *pcSteamName )
@@ -87,7 +87,7 @@ void CreateTemplateVMT( const char *pcDirectory, const char *pcBaseName, const c
 	V_snprintf( sz_Buffer, MAX_PATH, "\t\"$baseTexture\" \"models/contrib/%s/%s/%s\"\n", pcSteamName, pcBaseName, szTGAColorFileBase );
 	fputs( sz_Buffer,  fp );
 	
-	if ( pcTGANormalFile && ( V_strlen( pcTGANormalFile ) > 0 ) )
+	if ( !Q_isempty( pcTGANormalFile ) )
 	{
 		V_StripExtension( pcTGANormalFile, szTGANormalFileBase, sizeof( szTGANormalFileBase ) );
 		V_snprintf( sz_Buffer, MAX_PATH, "\t\"$bumpmap\" \"models/contrib/%s/%s/%s\"\n", pcSteamName, pcBaseName, szTGANormalFileBase );
@@ -193,14 +193,15 @@ void CreateTemplateVMT( const char *pcDirectory, const char *pcBaseName, const c
 bool CheckFilesExist( const char *pcDirectory, const char *pcOBJFile, const char *pcMTLFile )
 {
 	WIN32_FIND_DATA wfd;
-	HANDLE ff;
+	
 	char szSearchFile[MAX_PATH];
+	V_sprintf_safe( szSearchFile, "%s%s", pcDirectory, pcOBJFile );
 
-	V_snprintf( szSearchFile, MAX_PATH, "%s%s", pcDirectory, pcOBJFile );
-
-	if ( ( ff = FindFirstFile( szSearchFile, &wfd ) ) != INVALID_HANDLE_VALUE )
+	if ( HANDLE ff; ( ff = FindFirstFile( szSearchFile, &wfd ) ) != INVALID_HANDLE_VALUE )
 	{
-		V_snprintf( szSearchFile, MAX_PATH, "%s%s", pcDirectory, pcMTLFile );
+		RunCodeAtScopeExit(FindClose( ff ));
+
+		V_sprintf_safe( szSearchFile, "%s%s", pcDirectory, pcMTLFile );
 
 		if ( ( ff = FindFirstFile( szSearchFile, &wfd ) ) != INVALID_HANDLE_VALUE )
 		{
@@ -294,7 +295,7 @@ bool GetSteamUserName( char *pcSteamName, size_t nSteamNameBufSize )
 		V_FileBase( szModInstallPath, pcSteamName, nSteamNameBufSize  );
 	}
 
-	return ( V_strlen( pcSteamName ) > 0 );
+	return !Q_isempty( pcSteamName );
 }
 
 bool GetSDKBinDirectory( char *pcSDKBinDir, size_t nBuffSize )
@@ -472,9 +473,7 @@ bool DirectoryExists(const char* dirName)
 bool CopyFiles( const char *pcSourceDir, const char *pcPattern, const char *pcDestDir )
 {
 	char szFindPattern[MAX_PATH];
-	bool bAllSucceeded = true;
-
-	V_snprintf( szFindPattern, sizeof( szFindPattern ), "%s%s", pcSourceDir, pcPattern );
+	V_sprintf_safe( szFindPattern, "%s%s", pcSourceDir, pcPattern );
 
 	WIN32_FIND_DATA findData;
 	HANDLE hFind = FindFirstFile( szFindPattern, &findData );
@@ -482,25 +481,25 @@ bool CopyFiles( const char *pcSourceDir, const char *pcPattern, const char *pcDe
 	{
 		return false;
 	}
-	else
+
+	RunCodeAtScopeExit(FindClose( hFind ));
+
+	bool bAllSucceeded = true;
+	do
 	{
-		do
-		{
-			char szSrcPath[MAX_PATH];
-			char szDestPath[MAX_PATH];
+		char szSrcPath[MAX_PATH];
+		V_sprintf_safe( szSrcPath, "%s%s", pcSourceDir, findData.cFileName );
 
-			V_snprintf( szSrcPath, sizeof( szSrcPath ), "%s%s", pcSourceDir, findData.cFileName );
-			V_snprintf( szDestPath, sizeof( szDestPath ), "%s\\%s", pcDestDir, findData.cFileName );
+		char szDestPath[MAX_PATH];
+		V_sprintf_safe( szDestPath, "%s\\%s", pcDestDir, findData.cFileName );
 
-			DeleteFile( szDestPath );
-			CopyFile( szSrcPath, szDestPath, false );
-			bAllSucceeded &= FileExists( szDestPath );
+		DeleteFile( szDestPath );
+		CopyFile( szSrcPath, szDestPath, false );
 
-		} while ( FindNextFile( hFind, &findData ) );
-		FindClose( hFind );
+		bAllSucceeded &= FileExists( szDestPath );
+	} while ( FindNextFile( hFind, &findData ) );
 
-		return bAllSucceeded;
-	}
+	return bAllSucceeded;
 }
 
 bool CopyMaterialSourcesToSrcTree( const char *pcDirectory, const char *pcSteamName, const char *pcBaseName )
@@ -682,7 +681,7 @@ int main( int argc, char* argv[] )
 			printf( "--- OBJ to MDL file conversion helper ---\n" );
 			if ( !GetSteamUserName( szSteamName, sizeof( szSteamName ) ) )
 			{
-				printf( "--- Unable to get Steam user name. Exiting. ---\n" );
+				fprintf( stderr, "--- Unable to get Steam user name. Exiting. ---\n" );
 			}
 			printf( "--- Reading MTL file ---\n" );
 			ParseMTL( szDirectory, szOBJFile, szMTLFile, szTGAColorFile, sizeof( szTGAColorFile ), szTGASpecularFile, sizeof( szTGASpecularFile ) );

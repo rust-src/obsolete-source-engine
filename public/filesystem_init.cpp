@@ -214,15 +214,15 @@ public:
 // ---------------------------------------------------------------------------------------------------- //
 [[nodiscard]] bool Q_getwd( OUT_Z_CAP(outSize) char *out, int outSize )
 {
-	const bool ok{!!_getcwd( out, outSize )};
-	if (ok)
+	const bool ok{!!_getcwd( out, outSize )}; //-V781
+	if ( ok )
 	{
 		V_strncat( out, CORRECT_PATH_SEPARATOR_S, outSize );
-		Q_FixSlashes( out );
+		V_FixSlashes( out );
 	}
 	else
 	{
-		if (outSize > 0)
+		if ( outSize > 0 )
 		{
 			out[0] = '\0';
 		}
@@ -365,7 +365,7 @@ bool FileSystem_GetExecutableDir( OUT_Z_CAP(exeDirLen) char *exedir, unsigned ex
 	char ext[MAX_PATH];
 	// dimhotepus: x86-64 support. TF2 backport.
 	V_StrRight( exedir, ssize( PLATFORM_BIN_DIR ), ext);
-	if ( ext[0] != CORRECT_PATH_SEPARATOR || Q_stricmp( ext+1, PLATFORM_BIN_DIR ) != 0 )
+	if ( ext[0] != CORRECT_PATH_SEPARATOR || !V_strieq( ext+1, PLATFORM_BIN_DIR ) )
 	{
 		Q_strncat( exedir, CORRECT_PATH_SEPARATOR_S, exeDirLen, COPY_ALL_CHARACTERS );
 		// dimhotepus: x86-64 support. TF2 backport.
@@ -383,7 +383,7 @@ static bool FileSystem_GetBaseDir( OUT_Z_ARRAY char (&baseDir)[max_size] )
 	{
 		V_StripFilename( baseDir );
 		// dimhotepus: Need to strip PLATFORM_DIR, too.
-		if constexpr ( ssize( PLATFORM_DIR ) > 0 )
+		if constexpr ( ssize( PLATFORM_DIR ) > 1 )
 			V_StripFilename( baseDir );
 		return true;
 	}
@@ -430,7 +430,7 @@ static FSReturnCode_t SetupFileSystemError( bool bRunVConfig, FSReturnCode_t ret
 	// Don't do it if they specifically asked for it not to, or if they manually specified a vconfig with -game or -vproject.
 	if ( bRunVConfig &&
 		 g_FileSystemErrorMode.load(std::memory_order::memory_order_relaxed) == FS_ERRORMODE_VCONFIG &&
-		 !CommandLine()->FindParm( CMDLINEOPTION_NOVCONFIG ) && !GetVProjectCmdLineValue() )
+		 !CommandLine()->HasParm( CMDLINEOPTION_NOVCONFIG ) && !GetVProjectCmdLineValue() )
 	{
 		char vconfigExe[MAX_PATH];
 		if ( !LaunchVConfig( vconfigExe ) )
@@ -493,7 +493,7 @@ static void FileSystem_AddLoadedSearchPath(
 {
 
 	// Check for mounting LV game content in LV builds only
-	if ( V_stricmp( pPathID, "game_lv" ) == 0 )
+	if ( V_strieq( pPathID, "game_lv" ) )
 	{
 
 		// Not in LV build, don't mount
@@ -505,7 +505,7 @@ static void FileSystem_AddLoadedSearchPath(
 	}
 
 	// Check for mounting HD game content if enabled
-	if ( V_stricmp( pPathID, "game_hd" ) == 0 )
+	if ( V_strieq( pPathID, "game_hd" ) )
 	{
 
 		// Not in LV build, don't mount
@@ -518,9 +518,9 @@ static void FileSystem_AddLoadedSearchPath(
 
 
 	// Special processing for ordinary game folders
-	if ( V_stristr( fullLocationPath, ".vpk" ) == nullptr && Q_stricmp( pPathID, "game" ) == 0 )
+	if ( V_stristr( fullLocationPath, ".vpk" ) == nullptr && V_strieq( pPathID, "game" ) )
 	{
-		if ( CommandLine()->FindParm( "-tempcontent" ) != 0 )
+		if ( CommandLine()->HasParm( "-tempcontent" ) )
 		{
 			char szPath[MAX_PATH];
 			V_sprintf_safe( szPath, "%s_tempcontent", fullLocationPath );
@@ -626,7 +626,7 @@ FSReturnCode_t FileSystem_LoadSearchPaths( CFSSearchPathsInit &initInfo )
 
 		// dimhotepus: x86-64 support. TF2 backport.
 		char szBinLocation[MAX_PATH];
-		if ( Q_stricmp( pszPathID, "GAMEBIN" ) == 0 )
+		if ( V_strieq( pszPathID, "GAMEBIN" ) )
 		{
 			V_sprintf_safe( szBinLocation, "%s" PLATFORM_DIR, pLocation );
 			pLocation = szBinLocation;
@@ -673,12 +673,12 @@ FSReturnCode_t FileSystem_LoadSearchPaths( CFSSearchPathsInit &initInfo )
 
 						// Check for a common mistake
 						if (
-							!V_stricmp( pszFoundShortName, "materials" )
-							|| !V_stricmp( pszFoundShortName, "maps" )
-							|| !V_stricmp( pszFoundShortName, "resource" )
-							|| !V_stricmp( pszFoundShortName, "scripts" )
-							|| !V_stricmp( pszFoundShortName, "sound" )
-							|| !V_stricmp( pszFoundShortName, "models" ) )
+							V_strieq( pszFoundShortName, "materials" )
+							|| V_strieq( pszFoundShortName, "maps" )
+							|| V_strieq( pszFoundShortName, "resource" )
+							|| V_strieq( pszFoundShortName, "scripts" )
+							|| V_strieq( pszFoundShortName, "sound" )
+							|| V_strieq( pszFoundShortName, "models" ) )
 						{
 
 							char szReadme[MAX_PATH];
@@ -946,40 +946,6 @@ ShowError:
 		GAMEINFO_FILENAME, GAMEINFO_FILENAME );
 }
 
-bool DoesPathExistAlready( const char *pPathEnvVar, const char *pTestPath )
-{
-	// Fix the slashes in the input arguments.
-	char correctedPathEnvVar[8192], correctedTestPath[MAX_PATH];
-	V_strcpy_safe( correctedPathEnvVar, pPathEnvVar );
-	Q_FixSlashes( correctedPathEnvVar );
-	pPathEnvVar = correctedPathEnvVar;
-
-	V_strcpy_safe( correctedTestPath, pTestPath );
-	const size_t correctTestPathLen = strlen( correctedTestPath );
-	Q_FixSlashes( correctedTestPath );
-	if ( correctTestPathLen && PATHSEPARATOR( correctedTestPath[ correctTestPathLen - 1 ] ) )
-		correctedTestPath[ correctTestPathLen - 1 ] = 0;
-
-	pTestPath = correctedTestPath;
-
-	size_t nTestPathLen = strlen( pTestPath );
-	const char *pCurPos = pPathEnvVar;
-	while ( 1 )
-	{
-		const char *pTestPos = Q_stristr( pCurPos, pTestPath );
-		if ( !pTestPos )
-			return false;
-
-		// Ok, we found pTestPath in the path, but it's only valid if it's followed by an optional slash and a semicolon.
-		pTestPos += nTestPathLen;
-		if ( pTestPos[0] == 0 || pTestPos[0] == ';' || (PATHSEPARATOR( pTestPos[0] ) && pTestPos[1] == ';') )
-			return true;
-	
-		// Advance our marker..
-		pCurPos = pTestPos;
-	}
-}
-
 FSReturnCode_t FileSystem_SetBasePaths( IFileSystem *pFileSystem )
 {
 	pFileSystem->RemoveSearchPaths( "EXECUTABLE_PATH" );
@@ -990,7 +956,7 @@ FSReturnCode_t FileSystem_SetBasePaths( IFileSystem *pFileSystem )
 
 	pFileSystem->AddSearchPath( executablePath, "EXECUTABLE_PATH" );
 	// dimhotepus: x86-64 support.
-	if constexpr ( ssize( PLATFORM_DIR ) > 0 )
+	if constexpr ( ssize( PLATFORM_DIR ) > 1 )
 	{
 		char baseBinFolder[MAX_PATH];
 		V_strcpy_safe( baseBinFolder, executablePath );

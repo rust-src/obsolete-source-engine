@@ -94,8 +94,8 @@ protected:
 				break;
 			}	
 
-			UTIL_LogPrintf( "Team \"CT\" scored \"%i\" with \"%i\" players\n", ct->GetScore(), ct->GetNumPlayers() );
-			UTIL_LogPrintf( "Team \"TERRORIST\" scored \"%i\" with \"%i\" players\n", ter->GetScore(), ter->GetNumPlayers() );
+			UTIL_LogPrintf( "Team \"CT\" scored \"%i\" with \"%zd\" players\n", ct->GetScore(), ct->GetNumPlayers() );
+			UTIL_LogPrintf( "Team \"TERRORIST\" scored \"%i\" with \"%zd\" players\n", ter->GetScore(), ter->GetNumPlayers() );
 			
 			UTIL_LogPrintf("World triggered \"Round_End\"\n");
 			return true;

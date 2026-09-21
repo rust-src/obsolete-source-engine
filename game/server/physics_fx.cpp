@@ -158,7 +158,7 @@ void PhysicsSplash( IPhysicsFluidController *pFluid, IPhysicsObject *pObject, CB
 		bRippleOnly = true;
 	}
 
-	float size = RemapVal( speed, 0.35, 50, 8, 18 );
+	float size = RemapVal( speed, 0.35f, 50, 8, 18 );
 
 	//Find the surface area
 	float	radius = extents[0] * extents[1];

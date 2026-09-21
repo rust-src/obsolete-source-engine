@@ -338,13 +338,13 @@ void CArmoryPanel::OnCommand( const char *command )
 		PostMessage( GetParent(), new KeyValues("ArmoryClosed") );
 		return;
 	}
-	else if ( !Q_stricmp( command, "reloadscheme" ) )
+	else if ( V_strieq( command, "reloadscheme" ) )
 	{
 		InvalidateLayout( false, true );
 		SetTall( YRES(400) );
 		SetVisible( true );
 	}
-	else if ( !Q_stricmp( command, "openstore" ) )
+	else if ( V_strieq( command, "openstore" ) )
 	{
 		// Only available in the loadout->catalog path. So we close down the character info, and move to the store.
 		// Bit of a hack.
@@ -354,7 +354,7 @@ void CArmoryPanel::OnCommand( const char *command )
 		EconUI()->OpenStorePanel( iItemDef, false );
 		return;
 	}
-	else if ( !Q_stricmp( command, "wiki" ) )
+	else if ( V_strieq( command, "wiki" ) )
 	{
 		if ( steamapicontext && steamapicontext->SteamFriends() )
 		{
@@ -367,14 +367,15 @@ void CArmoryPanel::OnCommand( const char *command )
 				ELanguage iLang = PchLanguageToELanguage( uilanguage );
 
 				char szURL[512];
-				Q_snprintf( szURL, sizeof(szURL), "http://wiki.teamfortress.com/scripts/itemredirect.php?id=%d&lang=%s", m_SelectedItem.GetItemDefIndex(), GetLanguageICUName( iLang ) );
+				// dimhotepus: http:// -> https://
+				Q_snprintf( szURL, sizeof(szURL), "https://wiki.teamfortress.com/scripts/itemredirect.php?id=%d&lang=%s", m_SelectedItem.GetItemDefIndex(), GetLanguageICUName( iLang ) );
 				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( szURL );
 
 				C_CTF_GameStats.Event_Catalog( IE_ARMORY_BROWSE_WIKI, NULL, &m_SelectedItem );
 			}
 		}
 	}
-	else if ( !Q_stricmp( command, "viewset" ) )
+	else if ( V_strieq( command, "viewset" ) )
 	{
 		if ( m_SelectedItem.IsValid() )
 		{
@@ -587,14 +588,14 @@ bool CArmoryPanel::DefPassesFilter( const CTFItemDefinition *pDef, armory_filter
 
 	case ARMFILT_CRAFTITEMS:
 		{
-			bInList = pDef->GetItemClass() && ( !V_strcmp( pDef->GetItemClass(), "craft_item" ) || !V_strcmp( pDef->GetItemClass(), "class_token" ) || !V_strcmp( pDef->GetItemClass(), "slot_token" ) );
+			bInList = pDef->GetItemClass() && ( V_streq( pDef->GetItemClass(), "craft_item" ) || V_streq( pDef->GetItemClass(), "class_token" ) || V_streq( pDef->GetItemClass(), "slot_token" ) );
 			break;
 		}
 
 	case ARMFILT_TOOLS:
 		{
 			// For now, put the supply crates into the tool list, since it's the only item that shows up in no other lists
-			bInList = pDef->GetItemClass() && ( !V_strcmp( pDef->GetItemClass(), "tool" ) || !V_strcmp( pDef->GetItemClass(), "supply_crate" ) );
+			bInList = pDef->GetItemClass() && ( V_streq( pDef->GetItemClass(), "tool" ) || V_streq( pDef->GetItemClass(), "supply_crate" ) );
 			break;
 		}
 
@@ -615,7 +616,7 @@ bool CArmoryPanel::DefPassesFilter( const CTFItemDefinition *pDef, armory_filter
 	case ARMFILT_CLASS_ENGINEER:
 		{
 			// Don't show class/slot usage for class/slot tokens
-			if ( pDef->GetItemClass() && !V_strcmp( pDef->GetItemClass(), "class_token" ) )
+			if ( pDef->GetItemClass() && V_streq( pDef->GetItemClass(), "class_token" ) )
 				break;
 
 			bInList = ( !pDef->CanBeUsedByAllClasses() && pDef->CanBeUsedByClass( iFilter - ARMFILT_CLASS_SCOUT + 1 ) );
@@ -625,7 +626,7 @@ bool CArmoryPanel::DefPassesFilter( const CTFItemDefinition *pDef, armory_filter
 	case ARMFILT_DONATIONITEMS:
 		{
 			// Don't show class/slot usage for class/slot tokens
-			bInList = pDef->GetItemClass() && !V_strcmp( pDef->GetItemClass(), "map_token" );
+			bInList = pDef->GetItemClass() && V_streq( pDef->GetItemClass(), "map_token" );
 			break;
 		}
 	}

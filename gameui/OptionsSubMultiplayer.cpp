@@ -108,6 +108,7 @@ class CrosshairImagePanelSimple : public CrosshairImagePanelBase
 	DECLARE_CLASS_SIMPLE_OVERRIDE( CrosshairImagePanelSimple, CrosshairImagePanelBase );
 public:
 	CrosshairImagePanelSimple( Panel *parent, const char *name, COptionsSubMultiplayer* pOptionsPanel );
+	~CrosshairImagePanelSimple();
 	void Paint() override;
 	void ResetData() override;
 	void ApplyChanges() override;
@@ -150,6 +151,15 @@ CrosshairImagePanelSimple::CrosshairImagePanelSimple( Panel *parent, const char 
 	ResetData();
 }
 
+CrosshairImagePanelSimple::~CrosshairImagePanelSimple()
+{
+	// dimhotepus: Do not leak textures.
+	if ( m_iCrosshairTextureID != -1 )
+	{
+		vgui::surface()->CreateNewTextureID( m_iCrosshairTextureID );
+	}
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: initialize the crosshair size list.
 //-----------------------------------------------------------------------------
@@ -168,19 +178,16 @@ void CrosshairImagePanelSimple::InitCrosshairSizeList()
 //-----------------------------------------------------------------------------
 void CrosshairImagePanelSimple::InitCrosshairColorEntries()
 {
-	if (m_pCrosshairColorCombo != NULL)
+	KeyValuesAD data("data");
+
+	// add in the "Default" selection
+	data->Clear();
+
+	// add in the colors for the color list
+	for ( int i = 0; i < NumCrosshairColors; i++ )
 	{
-		KeyValuesAD data("data");
-
-		// add in the "Default" selection
-		data->Clear();
-
-		// add in the colors for the color list
-		for ( int i = 0; i < NumCrosshairColors; i++ )
-		{
-			data->SetInt("color", i);
-			m_pCrosshairColorCombo->AddItem( s_crosshairColors[ i ].name, data);
-		}
+		data->SetInt("color", i);
+		m_pCrosshairColorCombo->AddItem( s_crosshairColors[ i ].name, data);
 	}
 }
 
@@ -227,7 +234,8 @@ void CrosshairImagePanelSimple::Paint()
 	int centerY = tall / 2;
 	int iCrosshairDistance = m_barGap;
 
-	int iBarThickness = 1;
+	// dimhotepus: Scale UI.
+	int iBarThickness = QuickPropScale( 1 );
 	int iBarSize = m_barSize;
 
 	// draw horizontal crosshair lines
@@ -263,12 +271,8 @@ void CrosshairImagePanelSimple::UpdateCrosshair()
 	int colorIndex = data->GetInt("color");
 	colorIndex = clamp( colorIndex, 0, NumCrosshairColors );
 
-	int selectedColor = 0;
 	int actualVal = 0;
-	if (m_pCrosshairColorCombo != NULL)
-	{
-		selectedColor = m_pCrosshairColorCombo->GetActiveItem();
-	}
+	int selectedColor = m_pCrosshairColorCombo->GetActiveItem();
 
 	ConVarRef cl_crosshaircolor( "cl_crosshaircolor", true );
 	if ( cl_crosshaircolor.IsValid() )
@@ -386,12 +390,9 @@ void CrosshairImagePanelSimple::ApplyChanges()
 	char cmd[256];
 	cmd[0] = 0;
 
-	if (m_pCrosshairColorCombo != NULL)
-	{
-		int val = m_pCrosshairColorCombo->GetActiveItem();
-		Q_snprintf( cmd, sizeof(cmd), "cl_crosshaircolor %d\n", val );
-		engine->ClientCmd_Unrestricted( cmd );
-	}
+	int val = m_pCrosshairColorCombo->GetActiveItem();
+	Q_snprintf( cmd, sizeof(cmd), "cl_crosshaircolor %d\n", val );
+	engine->ClientCmd_Unrestricted( cmd );
 }
 
 
@@ -402,6 +403,7 @@ class CrosshairImagePanelCS : public CrosshairImagePanelBase
 
 public:
 	CrosshairImagePanelCS( Panel *parent, const char *name, COptionsSubMultiplayer* pOptionsPanel );
+	~CrosshairImagePanelCS();
 	void ResetData() override;
 	void ApplyChanges() override;
 
@@ -480,6 +482,15 @@ CrosshairImagePanelCS::CrosshairImagePanelCS( Panel *parent, const char *name, C
 	ResetData();
 }
 
+CrosshairImagePanelCS::~CrosshairImagePanelCS()
+{
+	// dimhotepus: Do not leak textures.
+	if ( m_iCrosshairTextureID != -1 )
+	{
+		vgui::surface()->CreateNewTextureID( m_iCrosshairTextureID );
+	}
+}
+
 void CrosshairImagePanelCS::InitCrosshairColorEntries()
 {
 	if (m_pColorComboBox != NULL)
@@ -541,14 +552,14 @@ void CrosshairImagePanelCS::Paint()
 	int iBarSize = RoundFloatToInt(m_barSize * screenTall / BASE_HEIGHT);
 	int iBarThickness = max(1, RoundFloatToInt(m_barThickness * (float)screenTall / BASE_HEIGHT));
 
-	float fBarGap = 4.0f;
+	double fBarGap = 4.0;
 	if ( bDynamic )
 	{
-		float curtime = system()->GetFrameTime();
-		fBarGap *= (1.0f + cosf(curtime * 1.5f) * 0.5f);
+		double curtime = system()->GetFrameTime();
+		fBarGap *= (1.0 + cos(curtime * 1.5) * 0.5);
 	}
 
-	int iBarGap = RoundFloatToInt(fBarGap * screenTall / BASE_HEIGHT);
+	int iBarGap = RoundFloatToInt(static_cast<float>( fBarGap * screenTall / BASE_HEIGHT ));
 
 	// draw horizontal crosshair lines
 	int iInnerLeft	= centerX - iBarGap - iBarThickness / 2;
@@ -742,7 +753,8 @@ private:
 
 	// animation
 	IVguiMatInfoVar	*m_pFrameVar;
-	float			m_flNextFrameChange;
+	// dimhotepus: float -> double.
+	double			m_flNextFrameChange;
 	int				m_nNumFrames;
 	bool			m_bAscending;	// animating forward or in reverse?
 };
@@ -797,6 +809,12 @@ CrosshairImagePanelAdvanced::~CrosshairImagePanelAdvanced()
 		delete m_pAdvCrosshairMaterial;
 		m_pAdvCrosshairMaterial = NULL;
 	}
+	
+	// dimhotepus: Do not leak textures.
+	if ( m_iCrosshairTextureID != -1 )
+	{
+		vgui::surface()->CreateNewTextureID( m_iCrosshairTextureID );
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -821,7 +839,7 @@ void CrosshairImagePanelAdvanced::SetCrosshairTexture( const char *crosshairname
 	m_pFrameVar = m_pAdvCrosshairMaterial->FindVarFactory( "$frame", NULL );
 	m_nNumFrames = m_pAdvCrosshairMaterial->GetNumAnimationFrames();
 
-	m_flNextFrameChange = system()->GetFrameTime() + 0.2f;
+	m_flNextFrameChange = system()->GetFrameTime() + 0.2;
 	m_bAscending = true;
 }
 
@@ -839,11 +857,11 @@ void CrosshairImagePanelAdvanced::Paint()
 	// scroll through all frames
 	if ( m_pFrameVar )
 	{	
-		float curtime = system()->GetFrameTime();
+		double curtime = system()->GetFrameTime();
 
 		if ( curtime >= m_flNextFrameChange )
 		{
-			m_flNextFrameChange = curtime + 0.2f;
+			m_flNextFrameChange = curtime + 0.2;
 
 			int frame = m_pFrameVar->GetIntValue();
 
@@ -852,7 +870,7 @@ void CrosshairImagePanelAdvanced::Paint()
 				frame++;
 				if ( frame >= m_nNumFrames )
 				{
-					m_bAscending = !m_bAscending;
+					m_bAscending = false;
 					frame--;
 				}
 			}
@@ -861,7 +879,7 @@ void CrosshairImagePanelAdvanced::Paint()
 				frame--;
 				if ( frame < 0 )
 				{
-					m_bAscending = !m_bAscending;
+					m_bAscending = true;
 					frame++;
 				}
 			}
@@ -873,7 +891,7 @@ void CrosshairImagePanelAdvanced::Paint()
 	float x, y;
 
 	// assume square
-	float flDrawWidth = ( m_flScale/48.0 ) * (float)wide;	
+	float flDrawWidth = ( m_flScale/48.0f ) * (float)wide;
 	int flHalfWidth = (int)( flDrawWidth / 2 );
 
 	x = wide/2 - flHalfWidth;
@@ -919,7 +937,6 @@ void CrosshairImagePanelAdvanced::InitAdvCrosshairStyleList()
 {
 	// Find out images
 	FileFindHandle_t fh = FILESYSTEM_INVALID_FIND_HANDLE;
-	char directory[ 512 ];
 
 	ConVarRef cl_crosshair_file( "cl_crosshair_file", true );
 	if ( !cl_crosshair_file.IsValid() )
@@ -933,31 +950,33 @@ void CrosshairImagePanelAdvanced::InitAdvCrosshairStyleList()
 	}
 
 	char crosshairfile[256];
-	Q_snprintf( crosshairfile, sizeof(crosshairfile), "materials/vgui/crosshairs/%s.vtf", cl_crosshair_file.GetString() );
-
-	Q_snprintf( directory, sizeof( directory ), "materials/vgui/crosshairs/*.vtf" );
+	V_sprintf_safe( crosshairfile, "materials/vgui/crosshairs/%s.vtf", cl_crosshair_file.GetString() );
+	
+	char directory[ 512 ];
+	V_sprintf_safe( directory, "materials/vgui/crosshairs/*.vtf" );
 	const char *fn = g_pFullFileSystem->FindFirst( directory, &fh );
+	RunCodeAtScopeExit( g_pFullFileSystem->FindClose( fh ) );
 	int i = 0, initialItem = 0; 
 	while (fn)
 	{
 		char filename[ 512 ];
-		Q_snprintf( filename, sizeof(filename), "materials/vgui/crosshairs/%s", fn );
-		if ( strlen( filename ) >= 4 )
+		V_sprintf_safe( filename, "materials/vgui/crosshairs/%s", fn );
+		if ( size_t len = strlen( filename ); len >= 4 )
 		{
-			filename[ strlen( filename ) - 4 ] = 0;
-			Q_strncat( filename, ".vmt", sizeof( filename ), COPY_ALL_CHARACTERS );
+			filename[ len - 4 ] = '\0';
+			V_strcat_safe( filename, ".vmt", COPY_ALL_CHARACTERS );
 			if ( g_pFullFileSystem->FileExists( filename ) )
 			{
 				// strip off the extension
-				Q_strncpy( filename, fn, sizeof( filename ) );
+				V_strcpy_safe( filename, fn );
 				filename[ strlen( filename ) - 4 ] = 0;
 				m_pAdvCrosshairStyle->AddItem( filename, "" );
 
 				// check to see if this is the one we have set
-				if ( crosshairfile[0] )
+				if ( !Q_isempty( crosshairfile ) )
 				{
-					Q_snprintf( filename, sizeof(filename), "materials/vgui/crosshairs/%s", fn );
-					if (!stricmp(filename, crosshairfile))
+					V_sprintf_safe( filename, "materials/vgui/crosshairs/%s", fn );
+					if (V_strieq(filename, crosshairfile))
 					{
 						if ( ModInfo().AdvCrosshairLevel() == 1 )
 						{
@@ -977,7 +996,6 @@ void CrosshairImagePanelAdvanced::InitAdvCrosshairStyleList()
 		fn = g_pFullFileSystem->FindNext( fh );
 	}
 
-	g_pFullFileSystem->FindClose( fh );
 	m_pAdvCrosshairStyle->SetInitialItem(initialItem);
 }
 
@@ -1203,7 +1221,7 @@ COptionsSubMultiplayer::~COptionsSubMultiplayer()
 //-----------------------------------------------------------------------------
 void COptionsSubMultiplayer::OnCommand( const char *command )
 {
-	if ( !stricmp( command, "Advanced" ) )
+	if ( V_strieq( command, "Advanced" ) )
 	{
 #ifndef _XBOX
 		if (!m_hMultiplayerAdvancedDialog.Get())
@@ -1213,7 +1231,7 @@ void COptionsSubMultiplayer::OnCommand( const char *command )
 		m_hMultiplayerAdvancedDialog->Activate();
 #endif
 	}
-	else if (!stricmp( command, "ImportSprayImage" ) )
+	else if (V_strieq( command, "ImportSprayImage" ) )
 	{
 		if (m_hImportSprayDialog == NULL)
 		{
@@ -1235,7 +1253,7 @@ void COptionsSubMultiplayer::OnCommand( const char *command )
 		m_hImportSprayDialog->Activate();
 	}
 
-	else if ( !stricmp( command, "ResetStats" ) )
+	else if ( V_strieq( command, "ResetStats" ) )
 	{
 		QueryBox *box = new QueryBox("#GameUI_ConfirmResetStatsTitle", "#GameUI_ConfirmResetStatsText", this);
 		box->SetOKButtonText("#GameUI_Reset");
@@ -1245,7 +1263,7 @@ void COptionsSubMultiplayer::OnCommand( const char *command )
 		box->DoModal();
 	}
 
-	else if ( !stricmp( command, "ResetStats_NoConfirm" ) )
+	else if ( V_strieq( command, "ResetStats_NoConfirm" ) )
 	{
 		engine->ClientCmd_Unrestricted("stats_reset");
 	}
@@ -1355,14 +1373,15 @@ void COptionsSubMultiplayer::InitLogoList( CLabeledCommandComboBox *cb )
 	const char *logofile = cl_logofile.GetString();
 	Q_snprintf( directory, sizeof( directory ), "materials/vgui/logos/*.vtf" );
 	const char *fn = g_pFullFileSystem->FindFirst( directory, &fh );
+	RunCodeAtScopeExit( g_pFullFileSystem->FindClose( fh ) );
 	int i = 0, initialItem = 0; 
 	while (fn)
 	{
 		char filename[ 512 ];
 		Q_snprintf( filename, sizeof(filename), "materials/vgui/logos/%s", fn );
-		if ( strlen( filename ) >= 4 )
+		if ( size_t len = strlen( filename ); len >= 4 )
 		{
-			filename[ strlen( filename ) - 4 ] = 0;
+			filename[ len - 4 ] = 0;
 			Q_strncat( filename, ".vmt", sizeof( filename ), COPY_ALL_CHARACTERS );
 			if ( g_pFullFileSystem->FileExists( filename ) )
 			{
@@ -1373,7 +1392,7 @@ void COptionsSubMultiplayer::InitLogoList( CLabeledCommandComboBox *cb )
 
 				// check to see if this is the one we have set
 				Q_snprintf( filename, sizeof(filename), "materials/vgui/logos/%s", fn );
-				if (!Q_stricmp(filename, logofile))
+				if (V_strieq(filename, logofile))
 				{
 					initialItem = i;
 				}
@@ -1385,7 +1404,6 @@ void COptionsSubMultiplayer::InitLogoList( CLabeledCommandComboBox *cb )
 		fn = g_pFullFileSystem->FindNext( fh );
 	}
 
-	g_pFullFileSystem->FindClose( fh );
 	cb->SetInitialItem(initialItem);
 }
 
@@ -1455,7 +1473,7 @@ void FindVMTFilesInFolder( const char *pFolder, const char *pFolderName, CLabele
 
 	while ( fn )
 	{
-		if ( !stricmp( fn, ".") || !stricmp( fn, "..") )
+		if ( V_streq( fn, ".") || V_streq( fn, "..") )
 		{
 			fn = g_pFullFileSystem->FindNext( fh );
 			continue;
@@ -1481,9 +1499,9 @@ void FindVMTFilesInFolder( const char *pFolder, const char *pFolderName, CLabele
 
 		char filename[ 512 ];
 		Q_snprintf( filename, sizeof(filename), "%s/%s", pFolder, fn );
-		if ( strlen( filename ) >= 4 )
+		if ( size_t len = strlen( filename ); len >= 4 )
 		{
-			filename[ strlen( filename ) - 4 ] = 0;
+			filename[ len - 4 ] = 0;
 			Q_strncat( filename, ".vmt", sizeof( filename ), COPY_ALL_CHARACTERS );
 			if ( g_pFullFileSystem->FileExists( filename ) )
 			{
@@ -1505,7 +1523,7 @@ void FindVMTFilesInFolder( const char *pFolder, const char *pFolderName, CLabele
 				V_FileBase( modelfile, realname );
 				V_FileBase( filename, filename );
 				
-				if (!stricmp(filename, realname))
+				if (V_strieq(filename, realname))
 				{
 					iInitialItem = iCount;
 				}
@@ -1588,11 +1606,12 @@ void COptionsSubMultiplayer::RemapModel()
 	if( pModelName == NULL )
 		return;
 
-	char texture[ 256 ];
-	Q_snprintf ( texture, sizeof( texture ), "vgui/playermodels/%s", pModelName );
-	texture[ strlen( texture ) - 4 ] = 0;
+	char texture[ 256 ], textureName[ 256 ];
+	V_sprintf_safe ( texture, "vgui/playermodels/%s", pModelName );
+	// dimhotepus: Correct way to strip extension.
+	V_StripExtension( texture, textureName );
 
-	m_pModelImage->setTexture( texture );
+	m_pModelImage->setTexture( textureName );
 }
 
 
@@ -1652,15 +1671,15 @@ void COptionsSubMultiplayer::OnResetData()
 		// cl_downloadfilter
 		ConVarRef cl_downloadfilter( "cl_downloadfilter");
 
-		if ( Q_stricmp( cl_downloadfilter.GetString(), "none" ) == 0 )
+		if ( V_strieq( cl_downloadfilter.GetString(), "none" ) )
 		{
 			m_pDownloadFilterCombo->ActivateItem( 3 );
 		}
-		else if ( Q_stricmp( cl_downloadfilter.GetString(), "nosounds" ) == 0 )
+		else if ( V_strieq( cl_downloadfilter.GetString(), "nosounds" ) )
 		{
 			m_pDownloadFilterCombo->ActivateItem( 1 );
 		}
-		else if ( Q_stricmp( cl_downloadfilter.GetString(), "mapsonly" ) == 0 )
+		else if ( V_strieq( cl_downloadfilter.GetString(), "mapsonly" ) )
 		{
 			m_pDownloadFilterCombo->ActivateItem( 2 );
 		}
@@ -1758,7 +1777,7 @@ void COptionsSubMultiplayer::OnApplyChanges()
 //-----------------------------------------------------------------------------
 Panel *COptionsSubMultiplayer::CreateControlByName( const char *controlName )
 {
-	if( !Q_stricmp( "CCvarToggleCheckButton", controlName ) )
+	if( V_strieq( "CCvarToggleCheckButton", controlName ) )
 	{
 		CCvarToggleCheckButton *newButton = new CCvarToggleCheckButton( this, controlName, "", "" );
 		m_cvarToggleCheckButtons.AddElement( newButton );

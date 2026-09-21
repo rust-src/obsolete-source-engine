@@ -44,7 +44,7 @@ unsigned char Interpolator_InterpolatorForName( char const *name )
 {
 	for ( auto &slot : g_InterpolatorNameMap )
 	{
-		if ( !Q_stricmp( name, slot.name ) )
+		if ( V_strieq( name, slot.name ) )
 			return slot.type;
 	}
 	
@@ -315,7 +315,7 @@ void Interpolator_CurveInterpolate( int interpolationType,
 			float dt = vEnd.x - vStart.x;
 			if ( dt > 0.0f )
 			{
-				float val = 1.0f - ExponentialDecay( 0.001, dt, f * dt ); 
+				float val = 1.0f - ExponentialDecay( 0.001f, dt, f * dt ); 
 				vOut.y = vStart.y + val * ( vEnd.y - vStart.y );
 			}
 			else
@@ -427,7 +427,7 @@ void Interpolator_CurveInterpolate_NonNormalized( int interpolationType,
 			float dt = vEnd.x - vStart.x;
 			if ( dt > 0.0f )
 			{
-				float val = 1.0f - ExponentialDecay( 0.001, dt, f * dt ); 
+				float val = 1.0f - ExponentialDecay( 0.001f, dt, f * dt ); 
 				vOut.y = vStart.y + val * ( vEnd.y - vStart.y );
 			}
 			else

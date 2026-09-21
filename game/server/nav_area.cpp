@@ -5805,7 +5805,7 @@ bool CNavArea::IsPotentiallyVisibleToTeam( int teamIndex ) const
 
 	CTeam *team = GetGlobalTeam( teamIndex );
 
-	for( int i = 0; i < team->GetNumPlayers(); ++i )
+	for( intp i = 0; i < team->GetNumPlayers(); ++i )
 	{
 		if ( team->GetPlayer(i)->IsAlive() )
 		{
@@ -5832,7 +5832,7 @@ bool CNavArea::IsCompletelyVisibleToTeam( int teamIndex ) const
 
 	CTeam *team = GetGlobalTeam( teamIndex );
 
-	for( int i = 0; i < team->GetNumPlayers(); ++i )
+	for( intp i = 0; i < team->GetNumPlayers(); ++i )
 	{
 		if ( team->GetPlayer(i)->IsAlive() )
 		{

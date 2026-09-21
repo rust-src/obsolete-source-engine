@@ -13,6 +13,7 @@
 #include <direct.h>
 #include <stdarg.h>
 
+#include "tier1/strtools.h"
 #include "goldsrc_standin.h"
 
 #include "wadlib.h"
@@ -329,14 +330,14 @@ int PrintUsage(const char *pExtra, ...) {
 }
 
 // Take something like "c:/a/b/c/filename.ext" and return "filename".
-void GetBaseFilename(const char *pWadFilename, char wadBaseName[512]) {
+void GetBaseFilename(const char *pWadFilename, char (&wadBaseName)[512]) {
   const char *pBase = strrchr(pWadFilename, '\\');
   if (strrchr(pWadFilename, '/') > pBase) pBase = strrchr(pWadFilename, '/');
 
   if (pBase)
-    strcpy(wadBaseName, pBase + 1);
+    V_strcpy_safe(wadBaseName, pBase + 1);
   else
-    strcpy(wadBaseName, pWadFilename);
+    V_strcpy_safe(wadBaseName, pWadFilename);
 
   char *pDot = strchr(wadBaseName, '.');
   if (pDot) *pDot = 0;
@@ -366,7 +367,7 @@ void EnsureDirExists(const char *pDir) {
 void WriteVMTFile(const char *pBaseDir, const char *pSubDir, const char *pName,
                   bool bTranslucent) {
   char vmtFilename[512];
-  sprintf(vmtFilename, "%s\\materials\\%s\\%s.vmt", pBaseDir, pSubDir, pName);
+  V_sprintf_safe(vmtFilename, "%s\\materials\\%s\\%s.vmt", pBaseDir, pSubDir, pName);
 
   FILE *fp = fopen(vmtFilename, "wt");
   if (!fp) {
@@ -400,7 +401,7 @@ void WriteVMTFile(const char *pBaseDir, const char *pSubDir, const char *pName,
 void WriteTXTFile(const char *pBaseDir, const char *pSubDir,
                   const char *pName) {
   char filename[512];
-  sprintf(filename, "%s\\materialsrc\\%s\\%s.txt", pBaseDir, pSubDir, pName);
+  V_sprintf_safe(filename, "%s\\materialsrc\\%s\\%s.txt", pBaseDir, pSubDir, pName);
 
   FILE *fp = fopen(filename, "wt");
   if (!fp) Error("\tWriteTXTFile: can't open %s for writing.\n", filename);
@@ -412,7 +413,7 @@ void WriteTXTFile(const char *pBaseDir, const char *pSubDir,
 void WriteResizeInfoFile(const char *pBaseDir, const char *pSubDir,
                          const char *pName, int width, int height) {
   char filename[512];
-  sprintf(filename, "%s\\materials\\%s\\%s.resizeinfo", pBaseDir, pSubDir,
+  V_sprintf_safe(filename, "%s\\materials\\%s\\%s.resizeinfo", pBaseDir, pSubDir,
           pName);
 
   FILE *fp = fopen(filename, "wt");
@@ -462,7 +463,7 @@ void WriteOutputFiles(const char *pBaseDir, const char *pSubDir,
   bool bPowerOf2 = true;
 
   char tgaFilename[1024];
-  sprintf(tgaFilename, "%s\\materialsrc\\%s\\%s.tga", pBaseDir, pSubDir, pName);
+  V_sprintf_safe(tgaFilename, "%s\\materialsrc\\%s\\%s.tga", pBaseDir, pSubDir, pName);
   if (!WriteTGAFile(tgaFilename, bAllowTranslucent, buffer, width, height,
                     pPalette, bPowerOf2, &bTranslucent, &bResized)) {
     Error("\tError writing %s.\n", tgaFilename);
@@ -488,8 +489,8 @@ void WriteOutputFiles(const char *pBaseDir, const char *pSubDir,
 
 void EnsureDirectoriesExist(const char *pBaseDir, const char *pSubDir) {
   char materialsrcDir[512], materialsDir[512];
-  sprintf(materialsrcDir, "%s\\materialsrc\\%s", pBaseDir, pSubDir);
-  sprintf(materialsDir, "%s\\materials\\%s", pBaseDir, pSubDir);
+  V_sprintf_safe(materialsrcDir, "%s\\materialsrc\\%s", pBaseDir, pSubDir);
+  V_sprintf_safe(materialsDir, "%s\\materials\\%s", pBaseDir, pSubDir);
   EnsureDirExists(materialsrcDir);
   EnsureDirExists(materialsDir);
 }
@@ -735,7 +736,7 @@ void ProcessSPRFile(const char *pBaseDir, const char *pSubDir,
   // Generate a .txt file for the sprite.
   //
   char txtFilename[512];
-  sprintf(txtFilename, "%s\\materialsrc\\%s\\%s.txt", pBaseDir, pSubDir,
+  V_sprintf_safe(txtFilename, "%s\\materialsrc\\%s\\%s.txt", pBaseDir, pSubDir,
           baseFilename);
 
   fp = fopen(txtFilename, "wt");
@@ -940,6 +941,8 @@ int main(int argc, char **argv) {
     _finddata_t findData;
     intptr_t handle = _findfirst(pWadFilenames, &findData);
     if (handle != -1) {
+    	RunCodeAtScopeExit(_findclose( handle ));
+
       do {
         if (!(findData.attrib & _A_SUBDIR)) {
           char fullFilename[512];
@@ -949,8 +952,6 @@ int main(int argc, char **argv) {
           ProcessWadFile(fullFilename, pBaseDir, pSubDir, pOnlyTex, bVTex);
         }
       } while (_findnext(handle, &findData) == 0);
-
-      _findclose(handle);
     }
   }
 
@@ -961,17 +962,16 @@ int main(int argc, char **argv) {
     _finddata_t findData;
     intptr_t handle = _findfirst(pBMPFilenames, &findData);
     if (handle != -1) {
+      RunCodeAtScopeExit(_findclose( handle ));
+
       do {
         if (!(findData.attrib & _A_SUBDIR)) {
           char fullFilename[512];
-          snprintf(fullFilename, ARRAYSIZE(fullFilename), "%s\\%s", prefix,
-                   findData.name);
+          V_sprintf_safe(fullFilename, "%s\\%s", prefix, findData.name);
 
           ProcessBMPFile(pBaseDir, pSubDir, fullFilename, bVTex);
         }
       } while (_findnext(handle, &findData) == 0);
-
-      _findclose(handle);
     }
   }
 
@@ -981,6 +981,8 @@ int main(int argc, char **argv) {
     _finddata_t findData;
     intptr_t handle = _findfirst(pSPRFilenames, &findData);
     if (handle != -1) {
+      RunCodeAtScopeExit(_findclose( handle ));
+
       do {
         if (!(findData.attrib & _A_SUBDIR)) {
           char fullFilename[512];
@@ -990,8 +992,6 @@ int main(int argc, char **argv) {
           ProcessSPRFile(pBaseDir, pSubDir, fullFilename, bVTex);
         }
       } while (_findnext(handle, &findData) == 0);
-
-      _findclose(handle);
     }
   }
 

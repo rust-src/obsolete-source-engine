@@ -672,20 +672,21 @@ byte *COM_LoadFile (IN_Z const char *path, int usehunk, int *pLength)
 {
 	FileHandle_t	hFile;
 	byte			*buf = NULL;
-	char			base[128];
-	int             len;
+	char			base[MAX_OSPATH];
 
 	if (pLength)
 	{
 		*pLength = 0;
 	}
 
-// look for it in the filesystem or pack files
-	len = COM_OpenFile( path, &hFile );
+	// look for it in the filesystem or pack files
+	int len = COM_OpenFile( path, &hFile );
 	if ( !hFile )
 	{
 		return NULL;
 	}
+
+	RunCodeAtScopeExit( COM_CloseFile( hFile ) );
 
 	// Extract the filename base name for hunk tag
 	Q_FileBase( path, base );
@@ -718,15 +719,13 @@ byte *COM_LoadFile (IN_Z const char *path, int usehunk, int *pLength)
 		Sys_Error ("COM_LoadFile: bad usehunk");
 	}
 
-	if ( !buf ) 
+	if ( !buf )
 	{
 		Sys_Error ("COM_LoadFile: not enough space for %s", path);
-		COM_CloseFile(hFile);	// exit here to prevent fault on oom (kdb)
-		return NULL;			
+		return NULL;
 	}
 		
 	g_pFileSystem->ReadEx( buf, bufSize, len, hFile );
-	COM_CloseFile( hFile );
 
 	((byte *)buf)[ len ] = 0;
 
@@ -751,7 +750,7 @@ void COM_CopyFileChunk( FileHandle_t dst, FileHandle_t src, int nSize )
 	while (copysize > COM_COPY_CHUNK_SIZE)
 	{
 		// dimhotepus: Write exactly bytes count which was read.
-		const int read = g_pFileSystem->Read( copybuf, COM_COPY_CHUNK_SIZE, src );
+		const int read = g_pFileSystem->Read( copybuf, src );
 		g_pFileSystem->Write( copybuf, read, dst );
 
 		copysize -= read;
@@ -815,7 +814,7 @@ void COM_SetupLogDir( IN_Z const char *mapname )
 	g_pFileSystem->RemoveSearchPath( NULL, "LOGDIR" );
 
 	// set the log directory
-	if ( mapname && CommandLine()->FindParm("-uselogdir") )
+	if ( mapname && CommandLine()->HasParm("-uselogdir") )
 	{
 		int i;
 		char sRelativeLogDir[MAX_PATH];
@@ -935,7 +934,7 @@ void COM_InitFilesystem( const char *pFullModPath )
 		else
 		{
 			// still allow command line override even when not running steam
-			if (CommandLine()->CheckParm(kAudioLanguageArg))
+			if (CommandLine()->HasParm(kAudioLanguageArg))
 			{
 				V_strcpy_safe(language, CommandLine()->ParmValue(kAudioLanguageArg, "english"));
 			}
@@ -949,7 +948,7 @@ void COM_InitFilesystem( const char *pFullModPath )
 			}
 		}
 
-		if ( !Q_isempty(language) && Q_stricmp(language, "english") )
+		if ( !Q_isempty(language) && !V_strieq(language, "english") )
 		{
 			initInfo.m_pLanguage = language;
 		}
@@ -1003,7 +1002,7 @@ const char *COM_DXLevelToString( int dxlevel )
 		bHalfPrecision = true;
 	}
 	
-	if( CommandLine()->CheckParm( "-dxlevel" ) )
+	if( CommandLine()->HasParm( "-dxlevel" ) )
 	{
 		switch( dxlevel )
 		{

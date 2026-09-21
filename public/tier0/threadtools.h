@@ -189,15 +189,18 @@ PLATFORM_INTERFACE void ThreadSetAffinity( ThreadHandle_t hThread, intp nAffinit
 
 //-----------------------------------------------------------------------------
 
-enum ThreadWaitResult_t
+// dimhotepus: int -> unsigned
+enum ThreadWaitResult_t : unsigned
 {
-	TW_FAILED = 0xffffffff, // WAIT_FAILED //-V112
-	TW_TIMEOUT = 0x00000102, // WAIT_TIMEOUT
+	TW_FAILED = 0xffffffffu, // WAIT_FAILED //-V112
+	TW_TIMEOUT = 0x00000102u, // WAIT_TIMEOUT
 };
 
 #ifdef _WIN32
-PLATFORM_INTERFACE int ThreadWaitForObjects( int nEvents, const HANDLE *pHandles, bool bWaitAll = true, unsigned timeout = TT_INFINITE );
-inline int ThreadWaitForObject( HANDLE handle, bool bWaitAll = true, unsigned timeout = TT_INFINITE ) { return ThreadWaitForObjects( 1, &handle, bWaitAll, timeout ); }
+// dimhotepus: int -> unsigned.
+PLATFORM_INTERFACE unsigned ThreadWaitForObjects( int nEvents, const HANDLE *pHandles, bool bWaitAll = true, unsigned timeout = TT_INFINITE );
+// dimhotepus: int -> unsigned.
+inline unsigned ThreadWaitForObject( HANDLE handle, bool bWaitAll = true, unsigned timeout = TT_INFINITE ) { return ThreadWaitForObjects( 1, &handle, bWaitAll, timeout ); }
 #endif
 
 //-----------------------------------------------------------------------------
@@ -419,6 +422,10 @@ class PLATFORM_CLASS CThreadLocalBase
 public:
 	CThreadLocalBase();
 	~CThreadLocalBase();
+
+	// dimhotepus: Delete implicit things.
+	CThreadLocalBase(const CThreadLocalBase &) = delete;
+	CThreadLocalBase& operator=(const CThreadLocalBase &) = delete;
 
 	[[nodiscard]] void * Get() const;
 	void   Set(void *);
@@ -658,7 +665,8 @@ private:
 class ReentrancyVerifier
 {
 public:
-	inline ReentrancyVerifier(CInterlockedInt* counter, int sleepTimeMS)
+	// dimhotepus: int -> unsigned.
+	inline ReentrancyVerifier(CInterlockedInt* counter, unsigned sleepTimeMS)
 	: mCounter(counter)
 	{
 		Assert(mCounter != nullptr);
@@ -695,6 +703,8 @@ class PLATFORM_CLASS CThreadMutex
 {
 public:
 	CThreadMutex();
+	// dimhotepus: Ctor with spin count.
+	CThreadMutex(unsigned int spinCount);
 	~CThreadMutex();
 
 	//------------------------------------------------------
@@ -1177,7 +1187,8 @@ public:
 	}
 };
 
-inline int ThreadWaitForEvents( int nEvents, CThreadEvent * const *pEvents, bool bWaitAll = true, unsigned timeout = TT_INFINITE )
+// dimhotepus: int -> unsigned.
+inline unsigned ThreadWaitForEvents( int nEvents, CThreadEvent * const *pEvents, bool bWaitAll = true, unsigned timeout = TT_INFINITE )
 {
 #ifdef POSIX
   Assert( nEvents == 1);
@@ -1302,7 +1313,8 @@ public:
 	const char *GetName();
 	void SetName( const char * );
 
-	size_t CalcStackDepth( void *pStackVariable ) const	{ return static_cast<byte *>(m_pStackBase) - static_cast<byte *>(pStackVariable); }
+	// dimhotepus: size_t -> ptrdiff_t.
+	[[nodiscard]] std::ptrdiff_t CalcStackDepth( void *pStackVariable ) const	{ return static_cast<byte *>(m_pStackBase) - static_cast<byte *>(pStackVariable); }
 
 	//-----------------------------------------------------
 	// Functions for the other threads
@@ -1670,7 +1682,7 @@ inline void CThreadMutex::Lock()
 #ifdef THREAD_MUTEX_TRACING_ENABLED
 		ThreadId_t thisThreadID = ThreadGetCurrentId();
 		if ( m_bTrace && m_currentOwnerID && ( m_currentOwnerID != thisThreadID ) )
-		Msg( "Thread %lu about to wait for lock %p owned by %lu\n",
+		Msg( "Thread %u about to wait for lock %p owned by %u\n",
 			ThreadGetCurrentId(),
 			reinterpret_cast<CRITICAL_SECTION *>(&m_CriticalSection),
 			m_currentOwnerID );
@@ -1684,7 +1696,7 @@ inline void CThreadMutex::Lock()
 			// we now own it for the first time.  Set owner information
 			m_currentOwnerID = thisThreadID;
 			if ( m_bTrace )
-			Msg( "Thread %lu now owns lock %p\n",
+			Msg( "Thread %u now owns lock %p\n",
 				m_currentOwnerID,
 				reinterpret_cast<CRITICAL_SECTION *>(&m_CriticalSection) );
 		}
@@ -1702,7 +1714,7 @@ inline void CThreadMutex::Unlock()
 		if (m_lockCount == 0)
 		{
 			if ( m_bTrace )
-			Msg( "Thread %lu releasing lock %p\n",
+			Msg( "Thread %u releasing lock %p\n",
 				m_currentOwnerID,
 				reinterpret_cast<CRITICAL_SECTION *>(&m_CriticalSection) );
 			m_currentOwnerID = 0;
@@ -1718,7 +1730,7 @@ inline bool CThreadMutex::AssertOwnedByCurrentThread() const
 #ifdef THREAD_MUTEX_TRACING_ENABLED
 	if (ThreadGetCurrentId() == m_currentOwnerID)
 		return true;
-	AssertMsg3( 0, "Expected thread %lu as owner of lock %p, but %lu owns",
+	AssertMsg3( 0, "Expected thread %u as owner of lock %p, but %u owns",
 		ThreadGetCurrentId(),
 		reinterpret_cast<const CRITICAL_SECTION *>(&m_CriticalSection),
 		m_currentOwnerID );
@@ -1747,6 +1759,11 @@ inline CThreadMutex::CThreadMutex()
 	pthread_mutexattr_init( &m_Attr );
 	pthread_mutexattr_settype( &m_Attr, PTHREAD_MUTEX_RECURSIVE );
 	pthread_mutex_init( &m_Mutex, &m_Attr );
+}
+
+// dimhotepus: Ctor with spin count.
+inline CThreadMutex::CThreadMutex(unsigned int spinCount) : CThreadMutex{}
+{
 }
 
 //---------------------------------------------------------
@@ -1885,7 +1902,6 @@ inline void CThreadSpinRWLock::LockForWrite()
 
 // read data from a memory address
 template<class T>
-FORCEINLINE
 [[nodiscard]]
 [[deprecated("Since C++17 you should use atomics.")]]
 T ReadVolatileMemory( T const *pPtr )

@@ -88,8 +88,10 @@ public:
 	virtual int				GetOwningWeaponEntIndex( int entindex );
 	virtual int				GetEntIndex( EntitySearchResult entityToAttach );
 
-	virtual int				FindGlobalFlexcontroller( char const *name );
-	virtual char const		*GetGlobalFlexControllerName( int idx );
+	// dimhotepus: int -> UtlSymId_t.
+	virtual UtlSymId_t		FindGlobalFlexcontroller( char const *name );
+	// dimhotepus: int -> UtlSymId_t.
+	virtual char const		*GetGlobalFlexControllerName( UtlSymId_t idx );
 
 	// helper for traversing ownership hierarchy
 	virtual EntitySearchResult	GetOwnerEntity( EntitySearchResult currentEnt );
@@ -644,12 +646,14 @@ void CClientTools::UpdateProjectedTexture( ClientShadowHandle_t h, bool bForce )
 	g_pClientShadowMgr->UpdateProjectedTexture( h, bForce );
 }
 
-int CClientTools::FindGlobalFlexcontroller( char const *name )
+// dimhotepus: int -> UtlSymId_t.
+UtlSymId_t CClientTools::FindGlobalFlexcontroller( char const *name )
 {
 	return C_BaseFlex::AddGlobalFlexController( name );
 }
 
-char const *CClientTools::GetGlobalFlexControllerName( int idx )
+// dimhotepus: int -> UtlSymId_t.
+char const *CClientTools::GetGlobalFlexControllerName( UtlSymId_t idx )
 {
 	return C_BaseFlex::GetGlobalFlexControllerName( idx );
 }
@@ -719,7 +723,7 @@ QAngle CClientTools::GetAbsAngles( HTOOLHANDLE handle )
 //-----------------------------------------------------------------------------
 void CClientTools::PostToolMessage( KeyValues *pKeyValues )
 {
-	if ( !Q_stricmp( pKeyValues->GetName(), "QueryParticleManifest" ) )
+	if ( V_strieq( pKeyValues->GetName(), "QueryParticleManifest" ) )
 	{
 		// NOTE: This cannot be done during particle system init because tools aren't set up at that point
 		CUtlVector<CUtlString> files;
@@ -735,20 +739,20 @@ void CClientTools::PostToolMessage( KeyValues *pKeyValues )
 		return;
 	}
 
-	if ( !Q_stricmp( pKeyValues->GetName(), "QueryMonitorTexture" ) )
+	if ( V_strieq( pKeyValues->GetName(), "QueryMonitorTexture" ) )
 	{
 		pKeyValues->SetPtr( "texture", GetCameraTexture() );
 		return;
 	}
 
 #ifdef PORTAL
-	if ( !Q_stricmp( pKeyValues->GetName(), "portals" ) )
+	if ( V_strieq( pKeyValues->GetName(), "portals" ) )
 	{
 		g_pPortalRender->HandlePortalPlaybackMessage( pKeyValues );
 		return;
 	}
 	
-	if ( !Q_stricmp( pKeyValues->GetName(), "query CPortalRenderer" ) )
+	if ( V_strieq( pKeyValues->GetName(), "query CPortalRenderer" ) )
 	{
 		pKeyValues->SetInt( "IsRenderingPortal", g_pPortalRender->IsRenderingPortal() ? 1 : 0 );
 		return;

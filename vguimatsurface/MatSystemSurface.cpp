@@ -359,7 +359,7 @@ InitReturnVal_t CMatSystemSurface::Init( void )
 	pVMTKeyValues->SetInt( "$ignorez", 1 );
 	pVMTKeyValues->SetInt( "$no_fullbright", 1 );
 	
-	if ( ! (CommandLine()->FindParm("-disable_matsurf_noculls")) )
+	if ( !CommandLine()->HasParm("-disable_matsurf_noculls") )
 	{
 		pVMTKeyValues->SetInt( "$nocull", 1 );	// skip this if user asks for the switch above
 	}
@@ -424,7 +424,7 @@ InitReturnVal_t CMatSystemSurface::Init( void )
 	// font manager needs the file system and material system for bitmap fonts
 	FontManager().SetInterfaces( g_pFullFileSystem, g_pMaterialSystem );
 
-	g_bSpewFocus = CommandLine()->FindParm( "-vguifocus" ) ? true : false;
+	g_bSpewFocus = CommandLine()->HasParm( "-vguifocus" );
 
 	return INIT_OK;
 }
@@ -1456,16 +1456,6 @@ bool CMatSystemSurface::DeleteTextureByID(int id)
 	return false;
 }
 
-#ifdef _X360
-void CMatSystemSurface::UncacheUnusedMaterials()
-{
-	// unbind any currently set texture (which may be uncached)
-	DrawSetTexture( -1 );
-
-	// X360TBD: Need to only destroy "marked" textures
-}
-#endif
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : id - 
@@ -2380,7 +2370,7 @@ void CMatSystemSurface::DrawPrintText(const wchar_t *text, int iTextLen, FontDra
 	int iLastTexId = -1;
 
 	int iCount = 0;
-	vgui::Vertex_t *pQuads = (vgui::Vertex_t*)stackalloc((2 * iTextLen) * sizeof(vgui::Vertex_t) );
+	vgui::Vertex_t *pQuads = stackallocT( vgui::Vertex_t, 2 * iTextLen );
 	bool bUnderlined = FontManager().GetFontUnderlined( m_hCurrentFont );
 
 	int iTotalWidth = 0;
@@ -4238,8 +4228,8 @@ static bool GetIconBits( HDC hdc, ICONINFO& iconInfo, int& w, int& h, unsigned c
 	DWORD *output = (DWORD *)rgba;
 
 	BITMAPINFO bmInfo;
+	BitwiseClear( bmInfo );
 
-	memset( &bmInfo, 0, sizeof( bmInfo ) );
 	bmInfo.bmiHeader.biSize = sizeof( bmInfo.bmiHeader );
 	bmInfo.bmiHeader.biWidth = w; 
     bmInfo.bmiHeader.biHeight = h; 
@@ -4288,9 +4278,9 @@ static bool GetIconBits( HDC hdc, ICONINFO& iconInfo, int& w, int& h, unsigned c
 
 static bool ShouldMakeUnique( char const *extension )
 {
-	if ( !Q_stricmp( extension, "cur" ) )
+	if ( V_strieq( extension, "cur" ) )
 		return true;
-	if ( !Q_stricmp( extension, "ani" ) )
+	if ( V_strieq( extension, "ani" ) )
 		return true;
 	return false;
 }
@@ -4317,7 +4307,7 @@ vgui::IImage *CMatSystemSurface::GetIconImageForFullPath( char const *pFullPath 
 			V_ExtractFileExtension( pFullPath, ext );
 
 			char lookup[ 512 ];
-			V_sprintf_safe( lookup, "%s", ShouldMakeUnique( ext ) ? pFullPath : info.szTypeName );
+			V_strcpy_safe( lookup, ShouldMakeUnique( ext ) ? pFullPath : info.szTypeName );
 			
 			// Now check the dictionary
 			unsigned short idx = m_FileTypeImages.Find( lookup );
@@ -4330,7 +4320,7 @@ vgui::IImage *CMatSystemSurface::GetIconImageForFullPath( char const *pFullPath 
 					size_t bufsize = 0;
 					
 					HDC hdc = ::GetDC(reinterpret_cast<HWND>(m_HWnd));
-					RunCodeAtScopeExit(::ReleaseDC( reinterpret_cast<HWND>(m_HWnd), hdc );)
+					RunCodeAtScopeExit(::ReleaseDC( reinterpret_cast<HWND>(m_HWnd), hdc ););
 
 					if ( GetIconBits( hdc, iconInfo, w, h, NULL, bufsize ) )
 					{

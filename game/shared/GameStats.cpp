@@ -695,8 +695,8 @@ bool CBaseGameStats_Driver::Init()
 	Q_strncpy( s_szStatUploadRegistryKeyName, "GameStatsUpload_", sizeof( s_szStatUploadRegistryKeyName ) );
 	Q_strncat( s_szStatUploadRegistryKeyName, szLoweredGameDir, sizeof( s_szStatUploadRegistryKeyName ) );
 
-	gamestats->m_bLoggingToFile = CommandLine()->FindParm( "-gamestatsloggingtofile" ) ? true : false;
-	gamestats->m_bLogging = CommandLine()->FindParm( "-gamestatslogging" ) ? true : false;
+	gamestats->m_bLoggingToFile = CommandLine()->HasParm( "-gamestatsloggingtofile" );
+	gamestats->m_bLogging = CommandLine()->HasParm( "-gamestatslogging" );
 
 	if ( gamestatsuploader )
 	{
@@ -860,7 +860,7 @@ void CBaseGameStats_Driver::LevelInitPreEntity()
 	m_bInLevel = true;
 	m_bFirstLevel = false;
 
-	if ( Q_stricmp( s_szPseudoUniqueID, "unknown" ) == 0 )
+	if ( V_strieq( s_szPseudoUniqueID, "unknown" ) )
 	{
 		// "unknown" means this is a dedicated server and we weren't able to generate a unique ID (e.g. Linux server).
 		// Change the unique ID to be a hash of IP & port.  We couldn't do this earlier because IP is not known until level
@@ -1055,7 +1055,7 @@ void CBaseGameStats_Driver::SendData()
 	CUtlBuffer buf( (intp)0, 0, CUtlBuffer::TEXT_BUFFER );
 	m_pGamestatsData->m_pKVData->RecursiveSaveToFile( buf, 0 );
 
-	if ( CommandLine()->FindParm( "-gamestatsfileoutputonly" ) )
+	if ( CommandLine()->HasParm( "-gamestatsfileoutputonly" ) )
 	{
 		// write file for debugging
 		const char szFileName[] = "gamestats.dat";

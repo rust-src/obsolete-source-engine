@@ -737,11 +737,11 @@ void CTFStorePreviewItemPanel2::OnCommand( const char *command )
 			  )
 	{
 #ifdef ENABLE_STORE_RENTAL_BACKEND
-		ECartItemType eCartItemType = !V_stricmp( command, "addrentaltocart_1day" )
+		ECartItemType eCartItemType = V_strieq( command, "addrentaltocart_1day" )
 									? kCartItem_Rental_1Day
-									: !V_stricmp( command, "addrentaltocart_3day" )
+									: V_strieq( command, "addrentaltocart_3day" )
 									? kCartItem_Rental_3Day
-									: !V_stricmp( command, "addrentaltocart_7day" )
+									: V_strieq( command, "addrentaltocart_7day" )
 									? kCartItem_Rental_7Day
 									: kCartItem_Purchase;
 #else
@@ -768,7 +768,8 @@ void CTFStorePreviewItemPanel2::OnCommand( const char *command )
 				ELanguage iLang = PchLanguageToELanguage( uilanguage );
 
 				char szURL[512];
-				Q_snprintf( szURL, sizeof(szURL), "http://wiki.teamfortress.com/scripts/itemredirect.php?id=%d&lang=%s", pItem->GetItemDefIndex(), GetLanguageICUName( iLang ) );
+				// dimhotepus: http:// -> https://
+				Q_snprintf( szURL, sizeof(szURL), "https://wiki.teamfortress.com/scripts/itemredirect.php?id=%d&lang=%s", pItem->GetItemDefIndex(), GetLanguageICUName( iLang ) );
 				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( szURL );
 
 				C_CTF_GameStats.Event_Catalog( IE_ARMORY_BROWSE_WIKI, NULL, pItem );

@@ -549,8 +549,8 @@ static WorldDecalHandle_t DecalToHandle( decal_t *pDecal )
 // Init the decal pool
 void R_DecalInit( void )
 {
-	g_nMaxDecals = Q_atoi( r_decals.GetDefault() );
-	g_nMaxDecals = MAX(64, g_nMaxDecals);
+	// dimhotepus: Use current r_decals value as upper bound instead of default one.
+	g_nMaxDecals = max( 64, r_decals.GetInt() );
 	Assert( g_DecalAllocator.Count() == 0 );
 	g_nDynamicDecals = 0;
 	g_nStaticDecals = 0;
@@ -1060,18 +1060,19 @@ static void R_DecalNode( mnode_t *node, decalinfo_t* decalinfo )
 //-----------------------------------------------------------------------------
 static int DecalListAdd( decallist_t *pList, int count )
 {
-	int			i;
-	Vector		tmp;
-	decallist_t	*pdecal;
+	// UNDONE: Tune this '2' constant.
+	constexpr int kRejectDecalsCloserThanUnit = 2;
 
-	pdecal = pList + count;
-	for ( i = 0; i < count; i++ )
+	Vector		tmp;
+
+	decallist_t	*pdecal = pList + count;
+	for ( int i = 0; i < count; i++ )
 	{
-		if ( !Q_strcmp( pdecal->name, pList[i].name ) && 
+		if ( V_streq( pdecal->name, pList[i].name ) && 
 			pdecal->entityIndex == pList[i].entityIndex )
 		{
 			VectorSubtract( pdecal->position, pList[i].position, tmp );	// Merge
-			if ( VectorLength( tmp ) < 2 )	// UNDONE: Tune this '2' constant
+			if ( VectorLength( tmp ) < kRejectDecalsCloserThanUnit )
 				return count;
 		}
 	}
@@ -1094,11 +1095,10 @@ static bool __cdecl DecalDepthCompare( const decallist_t &elem1, const decallist
 int DecalListCreate( decallist_t *pList )
 {
 	int total = 0;
-	int i, depth;
 
 	if ( host_state.worldmodel )
 	{
-		for ( i = 0; i < g_nMaxDecals; i++ )
+		for ( int i = 0; i < g_nMaxDecals; i++ )
 		{
 			decal_t *decal = s_aDecalPool[i];
 
@@ -1106,12 +1106,9 @@ int DecalListCreate( decallist_t *pList )
 			if ( !decal || !IS_SURF_VALID( decal->surfID ) || (decal->flags & ( FDECAL_CUSTOM | FDECAL_DONTSAVE ) ) )	
 				 continue;
 
-			decal_t		*pdecals;
-			IMaterial 	*pMaterial;
-
 			// compute depth
-			depth = 0;
-			pdecals = MSurf_DecalPointer( decal->surfID );
+			int depth = 0;
+			decal_t	*pdecals = MSurf_DecalPointer( decal->surfID );
 			while ( pdecals && pdecals != decal )
 			{
 				depth++;
@@ -1122,8 +1119,7 @@ int DecalListCreate( decallist_t *pList )
 			
 			R_DecalUnProject( decal, &pList[total] );
 
-			pMaterial = decal->material;
-			Q_strncpy( pList[total].name, pMaterial->GetName(), sizeof( pList[total].name ) );
+			V_strcpy_safe( pList[total].name, decal->material->GetName() );
 
 			// Check to see if the decal should be added
 			total = DecalListAdd( pList, total );
@@ -2298,7 +2294,7 @@ inline void R_DrawDecalMeshList( DecalMeshList_t &meshList )
 	}
 }
 
-#define DECALMARKERS_SWITCHSORTTREE ((decal_t *)nullptr)
+constexpr inline decal_t *DECALMARKERS_SWITCHSORTTREE{nullptr};
 #define DECALMARKERS_SWITCHBUCKET	((decal_t *)-1)
 //-----------------------------------------------------------------------------
 //
@@ -2485,7 +2481,7 @@ void R_DrawDecalsAll_Gathered( IMatRenderContext *pRenderContext, decal_t **ppDe
 			else
 			{
 				Assert( pDecalHead );
-				// dimhotepus: Do not derefence nullptr head.
+				// dimhotepus: Do not dereference nullptr head.
 				if ( pDecalHead )
 				{
 					meshList.m_pMesh = pRenderContext->GetDynamicMesh( false, NULL, NULL, pDecalHead->material );
@@ -2522,6 +2518,7 @@ void R_DrawDecalsAll_Gathered( IMatRenderContext *pRenderContext, decal_t **ppDe
 			}
 			else
 			{
+				Assert( pDecalHead );
 				pBatch->m_pMaterial = pDecalHead->material;
 				pBatch->m_pProxy = pDecalHead->userdata;
 				pBatch->m_iLightmapPage = materialSortInfoArray[MSurf_MaterialSortID( pDecalHead->surfID )].lightmapPageID;

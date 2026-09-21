@@ -319,16 +319,16 @@ bool CBaseFlex::ClearSceneEvent( CSceneEventInfo *info, bool fastKill, bool canc
 					if (canceled)
 					{
 						// remove slower if interrupted
-						RemoveLayer( info->m_iLayer, 0.5 );
+						RemoveLayer( info->m_iLayer, 0.5f );
 					}
 					else
 					{
-						RemoveLayer( info->m_iLayer, 0.1 );
+						RemoveLayer( info->m_iLayer, 0.1f );
 					}
 				}
 				else
 				{
-					RemoveLayer( info->m_iLayer, 0.3 );
+					RemoveLayer( info->m_iLayer, 0.3f );
 				}
 			}
 		}
@@ -565,11 +565,11 @@ bool CBaseFlex::HandleStartGestureSceneEvent( CSceneEventInfo *info, CChoreoScen
 		// check in the tag indexes
 		for ( KeyValues *pkvFaceposer = pkvAllFaceposer->GetFirstSubKey(); pkvFaceposer; pkvFaceposer = pkvFaceposer->GetNextKey() )
 		{
-			if (!stricmp( pkvFaceposer->GetName(), "startloop" ))
+			if (V_strieq( pkvFaceposer->GetName(), "startloop" ))
 			{
 				V_strcpy_safe( szStartLoop, pkvFaceposer->GetString() );
 			}
-			else if (!stricmp( pkvFaceposer->GetName(), "endloop" ))
+			else if (V_strieq( pkvFaceposer->GetName(), "endloop" ))
 			{
 				V_strcpy_safe( szEndLoop, pkvFaceposer->GetString() );
 			}
@@ -606,7 +606,7 @@ bool CBaseFlex::HandleStartGestureSceneEvent( CSceneEventInfo *info, CChoreoScen
 			// check in the tag indexes
 			for ( KeyValues *pkvFaceposer = pkvAllFaceposer->GetFirstSubKey(); pkvFaceposer; pkvFaceposer = pkvFaceposer->GetNextKey() )
 			{
-				if (!stricmp( pkvFaceposer->GetName(), "tags" ))
+				if (V_strieq( pkvFaceposer->GetName(), "tags" ))
 				{
 					KeyValues *pkvTags;
 					for ( pkvTags = pkvFaceposer->GetFirstSubKey(); pkvTags; pkvTags = pkvTags->GetNextKey() )
@@ -930,7 +930,7 @@ void CBaseFlex::ProcessSceneEvents( void )
 			Vector p1 = myNpc->GetHullMaxs();
 			p0.z = p1.z + 2;
 			p1.z = p1.z + 2;
-			NDebugOverlay::Box( myNpc->GetAbsOrigin(), p0, p1, 255, 0, 0, 0, 0.12 );
+			NDebugOverlay::Box( myNpc->GetAbsOrigin(), p0, p1, 255, 0, 0, 0, 0.12f );
 		}
 	}
 
@@ -988,7 +988,7 @@ public:
 		// See if it's already loaded
 		for ( auto *file : m_FileList )
 		{
-			if ( file && !stricmp( file->filename, filename ) )
+			if ( file && V_strieq( file->filename, filename ) )
 			{
 				// Make sure translations (local to global flex controller) are set up for this instance
 				EnsureTranslations( instance, ( const flexsettinghdr_t * )file->buffer );
@@ -1183,7 +1183,7 @@ bool CBaseFlex::ProcessFlexAnimationSceneEvent( CSceneEventInfo *info, CChoreoSc
 					if (gpGlobals->frametime > ai_expression_frametime.GetFloat())
 					{
 						info->m_bHasArrived = true;
-						info->m_flNext = gpGlobals->curtime + RandomFloat( 0.7, 1.2 );
+						info->m_flNext = gpGlobals->curtime + RandomFloat( 0.7f, 1.2f );
 					}
 					// only check occasionally
 					else if (info->m_flNext <= gpGlobals->curtime)
@@ -1192,7 +1192,7 @@ bool CBaseFlex::ProcessFlexAnimationSceneEvent( CSceneEventInfo *info, CChoreoSc
 
 						// if not in view, disable
 						info->m_bHasArrived = (pPlayer && !pPlayer->FInViewCone( this ) );
-						info->m_flNext = gpGlobals->curtime + RandomFloat( 0.7, 1.2 );
+						info->m_flNext = gpGlobals->curtime + RandomFloat( 0.7f, 1.2f );
 					}
 
 					if (info->m_bHasArrived)
@@ -1280,7 +1280,7 @@ bool CBaseFlex::ProcessFacingSceneEvent( CSceneEventInfo *info, CChoreoScene *sc
 		float intensity = event->GetIntensity( scene->GetTime() );
 		if (info->m_bIsMoving)
 		{
-			myNpc->AddFacingTarget( info->m_hTarget, intensity, 0.2 );
+			myNpc->AddFacingTarget( info->m_hTarget, intensity, 0.2f );
 		}
 		else
 		{
@@ -1321,15 +1321,15 @@ static Activity DetermineExpressionMoveActivity( CChoreoEvent *event, CAI_BaseNP
 		pszAct = sParam2;
 	}
 
-	if ( !Q_stricmp( pszAct, "Walk" ) )
+	if ( V_strieq( pszAct, "Walk" ) )
 	{
 		activity = ACT_WALK;
 	}
-	else if ( !Q_stricmp( pszAct, "Run" ) )
+	else if ( V_strieq( pszAct, "Run" ) )
 	{
 		activity = ACT_RUN;
 	}
-	else if ( !Q_stricmp( pszAct, "CrouchWalk" ) )
+	else if ( V_strieq( pszAct, "CrouchWalk" ) )
 	{
 		activity = ACT_WALK_CROUCH;
 	}
@@ -1433,8 +1433,8 @@ bool CBaseFlex::ProcessMoveToSceneEvent( CSceneEventInfo *info, CChoreoScene *sc
 					{
 						Vector vTestPoint;
 						myNpc->GetMoveProbe()->FloorPoint( info->m_hTarget->EyePosition(), MASK_NPCSOLID, 0, -64, &vTestPoint );
-						NDebugOverlay::HorzArrow( GetAbsOrigin() + Vector( 0, 0, 1 ), vTestPoint + Vector( 0, 0, 1 ), 4, 255, 0, 255, 0, false, 0.12 );
-						NDebugOverlay::Box( vTestPoint, myNpc->GetHullMins(), myNpc->GetHullMaxs(), 255, 0, 255, 0, 0.12 );
+						NDebugOverlay::HorzArrow( GetAbsOrigin() + Vector( 0, 0, 1 ), vTestPoint + Vector( 0, 0, 1 ), 4, 255, 0, 255, 0, false, 0.12f );
+						NDebugOverlay::Box( vTestPoint, myNpc->GetHullMins(), myNpc->GetHullMaxs(), 255, 0, 255, 0, 0.12f );
 					}
 				}
 			}
@@ -1493,8 +1493,8 @@ bool CBaseFlex::ProcessMoveToSceneEvent( CSceneEventInfo *info, CChoreoScene *sc
 			r = 255;
 		}
 
-		NDebugOverlay::HorzArrow( GetAbsOrigin() + Vector( 0, 0, 1 ), vTestPoint + Vector( 0, 0, 1 ), 4, r, g, b, 0, false, 0.12 );
-		NDebugOverlay::Box( vTestPoint, myNpc->GetHullMins(), myNpc->GetHullMaxs(), r, g, b, 0, 0.12 );
+		NDebugOverlay::HorzArrow( GetAbsOrigin() + Vector( 0, 0, 1 ), vTestPoint + Vector( 0, 0, 1 ), 4, r, g, b, 0, false, 0.12f );
+		NDebugOverlay::Box( vTestPoint, myNpc->GetHullMins(), myNpc->GetHullMaxs(), r, g, b, 0, 0.12f );
 	}
 
 	// handled in task
@@ -1514,13 +1514,13 @@ bool CBaseFlex::ProcessLookAtSceneEvent( CSceneEventInfo *info, CChoreoScene *sc
 		float flMaxIntensity = flDuration < 0.3f ? SimpleSpline( flDuration / 0.3f ) : 1.0f;
 		intensity = clamp( intensity, 0.0f, flMaxIntensity );
 
-		myNpc->AddLookTarget( info->m_hTarget, intensity, 0.1 );
+		myNpc->AddLookTarget( info->m_hTarget, intensity, 0.1f );
 		if (developer.GetInt() > 0 && scene_showlook.GetBool() && info->m_hTarget)
 		{
 			Vector tmp = info->m_hTarget->EyePosition() - myNpc->EyePosition();
 			VectorNormalize( tmp );
 			Vector p0 = myNpc->EyePosition();
-			NDebugOverlay::VertArrow( p0, p0 + tmp * (4 + 16 * intensity ), 4, 255, 255, 255, 0, true, 0.12 );
+			NDebugOverlay::VertArrow( p0, p0 + tmp * (4 + 16 * intensity ), 4, 255, 255, 255, 0, true, 0.12f );
 		}
 	}
 	return true;
@@ -1599,7 +1599,7 @@ flexsetting_t const *CBaseFlex::FindNamedSetting( flexsettinghdr_t const *pSetti
 
 		const char *name = pSetting->pszName();
 
-		if ( !stricmp( name, expr ) )
+		if ( V_strieq( name, expr ) )
 			break;
 	}
 
@@ -1757,7 +1757,7 @@ void CBaseFlex::AddFlexSetting( const char *expr, float scale,
 
 		const char *name = pSetting->pszName();
 
-		if ( !stricmp( name, expr ) )
+		if ( V_strieq( name, expr ) )
 			break;
 	}
 
@@ -1928,7 +1928,7 @@ bool CBaseFlex::ProcessSequenceSceneEvent( CSceneEventInfo *info, CChoreoScene *
 
 		if (myNpc)
 		{
-			myNpc->AddSceneLock( 0.2 );
+			myNpc->AddSceneLock( 0.2f );
 		}
 
 		// update layer priority
@@ -2129,25 +2129,25 @@ void CBaseFlex::DoBodyLean( void )
 		{
 			if (vecDelta.LengthSqr() > m_vecPrevVelocity.LengthSqr())
 			{
-				float decay =  ExponentialDecay( 0.6, 0.1, dt );
+				float decay =  ExponentialDecay( 0.6f, 0.1f, dt );
 				m_vecPrevVelocity = m_vecPrevVelocity * (decay) + vecDelta * (1.f - decay);
 			}
 			else
 			{
-				float decay =  ExponentialDecay( 0.4, 0.1, dt );
+				float decay =  ExponentialDecay( 0.4f, 0.1f, dt );
 				m_vecPrevVelocity = m_vecPrevVelocity * (decay) + vecDelta * (1.f - decay);
 			}
 
 			vecPos = m_vecPrevOrigin + m_vecPrevVelocity;
 
-			float decay =  ExponentialDecay( 0.5, 0.1, dt );
+			float decay =  ExponentialDecay( 0.5f, 0.1f, dt );
 			m_vecShift = m_vecShift * (decay) + (vecOrigin - vecPos) * (1.f - decay); // FIXME: Scale this
 			m_vecLean = (vecOrigin - vecPos) * 1.0; // FIXME: Scale this
 		}
 		else
 		{
 			m_vecPrevVelocity = vecDelta;
-			float decay =  ExponentialDecay( 0.5, 0.1, dt );
+			float decay =  ExponentialDecay( 0.5f, 0.1f, dt );
 			// dimhotepus: Ensure correct shifting and leaning are applied to bodies.
 			m_vecShift = m_vecShift * decay;
 			m_vecLean = m_vecLean * decay;
@@ -2374,13 +2374,13 @@ const char *predef_flexcontroller_names[] = {
 	NULL };
 
 float predef_flexcontroller_values[7][30] = {
-/* 0 */	{ 0.700,0.560,0.650,0.650,0.650,0.585,0.000,0.000,0.400,0.040,0.000,0.000,0.450,0.450,0.000,0.000,0.000,0.750,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.150,1.000,0.000,0.000,0.000 }, 
-/* 1 */	{ 0.450,0.450,0.450,0.450,0.000,0.000,0.000,0.000,0.300,0.300,0.000,0.000,0.250,0.250,0.000,0.000,0.000,0.750,0.750,0.000,0.000,0.000,0.000,0.400,0.400,0.000,1.000,0.000,0.050,0.050 }, 
-/* 2 */	{ 0.200,0.200,0.500,0.500,0.150,0.150,0.100,0.100,0.150,0.150,0.000,0.000,0.700,0.700,0.000,0.000,0.000,0.750,0.750,0.000,0.200,0.000,0.000,0.000,0.000,0.000,0.850,0.000,0.000,0.000 }, 
-/* 3 */	{ 0.000,0.000,0.000,0.000,0.000,0.000,0.300,0.300,0.000,0.000,0.000,0.000,0.000,0.000,0.100,0.000,0.000,0.000,0.000,0.700,0.300,0.000,0.000,0.200,0.200,0.000,0.000,0.300,0.000,0.000 }, 
-/* 4 */	{ 0.450,0.450,0.000,0.000,0.450,0.450,0.000,0.000,0.000,0.000,0.450,0.450,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.300,0.000,0.000,0.000,0.000 }, 
-/* 5 */	{ 0.000,0.000,0.350,0.350,0.150,0.150,0.300,0.300,0.450,0.450,0.000,0.000,0.200,0.200,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.200,0.200,0.000,0.000,0.300,0.000,0.000,0.000,0.000 }, 
-/* 6 */	{ 0.000,0.000,0.650,0.650,0.750,0.750,0.000,0.000,0.000,0.000,0.300,0.300,0.000,0.000,0.000,0.250,0.250,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000 }
+/* 0 */	{ 0.700f,0.560f,0.650f,0.650f,0.650f,0.585f,0.000f,0.000f,0.400f,0.040f,0.000f,0.000f,0.450f,0.450f,0.000f,0.000f,0.000f,0.750f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.150f,1.000f,0.000f,0.000f,0.000f }, 
+/* 1 */	{ 0.450f,0.450f,0.450f,0.450f,0.000f,0.000f,0.000f,0.000f,0.300f,0.300f,0.000f,0.000f,0.250f,0.250f,0.000f,0.000f,0.000f,0.750f,0.750f,0.000f,0.000f,0.000f,0.000f,0.400f,0.400f,0.000f,1.000f,0.000f,0.050f,0.050f }, 
+/* 2 */	{ 0.200f,0.200f,0.500f,0.500f,0.150f,0.150f,0.100f,0.100f,0.150f,0.150f,0.000f,0.000f,0.700f,0.700f,0.000f,0.000f,0.000f,0.750f,0.750f,0.000f,0.200f,0.000f,0.000f,0.000f,0.000f,0.000f,0.850f,0.000f,0.000f,0.000f }, 
+/* 3 */	{ 0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.300f,0.300f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.100f,0.000f,0.000f,0.000f,0.000f,0.700f,0.300f,0.000f,0.000f,0.200f,0.200f,0.000f,0.000f,0.300f,0.000f,0.000f }, 
+/* 4 */	{ 0.450f,0.450f,0.000f,0.000f,0.450f,0.450f,0.000f,0.000f,0.000f,0.000f,0.450f,0.450f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.300f,0.000f,0.000f,0.000f,0.000f }, 
+/* 5 */	{ 0.000f,0.000f,0.350f,0.350f,0.150f,0.150f,0.300f,0.300f,0.450f,0.450f,0.000f,0.000f,0.200f,0.200f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.200f,0.200f,0.000f,0.000f,0.300f,0.000f,0.000f,0.000f,0.000f }, 
+/* 6 */	{ 0.000f,0.000f,0.650f,0.650f,0.750f,0.750f,0.000f,0.000f,0.000f,0.000f,0.300f,0.300f,0.000f,0.000f,0.000f,0.250f,0.250f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f }
 };
 
 //-----------------------------------------------------------------------------
@@ -2717,7 +2717,7 @@ void CFlexCycler::Think( void )
 			if ((!m_istalking) && random->RandomInt( 0, 1 ) == 0)
 			{
 				m_lookTarget = EyePosition() + forward * 128 + right * random->RandomFloat(-64,64) + up * random->RandomFloat(-32,32);
-				m_looktime = gpGlobals->curtime + random->RandomFloat(0.3,1.0);
+				m_looktime = gpGlobals->curtime + random->RandomFloat(0.3f,1.0f);
 
 				if (m_blinktime - 0.5 < gpGlobals->curtime)
 				{

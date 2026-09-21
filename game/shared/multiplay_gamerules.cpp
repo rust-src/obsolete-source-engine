@@ -1222,7 +1222,7 @@ ConVarRef suitcharger( "sk_suitcharger" );
 		const char *pszVar = mapcyclefile.GetString();
 		if ( *pszVar == '\0' )
 		{
-			if ( bForceSpew || V_stricmp( szLastResult, "__novar") )
+			if ( bForceSpew || !V_strieq( szLastResult, "__novar") )
 			{
 				Msg( "mapcyclefile convar not set.\n" );
 				V_strcpy_safe( szLastResult, "__novar" );
@@ -1238,7 +1238,7 @@ ConVarRef suitcharger( "sk_suitcharger" );
 		V_strncpy( pszResult, szRecommendedName, nSizeResult );
 		if ( filesystem->FileExists( pszResult, "GAME" ) )
 		{
-			if ( bForceSpew || V_stricmp( szLastResult, pszResult) )
+			if ( bForceSpew || !V_strieq( szLastResult, pszResult) )
 			{
 				Msg( "Using map cycle file '%s'.\n", pszResult );
 				V_strcpy_safe( szLastResult, pszResult );
@@ -1250,7 +1250,7 @@ ConVarRef suitcharger( "sk_suitcharger" );
 		V_strncpy( pszResult, pszVar, nSizeResult );
 		if ( filesystem->FileExists( pszResult, "GAME" ) )
 		{
-			if ( bForceSpew || V_stricmp( szLastResult, pszResult) )
+			if ( bForceSpew || !V_strieq( szLastResult, pszResult) )
 			{
 				Msg( "Using map cycle file '%s'.  ('%s' was not found.)\n", pszResult, szRecommendedName );
 				V_strcpy_safe( szLastResult, pszResult );
@@ -1259,12 +1259,12 @@ ConVarRef suitcharger( "sk_suitcharger" );
 		}
 
 		// Nope?  Use the default.
-		if ( !V_stricmp( pszVar, "mapcycle.txt" ) )
+		if ( V_strieq( pszVar, "mapcycle.txt" ) )
 		{
 			V_strncpy( pszResult, "cfg/mapcycle_default.txt", nSizeResult );
 			if ( filesystem->FileExists( pszResult, "GAME" ) )
 			{
-				if ( bForceSpew || V_stricmp( szLastResult, pszResult) )
+				if ( bForceSpew || !V_strieq( szLastResult, pszResult) )
 				{
 					Msg( "Using map cycle file '%s'.  ('%s' was not found.)\n", pszResult, szRecommendedName );
 					V_strcpy_safe( szLastResult, pszResult );
@@ -1275,7 +1275,7 @@ ConVarRef suitcharger( "sk_suitcharger" );
 
 		// Failed
 		*pszResult = '\0';
-		if ( bForceSpew || V_stricmp( szLastResult, "__notfound") )
+		if ( bForceSpew || !V_strieq( szLastResult, "__notfound") )
 		{
 			Msg( "Map cycle file '%s' was not found.\n", szRecommendedName );
 			V_strcpy_safe( szLastResult, "__notfound" );
@@ -1352,7 +1352,7 @@ ConVarRef suitcharger( "sk_suitcharger" );
 	{
 		for ( int i = 0; i < m_MapList.Count(); i++ )
 		{
-			if ( V_stricmp( pszName, m_MapList[i] ) == 0 )
+			if ( V_strieq( pszName, m_MapList[i] ) )
 			{
 				return true;
 			}
@@ -1483,7 +1483,7 @@ ConVarRef suitcharger( "sk_suitcharger" );
 		int nOldPreviousMap = ( nOldCycleIndex == 0 ) ? ( m_MapList.Count() - 1 ) : ( nOldCycleIndex - 1 );
 		if ( nOldCycleIndex >= 0 && nOldCycleIndex < m_MapList.Count() &&
 		     nOldPreviousMap >= 0 && nOldPreviousMap < m_MapList.Count() &&
-		     V_strcmp( STRING( gpGlobals->mapname ), m_MapList[ nOldPreviousMap ] ) == 0 )
+		     V_streq( STRING( gpGlobals->mapname ), m_MapList[ nOldPreviousMap ] ) )
 		{
 			// The old index is still valid, and falls after our current map in the new cycle, use it
 			m_nMapCycleindex = nOldCycleIndex;
@@ -1493,7 +1493,7 @@ ConVarRef suitcharger( "sk_suitcharger" );
 			// Otherwise, if the current map selection is in the list, set m_nMapCycleindex to the map that follows it.
 			for ( intp i = 0; i < m_MapList.Count(); i++ )
 			{
-				if ( V_strcmp( STRING( gpGlobals->mapname ), m_MapList[i] ) == 0 )
+				if ( V_streq( STRING( gpGlobals->mapname ), m_MapList[i] ) )
 				{
 					m_nMapCycleindex = i;
 					IncrementMapCycleIndex();
@@ -1752,7 +1752,7 @@ ConVarRef suitcharger( "sk_suitcharger" );
 
 	bool CMultiplayRules::IsLoadingBugBaitReport()
 	{
-		return ( !engine->IsDedicatedServer()&& CommandLine()->CheckParm( "-bugbait" ) && sv_cheats->GetBool() );
+		return ( !engine->IsDedicatedServer() && CommandLine()->HasParm( "-bugbait" ) && sv_cheats->GetBool() );
 	}
 
 	void CMultiplayRules::HaveAllPlayersSpeakConceptIfAllowed( int iConcept, int iTeam /* = TEAM_UNASSIGNED */, const char *modifiers /* = NULL */ )

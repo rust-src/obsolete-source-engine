@@ -226,7 +226,7 @@ void TransformLocalToIVP( IVP_U_Point &point, IVP_Real_Object *pObject, bool tra
 //-----------------------------------------------------------------------------
 #if USE_CACHE_OBJECT
 #else
-static const IVP_U_Matrix *GetTmpObjectMatrix( IVP_Real_Object *pObject )
+static const IVP_U_Matrix *GetTmpObjectMatrix( const IVP_Real_Object *pObject )
 {
 	static IVP_U_Matrix coreShiftMatrix;
 	const IVP_U_Matrix *pOut = pObject->get_core()->get_m_world_f_core_PSI();
@@ -337,11 +337,11 @@ static constexpr inline char axisMap[] = {0,2,1,3};
 
 int ConvertCoordinateAxisToIVP( int axisIndex )
 {
-	return axisIndex < 4 ? axisMap[axisIndex] : 0;
+  return axisIndex < ssize(axisMap) ? axisMap[axisIndex] : 0;
 }
 
 int ConvertCoordinateAxisToHL( int axisIndex )
 {
-	return axisIndex < 4 ? axisMap[axisIndex] : 0;
+  return axisIndex < ssize(axisMap) ? axisMap[axisIndex] : 0;
 }
 

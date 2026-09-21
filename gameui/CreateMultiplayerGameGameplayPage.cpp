@@ -111,10 +111,10 @@ const char *CCreateMultiplayerGameGameplayPage::GetValue(const char *cvarName, c
 	for (mpcontrol_t *mp = m_pList; mp != NULL; mp = mp->next)
 	{
 		Panel *control = mp->pControl;
-		if (control && !stricmp(mp->GetName(), cvarName))
+		if (control && V_strieq(mp->GetName(), cvarName))
 		{
 			KeyValuesAD data("GetText");
-			if (control && control->RequestInfo(data))
+			if (control->RequestInfo(data))
 			{
 				V_strcpy_safe(buf, data->GetString("text", defaultValue));
 			}
@@ -317,17 +317,17 @@ void CCreateMultiplayerGameGameplayPage::GatherCurrentValues()
 		{
 		case O_BOOL:
 			pBox = (CheckButton *)pList->pControl;
-			Q_snprintf( szValue, sizeof( szValue ), "%s", pBox->IsSelected() ? "1" : "0" );
+			V_strcpy_safe( szValue, pBox->IsSelected() ? "1" : "0" );
 			break;
 		case O_NUMBER:
-			pEdit = ( TextEntry * )pList->pControl;
+			pEdit = ( TextEntry * )pList->pControl; //-V1037
 			pEdit->GetText( strValue );
-			Q_snprintf( szValue, sizeof( szValue ), "%s", strValue );
+			V_strcpy_safe( szValue, strValue );
 			break;
 		case O_STRING:
 			pEdit = ( TextEntry * )pList->pControl;
 			pEdit->GetText( strValue );
-			Q_snprintf( szValue, sizeof( szValue ), "%s", strValue );
+			V_strcpy_safe( szValue, strValue );
 			break;
 		case O_LIST:
 			pCombo = ( ComboBox *)pList->pControl;
@@ -368,11 +368,11 @@ void CCreateMultiplayerGameGameplayPage::GatherCurrentValues()
 
 			if ( pItem )
 			{
-				Q_snprintf( szValue, sizeof( szValue ), "%s", pItem->szValue );
+				V_strcpy_safe( szValue, pItem->szValue );
 			}
 			else  //Couldn't find index
 			{
-				Q_snprintf( szValue, sizeof( szValue ), "%s", pObj->defValue );
+				V_strcpy_safe( szValue, pObj->defValue );
 			}
 			break;
 		}

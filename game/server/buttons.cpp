@@ -824,11 +824,11 @@ int CBaseButton::DrawDebugTextOverlays()
 			nState = 4;
 		}
 
-		Q_snprintf( tempstr, sizeof(tempstr), "State: %s", pszStates[nState] );
+		V_sprintf_safe( tempstr, "State: %s", pszStates[nState] );
 		EntityText( text_offset, tempstr, 0 );
 		text_offset++;
 
-		Q_snprintf( tempstr, sizeof(tempstr), "%s", m_bLocked ? "Locked" : "Unlocked" );
+		V_strcpy_safe( tempstr, m_bLocked ? "Locked" : "Unlocked" );
 		EntityText( text_offset, tempstr, 0 );
 		text_offset++;
 	}
@@ -1393,7 +1393,7 @@ void CMomentaryRotButton::UpdateSelf( float value, bool bPlaySound )
 	// Set our move clock to 0.1 seconds in the future so we stop spinning unless we are
 	// used again before then.
 	//
-	SetMoveDoneTime( 0.1 );
+	SetMoveDoneTime( 0.1f );
 
 	//
 	// If we hit the end, zero our avelocity and snap to the end angles.

@@ -65,7 +65,7 @@ void CShower::Think( void )
 {
 	g_pEffects->Sparks( GetAbsOrigin() );
 
-	m_flSpeed -= 0.1;
+	m_flSpeed -= 0.1f;
 	if ( m_flSpeed > 0 )
 		SetNextThink( gpGlobals->curtime + 0.1f );
 	else
@@ -79,11 +79,11 @@ void CShower::Touch( CBaseEntity *pOther )
 	Vector vecNewVelocity = GetAbsVelocity();
 
 	if ( GetFlags() & FL_ONGROUND )
-		vecNewVelocity *= 0.1;
+		vecNewVelocity *= 0.1f;
 	else
-		vecNewVelocity *= 0.6;
+		vecNewVelocity *= 0.6f;
 
-	if ( (vecNewVelocity.x*vecNewVelocity.x+vecNewVelocity.y*vecNewVelocity.y) < 10.0 )
+	if ( (vecNewVelocity.x*vecNewVelocity.x+vecNewVelocity.y*vecNewVelocity.y) < 10.0f )
 		m_flSpeed = 0;
 
 	SetAbsVelocity( vecNewVelocity );

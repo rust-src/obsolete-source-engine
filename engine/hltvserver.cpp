@@ -217,7 +217,7 @@ static RecvTable* FindRecvTable( const char *pName, RecvTable **pRecvTables, int
 {
 	for ( int i=0; i< nRecvTables; i++ )
 	{
-		if ( !Q_strcmp( pName, pRecvTables[i]->GetName() ) )
+		if ( V_streq( pName, pRecvTables[i]->GetName() ) )
 			return pRecvTables[i];
 	}
 
@@ -239,7 +239,7 @@ static RecvTable* AddRecvTableR( SendTable *sendt, RecvTable **pRecvTables, int 
 		{
 			// copy property data
 
-			SendProp * sp = sendt->GetProp( i );
+			const SendProp * sp = sendt->GetProp( i );
 			RecvProp * rp = &receiveProps[i];
 
 			rp->m_pVarName	= sp->m_pVarName;
@@ -448,7 +448,7 @@ void CHLTVFrame::FreeBuffers( void )
 
 CHLTVServer::CHLTVServer()
 {
-	m_flTickInterval = 0.03;
+	m_flTickInterval = 0.03f;
 	m_MasterClient = NULL;
 	m_Server = NULL;
 	m_Director = NULL;
@@ -693,9 +693,9 @@ bool CHLTVServer::DispatchToRelay( CHLTVClient *pClient )
 	if ( !pszRelayAddr )
 		return false;
 	
-
+	char buffer[32];
 	ConMsg( "Redirecting spectator %s to SourceTV relay %s\n", 
-		pClient->GetNetChannel()->GetRemoteAddress().ToString(), 
+		pClient->GetNetChannel()->GetRemoteAddress().ToString_safe(buffer), 
 		pszRelayAddr );
 
 	// first tell that client that we are a SourceTV server,
@@ -710,7 +710,6 @@ bool CHLTVServer::DispatchToRelay( CHLTVClient *pClient )
 
  	// increase this proxies client number in advance so this proxy isn't used again next time
 	int clients = Q_atoi( pBestProxy->GetUserSetting( "hltv_clients" ) );
-	char buffer[16];
 	V_to_chars(buffer, clients+1);
 	pBestProxy->SetUserCVar( "hltv_clients", buffer );
 
@@ -1155,7 +1154,7 @@ Vector CHLTVServer::GetOriginFromPackedEntity(PackedEntity* pe)
 	{
 		SendProp *pProp = pSendTable->GetProp( i );
 
-		if ( Q_strcmp( pProp->GetName(), "m_vecOrigin" ) == 0 )
+		if ( V_streq( pProp->GetName(), "m_vecOrigin" ) )
 		{
 			Assert( pProp->GetType() == DPT_Vector );
 		
@@ -1432,17 +1431,17 @@ void CHLTVServer::UpdateStats( void )
 		if ( !event )
 			return;
 
-		char address[32];
+		char address[32], buffer[32];
 
 		if ( IsMasterProxy() || tv_overridemaster.GetBool() )
 		{
 			// broadcast own address
-			Q_snprintf( address, sizeof(address), "%s:%u", net_local_adr.ToString(true), GetUDPPort() );
+			V_sprintf_safe( address, "%s:%u", net_local_adr.ToString_safe(buffer, true), GetUDPPort() );
 		}
 		else
 		{
 			// forward address
-			Q_snprintf( address, sizeof(address), "%s", m_RootServer.ToString() );
+			V_strcpy_safe( address, m_RootServer.ToString_safe(buffer) );
 		}
 
 		event->SetString( "master", address );
@@ -1699,7 +1698,7 @@ bool CHLTVServer::ProcessConnectionlessPacket( netpacket_t * packet )
 	case A2S_INFO:
 		char rgchInfoPostfix[64];
 		msg.ReadString( rgchInfoPostfix );
-		if ( !Q_stricmp( rgchInfoPostfix, A2S_KEY_STRING_STEAM ) )
+		if ( V_strieq( rgchInfoPostfix, A2S_KEY_STRING_STEAM ) )
 		{
 			ReplyInfo( packet->from );
 			return true;
@@ -1721,7 +1720,7 @@ void CHLTVServer::Init(bool bIsDedicated)
 	m_Socket = NS_HLTV;
 	
 	// check if only master proxy is allowed, no broadcasting
-	if ( CommandLine()->FindParm("-tvmasteronly") )
+	if ( CommandLine()->HasParm("-tvmasteronly") )
 	{
 		m_bMasterOnlyMode = true;
 	}
@@ -1907,8 +1906,8 @@ void CHLTVServer::ReadCompleteDemoFile()
 			break;
 		case dem_datatables:
 			{
-				ALIGN4 char data[64*1024] ALIGN4_POST;
-				bf_read buf( "dem_datatables", data, sizeof(data) );
+				alignas(4) char data[64*1024];
+				bf_read buf( "dem_datatables", data );
 				
 				m_DemoFile.ReadNetworkDataTables( &buf );
 				buf.Seek( 0 );
@@ -1995,7 +1994,7 @@ const char *CHLTVServer::GetPassword() const
 	const char *password = tv_password.GetString();
 
 	// if password is empty or "none", return NULL
-	if ( !password[0] || !Q_stricmp(password, "none" ) )
+	if ( !password[0] || V_strieq(password, "none" ) )
 	{
 		return NULL;
 	}
@@ -2097,7 +2096,7 @@ void CHLTVServer::ReplyInfo( const netadr_t &adr )
 	if ( GetUDPPort() != 0 )
 		nNewFlags |= S2A_EXTRA_DATA_HAS_SPECTATOR_DATA;
 
-	if ( pchTags && pchTags[0] != '\0' )
+	if ( !Q_isempty( pchTags ) )
 		nNewFlags |= S2A_EXTRA_DATA_HAS_GAMETAG_DATA;
 
 	nNewFlags |= S2A_EXTRA_DATA_GAMEID;
@@ -2160,11 +2159,21 @@ CON_COMMAND( tv_status, "Show SourceTV server status." )
 	ConMsg("--- SourceTV Status ---\n");
 	ConMsg("Online %s, FPS %.1f, Version %i (%s)\n", 
 		COM_FormatSeconds( hltv->GetOnlineTime() ), hltv->m_flFPS, build_number(),
-
-#ifdef _WIN32
-		"Win32" );
+// dimhotepus: More OSes in status string.
+#if defined(_WIN32)
+#if defined(_WIN64)
+			"Win64" );
+#elif defined(__ARM_ARCH)
+			"ARM " CONST_INTEGER_AS_STRING(__ARM_ARCH) );
 #else
-		"Linux" );
+			"Win32" );
+#endif
+#elif defined(_LINUX)
+			"Linux" );
+#elif defined(OSX)
+			"OSX" );
+#else
+#error Please set OS string.
 #endif
 
 	if ( hltv->IsDemoPlayback() )
@@ -2179,7 +2188,8 @@ CON_COMMAND( tv_status, "Show SourceTV server status." )
 	{
 		if ( hltv->GetRelayAddress() )
 		{
-			ConMsg("Relay \"%s\", connect to %s\n", hltv->GetName(), hltv->GetRelayAddress()->ToString() );
+			char buffer[32];
+			ConMsg("Relay \"%s\", connect to %s\n", hltv->GetName(), hltv->GetRelayAddress()->ToString_safe(buffer) );
 		}
 		else
 		{
@@ -2190,8 +2200,9 @@ CON_COMMAND( tv_status, "Show SourceTV server status." )
 	ConMsg("Game Time %s, Mod \"%s\", Map \"%s\", Players %i\n", COM_FormatSeconds( hltv->GetTime() ),
 		gd, hltv->GetMapName(), hltv->GetNumPlayers() );
 
+	char buffer[32];
 	ConMsg("Local IP %s:%i, KiB/sec In %.1f, Out %.1f\n",
-		net_local_adr.ToString( true ), hltv->GetUDPPort(), in ,out );
+		net_local_adr.ToString_safe( buffer, true ), hltv->GetUDPPort(), in ,out );
 
 	hltv->GetLocalStats( proxies, slots, clients );
 	

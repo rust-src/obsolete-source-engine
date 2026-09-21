@@ -190,11 +190,11 @@ void CBaseActionEditDialog::OnCancel()
 //-----------------------------------------------------------------------------
 void CBaseActionEditDialog::OnCommand( char const *commands )
 {
-	if ( !Q_strcasecmp( commands, "OK" ) )
+	if ( V_strieq( commands, "OK" ) )
 	{
 		OnClose();
 	}
-	else if ( !Q_strcasecmp( commands, "Cancel" ) )
+	else if ( V_strieq( commands, "Cancel" ) )
 	{
 		OnCancel();
 	}
@@ -318,7 +318,7 @@ bool CBaseActionSkipAheadDialog::OnSaveChanges( void )
 	float fskip = V_atof( skipto );
 	int	 iskip = atoi( skipto );
 
-	if ( !Q_strcasecmp( skiptype, "TimeUseTick" ) )
+	if ( V_strieq( skiptype, "TimeUseTick" ) )
 	{
 		if ( GetAction()->m_nSkipToTick != iskip )
 		{
@@ -651,7 +651,7 @@ int CBaseActionTextMessageStartDialog::EffectTypeForName( char const *name )
 	int i;
 	for ( i = 0; i < c; i++ )
 	{
-		if ( !Q_strcasecmp( s_EffectTypes[ i ].name, name ) )
+		if ( V_strieq( s_EffectTypes[ i ].name, name ) )
 			return i;
 	}
 	Assert( 0 );
@@ -848,14 +848,14 @@ bool CBaseActionTextMessageStartDialog::OnSaveChanges( void )
 	}
 
 	m_pMessageText->GetText( sz );
-	if ( Q_strcasecmp( sz, GetAction()->GetMessageText() ) )
+	if ( !V_strieq( sz, GetAction()->GetMessageText() ) )
 	{
 		GetAction()->SetMessageText( sz );
 		bret = true;
 	}
 
 	m_pFontName->GetText( sz );
-	if ( Q_strcasecmp( sz, GetAction()->GetFontName() ) )
+	if ( !V_strieq( sz, GetAction()->GetFontName() ) )
 	{
 		GetAction()->SetFontName( sz );
 		bret = true;
@@ -915,7 +915,7 @@ bool CBaseActionPlayCommandsDialog::OnSaveChanges( void )
 	char commands[ 512 ];
 	m_pCommands->GetText( commands );
 
-	if ( Q_strcasecmp( commands, GetAction()->GetCommandStream() ) )
+	if ( !V_strieq( commands, GetAction()->GetCommandStream() ) )
 	{
 		bret = true;
 		GetAction()->SetCommandStream( commands );
@@ -1045,7 +1045,7 @@ bool CBaseActionPlaySoundStartDialog::OnSaveChanges( void )
 	char soundname[ 512 ];
 	m_pSoundName->GetText( soundname );
 
-	if ( Q_strcasecmp( soundname, GetAction()->GetSoundName() ) )
+	if ( !V_strieq( soundname, GetAction()->GetSoundName() ) )
 	{
 		bret = true;
 		GetAction()->SetSoundName( soundname );
@@ -1080,7 +1080,7 @@ void CBaseActionPlaySoundStartDialog::OnFileSelected( char const *fullpath )
 
 void CBaseActionPlaySoundStartDialog::OnCommand( char const *command )
 {
-	if ( !Q_strcasecmp( command, "choosesound" ) )
+	if ( V_strieq( command, "choosesound" ) )
 	{
 		if ( !m_hFileOpenDialog.Get() )
 		{
@@ -1168,7 +1168,7 @@ bool CBaseActionWithStopTimeDialog::OnSaveChanges( void )
 	float fstop = V_atof( stop );
 	int	 istop = atoi( stop );
 
-	if ( !Q_strcasecmp( stoptype, "TimeUseTick" ) )
+	if ( V_strieq( stoptype, "TimeUseTick" ) )
 	{
 		if ( GetAction()->m_nStopTick != istop )
 		{

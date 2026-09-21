@@ -26,9 +26,10 @@
 #include <algorithm>
 #include "tier0/valve_minmax_on.h"
 
-#if defined(DOD_DLL) || defined(CSTRIKE_DLL)
+// dimhotepus: Enable detail shapes for all games.
+// #if defined(DOD_DLL) || defined(CSTRIKE_DLL)
 #define USE_DETAIL_SHAPES
-#endif
+// #endif
 
 #ifdef USE_DETAIL_SHAPES
 #include "engine/ivdebugoverlay.h"
@@ -47,14 +48,20 @@
 //-----------------------------------------------------------------------------
 struct model_t;
 
+// dimhotepus: Bump default cl_detaildist 1200 -> 2000.
+ConVar cl_detaildist( "cl_detaildist", "2000", 0, "Distance at which detail props are no longer visible" );
+// dimhotepus: Allow to force cl_detaildist even if map overrides it.
+ConVar cl_detaildist_force( "cl_detaildist_force", "0", 0, "Force override distance at which detail props are no longer visible even if map sets its own", true, 0, true, 1 );
+// dimhotepus: Bump default cl_detailfade 400 -> 200.
+ConVar cl_detailfade( "cl_detailfade", "200", 0, "Distance across which detail props fade in" );
+// dimhotepus: Allow to force cl_detailfade even if map overrides it.
+ConVar cl_detailfade_force( "cl_detailfade_force", "0", 0, "Force override distance across which detail props fade in even if map sets its own", true, 0, true, 1 );
 
-ConVar cl_detaildist( "cl_detaildist", "1200", 0, "Distance at which detail props are no longer visible" );
-ConVar cl_detailfade( "cl_detailfade", "400", 0, "Distance across which detail props fade in" );
 #if defined( USE_DETAIL_SHAPES ) 
-ConVar cl_detail_max_sway( "cl_detail_max_sway", "0", FCVAR_ARCHIVE, "Amplitude of the detail prop sway" );
-ConVar cl_detail_avoid_radius( "cl_detail_avoid_radius", "0", FCVAR_ARCHIVE, "radius around detail sprite to avoid players" );
-ConVar cl_detail_avoid_force( "cl_detail_avoid_force", "0", FCVAR_ARCHIVE, "force with which to avoid players ( in units, percentage of the width of the detail sprite )" );
-ConVar cl_detail_avoid_recover_speed( "cl_detail_avoid_recover_speed", "0", FCVAR_ARCHIVE, "how fast to recover position after avoiding players" );
+ConVar cl_detail_max_sway( "cl_detail_max_sway", "5", FCVAR_ARCHIVE, "Amplitude of the detail prop sway" );
+ConVar cl_detail_avoid_radius( "cl_detail_avoid_radius", "64", FCVAR_ARCHIVE, "radius around detail sprite to avoid players" );
+ConVar cl_detail_avoid_force( "cl_detail_avoid_force", "0.4", FCVAR_ARCHIVE, "force with which to avoid players ( in units, percentage of the width of the detail sprite )" );
+ConVar cl_detail_avoid_recover_speed( "cl_detail_avoid_recover_speed", "0.25", FCVAR_ARCHIVE, "how fast to recover position after avoiding players" );
 #endif
 
 // Per detail instance information
@@ -79,20 +86,6 @@ struct DetailModelAdvInfo_t
 
 };
 
-class CDetailObjectSystemPerLeafData
-{
-	unsigned short	m_FirstDetailProp;
-	unsigned short	m_DetailPropCount;
-	int				m_DetailPropRenderFrame;
-
-	CDetailObjectSystemPerLeafData( void )
-	{
-		m_FirstDetailProp = 0;
-		m_DetailPropCount = 0;
-		m_DetailPropRenderFrame = -1;
-	}
-};
-
 //-----------------------------------------------------------------------------
 // Detail models
 //-----------------------------------------------------------------------------
@@ -112,11 +105,11 @@ public:
 
 
 	// Initialization
-	bool InitCommon( int index, const Vector& org, const QAngle& angles );
-	bool Init( int index, const Vector& org, const QAngle& angles, model_t* pModel, 
+	bool InitCommon( intp index, const Vector& org, const QAngle& angles );
+	bool Init( intp index, const Vector& org, const QAngle& angles, model_t* pModel, 
 		ColorRGBExp32 lighting, int lightstyle, unsigned char lightstylecount, int orientation );
 
-	bool InitSprite( int index, bool bFlipped, const Vector& org, const QAngle& angles,
+	bool InitSprite( intp index, bool bFlipped, const Vector& org, const QAngle& angles,
 					 unsigned short nSpriteIndex, 
 					 ColorRGBExp32 lighting, int lightstyle, unsigned char lightstylecount,
 					 int orientation, float flScale, unsigned char type,
@@ -431,7 +424,7 @@ private:
 		float m_flDistance;
 	};
 
-	int BuildOutSortedSprites( CFastDetailLeafSpriteList *pData,
+	intp BuildOutSortedSprites( CFastDetailLeafSpriteList *pData,
 							   Vector const &viewOrigin,
 							   Vector const &viewForward,
 							   Vector const &viewRight,
@@ -519,7 +512,7 @@ IDetailObjectSystem* DetailObjectSystem()
 
 CUtlMap<CDetailModel *, CDetailModel::LightStyleInfo_t> CDetailModel::gm_LightStylesMap( DefLessFunc( CDetailModel * ) );
 
-bool CDetailModel::InitCommon( int index, const Vector& org, const QAngle& angles )
+bool CDetailModel::InitCommon( intp index, const Vector& org, const QAngle& angles )
 {
 	VectorCopy( org, m_Origin );
 	VectorCopy( angles, m_Angles );
@@ -534,7 +527,7 @@ bool CDetailModel::InitCommon( int index, const Vector& org, const QAngle& angle
 //-----------------------------------------------------------------------------
 
 // NOTE: If DetailPropType_t enum changes, change CDetailModel::QuadsToDraw
-static int s_pQuadCount[4] =
+static constexpr int s_pQuadCount[DETAIL_PROP_TYPE_SHAPE_TRI + 1] =
 {
 	0, //DETAIL_PROP_TYPE_MODEL
 	1, //DETAIL_PROP_TYPE_SPRITE
@@ -768,7 +761,7 @@ CDetailModel::~CDetailModel()
 //-----------------------------------------------------------------------------
 // Initialization
 //-----------------------------------------------------------------------------
-bool CDetailModel::Init( int index, const Vector& org, const QAngle& angles, 
+bool CDetailModel::Init( intp index, const Vector& org, const QAngle& angles, 
 	model_t* pModel, ColorRGBExp32 lighting, int lightstyle, unsigned char lightstylecount, 
 	int orientation)
 {
@@ -788,7 +781,7 @@ bool CDetailModel::Init( int index, const Vector& org, const QAngle& angles,
 	return InitCommon( index, org, angles );
 }
 
-bool CDetailModel::InitSprite( int index, bool bFlipped, const Vector& org, const QAngle& angles, unsigned short nSpriteIndex, 
+bool CDetailModel::InitSprite( intp index, bool bFlipped, const Vector& org, const QAngle& angles, unsigned short nSpriteIndex, 
 	ColorRGBExp32 lighting, int lightstyle, unsigned char lightstylecount, int orientation, float flScale,
 	unsigned char type, unsigned char shapeAngle, unsigned char shapeSize, unsigned char swayAmount )
 {
@@ -1266,7 +1259,6 @@ void CDetailModel::DrawTypeShapeTri( CMeshBuilder &meshBuilder )
 	flHeight = (lr.y - ul.y);
 	flWidth = (lr.x - ul.x);
 
-	Vector vecSway;
 	Vector vecOrigin;
 	Vector vecHeight, vecWidth;
 
@@ -1327,8 +1319,8 @@ void CDetailModel::UpdatePlayerAvoid( void )
 	::partition->EnumerateElementsInSphere( PARTITION_CLIENT_SOLID_EDICTS, m_Origin, flRadius, false, &avoid );
 
 	// Okay, decide how to avoid if there's anything close by
-	int c = avoid.GetObjectCount();
-	for ( int i=0; i<c+1; i++ )	// +1 for the local player we tack on the end
+	intp c = avoid.GetObjectCount();
+	for ( intp i=0; i<c+1; i++ )	// +1 for the local player we tack on the end
 	{
 		if ( i == c )
 		{
@@ -1529,8 +1521,10 @@ void CDetailObjectSystem::LevelInitPostEntity()
 
 	if ( GetDetailController() )
 	{
-		cl_detailfade.SetValue( MIN( m_flDefaultFadeStart, GetDetailController()->m_flFadeStartDist ) );
-		cl_detaildist.SetValue( MIN( m_flDefaultFadeEnd, GetDetailController()->m_flFadeEndDist ) );
+		// dimhotepus: Allow to force cl_detailfade even if map overrides it.
+		cl_detailfade.SetValue( !cl_detailfade_force.GetBool() ? MIN( m_flDefaultFadeStart, GetDetailController()->m_flFadeStartDist ) : m_flDefaultFadeStart );
+		// dimhotepus: Allow to force cl_detaildist even if map overrides it.
+		cl_detaildist.SetValue( !cl_detaildist_force.GetBool() ? MIN( m_flDefaultFadeEnd, GetDetailController()->m_flFadeEndDist ) : m_flDefaultFadeEnd );
 	}
 	else
 	{
@@ -2128,13 +2122,13 @@ int CDetailObjectSystem::SortSpritesBackToFront( int nLeaf, const Vector &viewOr
 #else
 #define MANTISSA_LSB_OFFSET 0
 #endif
-static fltx4 Four_MagicNumbers={ MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER };
-static fltx4 Four_255s={ 255.0, 255.0, 255.0, 255.0 };
+static constexpr fltx4 Four_MagicNumbers={ MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER };
+static constexpr fltx4 Four_255s={ 255.0, 255.0, 255.0, 255.0 };
 
-alignas(16) static int32 And255Mask[4] = {0xff, 0xff, 0xff, 0xff};
+alignas(16) static constexpr int32 And255Mask[4] = {0xff, 0xff, 0xff, 0xff};
 #define PIXMASK ( * ( reinterpret_cast< fltx4 *>( &And255Mask ) ) )
 
-int CDetailObjectSystem::BuildOutSortedSprites( CFastDetailLeafSpriteList *pData,
+intp CDetailObjectSystem::BuildOutSortedSprites( CFastDetailLeafSpriteList *pData,
 												Vector const &viewOrigin,
 												Vector const &viewForward,
 												Vector const &viewRight,
@@ -2221,7 +2215,7 @@ int CDetailObjectSystem::BuildOutSortedSprites( CFastDetailLeafSpriteList *pData
 	} while( --nSIMDSprites );
 
 	// adjust count for tail
-	int nCount = pOut - m_pFastSortInfo;
+	intp nCount = pOut - m_pFastSortInfo;
 	if ( nLastBfMask != 0xf )						// if last not skipped
 		nCount -= ( 0 - pData->m_nNumSprites ) & 3;
 
@@ -2277,7 +2271,7 @@ void CDetailObjectSystem::RenderFastSprites( const Vector &viewOrigin, const Vec
 		return;
 
 	int nQuadsToDraw = MIN( nQuadCount, nMaxQuadsToDraw );
-	int nQuadsRemaining = nQuadsToDraw;
+	intp nQuadsRemaining = nQuadsToDraw;
 
 	meshBuilder.Begin( pMesh, MATERIAL_QUADS, nQuadsToDraw );
 
@@ -2295,7 +2289,7 @@ void CDetailObjectSystem::RenderFastSprites( const Vector &viewOrigin, const Vec
 		{
 			Assert( pData->m_nNumSprites );					// ptr with no sprites?
 
-			int nCount = BuildOutSortedSprites( pData, viewOrigin, viewForward, viewRight, viewUp );
+			intp nCount = BuildOutSortedSprites( pData, viewOrigin, viewForward, viewRight, viewUp );
 
 			// part 3 - stuff the sorted sprites into the vb
 			SortInfo_t const *pDraw = m_pFastSortInfo;
@@ -2314,7 +2308,7 @@ void CDetailObjectSystem::RenderFastSprites( const Vector &viewOrigin, const Vec
 					nQuadsRemaining = nQuadsToDraw;
 					meshBuilder.Begin( pMesh, MATERIAL_QUADS, nQuadsToDraw );
 				}
-				int nToDraw = MIN( nCount, nQuadsRemaining );
+				intp nToDraw = min( nCount, nQuadsRemaining );
 				nCount -= nToDraw;
 				nQuadsRemaining -= nToDraw;
 				while( nToDraw-- )

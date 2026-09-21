@@ -13,6 +13,7 @@
 #include "client.h"
 #include "client_class.h"
 #include "gl_matsysiface.h"
+#include "host.h"
 #include "icliententitylist.h"
 #include "igame.h"
 #include "ivideomode.h"
@@ -1166,7 +1167,7 @@ void CRenderTextureEditor::SetDispInfo( KeyValues *kv, intp iHint )
 				if ( !pTex || pTex->IsError() )
 					continue;
 
-				if ( !stricmp( pTex->GetName(), szTextureName ) )
+				if ( V_strieq( pTex->GetName(), szTextureName ) )
 				{
 					bool bRealMaterial = true;
 
@@ -1397,7 +1398,7 @@ void CRenderTextureEditor::OnCommand( const char *command )
 {
 	BaseClass::OnCommand( command );
 
-	if ( !stricmp( command, "Explore" ) && m_pInfo )
+	if ( V_strieq( command, "Explore" ) && m_pInfo )
 	{
 		char chResolveName[ 256 ] = {0}, chResolveNameArg[ 256 ] = {0};
 		V_sprintf_safe( chResolveNameArg, "materials/%s.vtf", m_pInfo->GetString( KEYNAME_NAME ) );
@@ -1408,7 +1409,7 @@ void CRenderTextureEditor::OnCommand( const char *command )
 		vgui::system()->ShellExecuteEx( "open", "explorer.exe", params );
 	}
 
-	if ( !stricmp( command, "Reload" ) && m_lstMaterials.Count() )
+	if ( V_strieq( command, "Reload" ) && m_lstMaterials.Count() )
 	{
 		CUtlBuffer bufCommand( (intp)0, 0, CUtlBuffer::TEXT_BUFFER );
 		int idxMaterial = 0;
@@ -1448,7 +1449,7 @@ void CRenderTextureEditor::OnCommand( const char *command )
 		}
 	}
 
-	if ( !stricmp( command, "CopyTxt" ) )
+	if ( V_strieq( command, "CopyTxt" ) )
 	{
 		char const *szName = ( char const * ) m_bufInfoText.Base();
 		if ( !m_bufInfoText.TellPut() || !szName )
@@ -1456,7 +1457,7 @@ void CRenderTextureEditor::OnCommand( const char *command )
 		vgui::system()->SetClipboardText( szName, strlen( szName ) + 1 );
 	}
 
-	if ( !stricmp( command, "CopyImg" ) )
+	if ( V_strieq( command, "CopyImg" ) )
 	{
 		int x = 0, y = 0;
 		this->LocalToScreen( x, y );
@@ -1465,19 +1466,19 @@ void CRenderTextureEditor::OnCommand( const char *command )
 		vgui::system()->SetClipboardImage( pMainWnd, x, y, x + GetWide(), y + GetTall() );
 	}
 
-	if ( !stricmp( command, "SaveImg" ) && m_pInfo )
+	if ( V_strieq( command, "SaveImg" ) && m_pInfo )
 	{
 		SaveTextureImage( m_pInfo->GetString( KEYNAME_NAME ) );
 	}
 
-	if ( !stricmp( command, "FlashBtn" ) )
+	if ( V_strieq( command, "FlashBtn" ) )
 	{
 		MatViewOverride::RequestSelectNone();
 		MatViewOverride::RequestSelected( m_lstMaterials.Count(), m_lstMaterials.Base() );
 		mat_texture_list_off_f();
 	}
 
-	if ( ( !stricmp( command, "size-" ) || !stricmp( command, "size+" ) ) && m_pInfo )
+	if ( ( V_strieq( command, "size-" ) || V_strieq( command, "size+" ) ) && m_pInfo )
 	{
 		bool bSizeUp = ( command[4] == '+' );
 		bool bResult = AdjustTextureSize( m_pInfo->GetString( KEYNAME_NAME ), bSizeUp );
@@ -1490,7 +1491,7 @@ void CRenderTextureEditor::OnCommand( const char *command )
 		InvalidateLayout();
 	}
 
-	if ( !stricmp( command, "ToggleNoMip" ) && m_pInfo )
+	if ( V_strieq( command, "ToggleNoMip" ) && m_pInfo )
 	{
 #ifdef IS_WINDOWS_PC
 		CP4Requirement p4req;
@@ -1605,7 +1606,7 @@ void CRenderTextureEditor::OnCommand( const char *command )
 #endif // #ifdef IS_WINDOWS_PC
 	}
 	
-	if ( !stricmp( command, "RebuildVTF" ) && m_pInfo )
+	if ( V_strieq( command, "RebuildVTF" ) && m_pInfo )
 	{
 #ifdef IS_WINDOWS_PC
 		CP4Requirement p4req;
@@ -1889,7 +1890,7 @@ void CRenderTextureEditor::Paint()
 	y += QuickPropScale( TILE_TEXT + TILE_BORDER );
 
 	// Images placement
-	bool bHasAlpha = !!stricmp( szTxFormat, "DXT1" );
+	bool bHasAlpha = !V_strieq( szTxFormat, "DXT1" );
 
 	int extTxWidth = QuickPropScale( TILE_SIZE );
 	int extTxHeight = QuickPropScale( TILE_SIZE );
@@ -2815,7 +2816,7 @@ void CTextureListPanel::PerformLayout()
 
 bool StripDirName( char *pFilename )
 {
-	if ( pFilename[0] == 0 )
+	if ( Q_isempty( pFilename ) )
 		return false;
 
 	char *pLastSlash = pFilename;
@@ -2858,11 +2859,11 @@ static void KeepSpecialKeys( KeyValues *textureList, bool bServiceKeys )
 		char const *szName = pCur->GetString( KEYNAME_NAME );
 		if ( StringHasPrefix( szName, "_" ) ||
 			 StringHasPrefix( szName, "[" ) ||
-			 !stricmp( szName, "backbuffer" ) ||
+			 V_strieq( szName, "backbuffer" ) ||
 			 StringHasPrefix( szName, "colorcorrection" ) ||
-			 !stricmp( szName, "depthbuffer" ) ||
-			 !stricmp( szName, "frontbuffer" ) ||
-			 !stricmp( szName, "normalize" ) ||
+			 V_strieq( szName, "depthbuffer" ) ||
+			 V_strieq( szName, "frontbuffer" ) ||
+			 V_strieq( szName, "normalize" ) ||
 			 !*szName )
 		{
 			bIsServiceKey = true;
@@ -2960,57 +2961,57 @@ void CTextureListPanel::OnTextChanged( void )
 
 void CTextureListPanel::OnCommand( const char *command )
 {
-	if ( !Q_stricmp( command, "Close" ) )
+	if ( V_strieq( command, "Close" ) )
 	{
 		vgui::Frame::OnCommand( command );
 		return;
 	}
 
-	if ( !Q_stricmp( command, "Collapse" ) )
+	if ( V_strieq( command, "Collapse" ) )
 	{
 		InvalidateLayout();
 		return;
 	}
 
-	if ( !Q_stricmp( command, "ShowAlpha" ) )
+	if ( V_strieq( command, "ShowAlpha" ) )
 	{
 		m_pViewPanel->SetPaintAlpha( m_pAlpha->IsSelected() );
 		return;
 	}
 
-	if ( !Q_stricmp( command, "ThumbWarnings" ) )
+	if ( V_strieq( command, "ThumbWarnings" ) )
 	{
 		g_warn_enable = m_pThumbWarnings->IsSelected();
 		return;
 	}
 
-	if ( !Q_stricmp( command, "ViewThumbnails" ) )
+	if ( V_strieq( command, "ViewThumbnails" ) )
 	{
 		InvalidateLayout();
 		return;
 	}
 
-	if ( !Q_stricmp( command, COPYTOCLIPBOARD_CMDNAME ) )
+	if ( V_strieq( command, COPYTOCLIPBOARD_CMDNAME ) )
 	{
 		CopyListPanelToClipboard( m_pListPanel );
 		return;
 	}
 
-	if ( !Q_stricmp( command, "ReloadAllMaterials" ) )
+	if ( V_strieq( command, "ReloadAllMaterials" ) )
 	{
 		Cbuf_AddText( "mat_reloadallmaterials" );
 		Cbuf_Execute();
 		return;
 	}
 
-	if ( !Q_stricmp( command, "CommitChanges" ) )
+	if ( V_strieq( command, "CommitChanges" ) )
 	{
 		Cbuf_AddText( "mat_texture_list_txlod_sync save" );
 		Cbuf_Execute();
 		return;
 	}
 
-	if ( !Q_stricmp( command, "DiscardChanges" ) )
+	if ( V_strieq( command, "DiscardChanges" ) )
 	{
 		Cbuf_AddText( "mat_texture_list_txlod_sync reset" );
 		Cbuf_Execute();
@@ -3043,9 +3044,9 @@ bool CTextureListPanel::UpdateDisplayedItem( KeyValues *pDispData, KeyValues *kv
 	if( pDispData->GetInt( KEYNAME_SIZE ) != kv->GetInt( KEYNAME_SIZE ) ||
 		pDispData->GetInt( KEYNAME_WIDTH ) != kv->GetInt( KEYNAME_WIDTH ) ||
 		pDispData->GetInt( KEYNAME_HEIGHT ) != kv->GetInt( KEYNAME_HEIGHT ) ||
-		Q_stricmp( pDispData->GetString( KEYNAME_FORMAT ), kv->GetString( KEYNAME_FORMAT ) ) != 0 ||
-		Q_stricmp( pDispData->GetString( KEYNAME_PATH ), kv->GetString( KEYNAME_PATH ) ) != 0 ||
-		Q_stricmp( pDispData->GetString( KEYNAME_TEXTURE_GROUP ), kv->GetString( KEYNAME_TEXTURE_GROUP ) ) != 0 )
+		!V_strieq( pDispData->GetString( KEYNAME_FORMAT ), kv->GetString( KEYNAME_FORMAT ) ) ||
+		!V_strieq( pDispData->GetString( KEYNAME_PATH ), kv->GetString( KEYNAME_PATH ) ) ||
+		!V_strieq( pDispData->GetString( KEYNAME_TEXTURE_GROUP ), kv->GetString( KEYNAME_TEXTURE_GROUP ) ) )
 	{
 		pDispData->SetInt( KEYNAME_SIZE, kv->GetInt( KEYNAME_SIZE ) );
 		pDispData->SetInt( KEYNAME_WIDTH, kv->GetInt( KEYNAME_WIDTH ) );
@@ -3153,7 +3154,7 @@ void CTextureListPanel::Paint()
 		if ( kv && iHint )
 		{
 			KeyValues *plv = ( m_pListPanel->IsValidItemID( iHint ) ? m_pListPanel->GetItem( iHint ) : nullptr );
-			if ( plv && !strcmp( plv->GetString( KEYNAME_NAME ), kv->GetString( KEYNAME_NAME ) ) )
+			if ( plv && V_streq( plv->GetString( KEYNAME_NAME ), kv->GetString( KEYNAME_NAME ) ) )
 			{
 				KeyValues *pValData = plv->GetFirstValue(), *pValRendered = kv->GetFirstValue();
 				for ( ; pValData && pValRendered; pValData = pValData->GetNextValue(), pValRendered = pValRendered->GetNextValue() )
@@ -3299,9 +3300,9 @@ void VGui_UpdateTextureListPanel()
 	{
 		con_nprint_t info;
 		info.index = 4;
-		info.time_to_live = 0.2;
+		info.time_to_live = 0.2f;
 		info.color[0] = 1;
-		info.color[1] = 0.5;
+		info.color[1] = 0.5f;
 		info.color[2] = 0;
 		info.fixed_width_font = true;
 
@@ -3332,6 +3333,15 @@ void CL_CreateTextureListPanel( vgui::Panel *parent )
 	g_pTextureListPanel = new CTextureListPanel( parent );
 }
 
+
+// dimhotepus: Pair with create.
+void CL_DestroyTextureListPanel()
+{
+	g_pTextureListPanel->MarkForDeletion();
+	g_pTextureListPanel = nullptr;
+}
+
+
 CON_COMMAND( mat_texture_save_fonts, "Save all font textures" )
 {
 	// dimhotepus: This can take a while, put up a waiting cursor.
@@ -3358,7 +3368,7 @@ CON_COMMAND( mat_texture_save_fonts, "Save all font textures" )
 void mat_texture_list_on_f()
 {
 	ConVarRef sv_cheats( "sv_cheats" );
-	if ( sv_cheats.IsValid() && !sv_cheats.GetBool() )
+	if ( !Host_IsSinglePlayerGame() && sv_cheats.IsValid() && !sv_cheats.GetBool())
 		return;
 
 	ConVarRef mat_queue_mode( "mat_queue_mode" );

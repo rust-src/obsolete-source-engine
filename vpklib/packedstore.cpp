@@ -176,7 +176,7 @@ CFileHeaderFixedData *CPackedStore::FindFileEntry( char const *pDirname, char co
 			// now, march through all the files
 			while( *pData )									// until we're out of files to look at
 			{
-				if ( !V_strcmp( pData, pBaseName ) )		// found it?
+				if ( V_streq( pData, pBaseName ) )		// found it?
 				{
 					if ( pNameBaseOut )
 						*pNameBaseOut = (uint8 *) pData;
@@ -267,7 +267,7 @@ static void StripTrailingString( char *pszBuf, const char *pszStrip )
 	if ( lBuf < lStrip )
 		return;
 	char *pExpectedPos = pszBuf + lBuf - lStrip;
-	if ( V_stricmp( pExpectedPos, pszStrip ) == 0 )
+	if ( V_strieq( pExpectedPos, pszStrip ) )
 		*pExpectedPos = '\0';
 }
 
@@ -386,9 +386,9 @@ CPackedStore::CPackedStore( char const *pFileBasename, char *pszFName, intp fnam
 #endif
 
 			// now read the self hashes
-			V_memset( m_DirectoryMD5.bits, 0, sizeof(m_DirectoryMD5.bits) );
-			V_memset( m_ChunkHashesMD5.bits, 0, sizeof(m_ChunkHashesMD5.bits) );
-			V_memset( m_TotalFileMD5.bits, 0, sizeof(m_TotalFileMD5.bits) );
+			BitwiseClear( m_DirectoryMD5.bits );
+			BitwiseClear( m_ChunkHashesMD5.bits );
+			BitwiseClear( m_TotalFileMD5.bits );
 			if ( dirHeader.m_nSelfHashesSize == 3*sizeof(m_DirectoryMD5.bits) )
 			{
 				// first is an MD5 of directory data
@@ -511,7 +511,7 @@ void SplitFileComponents( char const *pFileName, char (&pDirOut)[MAX_PATH], char
 	if ( pDot )
 	{
 		*pDot = 0;
-		V_strncpy( pExtOut, pDot+1, MAX_PATH );
+		V_strcpy_safe( pExtOut, pDot+1 );
 	}
 	else
 	{
@@ -572,9 +572,8 @@ CPackedStoreFileHandle CPackedStore::OpenFile( char const *pFileName )
 	// Fix up the filename first
 	char tempFileName[MAX_PATH];
 
-	V_strncpy( tempFileName, pFileName, sizeof( tempFileName ) );
-	V_FixSlashes( tempFileName, CORRECT_PATH_SEPARATOR );
-//	V_RemoveDotSlashes( tempFileName, CORRECT_PATH_SEPARATOR, true );
+	V_strcpy_safe( tempFileName, pFileName );
+	V_FixSlashes( tempFileName );
 	V_FixDoubleSlashes( tempFileName );
 	if ( !V_IsAbsolutePath( tempFileName ) )
 	{
@@ -1245,7 +1244,7 @@ bool CPackedStore::HashEntirePackFile( CPackedStoreFileHandle &handle, int64 &nF
 #endif
 	nFileSize = fileLength;
 	MD5Context_t ctx;
-	memset(&ctx, 0, sizeof(MD5Context_t));
+	BitwiseClear(ctx);
 	MD5Init(&ctx);
 
 	int nDesiredPos = nFileFraction;
@@ -1366,7 +1365,7 @@ void CPackedStore::HashAllChunkFiles()
 void CPackedStore::ComputeDirectoryHash( MD5Value_t &md5Directory )
 {
 	MD5Context_t ctx;
-	memset(&ctx, 0, sizeof(MD5Context_t));
+	BitwiseClear(ctx);
 	MD5Init(&ctx);
 	MD5Update(&ctx, m_DirectoryData.Base(), m_DirectoryData.Count() );
 	MD5Final( md5Directory.bits, &ctx);
@@ -1376,7 +1375,7 @@ void CPackedStore::ComputeDirectoryHash( MD5Value_t &md5Directory )
 void CPackedStore::ComputeChunkHash( MD5Value_t &md5ChunkHashes )
 {
 	MD5Context_t ctx;
-	memset(&ctx, 0, sizeof(MD5Context_t));
+	BitwiseClear(ctx);
 	MD5Init(&ctx);
 	MD5Update(&ctx, m_vecChunkHashFraction.Base(), size_cast<unsigned>(m_vecChunkHashFraction.Count()*sizeof(m_vecChunkHashFraction[0])) );
 	MD5Final( md5ChunkHashes.bits, &ctx);
@@ -1804,8 +1803,8 @@ intp CPackedStore::GetFileList( const char *pWildCard, CUtlStringList &outFilena
 					V_ExtractFileExtension( pszFNameOut, szFNameOutExt );
 
 					matches =  !V_strnicmp( szFNameOutPath, szWildCardPath, sizeof( szWildCardPath ) );
-					matches = matches && ( !V_strlen( szWildCardExt ) || bNoExtWildcard ? 0 == V_strnicmp( szFNameOutExt, szWildCardExt, strlen( szWildCardExt ) ) : 0 != V_stristr(szFNameOutExt, szWildCardExt ) );
-					matches = matches && ( !V_strlen( szWildCardBase ) || bNoBaseWildcard ? 0 == V_strnicmp( szFNameOutBase, szWildCardBase, strlen( szWildCardBase ) ) : 0 != V_stristr(szFNameOutBase, szWildCardBase ) );
+					matches = matches && ( Q_isempty( szWildCardExt ) || bNoExtWildcard ? 0 == V_strnicmp( szFNameOutExt, szWildCardExt, strlen( szWildCardExt ) ) : 0 != V_stristr(szFNameOutExt, szWildCardExt ) );
+					matches = matches && ( Q_isempty( szWildCardBase ) || bNoBaseWildcard ? 0 == V_strnicmp( szFNameOutBase, szWildCardBase, strlen( szWildCardBase ) ) : 0 != V_stristr(szFNameOutBase, szWildCardBase ) );
 				}
 
 				// Add the file to the output list
@@ -1861,7 +1860,7 @@ intp CPackedStore::GetFileAndDirLists( CUtlStringList &outDirnames, CUtlStringLi
 // dimhotepus: To correctly compare strings in hash table.
 struct StringEqual
 {
-	[[nodiscard]] bool operator()( const char *a, const char *b) const { return V_strcmp(a, b) == 0; }
+	[[nodiscard]] bool operator()( const char *a, const char *b) const { return V_streq(a, b); }
 };
 
 void CPackedStore::BuildFindFirstCache()
@@ -1997,7 +1996,7 @@ intp CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &ou
 				bool bExtMatch = false;
 
 				// Copy everything to the right of the root directory
-				V_strncpy( szSubDir, &m_directoryList[i][nLenWildcardPath], sizeof( szSubDir ) );
+				V_strcpy_safe( szSubDir, &m_directoryList[i][nLenWildcardPath] );
 
 				// Set the next / to NULL and we have our subdirectory
 				char *pSlash = strchr( szSubDir, '/' );
@@ -2028,7 +2027,7 @@ intp CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &ou
 				{
 					char szFullPathToDir[ MAX_PATH ];
 
-					V_strncpy( szFullPathToDir, szWildCardPath, nLenWildcardPath );
+					V_strcpy_safe( szFullPathToDir, szWildCardPath );
 					V_strcat_safe( szFullPathToDir, "/" );
 					// V_strcat_safe( szFullPathToDir, CORRECT_PATH_SEPARATOR_S );
 					V_strcat_safe( szFullPathToDir, szSubDir );

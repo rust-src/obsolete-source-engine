@@ -195,13 +195,13 @@ float CPointAngularVelocitySensor::SampleAngularVelocity(CBaseEntity *pEntity)
 
 			float dt = gpGlobals->curtime - GetLastThink();
 			if ( dt == 0 )
-				dt = 0.1;
+				dt = 0.1f;
 
 			// HACKHACK: We don't expect a real 'delta' orientation here, just enough of an error estimate to tell if this thing
 			// is trying to move, but failing.
 			QAngle delta = angles - m_lastOrientation;
 
-			if ( ( delta.Length() / dt )  < ( vecAngVelocity.Length() * 0.01 ) )
+			if ( ( delta.Length() / dt )  < ( vecAngVelocity.Length() * 0.01f ) )
 			{
 				return 0.0f;
 			}

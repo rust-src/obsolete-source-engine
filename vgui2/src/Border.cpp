@@ -32,7 +32,7 @@ Border::Border()
 	_name = NULL;
 	m_eBackgroundType = IBorder::BACKGROUND_FILLED;
 
-	memset(_sides, 0, sizeof(_sides));
+	BitwiseClear(_sides);
 }
 
 //-----------------------------------------------------------------------------
@@ -248,14 +248,8 @@ const char *Border::GetName()
 //-----------------------------------------------------------------------------
 void Border::SetName(const char *name)
 {
-	if (_name)
-	{
-		delete [] _name;
-	}
-
-	intp len = Q_strlen(name) + 1;
-	_name = new char[ len ];
-	Q_strncpy( _name, name, len );
+	delete [] _name;
+	_name = V_strdup( name );
 }
 
 //-----------------------------------------------------------------------------

@@ -114,7 +114,7 @@ public:
 
 		while ( p )
 		{
-			if ( !Q_stricmp( getLabel( p ), child ) )
+			if ( V_strieq( getLabel( p ), child ) )
 				return p;
 
 			p = getNextChild( p );
@@ -524,6 +524,8 @@ bool CWaveBrowser::LoadWaveFilesInDirectory( CUtlDict< CWaveFile *, int >& sound
 
 	FileFindHandle_t findHandle;
 	const char *pFileName = filesystem->FindFirst( pWildCard, &findHandle );
+	RunCodeAtScopeExit(filesystem->FindClose( findHandle ));
+	
 	while( pFileName )
 	{
 		if( !filesystem->FindIsDirectory( findHandle ) )
@@ -550,7 +552,6 @@ bool CWaveBrowser::LoadWaveFilesInDirectory( CUtlDict< CWaveFile *, int >& sound
 
 	m_pFileTree->FindOrAddSubdirectory( &pDirectoryName[ SOUND_PREFIX_LEN ] );
 
-	filesystem->FindClose( findHandle );
 	return true;
 }
 
@@ -704,7 +705,7 @@ void CWaveBrowser::PopulateTree( char const *subdirectory, bool textsearch /*= f
 
 		int slot = m_pListView->add( name );
 
-		if ( !Q_stricmp( prevSelectedName, name ) )
+		if ( V_strieq( prevSelectedName, name ) )
 		{
 			selectedSlot = slot;
 		}
@@ -869,7 +870,7 @@ void CWaveBrowser::JumpToItem( CWaveFile *wav )
 	for ( ; idx < c; idx++ )
 	{
 		CWaveFile *item = (CWaveFile *)m_pListView->getUserData( idx, 0 );
-		if ( !Q_stricmp( item->GetFileName(), wav->GetFileName() ) )
+		if ( V_strieq( item->GetFileName(), wav->GetFileName() ) )
 		{
 			break;
 		}

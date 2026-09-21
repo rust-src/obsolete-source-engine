@@ -1001,7 +1001,7 @@ void CFuncTrain::Activate( void )
 		// Start immediately if not triggered
 		if ( !GetEntityName() )
 		{	
-			SetMoveDoneTime( 0.1 );
+			SetMoveDoneTime( 0.1f );
 			SetMoveDone( &CFuncTrain::Next );
 		}
 		else
@@ -1580,7 +1580,7 @@ void CFuncTrackTrain::SetSpeed( float flSpeed, bool bAccel /*= false */  )
 
 		if ( m_flSpeed == 0 && abs(m_flDesiredSpeed) > 0 )
 		{
-			m_flSpeed = 0.1;	// little push to get us going
+			m_flSpeed = 0.1f;	// little push to get us going
 		}
 
 		Start();
@@ -2203,11 +2203,11 @@ void CFuncTrackTrain::DoUpdateOrientation( const QAngle &curAngles, const QAngle
 	
 	// HACKHACK: Clamp really small angular deltas to avoid rotating movement on things
 	// that are close enough
-	if ( fabs(vx) < 0.1 )
+	if ( fabs(vx) < 0.1f )
 	{
 		vx = 0;
 	}
-	if ( fabs(vy) < 0.1 )
+	if ( fabs(vy) < 0.1f )
 	{
 		vy = 0;
 	}
@@ -2215,7 +2215,7 @@ void CFuncTrackTrain::DoUpdateOrientation( const QAngle &curAngles, const QAngle
 	if ( flInterval == 0 )
 	{
 		// Avoid dividing by zero
-		flInterval = 0.1;
+		flInterval = 0.1f;
 	}
 
 	QAngle vecAngVel( vx / flInterval, vy / flInterval, GetLocalAngularVelocity().z );
@@ -2320,16 +2320,16 @@ void CFuncTrackTrain::Next( void )
 	{
 		if ( pNext != NULL )
 		{
-			NDebugOverlay::Line( GetAbsOrigin(), pNext->GetAbsOrigin(), 255, 0, 0, true, 0.1 );
-			NDebugOverlay::Line( pNext->GetAbsOrigin(), pNext->GetAbsOrigin() + Vector( 0,0,32), 255, 0, 0, true, 0.1 );
-			NDebugOverlay::Box( pNext->GetAbsOrigin(), Vector( -8, -8, -8 ), Vector( 8, 8, 8 ), 255, 0, 0, 0, 0.1 );
+			NDebugOverlay::Line( GetAbsOrigin(), pNext->GetAbsOrigin(), 255, 0, 0, true, 0.1f );
+			NDebugOverlay::Line( pNext->GetAbsOrigin(), pNext->GetAbsOrigin() + Vector( 0,0,32), 255, 0, 0, true, 0.1f );
+			NDebugOverlay::Box( pNext->GetAbsOrigin(), Vector( -8, -8, -8 ), Vector( 8, 8, 8 ), 255, 0, 0, 0, 0.1f );
 		}
 
 		if ( pNextNext != NULL )
 		{
-			NDebugOverlay::Line( GetAbsOrigin(), pNextNext->GetAbsOrigin(), 0, 255, 0, true, 0.1 );
-			NDebugOverlay::Line( pNextNext->GetAbsOrigin(), pNextNext->GetAbsOrigin() + Vector( 0,0,32), 0, 255, 0, true, 0.1 );
-			NDebugOverlay::Box( pNextNext->GetAbsOrigin(), Vector( -8, -8, -8 ), Vector( 8, 8, 8 ), 0, 255, 0, 0, 0.1 );
+			NDebugOverlay::Line( GetAbsOrigin(), pNextNext->GetAbsOrigin(), 0, 255, 0, true, 0.1f );
+			NDebugOverlay::Line( pNextNext->GetAbsOrigin(), pNextNext->GetAbsOrigin() + Vector( 0,0,32), 0, 255, 0, true, 0.1f );
+			NDebugOverlay::Box( pNextNext->GetAbsOrigin(), Vector( -8, -8, -8 ), Vector( 8, 8, 8 ), 0, 255, 0, 0, 0.1f );
 		}
 	}
 
@@ -2609,7 +2609,7 @@ void CFuncTrackTrain::NearestPath( void )
 
 	if ( m_flSpeed != 0 )
 	{
-		SetMoveDoneTime( 0.1 );
+		SetMoveDoneTime( 0.1f );
 		SetMoveDone( &CFuncTrackTrain::Next );
 	}
 }

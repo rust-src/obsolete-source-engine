@@ -147,8 +147,12 @@ class Panel : public IClientPanel, virtual public IForceVirtualInheritancePanel
 
 public:
 	// For property mapping
-	static void InitPropertyConverters( void );
+	static void InitPropertyConverters();
+	// dimhotepus: Pair with Init.
+	static void ShutdownPropertyConverters();
 	static void AddPropertyConverter( char const *typeName, IPanelAnimationPropertyConverter *converter );
+	// dimhotepus: Pair with Add.
+	static void RemovePropertyConverter( char const *typeName );
 
 	//-----------------------------------------------------------------------------
 	// CONSTRUCTORS
@@ -269,6 +273,8 @@ public:
 	virtual bool   IsPopup();	// has a parent, but is in it's own space
 	void   GetClipRect(int &x0, int &y0, int &x1, int &y1) override;
 	virtual void   MoveToFront();
+	// dimhotepus: Pair with MoveToFront.
+	virtual void   MoveToBack();
 
 	// pin positions for auto-layout
 	enum PinCorner_e 

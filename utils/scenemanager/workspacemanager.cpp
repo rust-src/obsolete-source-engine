@@ -763,7 +763,7 @@ void CWorkspaceManager::AddFileToRecentWorkspaceList( char const *filename )
 
 	for ( i = 0; i < c; i++ )
 	{
-		if (!Q_stricmp( m_RecentFiles[i].filename, filename ))
+		if (V_strieq( m_RecentFiles[i].filename, filename ))
 			break;
 	}
 
@@ -845,8 +845,8 @@ void CWorkspaceManager::SaveRecentFilesMenuToDisk()
 	FileHandle_t fh = filesystem->Open( recentfiles, "wt" );
 	if (fh)
 	{
+		RunCodeAtScopeExit(g_pFullFileSystem->Close(fh));
 		filesystem->Write( buf.Base(), buf.TellPut(), fh );
-		filesystem->Close(fh);
 	}
 	else
 	{
@@ -1214,7 +1214,7 @@ void CWorkspaceManager::OnModifyProjectComments()
 	if ( !InputProperties( &params ) )
 		return;
 
-	if ( !Q_strcmp( params.m_szInputText, project->GetComments() ) )
+	if ( V_streq( params.m_szInputText, project->GetComments() ) )
 		return;
 
 	project->SetComments( params.m_szInputText );
@@ -1344,7 +1344,7 @@ void CWorkspaceManager::OnSoundEditText()
 	if ( !InputProperties( &params ) )
 		return;
 
-	if ( !Q_stricmp( params.m_szInputText, s->GetSentenceText() ) )
+	if ( V_strieq( params.m_szInputText, s->GetSentenceText() ) )
 	{
 		return;
 	}
@@ -1417,7 +1417,7 @@ void CWorkspaceManager::OnModifySceneComments()
 	if ( !InputProperties( &params ) )
 		return;
 
-	if ( !Q_strcmp( params.m_szInputText, scene->GetComments() ) )
+	if ( V_streq( params.m_szInputText, scene->GetComments() ) )
 		return;
 
 	scene->SetComments( params.m_szInputText );
@@ -1446,7 +1446,7 @@ void CWorkspaceManager::OnModifyVCDComments()
 	if ( !InputProperties( &params ) )
 		return;
 
-	if ( !Q_strcmp( params.m_szInputText, file->GetComments() ) )
+	if ( V_streq( params.m_szInputText, file->GetComments() ) )
 		return;
 
 	file->SetComments( params.m_szInputText );

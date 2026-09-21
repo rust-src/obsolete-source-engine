@@ -73,7 +73,7 @@ static bool BPingDebug() { return tf_datacenter_ping_debug.GetBool(); }
 // Allow disabling for staging. Will only send dummy values set by the overrides above
 #ifdef TF_GC_PING_DEBUG
 #include "tier0/icommandline.h"
-static bool BUseSteamDatagram() { return !CommandLine()->CheckParm("-nosteamdatagram" ); }
+static bool BUseSteamDatagram() { return !CommandLine()->HasParm("-nosteamdatagram" ); }
 #else
 static bool BUseSteamDatagram() { return true; }
 #endif
@@ -148,7 +148,7 @@ static void ApplyPingToMsg( CMsgGCDataCenterPing_Update &msg, const CMsgGCDataCe
 	{
 		CMsgGCDataCenterPing_Update_PingEntry& existingEntry = *msg.mutable_pingdata(j);
 
-		if ( V_stricmp( existingEntry.name().c_str(), pszName ) == 0 )
+		if ( V_strieq( existingEntry.name().c_str(), pszName ) )
 		{
 			pEntry = &existingEntry;
 			break;
@@ -785,12 +785,12 @@ void CTFGCClientSystem::FireGameEvent( IGameEvent *event )
 {
 	const char *pEventName = event->GetName();
 	// Disconnected from gameserver
-	if ( !Q_stricmp( pEventName, "client_disconnect" ) )
+	if ( V_strieq( pEventName, "client_disconnect" ) )
 	{
 		m_steamIDCurrentServer.Clear();
 
 		// Do not send end match making if we see the mvm end message
-		if ( !Q_stricmp( event->GetString( "message", "" ), "#TF_PVE_Disconnect" ) )
+		if ( V_strieq( event->GetString( "message", "" ), "#TF_PVE_Disconnect" ) )
 			return;
 
 		// Don't bail if GC has told us to expect to be put into a new party
@@ -800,7 +800,7 @@ void CTFGCClientSystem::FireGameEvent( IGameEvent *event )
 		m_eConnectState = eConnectState_Disconnected; // clear variable first to avoid recursion
 
 		// Ladder games
-		//if ( !Q_stricmp( event->GetString( "message", "" ), "#TF_Competitive_Disconnect" ) ) // FIXME only disconnect if we were previously connected(ing), this fires spuriously from the main menu
+		//if ( V_strieq( event->GetString( "message", "" ), "#TF_Competitive_Disconnect" ) ) // FIXME only disconnect if we were previously connected(ing), this fires spuriously from the main menu
 		//{
 		//	engine->ClientCmd_Unrestricted( "OpenMatchmakingLobby ladder" );
 		//	return;
@@ -834,7 +834,7 @@ void CTFGCClientSystem::FireGameEvent( IGameEvent *event )
 	}
 
 	// Started attempting connection to gameserver
-	if ( !Q_stricmp( pEventName, "client_beginconnect" ) )
+	if ( V_strieq( pEventName, "client_beginconnect" ) )
 	{
 		Assert( IsConnectStateDisconnected() );
 
@@ -860,7 +860,7 @@ void CTFGCClientSystem::FireGameEvent( IGameEvent *event )
 
 	// Successfully connected to a gameserver. For MM purposes, we stay in state connecting until server spawn as that
 	// ensures there's no intermediate "loading into some server but we're not sure of its steamid yet" state.
-	if ( !Q_strcmp( pEventName, "server_spawn" ) )
+	if ( V_streq( pEventName, "server_spawn" ) )
 	{
 		GCMatchmakingDebugSpew( 4, "Client reached server_spawn.\n" );
 		switch ( m_eConnectState )
@@ -1585,11 +1585,11 @@ void CTFGCClientSystem::SOChanged( const GCSDK::CSharedObject *pObject, SOChange
 //
 //	for ( KeyValues *pItems = m_pNewsKeys->GetFirstSubKey(); pItems; pItems = pItems->GetNextKey() )
 //	{
-//		if ( !Q_stricmp( pItems->GetName(), "newsitems" ) )
+//		if ( V_strieq( pItems->GetName(), "newsitems" ) )
 //		{
 //			for ( KeyValues *pItem = pItems->GetFirstSubKey(); pItem; pItem = pItem->GetNextKey() )
 //			{
-//				if ( !Q_stricmp( pItem->GetName(), "newsitem" ) )
+//				if ( V_strieq( pItem->GetName(), "newsitem" ) )
 //				{
 //					for ( KeyValues *pStory = pItem->GetFirstSubKey(); pStory; pStory = pStory->GetNextKey() )
 //					{
@@ -1613,11 +1613,11 @@ void CTFGCClientSystem::SOChanged( const GCSDK::CSharedObject *pObject, SOChange
 //	int nCount = 0;
 //	for ( KeyValues *pItems = m_pNewsKeys->GetFirstSubKey(); pItems; pItems = pItems->GetNextKey() )
 //	{
-//		if ( !Q_stricmp( pItems->GetName(), "newsitems" ) )
+//		if ( V_strieq( pItems->GetName(), "newsitems" ) )
 //		{
 //			for ( KeyValues *pItem = pItems->GetFirstSubKey(); pItem; pItem = pItem->GetNextKey() )
 //			{
-//				if ( !Q_stricmp( pItem->GetName(), "newsitem" ) )
+//				if ( V_strieq( pItem->GetName(), "newsitem" ) )
 //				{
 //					for ( KeyValues *pStory = pItem->GetFirstSubKey(); pStory; pStory = pStory->GetNextKey() )
 //					{
@@ -1873,7 +1873,7 @@ bool ForceCompetitiveConvars()
 
 		// Hack: This var is created by the dxconfig system, but it doesn't actually exist.
 		// Skip it so we have no vars change when running a clean config.
-		if ( V_stricmp( pVar->GetName(), "r_decal_cullsize" ) == 0 )
+		if ( V_strieq( pVar->GetName(), "r_decal_cullsize" ) )
 			continue;
 		
 		if ( !pVar->SetCompetitiveMode( true ) )

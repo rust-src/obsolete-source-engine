@@ -121,7 +121,7 @@ void CDownloadListGenerator::OnLevelLoadStart(const char *levelName)
 	Q_FixSlashes( m_gameDir );
 
 	// save off the map name
-	Q_snprintf( m_mapName, sizeof( m_mapName ), "%s", levelName );
+	V_strcpy_safe( m_mapName, levelName );
 }
 
 //-----------------------------------------------------------------------------
@@ -205,7 +205,7 @@ void CDownloadListGenerator::OnSoundPrecached(const char *relativePathFileName)
 void CDownloadListGenerator::OnResourcePrecached(const char *relativePathFileName)
 {
 	// ignore empty string
-	if (relativePathFileName[0] == 0)
+	if (Q_isempty( relativePathFileName ))
 	{
 		return;
 	}
@@ -217,9 +217,9 @@ void CDownloadListGenerator::OnResourcePrecached(const char *relativePathFileNam
 	}
 
 	char fullPath[MAX_PATH];
-	if (g_pFileSystem->GetLocalPath_safe(relativePathFileName, fullPath))
+	if (g_pFileSystem->GetLocalPath_safe( relativePathFileName, fullPath ))
 	{
-		OnResourcePrecachedFullPath( fullPath, relativePathFileName);
+		OnResourcePrecachedFullPath( fullPath, relativePathFileName );
 	}
 }
 

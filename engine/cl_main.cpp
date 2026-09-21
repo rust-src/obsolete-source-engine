@@ -354,9 +354,8 @@ bool CL_CheckCRCs( const char *pszMap )
 	{
 		// Does the file exist?
 		FileHandle_t fp = FILESYSTEM_INVALID_HANDLE;
-		int nSize = COM_OpenFile( pszMap, &fp );
-		if ( fp )
-			g_pFileSystem->Close( fp );
+		const int nSize{COM_OpenFile( pszMap, &fp )};
+		if (fp) g_pFileSystem->Close(fp);
 
 		if ( nSize != -1 )
 		{
@@ -365,7 +364,7 @@ bool CL_CheckCRCs( const char *pszMap )
 		}
 		else
 		{
-			COM_ExplainDisconnection( true, "Missing map %s,  disconnecting\n", pszMap);
+			COM_ExplainDisconnection( true, "Missing map %s, disconnecting\n", pszMap);
 			Host_Error( "Map is missing" );
 		}
 
@@ -515,19 +514,13 @@ void CL_ClearState ( void )
 	}
 
 	R_LevelShutdown();
-	if ( IsX360() )
-	{
-		// Reset material system temporary memory (frees up memory for map loading)
-		bool bOnLevelShutdown = true;
-		materials->ResetTempHWMemory( bOnLevelShutdown );
-	}
 	
 	if ( g_pLocalNetworkBackdoor )
 		g_pLocalNetworkBackdoor->ClearState();
 
-	// clear other arrays	
-	memset (cl_dlights, 0, sizeof(cl_dlights));
-	memset (cl_elights, 0, sizeof(cl_elights));
+	// clear other arrays
+	BitwiseClear (cl_dlights);
+	BitwiseClear (cl_elights);
 
 	// Wipe the hunk ( unless the server is active )
 	Host_FreeStateAndWorld( false );
@@ -584,7 +577,7 @@ void CL_DispatchSound( const SoundInfo_t &sound )
 			pSentenceName = "";
 		}
 
-		V_snprintf( name, sizeof( name ), "%c%s", CHAR_SENTENCE, pSentenceName );		
+		V_sprintf_safe( name, "%c%s", CHAR_SENTENCE, pSentenceName );
 		pSfx = S_DummySfx( name );
 	}
 	else
@@ -592,7 +585,7 @@ void CL_DispatchSound( const SoundInfo_t &sound )
 		V_strncpy( name, cl.GetSoundName( sound.nSoundNum ), sizeof( name ) );
 
 		const char *pchTranslatedName = g_ClientDLL->TranslateEffectForVisionFilter( "sounds", name );
-		if ( V_strcmp( pchTranslatedName, name ) != 0 )
+		if ( !V_streq( pchTranslatedName, name ) )
 		{
 			V_strncpy( name, pchTranslatedName, sizeof( name ) );
 			nSoundNum = cl.LookupSoundIndex( name );
@@ -1013,8 +1006,7 @@ void CL_FullyConnected( void )
 	// client DLL where it knows its read in all entities
 	if ( IsPC() )
 	{
-		int i;
-		if( (i = CommandLine()->FindParm( "-buildcubemaps" )) != 0 )
+		if( int i; (i = CommandLine()->FindParm( "-buildcubemaps" )) != 0 )
 		{
 			int numIterations = 1;
 			if( CommandLine()->ParmCount() > i + 1 )
@@ -1026,18 +1018,18 @@ void CL_FullyConnected( void )
 				numIterations = 1;
 			}
 			char cmd[1024] = { 0 };
-			V_snprintf( cmd, sizeof( cmd ), "buildcubemaps %u\nquit\n", numIterations );
+			V_sprintf_safe( cmd, "buildcubemaps %u\nquit\n", numIterations );
 			Cbuf_AddText( cmd );
 		}
-		else if( CommandLine()->FindParm( "-navanalyze" ) )
+		else if( CommandLine()->HasParm( "-navanalyze" ) )
 		{
 			Cbuf_AddText( "nav_edit 1;nav_analyze_scripted\n" );
 		}
-		else if( CommandLine()->FindParm( "-navforceanalyze" ) )
+		else if( CommandLine()->HasParm( "-navforceanalyze" ) )
 		{
 			Cbuf_AddText( "nav_edit 1;nav_analyze_scripted force\n" );
 		}
-		else if ( CommandLine()->FindParm("-exit") )
+		else if ( CommandLine()->HasParm("-exit") )
 		{
 			Cbuf_AddText( "quit\n" );
 		}
@@ -1090,7 +1082,7 @@ void CL_FullyConnected( void )
 	float map_loadtime_start = dev_loadtime_map_start.GetFloat();
 	if (map_loadtime_start > 0.0)
 	{
-		float elapsed = Plat_FloatTime() - map_loadtime_start;
+		float elapsed = static_cast<float>( Plat_FloatTime() - map_loadtime_start );
 		dev_loadtime_map_elapsed.SetValue( elapsed );
 
 		// Clear this for next time so we know we did.
@@ -1138,7 +1130,7 @@ void CL_NextDemo (void)
 		}
 	}
 
-	Q_snprintf (str,sizeof( str ), "%s %s", CommandLine()->FindParm("-timedemoloop") ? "timedemo" : "playdemo", cl.demos[cl.demonum].Get());
+	Q_snprintf (str,sizeof( str ), "%s %s", CommandLine()->HasParm("-timedemoloop") ? "timedemo" : "playdemo", cl.demos[cl.demonum].Get());
 	Cbuf_AddText (str);
 	cl.demonum++;
 }
@@ -1162,7 +1154,7 @@ void CL_TakeScreenshot(const char *name)
 
 		if ( !Q_isempty( cl_screenshotname.GetString() ) )
 		{
-			Q_snprintf( cl_snapshotname, sizeof( cl_snapshotname ), "%s", cl_screenshotname.GetString() );		
+			V_strcpy_safe( cl_snapshotname, cl_screenshotname.GetString() );
 		}
 	}
 
@@ -1333,7 +1325,7 @@ void CL_TakeSnapshotAndSwap()
 						break;
 				}
 
-				if ( iNumber > 0 && g_pFileSystem->GetFileTime( filename ) )
+				if ( g_pFileSystem->GetFileTime( filename ) )
 				{
 					g_pFileSystem->RenameFile(filename, renamedfile);
 				}
@@ -1578,7 +1570,7 @@ CON_COMMAND_F( startmovie, "Start recording movie frames.", FCVAR_DONTRECORD )
 		flags = 0;
 		for ( int i = 2; i < args.ArgC(); ++i )
 		{
-			if ( !Q_stricmp( args[ i ], "avi" ) )
+			if ( V_strieq( args[ i ], "avi" ) )
 			{
 				//flags |= MovieInfo_t::FMOVIE_VID | MovieInfo_t::FMOVIE_VIDSOUND;
 				//videoSystem = VideoSystem::AVI;
@@ -1590,46 +1582,46 @@ CON_COMMAND_F( startmovie, "Start recording movie frames.", FCVAR_DONTRECORD )
 				return;
 			}
 #ifdef USE_WEBM_FOR_REPLAY
-			else if ( !Q_stricmp( args[ i ], "webm" ) )
+			else if ( V_strieq( args[ i ], "webm" ) )
 			{
 				flags |= MovieInfo_t::FMOVIE_VID | MovieInfo_t::FMOVIE_VIDSOUND;
 				videoSystem = VideoSystem::WEBM;
 			}
-			else if ( !Q_stricmp( args[ i ], "h264" ) )
+			else if ( V_strieq( args[ i ], "h264" ) )
 			{
 				Warning( "h264 is not supported on this platform!  Use \"webm\".\n" );
 				return;
 			}
 #else
-			else if ( !Q_stricmp( args[ i ], "h264" ) )
+			else if ( V_strieq( args[ i ], "h264" ) )
 			{
 				flags |= MovieInfo_t::FMOVIE_VID | MovieInfo_t::FMOVIE_VIDSOUND;
 				videoSystem = VideoSystem::QUICKTIME;
 			}
-			else if ( !Q_stricmp( args[ i ], "webm" ) )
+			else if ( V_strieq( args[ i ], "webm" ) )
 			{
 				Warning( "WebM is not supported on this platform!  Make sure QuickTime is installed and use \"h264\" - if you install QuickTime, you will need to reboot before using startmovie.\n" );
 				return;
 			}
 #endif
-			if ( !Q_stricmp( args[ i ], "raw" ) )
+			if ( V_strieq( args[ i ], "raw" ) )
 			{
 				flags |= MovieInfo_t::FMOVIE_TGA | MovieInfo_t::FMOVIE_WAV;
 			}
-			if ( !Q_stricmp( args[ i ], "tga" ) )
+			if ( V_strieq( args[ i ], "tga" ) )
 			{
 				flags |= MovieInfo_t::FMOVIE_TGA;
 			}
-			if ( !Q_stricmp( args[ i ], "jpeg" ) || !Q_stricmp( args[ i ], "jpg" ) )
+			if ( V_strieq( args[ i ], "jpeg" ) || V_strieq( args[ i ], "jpg" ) )
 			{
 				flags &= ~MovieInfo_t::FMOVIE_TGA;
 				flags |= MovieInfo_t::FMOVIE_JPG;
 			}
-			if ( !Q_stricmp( args[ i ], "jpeg_quality" ) )
+			if ( V_strieq( args[ i ], "jpeg_quality" ) )
 			{
 				nJpegQuality = clamp( Q_atoi( args[ ++i ] ), 1, 100 );
 			}
-			if ( !Q_stricmp( args[ i ], "wav" ) )
+			if ( V_strieq( args[ i ], "wav" ) )
 			{
 				flags |= MovieInfo_t::FMOVIE_WAV;
 			}
@@ -1799,7 +1791,7 @@ dlight_t *CL_AllocDlight (int key)
 	int i = CL_AllocLightFromArray( cl_dlights, MAX_DLIGHTS, key );
 	dlight_t *dl = &cl_dlights[i];
 	R_MarkDLightNotVisible( i );
-	memset (dl, 0, sizeof(*dl));
+	BitwiseClear (*dl);
 	dl->key = key;
 	r_dlightchanged |= (1 << i);
 	r_dlightactive |= (1 << i);
@@ -1818,7 +1810,7 @@ dlight_t *CL_AllocElight (int key)
 {
 	int i = CL_AllocLightFromArray( cl_elights, MAX_ELIGHTS, key );
 	dlight_t *el = &cl_elights[i];
-	memset (el, 0, sizeof(*el));
+	BitwiseClear (*el);
 	el->key = key;
 	g_bActiveElights = true;
 	return el;
@@ -2066,12 +2058,12 @@ void CL_Move(float accumulated_extra_samples, bool bFinalTick )
 	if ( hasProblem )
 	{
 		con_nprint_t np;
-		np.time_to_live = 1.0;
+		np.time_to_live = 1.0f;
 		np.index = 2;
 		np.fixed_width_font = false;
-		np.color[ 0 ] = 1.0;
-		np.color[ 1 ] = 0.2;
-		np.color[ 2 ] = 0.2;
+		np.color[ 0 ] = 1.0f;
+		np.color[ 1 ] = 0.2f;
+		np.color[ 2 ] = 0.2f;
 		
 		float flTimeOut = cl.m_NetChannel->GetTimeoutSeconds();
 		Assert( flTimeOut != -1.0f );
@@ -2115,7 +2107,15 @@ void CL_Move(float accumulated_extra_samples, bool bFinalTick )
 }
 
 #define TICK_INTERVAL			(host_state.interval_per_tick)
-#define ROUND_TO_TICKS( t )		( TICK_INTERVAL * TIME_TO_TICKS( t ) )
+
+template<typename TDelta>
+[[nodiscard]]
+inline
+TimeDeltaConcept<TDelta, float>
+ROUND_TO_TICKS( TDelta dt )
+{
+	return TICK_INTERVAL * TIME_TO_TICKS( dt );
+}
 
 void CL_LatchInterpolationAmount()
 {
@@ -2177,20 +2177,16 @@ bool CL_ShouldLoadBackgroundLevel( const CCommand &args )
 	if ( InEditMode() )
 		return false;
 
-	// If TF2 and PC we don't want to load the background map.
-	bool bIsTF2 = false;
-	if ( ( Q_stricmp( COM_GetModDirectory(), "tf" ) == 0 ) ||
-		 ( Q_stricmp( COM_GetModDirectory(), "tf_beta" ) == 0 ) )
-	{
-		bIsTF2 = true;
-	}
+	// If TF2 we don't want to load the background map.
+	const char *pszModDir = COM_GetModDirectory();
+	bool bIsTF2 = V_strieq( pszModDir, "tf" ) || V_strieq( pszModDir, "tf_beta" );
 
-	if ( bIsTF2 && IsPC() )
+	if ( bIsTF2 )
 		return false;
 
 	if ( args.ArgC() == 2 )
 	{
-		if ( !Q_stricmp( args[1], "force" ) )
+		if ( V_strieq( args[1], "force" ) )
 		{
 			// Adrian: Have to do this so the menu shows up if we ever call this while in a level.
 			Host_Disconnect( true );
@@ -2198,7 +2194,7 @@ bool CL_ShouldLoadBackgroundLevel( const CCommand &args )
 			return false;
 		}
 
-		if ( !Q_stricmp( args[1], "playendgamevid" ) )
+		if ( V_strieq( args[1], "playendgamevid" ) )
 		{
 			// Bail back to the menu and play the end game video.
 			CommandLine()->AppendParm( "-endgamevid", NULL ); 
@@ -2209,7 +2205,7 @@ bool CL_ShouldLoadBackgroundLevel( const CCommand &args )
 			return false;
 		}
 
-		if ( !Q_stricmp( args[1], "playrecapvid" ) )
+		if ( V_strieq( args[1], "playrecapvid" ) )
 		{
 			// Bail back to the menu and play the recap video
 			CommandLine()->AppendParm( "-recapvid", NULL ); 
@@ -2220,23 +2216,23 @@ bool CL_ShouldLoadBackgroundLevel( const CCommand &args )
 	}
 	
 	// if force is set, then always return true
-	if (CommandLine()->CheckParm("-forcestartupmenu"))
+	if (CommandLine()->HasParm("-forcestartupmenu"))
 		return true;
 
 	// don't load the map in developer or console mode
 	if ( developer.GetInt() || 
-		CommandLine()->CheckParm("-console") || 
-		CommandLine()->CheckParm("-dev") )
+		CommandLine()->HasParm("-console") || 
+		CommandLine()->HasParm("-dev") )
 		return false;
 
 	// don't load the map if we're going straight into a level
-	if ( CommandLine()->CheckParm("+map") ||
-		CommandLine()->CheckParm("+connect") ||
-		CommandLine()->CheckParm("+playdemo") ||
-		CommandLine()->CheckParm("+timedemo") ||
-		CommandLine()->CheckParm("+timedemoquit") ||
-		CommandLine()->CheckParm("+load") ||
-		CommandLine()->CheckParm("-makereslists"))
+	if ( CommandLine()->HasParm("+map") ||
+		CommandLine()->HasParm("+connect") ||
+		CommandLine()->HasParm("+playdemo") ||
+		CommandLine()->HasParm("+timedemo") ||
+		CommandLine()->HasParm("+timedemoquit") ||
+		CommandLine()->HasParm("+load") ||
+		CommandLine()->HasParm("-makereslists"))
 		return false;
 
 	// nothing else is going on, so load the startup level
@@ -2456,10 +2452,11 @@ void CL_SetSteamCrashComment()
 		latency
 	);
 
+	char buffer[32];
 	const char *pNetChannel = "Not Connected";
 	if ( cl.m_NetChannel )
 	{
-		pNetChannel = cl.m_NetChannel->GetRemoteAddress().ToString();
+		pNetChannel = cl.m_NetChannel->GetRemoteAddress().ToString_safe(buffer);
 	}
 
 		CL_SetPagedPoolInfo();
@@ -2613,7 +2610,7 @@ CON_COMMAND_F( setinfo, "Adds a new user info value", FCVAR_CLIENTCMD_CAN_EXECUT
 	const char *value = args[ 2 ];
 
 	// Prevent players manually changing their name (their Steam account provides it now)
-	if ( Q_stricmp( name, "name" ) == 0 )
+	if ( V_strieq( name, "name" ) )
 		return;
 
 	// Discard any convar change request if contains funky characters

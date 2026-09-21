@@ -1141,7 +1141,7 @@ void CAI_BaseNPC::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir
 
 	// hit gear, react but don't bleed
 	case HITGROUP_GEAR:
-		subInfo.SetDamage( 0.01 );
+		subInfo.SetDamage( 0.01f );
 		ptr->hitgroup = HITGROUP_GENERIC;
 		if( bDebug ) DevMsg("Hit Location: Gear\n");
 		break;
@@ -2421,14 +2421,14 @@ void CAI_BaseNPC::SetHeadDirection( const Vector &vTargetPos, float flInterval)
 	if (flDesiredYaw < -180)
 		flDesiredYaw += 360;
 
-	float	iRate	 = 0.8;
+	float	iRate	 = 0.8f;
 
 	// Make frame rate independent
 	float timeToUse = flInterval;
 	while (timeToUse > 0)
 	{
 		m_flHeadYaw	   = (iRate * m_flHeadYaw) + (1-iRate)*flDesiredYaw;
-		timeToUse -= 0.1;
+		timeToUse -= 0.1f;
 	}
 	if (m_flHeadYaw > 360) m_flHeadYaw = 0;
 
@@ -2448,7 +2448,7 @@ void CAI_BaseNPC::SetHeadDirection( const Vector &vTargetPos, float flInterval)
 	while (timeToUse > 0)
 	{
 		m_flHeadPitch	   = (iRate * m_flHeadPitch) + (1-iRate)*flDesiredPitch;
-		timeToUse -= 0.1;
+		timeToUse -= 0.1f;
 	}
 	if (m_flHeadPitch > 360) m_flHeadPitch = 0;
 
@@ -2805,7 +2805,7 @@ void CAI_BaseNPC::MaintainLookTargets ( float flInterval )
 	while (timeToUse > 0)
 	{
 		m_vCurEyeTarget = ((1 - m_flEyeIntegRate) * m_vCurEyeTarget + m_flEyeIntegRate * m_vEyeLookTarget);
-		timeToUse -= 0.1;
+		timeToUse -= 0.1f;
 	}
 	SetViewtarget( m_vCurEyeTarget );
 }
@@ -2908,8 +2908,8 @@ bool CAI_BaseNPC::PreThink( void )
 			g_AINextDisabledMessageTime = gpGlobals->curtime + 0.5f;
 
 			hudtextparms_s tTextParam;
-			tTextParam.x			= 0.7;
-			tTextParam.y			= 0.65;
+			tTextParam.x			= 0.7f;
+			tTextParam.y			= 0.65f;
 			tTextParam.effect		= 0;
 			tTextParam.r1			= 255;
 			tTextParam.g1			= 255;
@@ -2921,7 +2921,7 @@ bool CAI_BaseNPC::PreThink( void )
 			tTextParam.a2			= 255;
 			tTextParam.fadeinTime	= 0;
 			tTextParam.fadeoutTime	= 0;
-			tTextParam.holdTime		= 0.6;
+			tTextParam.holdTime		= 0.6f;
 			tTextParam.fxTime		= 0;
 			tTextParam.channel		= 1;
 			UTIL_HudMessageAll( tTextParam, "A.I. Disabled...\n" );
@@ -2951,7 +2951,7 @@ bool CAI_BaseNPC::PreThink( void )
 
 	if ( m_hOpeningDoor.Get() && AIIsDebuggingDoors( this ) )
 	{
-		NDebugOverlay::Line( EyePosition(), m_hOpeningDoor->WorldSpaceCenter(), 255, 255, 255, false, .1 );
+		NDebugOverlay::Line( EyePosition(), m_hOpeningDoor->WorldSpaceCenter(), 255, 255, 255, false, .1f );
 	}
 
 	return true;
@@ -3685,9 +3685,9 @@ bool CAI_BaseNPC::PreNPCThink()
 	bool bUseThinkLimits = ( !m_bInChoreo && ShouldUseFrameThinkLimits() );
 
 #ifdef _DEBUG
-	constexpr float NPC_THINK_LIMIT = 30.0 / 1000.0;
+	constexpr float NPC_THINK_LIMIT = 30.0f / 1000.0f;
 #else
-	constexpr float NPC_THINK_LIMIT = 10.0 / 1000.0;
+	constexpr float NPC_THINK_LIMIT = 10.0f / 1000.0f;
 #endif
 
 	g_StartTimeCurThink = 0;
@@ -3844,7 +3844,7 @@ void CAI_BaseNPC::SetPlayerAvoidState( void )
 		{
 			int iRed = ( bShouldPlayerAvoid == true ) ? 255 : 0;
 
-			NDebugOverlay::Box( GetAbsOrigin(), vMins, vMaxs, iRed, 0, 255, 64, 0.1 );
+			NDebugOverlay::Box( GetAbsOrigin(), vMins, vMaxs, iRed, 0, 255, 64, 0.1f );
 		}
 	}
 
@@ -4018,10 +4018,10 @@ void CAI_BaseNPC::NPCThink( void )
 
 		static float g_DecisionIntervals[] = 
 		{
-			.1,	//	AIE_NORMAL
-			.2, //	AIE_EFFICIENT
-			.4, //	AIE_VERY_EFFICIENT
-			.6, //	AIE_SUPER_EFFICIENT
+			.1f,	//	AIE_NORMAL
+			.2f,	//	AIE_EFFICIENT
+			.4f,	//	AIE_VERY_EFFICIENT
+			.6f,	//	AIE_SUPER_EFFICIENT
 		};
 
 		if ( bRanDecision )
@@ -4793,15 +4793,15 @@ void CAI_BaseNPC::RunAI( void )
 
 			vecPoint = EyePosition() + Vector( 0, 0, 12 );
 			GetVectors( NULL, &right, NULL );
-			NDebugOverlay::Line( vecPoint, vecPoint + Vector( 0, 0, 64 ), 0, 255, 0, false , 0.1 );
-			NDebugOverlay::Line( vecPoint, vecPoint + Vector( 0, 0, 32 ) + right * 32, 0, 255, 0, false , 0.1 );
-			NDebugOverlay::Line( vecPoint, vecPoint + Vector( 0, 0, 32 ) - right * 32, 0, 255, 0, false , 0.1 );
+			NDebugOverlay::Line( vecPoint, vecPoint + Vector( 0, 0, 64 ), 0, 255, 0, false , 0.1f );
+			NDebugOverlay::Line( vecPoint, vecPoint + Vector( 0, 0, 32 ) + right * 32, 0, 255, 0, false , 0.1f );
+			NDebugOverlay::Line( vecPoint, vecPoint + Vector( 0, 0, 32 ) - right * 32, 0, 255, 0, false , 0.1f );
 
 			for ( CAI_BaseNPC *pSquadMember = pSquad->GetFirstMember( &iter, false ); pSquadMember; pSquadMember = pSquad->GetNextMember( &iter, false ) )
 			{
 				if ( pSquadMember != this )
 					NDebugOverlay::Line( EyePosition(), pSquadMember->EyePosition(), 0, 
-										 CAI_Squad::IsSilentMember(pSquadMember) ? 127 : 255, 0, false , 0.1 );
+										 CAI_Squad::IsSilentMember(pSquadMember) ? 127 : 255, 0, false , 0.1f );
 			}
 		}
 	}
@@ -4815,9 +4815,9 @@ void CAI_BaseNPC::RunAI( void )
 
 		UTIL_GetLocalPlayer()->GetVectors( NULL, &right, NULL );
 
-		NDebugOverlay::Line( vecPoint, vecPoint + Vector( 0, 0, 64 ), 255, 0, 0, false , 0.1 );
-		NDebugOverlay::Line( vecPoint, vecPoint + Vector( 0, 0, 32 ) + right * 32, 255, 0, 0, false , 0.1 );
-		NDebugOverlay::Line( vecPoint, vecPoint + Vector( 0, 0, 32 ) - right * 32, 255, 0, 0, false , 0.1 );
+		NDebugOverlay::Line( vecPoint, vecPoint + Vector( 0, 0, 64 ), 255, 0, 0, false , 0.1f );
+		NDebugOverlay::Line( vecPoint, vecPoint + Vector( 0, 0, 32 ) + right * 32, 255, 0, 0, false , 0.1f );
+		NDebugOverlay::Line( vecPoint, vecPoint + Vector( 0, 0, 32 ) - right * 32, 255, 0, 0, false , 0.1f );
 	}
 	
 #ifdef _DEBUG
@@ -5631,7 +5631,7 @@ void CAI_BaseNPC::GatherEnemyConditions( CBaseEntity *pEnemy )
 		// Trail the enemy a bit if he's moving
 		if (pEnemy->GetSmoothedVelocity() != vec3_origin)
 		{
-			Vector vTrailPos = pEnemy->GetAbsOrigin() - pEnemy->GetSmoothedVelocity() * random->RandomFloat( -0.05, 0 );
+			Vector vTrailPos = pEnemy->GetAbsOrigin() - pEnemy->GetSmoothedVelocity() * random->RandomFloat( -0.05f, 0 );
 			UpdateEnemyMemory(pEnemy,vTrailPos);
 		}
 		else
@@ -5754,7 +5754,7 @@ float CAI_BaseNPC::GetGoalRepathTolerance( CBaseEntity *pGoalEnt, GoalType_t typ
 	}
 		
 	if ( !pGoalEnt->IsPlayer() )
-		result *= 1.20;
+		result *= 1.20f;
 		
 	return result;
 }
@@ -5788,7 +5788,7 @@ void CAI_BaseNPC::UpdateEnemyPos()
 				if ( (GetNavigator()->GetGoalPos() - vEnemyLKP).Length() > tolerance )
 				{
 					// FIXME: when fleeing crowds, won't this severely limit the effectiveness of each individual?  Shouldn't this be a mutex that's held for some period so that at least one attacker is effective?
-					m_AnyUpdateEnemyPosTimer.Set( 0.1 ); // FIXME: what's a reasonable interval?
+					m_AnyUpdateEnemyPosTimer.Set( 0.1f ); // FIXME: what's a reasonable interval?
 					if ( !GetNavigator()->RefindPathToGoal( false ) )
 					{	
 						TaskFail( FAIL_NO_ROUTE );
@@ -7166,19 +7166,19 @@ void CAI_BaseNPC::AddRelationship( const char *pszRelationship, CBaseEntity *pAc
 		Disposition_t disposition = D_NU;
 		if ( dispositionString )
 		{
-			if (!stricmp(dispositionString,"D_HT"))
+			if (V_strieq(dispositionString,"D_HT"))
 			{
 				disposition = D_HT;
 			}
-			else if (!stricmp(dispositionString,"D_FR"))
+			else if (V_strieq(dispositionString,"D_FR"))
 			{
 				disposition = D_FR;
 			}
-			else if (!stricmp(dispositionString,"D_LI"))
+			else if (V_strieq(dispositionString,"D_LI"))
 			{
 				disposition = D_LI;
 			}
-			else if (!stricmp(dispositionString,"D_NU"))
+			else if (V_strieq(dispositionString,"D_NU"))
 			{
 				disposition = D_NU;
 			}
@@ -7216,7 +7216,7 @@ void CAI_BaseNPC::AddRelationship( const char *pszRelationship, CBaseEntity *pAc
 		if( !bFoundEntity )
 		{
 			// Need special condition for player as we can only have one
-			if (!stricmp("player", entityString) || !stricmp("!player", entityString))
+			if (V_strieq("player", entityString) || V_strieq("!player", entityString))
 			{
 				AddClassRelationship( CLASS_PLAYER, disposition, priority );
 			}
@@ -7310,7 +7310,7 @@ void CAI_BaseNPC::StartNPC( void )
 	{
 		Vector origin = GetLocalOrigin();
 
-		if (!GetMoveProbe()->FloorPoint( origin + Vector(0, 0, 0.1), MASK_NPCSOLID, 0, -2048, &origin ))
+		if (!GetMoveProbe()->FloorPoint( origin + Vector(0, 0, 0.1f), MASK_NPCSOLID, 0, -2048, &origin ))
 		{
 			Warning( "NPC %s stuck in wall--level design error at (%.2f %.2f %.2f)\n", GetClassname(), GetAbsOrigin().x, GetAbsOrigin().y, GetAbsOrigin().z );
 			if ( g_pDeveloper->GetInt() > 1 )
@@ -7388,7 +7388,7 @@ void CAI_BaseNPC::StartNPC( void )
 
 	static constexpr float nextThinkTimes[20] = 
 	{
-		.0, .150, .075, .225, .030, .180, .120, .270, .045, .210, .105, .255, .015, .165, .090, .240, .135, .060, .195, .285
+		.0f, .150f, .075f, .225f, .030f, .180f, .120f, .270f, .045f, .210f, .105f, .255f, .015f, .165f, .090f, .240f, .135f, .060f, .195f, .285f
 	};
 
 	SetNextThink( gpGlobals->curtime + nextThinkTimes[gm_nSpawnedThisFrame % 20] );
@@ -7720,7 +7720,7 @@ CBaseEntity *CAI_BaseNPC::BestEnemy( void )
 
 		if ( m_bIgnoreUnseenEnemies )
 		{
-			constexpr float TIME_CONSIDER_ENEMY_UNSEEN = .4;
+			constexpr float TIME_CONSIDER_ENEMY_UNSEEN = .4f;
 			if ( pEMemory->timeLastSeen < gpGlobals->curtime - TIME_CONSIDER_ENEMY_UNSEEN )
 			{
 				DbgEnemyMsg( this, "    %s rejected: not seen and set to ignore unseen enemies\n", pEnemy->GetDebugName() );
@@ -9904,26 +9904,26 @@ int CAI_BaseNPC::PlayScriptedSentence( const char *pszSentence, float delay, flo
 //-----------------------------------------------------------------------------
 CBaseEntity *CAI_BaseNPC::FindNamedEntity( const char *name, IEntityFindFilter *pFilter )
 {
-	if ( !stricmp( name, "!player" ))
+	if ( V_strieq( name, "!player" ))
 	{
 		return ( CBaseEntity * )AI_GetSinglePlayer();
 	}
-	else if ( !stricmp( name, "!enemy" ) )
+	else if ( V_strieq( name, "!enemy" ) )
 	{
 		if (GetEnemy() != NULL)
 			return GetEnemy();
 	}
-	else if ( !stricmp( name, "!self" ) || !stricmp( name, "!target1" ) )
+	else if ( V_strieq( name, "!self" ) || V_strieq( name, "!target1" ) )
 	{
 		return this;
 	}
-	else if ( !stricmp( name, "!nearestfriend" ) || !stricmp( name, "!friend" ) )
+	else if ( V_strieq( name, "!nearestfriend" ) || V_strieq( name, "!friend" ) )
 	{
 		// FIXME: look at CBaseEntity *CNPCSimpleTalker::FindNearestFriend(bool fPlayer)
 		// punt for now
 		return ( CBaseEntity * )AI_GetSinglePlayer();
 	}
-	else if (!stricmp( name, "self" ))
+	else if (V_strieq( name, "self" ))
 	{
 		static int selfwarningcount = 0;
 
@@ -9934,7 +9934,7 @@ CBaseEntity *CAI_BaseNPC::FindNamedEntity( const char *name, IEntityFindFilter *
 		}
 		return this;
 	}
-	else if ( !stricmp( name, "Player" ))
+	else if ( V_strieq( name, "Player" ))
 	{
 		static int playerwarningcount = 0;
 		if ( ++playerwarningcount < 5 )
@@ -11347,7 +11347,7 @@ CAI_BaseNPC::CAI_BaseNPC(void)
 	m_spawnEquipment			= NULL_STRING;
 	m_pEnemies					= new CAI_Enemies;
 	m_bIgnoreUnseenEnemies		= false;
-	m_flEyeIntegRate			= 0.95;
+	m_flEyeIntegRate			= 0.95f;
 	SetTarget( NULL );
 
 	m_pSquad					= NULL;
@@ -13068,11 +13068,11 @@ void CAI_BaseNPC::ParseScriptedNPCInteractions( void )
 				const char *pszDontFixup = pkvNode->GetString( "dont_teleport_at_end", NULL );
 				if ( pszDontFixup )
 				{
-					if ( !Q_stricmp( pszDontFixup, "me" ) || !Q_stricmp( pszDontFixup, "both" ) )
+					if ( V_strieq( pszDontFixup, "me" ) || V_strieq( pszDontFixup, "both" ) )
 					{
 						sInteraction.iFlags |= SCNPC_FLAG_DONT_TELEPORT_AT_END_ME;
 					}
-					else if ( !Q_stricmp( pszDontFixup, "them" ) || !Q_stricmp( pszDontFixup, "both" ) ) 
+					else if ( V_strieq( pszDontFixup, "them" ) || V_strieq( pszDontFixup, "both" ) ) 
 					{
 						sInteraction.iFlags |= SCNPC_FLAG_DONT_TELEPORT_AT_END_THEM;
 					}
@@ -13677,7 +13677,7 @@ bool CAI_BaseNPC::InteractionCouldStart( CAI_BaseNPC *pOtherNPC, ScriptedNPCInte
 	bool bDebug = ai_debug_dyninteractions.GetBool();
 	if ( bDebug )
 	{
-		NDebugOverlay::Axis( vecOrigin, angAngles, 20, true, 0.1 );
+		NDebugOverlay::Axis( vecOrigin, angAngles, 20, true, 0.1f );
 	}
 
 	// Determine whether or not the enemy is on the target

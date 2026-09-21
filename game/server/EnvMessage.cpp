@@ -67,12 +67,12 @@ void CMessage::Spawn( void )
 	m_MessageAttenuation = 0;
 
 	// Remap volume from [0,10] to [0,1].
-	m_MessageVolume *= 0.1;
+	m_MessageVolume *= 0.1f;
 
 	// No volume, use normal
 	if ( m_MessageVolume <= 0 )
 	{
-		m_MessageVolume = 1.0;
+		m_MessageVolume = 1.0f;
 	}
 }
 

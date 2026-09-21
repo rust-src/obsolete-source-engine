@@ -166,15 +166,15 @@ const char* GetSwizzleDot( const char *pParam )
 int GetNumSwizzleComponents( const char *pParam )
 {
 	// Special scalar output which won't accept a swizzle
-	if ( !V_stricmp( pParam, "gl_FogFragCoord" ) )
+	if ( V_strieq( pParam, "gl_FogFragCoord" ) )
 		return 1;
 
 	// Special scalar output which won't accept a swizzle
-	if ( !V_stricmp( pParam, "gl_FragDepth" ) )
+	if ( V_strieq( pParam, "gl_FragDepth" ) )
 		return 1;	
 	
 	// Special scalar output which won't accept a swizzle
-	if ( !V_stricmp( pParam, "a0" ) )
+	if ( V_strieq( pParam, "a0" ) )
 		return 1;
 	
 	const char *pDot = GetSwizzleDot( pParam );
@@ -268,7 +268,7 @@ bool DoParamNamesMatch( const char *pParam1, const char *pParam2 )
 	char szTemp[2][256];
 	GetParamNameWithoutSwizzle( pParam1, szTemp[0], sizeof( szTemp[0] ) );
 	GetParamNameWithoutSwizzle( pParam2, szTemp[1], sizeof( szTemp[1] ) );
-	return ( V_stricmp( szTemp[0], szTemp[1] ) == 0 );
+	return V_strieq( szTemp[0], szTemp[1] );
 }
 
 
@@ -963,9 +963,9 @@ CUtlString D3DToGL::GetParameterString( uint32 dwToken, uint32 dwSourceOrDest, b
 // If the register happens to end with ".xyzw", then this strips off the mask.
 void SimplifyFourParamRegister( char *pRegister )
 {
-	int nLen = V_strlen( pRegister );
-	if ( nLen > 5 && V_strcmp( &pRegister[nLen-5], ".xyzw" ) == 0 )
-		pRegister[nLen-5] = 0;
+	intp nLen = V_strlen( pRegister );
+	if ( nLen > 5 && V_streq( &pRegister[nLen-5], ".xyzw" ) )
+		pRegister[nLen-5] = '\0';
 }
 
 
@@ -1822,7 +1822,7 @@ void D3DToGL::Handle_DCL()
 
 			char temp[128];
 			// regnum goes straight into the vertex.attrib[n] index
-			sprintf( temp, "%08x %08x\n", dwToken, dwRegToken );
+			V_sprintf_safe( temp, "%08x %08x\n", dwToken, dwRegToken );
 			StrcatToHeaderCode( temp );
 		}
 	}

@@ -62,20 +62,20 @@ inline int CheckDeclareClass_Access( T *, const char *pShouldBe )
 #ifdef  VALIDATE_DECLARE_CLASS
 
 	#define DECLARE_CLASS( className, baseClassName ) \
-		typedef baseClassName BaseClass; \
-		typedef className ThisClass; \
+		using BaseClass = baseClassName; \
+		using ThisClass = className; \
 		template <typename T> friend int CheckDeclareClass_Access(T *, const char *pShouldBe); \
 		static int CheckDeclareClass( const char *pShouldBe ) \
 		{ \
 			InternalCheckDeclareClass( pShouldBe, #className, (ThisClass*)0xFFFFF, (BaseClass*)(ThisClass*)0xFFFFF ); \
-			return CheckDeclareClass_Access( (BaseClass *)NULL, #baseClassName ); \
+			return CheckDeclareClass_Access( (BaseClass *)nullptr, #baseClassName ); \
 		}
 
 	// Use this macro when you have a base class, but it's part of a library that doesn't use network vars
 	// or any of the things that use ThisClass or BaseClass.
 	#define DECLARE_CLASS_GAMEROOT( className, baseClassName ) \
-		typedef baseClassName BaseClass; \
-		typedef className ThisClass; \
+		using BaseClass = baseClassName; \
+		using ThisClass = className; \
 		template <typename T> friend int CheckDeclareClass_Access(T *, const char *pShouldBe); \
 		static int CheckDeclareClass( const char *pShouldBe ) \
 		{ \
@@ -87,7 +87,7 @@ inline int CheckDeclareClass_Access( T *, const char *pShouldBe )
 		DECLARE_CLASS( className, baseClassName )
 
 	#define DECLARE_CLASS_NOBASE( className ) \
-		typedef className ThisClass; \
+		using ThisClass = className; \
 		template <typename T> friend int CheckDeclareClass_Access(T *, const char *pShouldBe); \
 		static int CheckDeclareClass( const char *pShouldBe ) \
 		{ \
@@ -96,13 +96,13 @@ inline int CheckDeclareClass_Access( T *, const char *pShouldBe )
 
 #else
 	#define DECLARE_CLASS( className, baseClassName ) \
-		typedef baseClassName BaseClass; \
-		typedef className ThisClass;
+		using BaseClass = baseClassName; \
+		using ThisClass = className;
 
 	#define DECLARE_CLASS_GAMEROOT( className, baseClassName )	DECLARE_CLASS( className, baseClassName )
 	#define DECLARE_CLASS_NOFRIEND( className, baseClassName )	DECLARE_CLASS( className, baseClassName )
 
-	#define DECLARE_CLASS_NOBASE( className )					typedef className ThisClass;
+	#define DECLARE_CLASS_NOBASE( className )					using ThisClass = className;
 #endif
 
 
@@ -117,9 +117,8 @@ inline int CheckDeclareClass_Access( T *, const char *pShouldBe )
 	class CAutoInitEntPtr
 	{
 	public:
-		CAutoInitEntPtr()
+		CAutoInitEntPtr() : m_pEnt{ nullptr }
 		{
-			m_pEnt = NULL;
 		}
 		CBaseEntity *m_pEnt;
 	};
@@ -158,8 +157,8 @@ static inline void DispatchNetworkStateChanged( T *pObj, void *pVar )
 #define CNetworkVarEmbedded( type, name ) \
 	class NetworkVar_##name; \
 	friend class NetworkVar_##name; \
-	static inline int GetOffset_##name() { return MyOffsetOf(ThisClass,name); } \
-	typedef ThisClass ThisClass_##name; \
+	[[nodiscard]] static inline intp GetOffset_##name() { const intp offset = MyOffsetOf(ThisClass,name); return offset; } \
+	using ThisClass_##name = ThisClass; \
 	class NetworkVar_##name : public type \
 	{ \
 		template< class T > NetworkVar_##name& operator=( const T &val ) { *((type*)this) = val; return *this; } \
@@ -167,11 +166,13 @@ static inline void DispatchNetworkStateChanged( T *pObj, void *pVar )
 		void CopyFrom( const type &src ) { *((type *)this) = src; NetworkStateChanged(); } \
 		virtual void NetworkStateChanged() \
 		{ \
-			DispatchNetworkStateChanged( (ThisClass_##name*)( ((char*)this) - GetOffset_##name() ) ); \
+			const intp offset = GetOffset_##name(); \
+			DispatchNetworkStateChanged( (ThisClass_##name*)( ((char*)this) - offset ) ); \
 		} \
 		virtual void NetworkStateChanged( void *pVar ) \
 		{ \
-			DispatchNetworkStateChanged( (ThisClass_##name*)( ((char*)this) - GetOffset_##name() ), pVar ); \
+			const intp offset = GetOffset_##name(); \
+			DispatchNetworkStateChanged( (ThisClass_##name*)( ((char*)this) - offset ), pVar ); \
 		} \
 	}; \
 	NetworkVar_##name name; 
@@ -673,7 +674,7 @@ private:
 #define CNetworkString( name, length ) \
 	class NetworkVar_##name; \
 	friend class NetworkVar_##name; \
-	typedef ThisClass MakeANetworkVar_##name; \
+	using MakeANetworkVar_##name = ThisClass; \
 	class NetworkVar_##name \
 	{ \
 	public: \
@@ -689,7 +690,8 @@ private:
 	protected: \
 		inline void NetworkStateChanged() \
 		{ \
-		CHECK_USENETWORKVARS ((ThisClass*)(((char*)this) - MyOffsetOf(ThisClass,name)))->NetworkStateChanged(); \
+		const intp offset = MyOffsetOf(ThisClass, name); \
+		CHECK_USENETWORKVARS ((ThisClass*)(((char*)this) - offset))->NetworkStateChanged(); \
 		} \
 	private: \
 		char m_Value[length]; \
@@ -704,7 +706,7 @@ private:
 #define CNetworkArrayInternal( type, name, count, stateChangedFn ) \
 	class NetworkVar_##name; \
 	friend class NetworkVar_##name; \
-	typedef ThisClass MakeANetworkVar_##name; \
+	using MakeANetworkVar_##name = ThisClass; \
 	class NetworkVar_##name \
 	{ \
 	public: \
@@ -746,7 +748,8 @@ private:
 	protected: \
 		inline void NetworkStateChanged( int net_change_index ) \
 		{ \
-			CHECK_USENETWORKVARS ((ThisClass*)(((char*)this) - MyOffsetOf(ThisClass,name)))->stateChangedFn( &m_Value[net_change_index] ); \
+			const intp offset = MyOffsetOf(ThisClass, name); \
+			CHECK_USENETWORKVARS ((ThisClass*)(((char*)this) - offset))->stateChangedFn( &m_Value[net_change_index] ); \
 		} \
 		type m_Value[count]; \
 	}; \
@@ -760,7 +763,7 @@ private:
 #define NETWORK_VAR_START( type, name ) \
 	class NetworkVar_##name; \
 	friend class NetworkVar_##name; \
-	typedef ThisClass MakeANetworkVar_##name; \
+	using MakeANetworkVar_##name = ThisClass; \
 	class NetworkVar_##name \
 	{ \
 	public: \
@@ -771,7 +774,8 @@ private:
 	public: \
 		static inline void NetworkStateChanged( void *ptr ) \
 		{ \
-			CHECK_USENETWORKVARS ((ThisClass*)(((char*)ptr) - MyOffsetOf(ThisClass,name)))->stateChangedFn( ptr ); \
+			const intp offset = MyOffsetOf(ThisClass, name); \
+			CHECK_USENETWORKVARS ((ThisClass*)(((char*)ptr) - offset))->stateChangedFn( ptr ); \
 		} \
 	}; \
 	base< type, NetworkVar_##name > name;

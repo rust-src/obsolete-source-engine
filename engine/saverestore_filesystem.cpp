@@ -209,7 +209,8 @@ public:
 			Q_snprintf( szName, sizeof( szName ), "%s/%s", saverestore->GetSaveDir(), list[i].szFileName );
 			Q_FixSlashes( szName );
 
-			unsigned fileSize = g_pFileSystem->Size( szName );
+			// dimhotepus: Correctly check file size.
+			unsigned fileSize = g_pFileSystem->Size( szName, "MOD" );
 			if ( fileSize )
 			{
 				Assert( sizeof(list[i].szFileName) == MAX_PATH );
@@ -228,7 +229,7 @@ public:
 	//-----------------------------------------------------------------------------
 	// Purpose: Extracts all the files contained within pFile
 	//-----------------------------------------------------------------------------
-	bool DirectoryExtract( FileHandle_t pFile, int fileCount, bool bIsXSave )
+	bool DirectoryExtract( FileHandle_t pFile, int fileCount )
 	{
 		int				fileSize;
 		char			szName[ MAX_PATH ], fileName[ MAX_PATH ];
@@ -237,24 +238,16 @@ public:
 		for ( int i = 0; i < fileCount && success; i++ )
 		{
 			// Filename can only be as long as a map name + extension
-			if ( g_pSaveRestoreFileSystem->Read( fileName, MAX_PATH, pFile ) != MAX_PATH )
+			if ( g_pSaveRestoreFileSystem->Read( fileName, pFile ) != sizeof(fileName) )
 				return false;
 
-			if ( g_pSaveRestoreFileSystem->Read( &fileSize, sizeof(int), pFile ) != sizeof(int) )
+			if ( g_pSaveRestoreFileSystem->Read( fileSize, pFile ) != sizeof(fileSize) )
 				return false;
 
 			if ( !fileSize )
 				return false;
 
-			if ( !bIsXSave )
-			{
-				Q_snprintf( szName, sizeof( szName ), "%s/%s", saverestore->GetSaveDir(), fileName );
-			}
-			else
-			{
-				Q_snprintf( szName, sizeof( szName ), "%s:\\%s", GetCurrentMod(), fileName );
-			}
-
+			V_sprintf_safe( szName, "%s/%s", saverestore->GetSaveDir(), fileName );
 			Q_FixSlashes( szName );
 
 			FileHandle_t pCopy = g_pSaveRestoreFileSystem->Open( szName, "wb", "MOD" );
@@ -290,7 +283,7 @@ public:
 	//-----------------------------------------------------------------------------
 	// Purpose: Clears the save directory of all temporary files (*.hl)
 	//-----------------------------------------------------------------------------
-	void DirectoryClear( const char *pPath, bool bIsXSave )
+	void DirectoryClear( const char *pPath )
 	{
 		char		szPath[ MAX_PATH ];
 		
@@ -298,14 +291,7 @@ public:
 		RunCodeAtScopeExit(Sys_FindClose());
 		while ( findfn != NULL )
 		{
-			if ( !bIsXSave )
-			{
-				Q_snprintf( szPath, sizeof( szPath ), "%s/%s", saverestore->GetSaveDir(), findfn );
-			}
-			else
-			{
-				Q_snprintf( szPath, sizeof( szPath ), "%s:\\%s", GetCurrentMod(), findfn );
-			}
+			Q_snprintf( szPath, sizeof( szPath ), "%s/%s", saverestore->GetSaveDir(), findfn );
 
 			// Delete the temporary save file
 			g_pFileSystem->RemoveFile( szPath, "MOD" );

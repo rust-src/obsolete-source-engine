@@ -91,7 +91,7 @@ int GetTeamVisualsFromString( const char *pszString )
 	for ( int i = 0; i < TEAM_VISUAL_SECTIONS; i++ )
 	{
 		// There's a NULL hidden in g_TeamVisualSections
-		if ( g_TeamVisualSections[i] && !Q_stricmp( pszString, g_TeamVisualSections[i] ) )
+		if ( g_TeamVisualSections[i] && V_strieq( pszString, g_TeamVisualSections[i] ) )
 			return i;
 	}
 	return -1;
@@ -990,7 +990,7 @@ bool CEconOperationDefinition::BInitFromKV( KeyValues *pKVPOperation, CUtlVector
 RTime32	CEconOperationDefinition::GetMinQueueFreq() const
 { 
 #ifdef STAGING_ONLY
-	if ( Q_stricmp( gc_quick_operation_drop_name.GetString(), m_pszName ) == 0 )
+	if ( V_strieq( gc_quick_operation_drop_name.GetString(), m_pszName ) )
 	{
 		return gc_quick_operation_drop_rate.GetInt();
 	}
@@ -1002,7 +1002,7 @@ RTime32	CEconOperationDefinition::GetMinQueueFreq() const
 RTime32	CEconOperationDefinition::GetMaxQueueFreq() const
 { 
 #ifdef STAGING_ONLY
-	if ( Q_stricmp( gc_quick_operation_drop_name.GetString(), m_pszName ) == 0 )
+	if ( V_strieq( gc_quick_operation_drop_name.GetString(), m_pszName ) )
 	{
 		return gc_quick_operation_drop_rate.GetInt() + 2;
 	}
@@ -1014,7 +1014,7 @@ RTime32	CEconOperationDefinition::GetMaxQueueFreq() const
 RTime32	CEconOperationDefinition::GetMinDropFreq() const 
 { 
 #ifdef STAGING_ONLY
-	if ( Q_stricmp( gc_quick_operation_drop_name.GetString(), m_pszName ) == 0 )
+	if ( V_strieq( gc_quick_operation_drop_name.GetString(), m_pszName ) )
 	{
 		return gc_quick_operation_drop_rate.GetInt();
 	}
@@ -1026,7 +1026,7 @@ RTime32	CEconOperationDefinition::GetMinDropFreq() const
 RTime32	CEconOperationDefinition::GetMaxDropFreq() const 
 { 
 #ifdef STAGING_ONLY
-	if ( Q_stricmp( gc_quick_operation_drop_name.GetString(), m_pszName ) == 0 )
+	if ( V_strieq( gc_quick_operation_drop_name.GetString(), m_pszName ) )
 	{
 		return gc_quick_operation_drop_rate.GetInt() + 2;
 	}
@@ -1077,7 +1077,7 @@ bool BCommonInitPropertyGeneratorsFromKV( const char *pszContext, CUtlVector<con
 		IEconItemPropertyGenerator *pGenerator = NULL;
 		for ( const auto& gen : s_Generators )
 		{
-			if ( Q_stricmp( gen.m_pszGeneratorName, pszGeneratorName ) != 0 )
+			if ( !V_strieq( gen.m_pszGeneratorName, pszGeneratorName ) )
 				continue;
 
 			pGenerator = (*gen.m_funcCreateGeneratorInstance)( pKVGenerator, pVecErrors );
@@ -1164,7 +1164,7 @@ bool CEconLootListDefinition::BInitFromKV( KeyValues *pKVLootList, CEconItemSche
 	{
 		const char *pszName = pKVListItem->GetName();
 		
-		if ( !Q_strcmp( pszName, "loot_list_header_desc" ) )
+		if ( V_streq( pszName, "loot_list_header_desc" ) )
 		{
 			// Make sure we didn't specify multiple entries.
 			SCHEMA_INIT_CHECK(
@@ -1179,7 +1179,7 @@ bool CEconLootListDefinition::BInitFromKV( KeyValues *pKVLootList, CEconItemSche
 
 			continue;
 		}
-		else if ( !Q_strcmp( pszName, "loot_list_footer_desc" ) )
+		else if ( V_streq( pszName, "loot_list_footer_desc" ) )
 		{
 			// Make sure we didn't specify multiple entries.
 			SCHEMA_INIT_CHECK(
@@ -1194,30 +1194,30 @@ bool CEconLootListDefinition::BInitFromKV( KeyValues *pKVLootList, CEconItemSche
 
 			continue;
 		}
-		else if ( !Q_strcmp( pszName, "loot_list_collection" ) )
+		else if ( V_streq( pszName, "loot_list_collection" ) )
 		{
 			// Set name as the collection lootlist name
 			pszName = pKVListItem->GetString();
 			m_pszCollectionReference = pszName;
 			bCollectionLootList = true;
 		}
-		else if ( !Q_strcmp( pszName, "hide_lootlist" ) )
+		else if ( V_streq( pszName, "hide_lootlist" ) )
 		{
 			m_bPublicListContents = !pKVListItem->GetBool( nullptr, true );
 			continue;
 		}
-		else if ( !Q_strcmp( pszName, "rarity" ) )
+		else if ( V_streq( pszName, "rarity" ) )
 		{
 			// already parsed up top
 			continue;
 		}
 #ifdef GC_DLL
-		else if ( !Q_strcmp( pszName, "random_attributes" ) )
+		else if ( V_streq( pszName, "random_attributes" ) )
 		{
 			AddRandomAtrributes( pKVListItem, pschema, pVecErrors );
 			continue;
 		}
-		else if ( !Q_strcmp( pszName, "attribute_templates" ) )
+		else if ( V_streq( pszName, "attribute_templates" ) )
 		{
 			FOR_EACH_SUBKEY( pKVListItem, pKVAttributeTemplate )
 			{
@@ -1230,17 +1230,17 @@ bool CEconLootListDefinition::BInitFromKV( KeyValues *pKVLootList, CEconItemSche
 
 			continue;
 		}
-		else if ( !Q_strcmp( pszName, "public_list_contents" ) )
+		else if ( V_streq( pszName, "public_list_contents" ) )
 		{
 			m_bPublicListContents = pKVListItem->GetBool( nullptr, true );
 			continue;
 		}
-		else if ( !Q_stricmp( pszName, "__no_dupes_iter_count" ) )
+		else if ( V_strieq( pszName, "__no_dupes_iter_count" ) )
 		{
 			m_iNoDupesIterations = pKVListItem->GetInt( nullptr, -1 );
 			continue;
 		}
-		else if ( !Q_strcmp( pszName, "additional_drop" ) )
+		else if ( V_streq( pszName, "additional_drop" ) )
 		{
 			float		fChance			   = pKVListItem->GetFloat( "chance", 0.0f );
 			bool		bPremiumOnly	   = pKVListItem->GetBool( "premium_only", false );
@@ -1301,7 +1301,7 @@ bool CEconLootListDefinition::BInitFromKV( KeyValues *pKVLootList, CEconItemSche
 			}
 			continue;
 		}
-		else if ( !Q_strcmp( pszName, "property_generators" ) )
+		else if ( V_streq( pszName, "property_generators" ) )
 		{
 			SCHEMA_INIT_SUBSTEP( BCommonInitPropertyGeneratorsFromKV( m_pszName, &m_PropertyGenerators, pKVListItem, pVecErrors ) );
 			continue;
@@ -2063,7 +2063,7 @@ private:
 				// the attribute value of supply_crate_series (187)
 				FOR_EACH_MAP_FAST( mapRevolvingLootlists, i )
 				{
-					if ( V_stricmp( mapRevolvingLootlists[ i ], m_pDroppingLootlist->GetName() ) == 0 )
+					if ( V_strieq( mapRevolvingLootlists[ i ], m_pDroppingLootlist->GetName() ) )
 					{
 						nRevolvingIdx = mapRevolvingLootlists.Key( i );
 						break;
@@ -2206,7 +2206,7 @@ GC_CON_COMMAND( list_keys, "Lists all the keys in the schema" )
 	FOR_EACH_MAP_FAST( mapItemDefs, i )
 	{
 		const CEconItemDefinition* pItemDef = mapItemDefs[ i ];
-		if ( !pItemDef || !pItemDef->GetEconTool() || ( Q_strcmp( pItemDef->GetEconTool()->GetTypeName(), "decoder_ring" ) != 0 ) )
+		if ( !pItemDef || !pItemDef->GetEconTool() || ( !V_streq( pItemDef->GetEconTool()->GetTypeName(), "decoder_ring" ) ) )
 		{
 			continue;
 		}
@@ -3748,27 +3748,27 @@ private:
 
 		const char *pszMethod = staticAttrib.m_pKVCustomData->GetString( "method", NULL );
 
-		if ( Q_stricmp( pszMethod, "employee_number" ) == 0 )
+		if ( V_strieq( pszMethod, "employee_number" ) )
 		{
 			flValue = pGameAccount->Obj().m_rtime32FirstPlayed;
 		}
-		else if ( Q_stricmp( pszMethod, "date" ) == 0 ) // Not used?
+		else if ( V_strieq( pszMethod, "date" ) ) // Not used?
 		{
 			flValue = CRTime::RTime32TimeCur();
 		}
-		else if ( Q_stricmp( pszMethod, "year" ) == 0 )
+		else if ( V_strieq( pszMethod, "year" ) )
 		{
 			flValue = CRTime( CRTime::RTime32TimeCur() ).GetYear();
 		}
-		else if ( Q_stricmp( pszMethod, "gifts_given_out" ) == 0 )
+		else if ( V_strieq( pszMethod, "gifts_given_out" ) )
 		{
 			flValue = pGameAccount->Obj().m_unNumGiftsGiven;
 		}
-		else if ( Q_stricmp( pszMethod, "expiration_period_hours_from_now" ) == 0 )
+		else if ( V_strieq( pszMethod, "expiration_period_hours_from_now" ) )
 		{
 			flValue = CRTime::RTime32DateAdd( CRTime::RTime32TimeCur(), staticAttrib.m_value.asFloat, k_ETimeUnitHour );
 		}
-		else if ( Q_stricmp( pszMethod, "def index from lootlist" ) == 0 )
+		else if ( V_strieq( pszMethod, "def index from lootlist" ) )
 		{
 			const char* pszLootlistName = staticAttrib.m_pKVCustomData->GetString( "lootlist" );
 			// Custom data stores the lootlist
@@ -3888,10 +3888,10 @@ CEconItemAttributeDefinition &CEconItemAttributeDefinition::operator=( const CEc
 		m_pszArmoryDesc = m_pKVAttribute->GetString( "armory_desc", NULL );
 		m_pszAttributeClass = m_pKVAttribute->GetString( "attribute_class", NULL );
 
-		Assert( V_strcmp( m_pszDefinitionName, rhs.m_pszDefinitionName ) == 0 );
-		Assert( V_strcmp( m_pszDescriptionString, rhs.m_pszDescriptionString ) == 0 );
-		Assert( V_strcmp( m_pszArmoryDesc, rhs.m_pszArmoryDesc ) == 0 );
-		Assert( V_strcmp( m_pszAttributeClass, rhs.m_pszAttributeClass ) == 0 );
+		Assert( V_streq( m_pszDefinitionName, rhs.m_pszDefinitionName ) );
+		Assert( V_streq( m_pszDescriptionString, rhs.m_pszDescriptionString ) );
+		Assert( V_streq( m_pszArmoryDesc, rhs.m_pszArmoryDesc ) );
+		Assert( V_streq( m_pszAttributeClass, rhs.m_pszAttributeClass ) );
 	}
 	else
 	{
@@ -3971,20 +3971,20 @@ bool CEconItemAttributeDefinition::BInitFromKV( KeyValues *pKVAttribute, CUtlVec
 	m_eAssetClassAttrExportRule = k_EAssetClassAttrExportRule_Default;
 	if ( char const *szRule = pKVAttribute->GetString( "asset_class_export", NULL ) )
 	{
-		if ( !V_stricmp( szRule, "skip" ) )
+		if ( V_strieq( szRule, "skip" ) )
 		{
 			m_eAssetClassAttrExportRule = k_EAssetClassAttrExportRule_Skip;
 		}
-		else if ( !V_stricmp( szRule, "gconly" ) )
+		else if ( V_strieq( szRule, "gconly" ) )
 		{
 			m_eAssetClassAttrExportRule = EAssetClassAttrExportRule_t( k_EAssetClassAttrExportRule_GCOnly | k_EAssetClassAttrExportRule_Skip );
 		}
-		else if ( !V_stricmp( szRule, "bucketed" ) )
+		else if ( V_strieq( szRule, "bucketed" ) )
 		{
 			SCHEMA_INIT_CHECK( m_unAssetClassBucket, "Attribute definition %s: Asset class export rule '%s' is incompatible", m_pszDefinitionName, szRule );
 			m_eAssetClassAttrExportRule = k_EAssetClassAttrExportRule_Bucketed;
 		}
-		else if ( !V_stricmp( szRule, "default" ) )
+		else if ( V_strieq( szRule, "default" ) )
 		{
 			m_eAssetClassAttrExportRule = k_EAssetClassAttrExportRule_Default;
 		}
@@ -4256,7 +4256,7 @@ void CEconItemDefinition::BInitVisualBlockFromKV( KeyValues *pKVItem, CUtlVector
 			{
 				const char *pszEntry = pKVEntry->GetName();
 
-				if ( !Q_stricmp( pszEntry, "use_visualsblock_as_base" ) )
+				if ( V_strieq( pszEntry, "use_visualsblock_as_base" ) )
 				{
 					// Start with a copy of an existing PerTeamVisuals
 					const char *pszString = pKVEntry->GetString();
@@ -4270,7 +4270,7 @@ void CEconItemDefinition::BInitVisualBlockFromKV( KeyValues *pKVItem, CUtlVector
 						pVecErrors->AddToTail( CFmtStr( "Unknown visuals block: %s", pszString ).Access() );
 					}
 				}
-				else if ( !Q_stricmp( pszEntry, "attached_models" ) )
+				else if ( V_strieq( pszEntry, "attached_models" ) )
 				{
 					FOR_EACH_SUBKEY( pKVEntry, pKVAttachedModelData )
 					{
@@ -4279,7 +4279,7 @@ void CEconItemDefinition::BInitVisualBlockFromKV( KeyValues *pKVItem, CUtlVector
 						pVisData->m_AttachedModels[iAtt].m_pszModelName = pKVAttachedModelData->GetString( "model", NULL );
 					}
 				}
-				else if ( !Q_stricmp( pszEntry, "attached_models_festive" ) )
+				else if ( V_strieq( pszEntry, "attached_models_festive" ) )
 				{
 					FOR_EACH_SUBKEY( pKVEntry, pKVAttachedModelData )
 					{
@@ -4288,7 +4288,7 @@ void CEconItemDefinition::BInitVisualBlockFromKV( KeyValues *pKVItem, CUtlVector
 						pVisData->m_AttachedModelsFestive[iAtt].m_pszModelName = pKVAttachedModelData->GetString( "model", NULL );
 					}
 				}
-				else if ( !Q_stricmp( pszEntry, "attached_particlesystems" ) )
+				else if ( V_strieq( pszEntry, "attached_particlesystems" ) )
 				{
 					FOR_EACH_SUBKEY( pKVEntry, pKVAttachedParticleSystemData )
 					{
@@ -4299,19 +4299,19 @@ void CEconItemDefinition::BInitVisualBlockFromKV( KeyValues *pKVItem, CUtlVector
 						pVisData->m_AttachedParticles[iAtt].iCustomType = 0;
 					}
 				}
-				else if ( !Q_stricmp( pszEntry, "custom_particlesystem2" ) )
+				else if ( V_strieq( pszEntry, "custom_particlesystem2" ) )
 				{
 					int iAtt = pVisData->m_AttachedParticles.AddToTail();
 					pVisData->m_AttachedParticles[iAtt].pszSystemName = pKVEntry->GetString( "system", NULL );
 					pVisData->m_AttachedParticles[iAtt].iCustomType = 2;
 				}
-				else if ( !Q_stricmp( pszEntry, "custom_particlesystem" ) )
+				else if ( V_strieq( pszEntry, "custom_particlesystem" ) )
 				{
 					int iAtt = pVisData->m_AttachedParticles.AddToTail();
 					pVisData->m_AttachedParticles[iAtt].pszSystemName = pKVEntry->GetString( "system", NULL );
 					pVisData->m_AttachedParticles[iAtt].iCustomType = 1;
 				}
-				else if ( !Q_stricmp( pszEntry, "playback_activity" ) )
+				else if ( V_strieq( pszEntry, "playback_activity" ) )
 				{
 					FOR_EACH_SUBKEY( pKVEntry, pKVSubKey )
 					{
@@ -4323,7 +4323,7 @@ void CEconItemDefinition::BInitVisualBlockFromKV( KeyValues *pKVItem, CUtlVector
 						}
 					}
 				}
-				else if ( !Q_stricmp( pszEntry, "animation_replacement" ) )
+				else if ( V_strieq( pszEntry, "animation_replacement" ) )
 				{
 					FOR_EACH_SUBKEY( pKVEntry, pKVSubKey )
 					{
@@ -4331,7 +4331,7 @@ void CEconItemDefinition::BInitVisualBlockFromKV( KeyValues *pKVItem, CUtlVector
 						pEntry->pszReplacement = pKVSubKey->GetString();
 					}
 				}
-				else if ( !Q_stricmp( pszEntry, "animation_sequence" ) )
+				else if ( V_strieq( pszEntry, "animation_sequence" ) )
 				{
 					FOR_EACH_SUBKEY( pKVEntry, pKVSubKey )
 					{
@@ -4339,7 +4339,7 @@ void CEconItemDefinition::BInitVisualBlockFromKV( KeyValues *pKVItem, CUtlVector
 						pEntry->pszSequence = pKVSubKey->GetString();
 					}
 				}
-				else if ( !Q_stricmp( pszEntry, "animation_scene" ) )
+				else if ( V_strieq( pszEntry, "animation_scene" ) )
 				{
 					FOR_EACH_SUBKEY( pKVEntry, pKVSubKey )
 					{
@@ -4347,7 +4347,7 @@ void CEconItemDefinition::BInitVisualBlockFromKV( KeyValues *pKVItem, CUtlVector
 						pEntry->pszScene = pKVSubKey->GetString();
 					}
 				}
-				else if ( !Q_stricmp( pszEntry, "animation_required_item" ) )
+				else if ( V_strieq( pszEntry, "animation_required_item" ) )
 				{
 					FOR_EACH_SUBKEY( pKVEntry, pKVSubKey )
 					{
@@ -4355,7 +4355,7 @@ void CEconItemDefinition::BInitVisualBlockFromKV( KeyValues *pKVItem, CUtlVector
 						pEntry->pszRequiredItem = pKVSubKey->GetString();
 					}
 				}
-				else if ( !Q_stricmp( pszEntry, "player_bodygroups" ) )
+				else if ( V_strieq( pszEntry, "player_bodygroups" ) )
 				{
 					FOR_EACH_SUBKEY( pKVEntry, pKVBodygroupKey )
 					{
@@ -4369,23 +4369,23 @@ void CEconItemDefinition::BInitVisualBlockFromKV( KeyValues *pKVItem, CUtlVector
 						GetItemSchema()->AssignDefaultBodygroupState( pszBodygroupName, iValue );
 					}
 				}
-				else if ( !Q_stricmp( pszEntry, "skin" ) )
+				else if ( V_strieq( pszEntry, "skin" ) )
 				{
 					pVisData->iSkin = pKVEntry->GetInt();
 				}
-				else if ( !Q_stricmp( pszEntry, "use_per_class_bodygroups" ) )
+				else if ( V_strieq( pszEntry, "use_per_class_bodygroups" ) )
 				{
 					pVisData->bUsePerClassBodygroups = pKVEntry->GetBool();
 				}
-				else if ( !Q_stricmp( pszEntry, "muzzle_flash" ) )
+				else if ( V_strieq( pszEntry, "muzzle_flash" ) )
 				{
 					pVisData->pszMuzzleFlash = pKVEntry->GetString();
 				}
-				else if ( !Q_stricmp( pszEntry, "tracer_effect" ) )
+				else if ( V_strieq( pszEntry, "tracer_effect" ) )
 				{
 					pVisData->pszTracerEffect = pKVEntry->GetString();
 				}
-				else if ( !Q_stricmp( pszEntry, "particle_effect" ) )
+				else if ( V_strieq( pszEntry, "particle_effect" ) )
 				{
 					pVisData->pszParticleEffect = pKVEntry->GetString();
 				}
@@ -4398,7 +4398,7 @@ void CEconItemDefinition::BInitVisualBlockFromKV( KeyValues *pKVItem, CUtlVector
 					}
 					pVisData->pszCustomSounds[iIndex] = pKVEntry->GetString();
 				}
-				else if ( !Q_stricmp( pszEntry, "material_override" ) )
+				else if ( V_strieq( pszEntry, "material_override" ) )
 				{
 					pVisData->pszMaterialOverride = pKVEntry->GetString();
 				}
@@ -4410,7 +4410,7 @@ void CEconItemDefinition::BInitVisualBlockFromKV( KeyValues *pKVItem, CUtlVector
 						pVisData->pszWeaponSoundReplacements[iIndex] = pKVEntry->GetString();
 					}
 				}
-				else if ( !Q_stricmp( pszEntry, "code_controlled_bodygroup" ) )
+				else if ( V_strieq( pszEntry, "code_controlled_bodygroup" ) )
 				{
 					const char *pBodyGroupName = pKVEntry->GetString( "bodygroup", NULL );
 					const char *pFuncName = pKVEntry->GetString( "function", NULL );
@@ -4420,19 +4420,19 @@ void CEconItemDefinition::BInitVisualBlockFromKV( KeyValues *pKVItem, CUtlVector
 						pVisData->m_Maps.m_CodeControlledBodyGroupNames.Insert( pBodyGroupName, ccbgd );
 					}
 				}
-				else if ( !Q_stricmp( pszEntry, "vm_bodygroup_override" ) )
+				else if ( V_strieq( pszEntry, "vm_bodygroup_override" ) )
 				{
 					pVisData->m_iViewModelBodyGroupOverride = pKVEntry->GetInt();
 				}
-				else if ( !Q_stricmp( pszEntry, "vm_bodygroup_state_override" ) )
+				else if ( V_strieq( pszEntry, "vm_bodygroup_state_override" ) )
 				{
 					pVisData->m_iViewModelBodyGroupStateOverride = pKVEntry->GetInt();
 				}
-				else if ( !Q_stricmp( pszEntry, "wm_bodygroup_override" ) )
+				else if ( V_strieq( pszEntry, "wm_bodygroup_override" ) )
 				{
 					pVisData->m_iWorldModelBodyGroupOverride = pKVEntry->GetInt();
 				}
-				else if ( !Q_stricmp( pszEntry, "wm_bodygroup_state_override" ) )
+				else if ( V_strieq( pszEntry, "wm_bodygroup_state_override" ) )
 				{
 					pVisData->m_iWorldModelBodyGroupStateOverride = pKVEntry->GetInt();
 				}
@@ -4944,7 +4944,7 @@ bool CEconItemDefinition::BInitFromKV( KeyValues *pKVItem, CUtlVector<CUtlString
 #else
 			// Check that if we convert back to a string, we get the same value.  Emit an error, but don't fail in the game code
 			char rtimeBuf[k_RTimeRenderBufferSize];
-			if ( Q_strcmp( CRTime::RTime32ToString( m_rtExpiration, rtimeBuf ), pchExpiration ) != 0 )
+			if ( !V_streq( CRTime::RTime32ToString( m_rtExpiration, rtimeBuf ), pchExpiration ) )
 			{
 #if ( defined( _MSC_VER ) && _MSC_VER >= 1900 )
 #define timezone _timezone
@@ -4998,7 +4998,7 @@ bool CEconItemDefinition::BInitFromKV( KeyValues *pKVItem, CUtlVector<CUtlString
 	m_bFlipViewModel = m_pKVItem->GetInt( "flip_viewmodel", 0 ) != 0;
 	m_bActAsWearable = m_pKVItem->GetInt( "act_as_wearable", 0 ) != 0;
 	m_bActAsWeapon = m_pKVItem->GetInt( "act_as_weapon", 0 ) != 0;
-	m_bIsTool = m_pKVItem->GetBool( "is_tool", 0 ) || ( GetItemClass() && !V_stricmp( GetItemClass(), "tool" ) );
+	m_bIsTool = m_pKVItem->GetBool( "is_tool", 0 ) || ( GetItemClass() && V_strieq( GetItemClass(), "tool" ) );
 	m_iDropType = StringFieldToInt( m_pKVItem->GetString("drop_type"), g_szDropTypeStrings, ARRAYSIZE(g_szDropTypeStrings) );
 	m_pszCollectionReference = m_pKVItem->GetString( "collection_reference", NULL );
 
@@ -5519,7 +5519,7 @@ const char *CEconItemDefinition::GetActivityOverride( int iTeam, const char *psz
 	for ( int i = 0; i < iAnims; i++ )
 	{
 		animation_on_wearable_t *pData = GetAnimationData( iTeam, i );
-		if ( Q_stricmp( pszActivity, pData->pszActivity ) == 0 )
+		if ( V_strieq( pszActivity, pData->pszActivity ) )
 			return pData->pszReplacement;
 	}
 
@@ -5762,7 +5762,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 {
 	if ( pszToolType )
 	{
-		if ( !V_stricmp( pszToolType, "duel_minigame" ) )
+		if ( V_strieq( pszToolType, "duel_minigame" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5772,7 +5772,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_DuelingMinigame( pszToolType, pszUseString );
 		}
 
-		if ( !V_stricmp( pszToolType, "noise_maker" ) )
+		if ( V_strieq( pszToolType, "noise_maker" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5782,7 +5782,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_Noisemaker( pszToolType, pszUseString );
 		}
 
-		if ( !V_stricmp( pszToolType, "wrapped_gift" ) )
+		if ( V_strieq( pszToolType, "wrapped_gift" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5790,7 +5790,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_WrappedGift( pszToolType, pszUseString, unCapabilities, pUsageKV );
 		}
 
-		if ( !V_stricmp( pszToolType, "backpack_expander" ) )
+		if ( V_strieq( pszToolType, "backpack_expander" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5799,7 +5799,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_BackpackExpander( pszToolType, pszUseString, pUsageKV );
 		}
 
-		if ( !V_stricmp( pszToolType, "account_upgrade_to_premium" ) )
+		if ( V_strieq( pszToolType, "account_upgrade_to_premium" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5809,7 +5809,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_AccountUpgradeToPremium( pszToolType, pszUseString );
 		}
 
-		if ( !V_stricmp( pszToolType, "claimcode" ) )
+		if ( V_strieq( pszToolType, "claimcode" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5818,7 +5818,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_ClaimCode( pszToolType, pszUseString, pUsageKV );
 		}
 
-		if ( !V_stricmp( pszToolType, "gift" ) )
+		if ( V_strieq( pszToolType, "gift" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5827,7 +5827,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_Gift( pszToolType, pszUseString, pUsageKV );
 		}
 
-		if ( !V_stricmp( pszToolType, "paint_can" ) )
+		if ( V_strieq( pszToolType, "paint_can" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5836,7 +5836,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_PaintCan( pszToolType, unCapabilities );
 		}
 
-		if ( !V_stricmp( pszToolType, "name" ) )
+		if ( V_strieq( pszToolType, "name" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5845,7 +5845,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_NameTag( pszToolType, unCapabilities );
 		}
 
-		if ( !V_stricmp( pszToolType, "desc" ) )
+		if ( V_strieq( pszToolType, "desc" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5854,7 +5854,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_DescTag( pszToolType, unCapabilities );
 		}
 
-		if ( !V_stricmp( pszToolType, "decoder_ring" ) )
+		if ( V_strieq( pszToolType, "decoder_ring" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pUsageKV )								return NULL;
@@ -5862,7 +5862,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_CrateKey( pszToolType, pszUsageRestriction, unCapabilities );
 		}
 
-		if ( !V_stricmp( pszToolType, "customize_texture_item" ) )
+		if ( V_strieq( pszToolType, "customize_texture_item" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5871,7 +5871,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_CustomizeTexture( pszToolType, unCapabilities );
 		}
 
-		if ( !V_stricmp( pszToolType, "gift_wrap" ) )
+		if ( V_strieq( pszToolType, "gift_wrap" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5879,7 +5879,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_GiftWrap( pszToolType, pszUseString, unCapabilities, pUsageKV );
 		}
 
-		if ( !V_stricmp( pszToolType, "wedding_ring" ) )
+		if ( V_strieq( pszToolType, "wedding_ring" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5888,7 +5888,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_WeddingRing( pszToolType, pszUseString, unCapabilities );
 		}
 
-		if ( !V_stricmp( pszToolType, "strange_part" ) )
+		if ( V_strieq( pszToolType, "strange_part" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5896,7 +5896,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_StrangePart( pszToolType, pszUseString, unCapabilities, pUsageKV );
 		}
 
-		if ( !V_stricmp( pszToolType, "strange_part_restriction" ) )
+		if ( V_strieq( pszToolType, "strange_part_restriction" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5905,7 +5905,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_StrangePartRestriction( pszToolType, pszUseString, unCapabilities, pUsageKV );
 		}
 
-		if ( !V_stricmp( pszToolType, "apply_custom_attrib" ) )
+		if ( V_strieq( pszToolType, "apply_custom_attrib" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5913,7 +5913,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_UpgradeCard( pszToolType, pszUseString, unCapabilities, pUsageKV );
 		}
 
-		if ( !V_stricmp( pszToolType, "strangifier" ) )
+		if ( V_strieq( pszToolType, "strangifier" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5921,7 +5921,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_Strangifier( pszToolType, pszUseString, unCapabilities, pUsageKV );
 		}
 
-		if ( !V_stricmp( pszToolType, "killstreakifier" ) )
+		if ( V_strieq( pszToolType, "killstreakifier" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5929,7 +5929,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_KillStreakifier( pszToolType, pszUseString, unCapabilities, pUsageKV );
 		}
 
-		if( !V_stricmp( pszToolType, "dynamic_recipe" ) )
+		if( V_strieq( pszToolType, "dynamic_recipe" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5937,7 +5937,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_ItemDynamicRecipe( pszToolType, pszUseString, unCapabilities, pUsageKV );
 		}
 
-		if ( !V_stricmp( pszToolType, "item_eater_recharger" ) )
+		if ( V_strieq( pszToolType, "item_eater_recharger" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5945,7 +5945,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_ItemEaterRecharger( pszToolType, pszUseString, unCapabilities, pUsageKV );
 		}
 
-		if ( !V_stricmp( pszToolType, "class_transmogrifier" ) )
+		if ( V_strieq( pszToolType, "class_transmogrifier" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5953,7 +5953,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_ClassTransmogrifier( pszToolType, pszUseString, unCapabilities, pUsageKV );
 		}
 
-		if ( !V_stricmp( pszToolType, "duck_token" ) )
+		if ( V_strieq( pszToolType, "duck_token" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5962,7 +5962,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_DuckToken( pszToolType, unCapabilities );
 		}
 
-		if ( !V_stricmp( pszToolType, "grant_operation_pass" ) )
+		if ( V_strieq( pszToolType, "grant_operation_pass" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5970,7 +5970,7 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_GrantOperationPass( pszToolType, pszUseString, unCapabilities, pUsageKV );
 		}
 
-		if ( !V_stricmp( pszToolType, "strange_count_transfer" ) )
+		if ( V_strieq( pszToolType, "strange_count_transfer" ) )
 		{
 			// Error checking -- make sure we aren't setting properties in the schema that we don't support.
 			if ( pszUsageRestriction )					return NULL;
@@ -5979,12 +5979,12 @@ IEconTool *CEconItemSchema::CreateEconToolImpl( const char *pszToolType, const c
 			return new CEconTool_StrangeCountTransfer( pszToolType, unCapabilities );
 		}
 
-		if ( !V_stricmp( pszToolType, "paintkit_weapon_festivizer" ) )
+		if ( V_strieq( pszToolType, "paintkit_weapon_festivizer" ) )
 		{
 			return new CEconTool_Festivizer( pszToolType, pszUseString, unCapabilities, pUsageKV );
 		}
 
-		if ( !V_stricmp( pszToolType, "unusualifier" ) )
+		if ( V_strieq( pszToolType, "unusualifier" ) )
 		{
 			return new CEconTool_Unusualifier( pszToolType, pszUseString, unCapabilities, pUsageKV );
 		}
@@ -6024,11 +6024,11 @@ random_attrib_t	*CEconItemSchema::CreateRandomAttribute( const char *pszContext,
 	{
 		const char *pszName = pKVAttribute->GetName();
 
-		if ( !Q_strcmp( pszName, "chance" ) )
+		if ( V_streq( pszName, "chance" ) )
 			continue;
 
 		// Quick block list of attrs that have equal weight
-		if ( !Q_strcmp( pszName, "is_even_chance_attr" ) )
+		if ( V_streq( pszName, "is_even_chance_attr" ) )
 		{
 			FOR_EACH_VALUE( pKVAttribute, pKVListItem )
 			{
@@ -6470,7 +6470,8 @@ static void CalculateKeyValuesCRCRecursive( KeyValues *pKV, CRC32_t *crc, bool b
 		const char *s = pKV->GetName();  
 		for (;;)
 		{
-			unsigned char x = tolower(*s);
+			// dimhotepus: tolower -> V_tolower.
+			unsigned char x = static_cast<unsigned char>(V_tolower(*s));
 			CRC32_ProcessBuffer( crc, &x, 1 ); // !SPEED! This is slow, but it works.
 			if (*s == '\0') break;
 			++s;
@@ -6867,12 +6868,12 @@ bool CEconItemSchema::BInitAttributeTypes( CUtlVector<CUtlString> *pVecErrors )
 
 		const CColumnInfo& Column0 = cs.GetColumnInfo( 0 );
 		SCHEMA_INIT_CHECK( Column0.GetType() == k_EGCSQLType_int64, "BInitAttributeTypes(): '%s' column 0 has invalid data type %u.\n", cs.GetRecordInfo()->GetName(), Column0.GetType() );
-		SCHEMA_INIT_CHECK( Column0.GetName() && !V_stricmp( Column0.GetName(), "ItemID" ), "BInitAttributeTypes(): '%s' has invalid name '%s'.\n", cs.GetRecordInfo()->GetName(), Column0.GetName() ? Column0.GetName() : "[null]" );
+		SCHEMA_INIT_CHECK( Column0.GetName() && V_strieq( Column0.GetName(), "ItemID" ), "BInitAttributeTypes(): '%s' has invalid name '%s'.\n", cs.GetRecordInfo()->GetName(), Column0.GetName() ? Column0.GetName() : "[null]" );
 		SCHEMA_INIT_CHECK( Column0.BIsPrimaryKey(), "BInitAttributeTypes(): '%s' has an item ID column that isn't in the PK.\n", cs.GetRecordInfo()->GetName() );
 
 		const CColumnInfo& Column1 = cs.GetColumnInfo( 1 );
 		SCHEMA_INIT_CHECK( Column1.GetType() == k_EGCSQLType_int16, "BInitAttributeTypes(): '%s' column 1 has invalid data type %u.\n", cs.GetRecordInfo()->GetName(), Column0.GetType() );
-		SCHEMA_INIT_CHECK( Column1.GetName() && !V_stricmp( Column1.GetName(), "AttrDefIndex" ), "BInitAttributeTypes(): '%s' has invalid name '%s'.\n", cs.GetRecordInfo()->GetName(), Column1.GetName() ? Column1.GetName() : "[null]" );
+		SCHEMA_INIT_CHECK( Column1.GetName() && V_strieq( Column1.GetName(), "AttrDefIndex" ), "BInitAttributeTypes(): '%s' has invalid name '%s'.\n", cs.GetRecordInfo()->GetName(), Column1.GetName() ? Column1.GetName() : "[null]" );
 
 		// Make sure two different attribute types don't point to the same DB table. There's nothing
 		// technically that would prevent this from working, but right now the way we load from the
@@ -6918,7 +6919,7 @@ static bool LookupValueFromString( const search_entry_type(&searchArray)[search_
 
 	for ( int i = 0; i < search_entry_array_size; i++ )
 	{
-		if ( !V_stricmp( pszSearch, searchArray[i].m_pszName ) )
+		if ( V_strieq( pszSearch, searchArray[i].m_pszName ) )
 		{
 			*out_pResult = searchArray[i];
 			return true;
@@ -7133,7 +7134,7 @@ int CEconItemSchema::GetEquipRegionIndexByName( const char *pRegionName ) const
 	FOR_EACH_VEC( m_vecEquipRegionsList, i )
 	{
 		const char *szEntryRegionName = m_vecEquipRegionsList[i].m_sName.Get();
-		if ( !V_stricmp( szEntryRegionName, pRegionName ) )
+		if ( V_strieq( szEntryRegionName, pRegionName ) )
 			return i;
 	}
 
@@ -7224,7 +7225,7 @@ bool CEconItemSchema::BInitEquipRegions( KeyValues *pKVEquipRegions, CUtlVector<
 		// bunch of different names. This is useful in TF where different classes have different regions, but
 		// those regions cannot possibly conflict with each other. For example, "scout_backpack" cannot possibly
 		// overlap with "pyro_shoulder" because they can't even be equipped on the same character.
-		if ( pRegionKeyName && !Q_stricmp( pRegionKeyName, "shared" ) )
+		if ( pRegionKeyName && V_strieq( pRegionKeyName, "shared" ) )
 		{
 			FOR_EACH_SUBKEY( pKVRegion, pKVSharedRegionName )
 			{
@@ -7384,7 +7385,7 @@ bool CEconItemSchema::BInitItems( KeyValues *pKVItems, CUtlVector<CUtlString> *p
 	{
 		FOR_EACH_TRUE_SUBKEY( pKVItems, pKVItem )
 		{
-			if ( Q_stricmp( pKVItem->GetName(), "default" ) == 0 )
+			if ( V_strieq( pKVItem->GetName(), "default" ) )
 			{
 #if defined(CLIENT_DLL) || defined(GAME_DLL)
 				SCHEMA_INIT_CHECK(
@@ -7656,7 +7657,7 @@ bool CEconItemSchema::BInitCollectionReferences( CUtlVector<CUtlString> *pVecErr
 			{
 				const char * pszTemp = m_mapItemCollections[iCollectionIndex]->m_pszName;
 
-				if ( !V_strcmp( pszTemp, pszCollectionName) )
+				if ( V_streq( pszTemp, pszCollectionName) )
 				{
 					bFound = true;
 					pItemDef->SetItemCollectionDefinition( m_mapItemCollections[iCollectionIndex] );
@@ -7678,7 +7679,7 @@ const CEconItemCollectionDefinition *CEconItemSchema::GetCollectionByName( const
 	FOR_EACH_MAP_FAST( m_mapItemCollections, iCollectionIndex )
 	{
 		const char * pszTemp = m_mapItemCollections[iCollectionIndex]->m_pszName;
-		if ( !V_strcmp( pszTemp, pCollectionName ) )
+		if ( V_streq( pszTemp, pCollectionName ) )
 		{
 			return m_mapItemCollections[iCollectionIndex];
 		}
@@ -8298,15 +8299,15 @@ bool CEconItemSchema::BInitAttributeControlledParticleSystems( KeyValues *pKVPar
 		FOR_EACH_TRUE_SUBKEY( pKVParticleSystems, pKVCategory )
 		{
 			// There is 3 Categories we want to track with additional info
-			if ( !V_strcmp( pKVCategory->GetName(), "cosmetic_unusual_effects" ) )
+			if ( V_streq( pKVCategory->GetName(), "cosmetic_unusual_effects" ) )
 			{
 				pVec = &m_vecAttributeControlledParticleSystemsCosmetics;
 			} 
-			else if ( !V_strcmp( pKVCategory->GetName(), "weapon_unusual_effects" ) )
+			else if ( V_streq( pKVCategory->GetName(), "weapon_unusual_effects" ) )
 			{
 				pVec = &m_vecAttributeControlledParticleSystemsWeapons;
 			}
-			else if ( !V_strcmp( pKVCategory->GetName(), "taunt_unusual_effects" ) )
+			else if ( V_streq( pKVCategory->GetName(), "taunt_unusual_effects" ) )
 			{
 				pVec = &m_vecAttributeControlledParticleSystemsTaunts;
 			}
@@ -8856,7 +8857,7 @@ const CEconItemQualityDefinition *CEconItemSchema::GetQualityDefinitionByName( c
 {
 	FOR_EACH_MAP_FAST( m_mapQualities, i )
 	{
-		if ( V_stricmp( pszDefName, m_mapQualities[i].GetName()) == 0 )
+		if ( V_strieq( pszDefName, m_mapQualities[i].GetName()) )
 			return &m_mapQualities[i]; 
 	}
 	return NULL;
@@ -8885,7 +8886,7 @@ const CEconItemRarityDefinition *CEconItemSchema::GetRarityDefinitionByName( con
 {
 	FOR_EACH_MAP_FAST( m_mapRarities, i )
 	{
-		if ( !strcmp( pszDefName, m_mapRarities[i].GetName() ) )
+		if ( V_streq( pszDefName, m_mapRarities[i].GetName() ) )
 			return &m_mapRarities[i];
 	}
 	return NULL;
@@ -9004,7 +9005,7 @@ CEconItemDefinition *CEconItemSchema::GetItemDefinitionByName( const char *pszDe
 
 	FOR_EACH_MAP_FAST( m_mapItems, i )
 	{
-		if ( V_stricmp( pszDefName, m_mapItems[i]->GetDefinitionName()) == 0 )
+		if ( V_strieq( pszDefName, m_mapItems[i]->GetDefinitionName()) )
 			return m_mapItems[i]; 
 	}
 	return NULL;
@@ -9060,7 +9061,7 @@ CEconItemAttributeDefinition *CEconItemSchema::GetAttributeDefinitionByName( con
 		if ( !m_mapAttributes[i].GetDefinitionName() )
 			continue;
 
-		if ( V_stricmp( pszDefName, m_mapAttributes[i].GetDefinitionName() ) == 0 )
+		if ( V_strieq( pszDefName, m_mapAttributes[i].GetDefinitionName() ) )
 			return &m_mapAttributes[i]; 
 	}
 	return NULL;
@@ -9090,7 +9091,7 @@ CEconColorDefinition *CEconItemSchema::GetColorDefinitionByName( const char *psz
 {
 	FOR_EACH_VEC( m_vecColorDefs, i )
 	{
-		if ( !Q_stricmp( m_vecColorDefs[i]->GetName(), pszDefName ) )
+		if ( V_strieq( m_vecColorDefs[i]->GetName(), pszDefName ) )
 			return m_vecColorDefs[i];
 	}
 	return NULL;
@@ -9129,7 +9130,7 @@ attachedparticlesystem_t* CEconItemSchema::FindAttributeControlledParticleSystem
 {
 	FOR_EACH_MAP_FAST( m_mapAttributeControlledParticleSystems, nSystem )
 	{
-		if( !Q_stricmp( m_mapAttributeControlledParticleSystems[nSystem].pszSystemName, pchSystemName ) )
+		if( V_strieq( m_mapAttributeControlledParticleSystems[nSystem].pszSystemName, pchSystemName ) )
 			return &m_mapAttributeControlledParticleSystems[nSystem];
 	}
 	return NULL;

@@ -277,7 +277,7 @@ static int FindCommonPathID( const char *pPathID )
 {
 	for ( int i=0; i < ssize( g_MostCommonPathIDs ); i++ )
 	{
-		if ( V_stricmp( pPathID, g_MostCommonPathIDs[i] ) == 0 )
+		if ( V_strieq( pPathID, g_MostCommonPathIDs[i] ) )
 			return i;
 	}
 	return -1;
@@ -417,7 +417,7 @@ bool CLC_FileCRCCheck::ReadFromBuffer( bf_read &buffer )
 
 const char *CLC_FileCRCCheck::ToString() const
 {
-	V_snprintf( s_text, sizeof(s_text), "%s: path: %s, file: %s", GetName(), m_szPathID, m_szFilename );
+	V_sprintf_safe( s_text, "%s: path: %s, file: %s", GetName(), m_szPathID, m_szFilename );
 	return s_text;
 }
 
@@ -504,7 +504,7 @@ bool CLC_FileMD5Check::ReadFromBuffer( bf_read &buffer )
 
 const char *CLC_FileMD5Check::ToString() const
 {
-	V_snprintf( s_text, sizeof(s_text), "%s: path: %s, file: %s", GetName(), m_szPathID, m_szFilename );
+	V_sprintf_safe( s_text, "%s: path: %s, file: %s", GetName(), m_szPathID, m_szFilename );
 	return s_text;
 }
 
@@ -528,7 +528,7 @@ bool CLC_SaveReplay::ReadFromBuffer( bf_read &buffer )
 
 const char *CLC_SaveReplay::ToString() const
 {
-	V_snprintf( s_text, sizeof( s_text ), "%s: filename: %s, start byte: %i, post death record time: %f", GetName(), m_szFilename, m_nStartSendByte, m_flPostDeathRecordTime );
+	V_sprintf_safe( s_text, "%s: filename: %s, start byte: %i, post death record time: %f", GetName(), m_szFilename, m_nStartSendByte, m_flPostDeathRecordTime );
 	return s_text;
 }
 #endif
@@ -1829,7 +1829,7 @@ bool MM_Heartbeat::ReadFromBuffer( bf_read &buffer )
 
 const char *MM_Heartbeat::ToString( ) const
 {
-	V_sprintf_safe( s_text, "Heartbeat" );
+	V_strcpy_safe( s_text, "Heartbeat" );
 	return s_text;
 }
 

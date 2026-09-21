@@ -31,13 +31,12 @@ public:
 	CKeyRepeatHandler()
 	{
 		Reset();
-		for ( auto &t : m_flRepeatTimes )
-		{
-			t = 0.16;
-		}
+		static_assert(std::numeric_limits<double>::is_iec559);
+		BitwiseClear( m_flRepeatTimes );
+		m_flNextKeyRepeat = 0.0;
 	}
 
-	void		Reset( void ) { memset( m_bAliasDown, 0, sizeof(bool) * FM_NUM_KEYREPEAT_ALIASES ); m_bHaveKeyDown = false; }
+	void		Reset( void ) { BitwiseClear( m_bAliasDown ); m_bHaveKeyDown = false; }
 	void		KeyDown( vgui::KeyCode code );
 	void		KeyUp( vgui::KeyCode code );
 	vgui::KeyCode	KeyRepeated( void );

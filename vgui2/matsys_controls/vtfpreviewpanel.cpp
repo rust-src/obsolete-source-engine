@@ -41,9 +41,10 @@ CVTFPreviewPanel::CVTFPreviewPanel( vgui::Panel *pParent, const char *pName ) :
 
 CVTFPreviewPanel::~CVTFPreviewPanel()
 {
-	if ( vgui::surface() && m_nTextureID != -1 )
+	// dimhotepus: vgui::surface() -> MatSystemSurface() to match Create.
+	if ( m_nTextureID != -1 )
 	{
-		vgui::surface()->DestroyTextureID( m_nTextureID );
+		MatSystemSurface()->DestroyTextureID( m_nTextureID );
 		m_nTextureID = -1;
 	}
 }
@@ -72,7 +73,8 @@ void CVTFPreviewPanel::SetVTF( const char *pFullPath, bool bLoadImmediately )
 	}
 	pVMTKeyValues->SetInt( "$nocull", 1 );
 	pVMTKeyValues->SetInt( "$nodebug", 1 );
-	m_PreviewMaterial.Init( MaterialSystem()->CreateMaterial( pFullPath, pVMTKeyValues ));
+	// dimhotepus: Do not leak texture.
+	m_PreviewMaterial.Init( pFullPath, pVMTKeyValues );
 
 	MatSystemSurface()->DrawSetTextureMaterial( m_nTextureID, m_PreviewMaterial );
 
@@ -300,7 +302,7 @@ void CVTFPreviewPanel::LookAt( const Vector &vecLookAt, float flRadius )
 	float flFOVx = FOV;
 
 	// Compute fov/2 in radians
-	flFOVx *= M_PI / 360.0f;
+	flFOVx *= M_PI_F / 360.0f;
 
 	// Compute an effective fov	based on the aspect ratio 
 	// if the height is smaller than the width
@@ -383,6 +385,7 @@ void CVTFPreviewPanel::Paint( void )
 	int w, h;
 	GetSize( w, h );
 	vgui::MatSystemSurface()->Begin3DPaint( 0, 0, w, h );
+	RunCodeAtScopeExit(vgui::MatSystemSurface()->End3DPaint( ));
 
 	pRenderContext->ClearColor4ub( 76, 88, 68, 255 ); 
 	pRenderContext->ClearBuffers( true, true );
@@ -401,6 +404,4 @@ void CVTFPreviewPanel::Paint( void )
 	{
 		PaintVolumeTexture();
 	}
-
-	vgui::MatSystemSurface()->End3DPaint( );
 }

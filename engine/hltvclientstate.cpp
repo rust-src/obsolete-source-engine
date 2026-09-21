@@ -34,7 +34,7 @@
 // copy message data from in to out buffer
 #define CopyDataInToOut(msg)									\
 	int	 size = PAD_NUMBER( Bits2Bytes(msg->m_nLength), 4);		\
-	byte *buffer = (byte*) stackalloc( size );					\
+	byte *buffer = stackallocT( byte, size );					\
 	msg->m_DataIn.ReadBits( buffer, msg->m_nLength );			\
 	msg->m_DataOut.StartWriting( buffer, size, msg->m_nLength );\
 	
@@ -130,9 +130,9 @@ void CHLTVClientState::CopyNewEntity(
 	pPackedEntity->SetServerAndClientClass( pServerClass, pClientClass );
 
 	// Make space for the baseline data.
-	ALIGN4 char packedData[MAX_PACKEDENTITY_DATA] ALIGN4_POST;
+	alignas(4) char packedData[MAX_PACKEDENTITY_DATA];
 	bf_read fromBuf( "HLTV_ReadEnterPVS1", pFromData, Bits2Bytes( nFromBits ), nFromBits );
-	bf_write writeBuf( "HLTV_ReadEnterPVS2", packedData, sizeof( packedData ) );
+	bf_write writeBuf( "HLTV_ReadEnterPVS2", packedData );
 
 	int changedProps[MAX_DATATABLE_PROPS];
 	
@@ -444,7 +444,7 @@ bool CHLTVClientState::HookClientStringTable( char const *tableName )
 		return false;
 
 	// Hook instance baseline table
-	if ( !Q_strcasecmp( tableName, INSTANCE_BASELINE_TABLENAME ) )
+	if ( V_strieq( tableName, INSTANCE_BASELINE_TABLENAME ) )
 	{
 		table->SetStringChangedCallback( m_pHLTV,  HLTV_Callback_InstanceBaseline );
 		return true;
@@ -461,7 +461,7 @@ void CHLTVClientState::InstallStringTableCallback( char const *tableName )
 		return;
 
 	// Hook instance baseline table
-	if ( !Q_strcasecmp( tableName, INSTANCE_BASELINE_TABLENAME ) )
+	if ( V_strieq( tableName, INSTANCE_BASELINE_TABLENAME ) )
 	{
 		table->SetStringChangedCallback( m_pHLTV,  HLTV_Callback_InstanceBaseline );
 		return;
@@ -484,7 +484,7 @@ bool CHLTVClientState::ProcessVoiceInit( SVC_VoiceInit *msg )
 bool CHLTVClientState::ProcessVoiceData( SVC_VoiceData *msg )
 {
 	int	 size = PAD_NUMBER( Bits2Bytes(msg->m_nLength), 4);
-	byte *buffer = (byte*) stackalloc( size );
+	byte *buffer = stackallocT( byte, size );
 	msg->m_DataIn.ReadBits( buffer, msg->m_nLength );
 	msg->m_DataOut = buffer;
 
@@ -530,7 +530,7 @@ bool CHLTVClientState::ProcessGameEvent( SVC_GameEvent *msg )
 
 		bool bDontForward = false;
 
-		if ( Q_strcmp( pszName, "hltv_status" ) == 0 )
+		if ( V_streq( pszName, "hltv_status" ) )
 		{
 			m_pHLTV->m_nGlobalSlots = event->GetInt("slots");
 			m_pHLTV->m_nGlobalProxies = event->GetInt("proxies");
@@ -541,7 +541,7 @@ bool CHLTVClientState::ProcessGameEvent( SVC_GameEvent *msg )
 			}
 			bDontForward = true;
 		}
-		else if ( Q_strcmp( pszName, "hltv_title" ) == 0 )
+		else if ( V_streq( pszName, "hltv_title" ) )
 		{
 			// ignore title messages
 			bDontForward = true;
@@ -733,7 +733,7 @@ void CHLTVClientState::ReadDeltaEnt( CEntityReadInfo &u )
 	}
 
 	// Make space for the baseline data.
-	ALIGN4 char packedData[MAX_PACKEDENTITY_DATA] ALIGN4_POST;
+	alignas(4) char packedData[MAX_PACKEDENTITY_DATA];
 	const void *pFromData;
 	int nFromBits;
 
@@ -748,7 +748,7 @@ void CHLTVClientState::ReadDeltaEnt( CEntityReadInfo &u )
 	}
 
 	bf_read fromBuf( "HLTV_ReadEnterPVS1", pFromData, Bits2Bytes( nFromBits ), nFromBits );
-	bf_write writeBuf( "HLTV_ReadEnterPVS2", packedData, sizeof( packedData ) );
+	bf_write writeBuf( "HLTV_ReadEnterPVS2", packedData );
 
 	int changedProps[MAX_DATATABLE_PROPS];
 	
@@ -908,7 +908,9 @@ void CHLTVClientState::UpdateStats()
 	conVars.m_ConVars.AddToTail( acvar );
 
 	Q_strncpy( acvar.name, "hltv_addr", sizeof(acvar.name) );
-	Q_snprintf( acvar.value, sizeof(acvar.value), "%s:%u", net_local_adr.ToString(true), m_pHLTV->GetUDPPort()  );
+
+	char buffer[32];
+	V_sprintf_safe( acvar.value, "%s:%u", net_local_adr.ToString_safe(buffer, true), m_pHLTV->GetUDPPort()  );
 	conVars.m_ConVars.AddToTail( acvar );
 
 	m_NetChannel->SendNetMsg( conVars );

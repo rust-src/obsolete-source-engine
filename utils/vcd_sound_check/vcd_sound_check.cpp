@@ -9,6 +9,7 @@
 #include "tier0/dbg.h"
 #include "utldict.h"
 #include "tier1/UtlLinkedList.h"
+#include "tier1/strtools.h"
 #include "filesystem.h"
 #include "FileSystem_Tools.h"
 #include "KeyValues.h"
@@ -232,18 +233,18 @@ void printusage( void )
 
 void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char const *extension )
 {
+	char directory[ MAX_PATH ];
+	V_sprintf_safe( directory, "%s\\*.*", dir );
+
 	WIN32_FIND_DATA wfd;
-
-	char directory[ 256 ];
-	char filename[ 256 ];
 	HANDLE ff;
-
-	sprintf( directory, "%s\\*.*", dir );
-
 	if ( ( ff = FindFirstFile( directory, &wfd ) ) == INVALID_HANDLE_VALUE )
 		return;
 
+	RunCodeAtScopeExit(FindClose( ff ));
+
 	int extlen = strlen( extension );
+	char filename[ MAX_PATH ];
 
 	do
 	{
@@ -254,7 +255,7 @@ void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char con
 				continue;
 
 			// Recurse down directory
-			sprintf( filename, "%s\\%s", dir, wfd.cFileName );
+			V_sprintf_safe( filename, "%s\\%s", dir, wfd.cFileName );
 			BuildFileList_R( files, filename, extension );
 		}
 		else
@@ -262,7 +263,7 @@ void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char con
 			int len = strlen( wfd.cFileName );
 			if ( len > extlen )
 			{
-				if ( !stricmp( &wfd.cFileName[ len - extlen ], extension ) )
+				if ( V_strieq( &wfd.cFileName[ len - extlen ], extension ) )
 				{
 					char filename[ MAX_PATH ];
 					Q_snprintf( filename, sizeof( filename ), "%s\\%s", dir, wfd.cFileName );
@@ -402,7 +403,7 @@ static bool IsFlexTrackBeingUsed( CChoreoEvent *event, char const *trackName )
 			continue;
 
 		// Otherwise, see if the test track has this as an active track
-		if ( !Q_stricmp( t->GetFlexControllerName(), trackName ) )
+		if ( V_strieq( t->GetFlexControllerName(), trackName ) )
 		{
 			return true;
 		}
@@ -544,7 +545,7 @@ void ProcessVCD( CUtlDict< VCDList, int >& database, CUtlSymbol& vcdname )
 
 	// Load the .vcd
 	char fullname[ 512 ];
-	Q_snprintf( fullname, sizeof( fullname ), "%s", g_Analysis.symbols.String( vcdname ) );
+	V_strcpy_safe( fullname, g_Analysis.symbols.String( vcdname ) );
 
 	LoadScriptFile( fullname );
 	
@@ -709,8 +710,8 @@ int main( int argc, char* argv[] )
 
 	char sounddir[ 256 ];
 	char vcddir[ 256 ];
-	strcpy( sounddir, argv[ i - 2 ] );
-	strcpy( vcddir, argv[ i - 1 ] );
+	V_strcpy_safe( sounddir, argv[ i - 2 ] );
+	V_strcpy_safe( vcddir, argv[ i - 1 ] );
 	if ( !strstr( sounddir, "sound" ) )
 	{
 		vprint( 0, "Sound dir %s looks invalid (format:  u:/tf2/hl2/sound/vo)\n", sounddir );

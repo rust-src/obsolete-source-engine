@@ -92,7 +92,7 @@ CVCDFile *CScene::FindVCD( char const *filename )
 		if ( !vcd )
 			continue;
 
-		if ( !Q_stricmp( filename, vcd->GetName() ) )
+		if ( V_strieq( filename, vcd->GetName() ) )
 			return vcd;
 	}
 	return NULL;
@@ -117,7 +117,7 @@ void CScene::ValidateTree( mxTreeView *tree, mxTreeViewItem* parent )
 		}
 		else
 		{
-			Q_snprintf( sz, sizeof( sz ), "%s", vcd->GetName() );
+			V_strcpy_safe( sz, vcd->GetName() );
 		}
 
 		mxTreeViewItem *spot = vcd->FindItem( tree, parent );

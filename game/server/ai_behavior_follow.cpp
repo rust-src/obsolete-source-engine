@@ -2066,7 +2066,7 @@ bool CAI_FollowBehavior::FValidateHintType( CAI_Hint *pHint )
 {
 	if ( pHint->HintType() == HINT_FOLLOW_WAIT_POINT )
 	{
-		if ( GetFollowTarget() && GetFollowTarget()->FVisible( pHint->GetAbsOrigin() + Vector( 0, 0, 0.1 ) )  )
+		if ( GetFollowTarget() && GetFollowTarget()->FVisible( pHint->GetAbsOrigin() + Vector( 0, 0, 0.1f ) )  )
 			return true;
 		else
 			return false;
@@ -2332,7 +2332,7 @@ static AI_FollowFormation_t g_AntlionFollowFormation =
 
 //-------------------------------------
 
-#define COMMANDER_TOLERANCE (13.0 * 1.415)
+constexpr inline float COMMANDER_TOLERANCE{13.0f * 1.415f};
 
 static AI_FollowSlot_t g_CommanderFollowFormationSlots[] = 
 {

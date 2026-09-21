@@ -282,7 +282,7 @@ bool CGCAccess::InternalValidateAccess( GCAccessSystem_t nSystem, CSteamID steam
 		SingleAssert_t* pAssert = m_SingleAsserts[ nCurrAssert ];
 		if( nSystem == pAssert->m_System )
 		{
-			if( V_stricmp( ( pAssert->m_bContext ) ? pContext->GetName() : pszJobName, pAssert->m_sContextOrJob ) == 0 )
+			if( V_strieq( ( pAssert->m_bContext ) ? pContext->GetName() : pszJobName, pAssert->m_sContextOrJob ) )
 			{
 				//log this assert
 				{
@@ -382,7 +382,7 @@ bool CGCAccess::CatchSingleAssert( const char* pszSystem, bool bContext, const c
 	GCAccessSystem_t nSystemID = ( GCAccessSystem_t )-1;
 	FOR_EACH_MAP_FAST( m_Systems, nSystem )
 	{
-		if( V_stricmp( m_Systems[ nSystem ]->m_sName, pszSystem ) == 0 )
+		if( V_strieq( m_Systems[ nSystem ]->m_sName, pszSystem ) )
 		{
 			nSystemID = m_Systems.Key( nSystem );
 			break;
@@ -487,7 +487,7 @@ void CGCAccess::ReportSystems( const char* pszContext, EDisplay eDisplay ) const
 		{
 			const CGCAccessSystem::TrackedJob_t& job = pSystem->m_Jobs[ nJob ];
 			//skip any contexts we don't care about
-			if( pszContext && ( V_stricmp( pszContext, job.m_sContext ) != 0 ) )
+			if( pszContext && !V_strieq( pszContext, job.m_sContext ) )
 				continue;		
 
 			stats.Add( job.m_Stats );
@@ -522,7 +522,7 @@ void CGCAccess::FullReport( const char* pszSystemFilter, const char* pszContextF
 	FOR_EACH_MAP_FAST( m_Systems, nSystem )
 	{
 		const CGCAccessSystem* pSystem = m_Systems[ nSystem ];
-		if( pszSystemFilter && V_stricmp( pszSystemFilter, pSystem->m_sName ) )
+		if( pszSystemFilter && !V_strieq( pszSystemFilter, pSystem->m_sName ) )
 			continue;
 
 		FOR_EACH_MAP_FAST( pSystem->m_Jobs, nJob )
@@ -533,9 +533,9 @@ void CGCAccess::FullReport( const char* pszSystemFilter, const char* pszContextF
 
 			if( !ShouldDisplayStats( eDisplay, stats ) )
 				continue;			
-			if( pszJobFilter && V_stricmp( pszJobFilter, pszJob ) )
+			if( pszJobFilter && !V_strieq( pszJobFilter, pszJob ) )
 				continue;
-			if( pszContextFilter && V_stricmp( pszContextFilter, pszContext ) )
+			if( pszContextFilter && !V_strieq( pszContextFilter, pszContext ) )
 				continue;
 
 			rp.StrValue( pszJob, CFmtStr( "gcaccess_dump_job \"%s\" %d", pszJob, eDisplay ).String() );
@@ -559,7 +559,7 @@ void CGCAccess::DependencyReport( const char* pszSystem, EDisplay eDisplay ) con
 	FOR_EACH_MAP_FAST( m_Systems, nSystem )
 	{
 		const CGCAccessSystem* pSystem = m_Systems[ nSystem ];
-		if( V_stricmp( pszSystem, pSystem->m_sName ) == 0 )
+		if( V_strieq( pszSystem, pSystem->m_sName ) )
 		{
 			pMatchSystem = pSystem;
 			break;

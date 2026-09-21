@@ -809,7 +809,7 @@ bool CVGui::DispatchMessages()
 					&& strcmp(paramsName, "KeyFocusTicked")
 					&& strcmp(paramsName, "CursorMoved"))
 				{
-					if (!stricmp(paramsName, "command"))
+					if (V_strieq(paramsName, "command"))
 					{
 						g_pIVgui->DPrintf2( "%s Queue dispatching command( %s, %s -- %i )\n", qname, paramsName, messageItem->_params->GetString("command"), messageItem->_messageID );
 					}
@@ -826,7 +826,7 @@ bool CVGui::DispatchMessages()
 			// Deal with special internal cursor movement messages
 			if ( messageItem->_messageTo == 0xFFFFFFFF )
 			{
-				if ( !Q_stricmp( params->GetName(), "SetCursorPosInternal" ) )
+				if ( V_strieq( params->GetName(), "SetCursorPosInternal" ) )
 				{
 					int nXPos = params->GetInt( "xpos", 0 );
 					int nYPos = params->GetInt( "ypos", 0 );
@@ -1120,7 +1120,7 @@ void CVGui::Disconnect()
 InitReturnVal_t CVGui::Init()
 {
 	m_hContext = DEFAULT_VGUI_CONTEXT;
-	m_bDebugMessages = CommandLine()->FindParm( "-vguimessages" ) ? true : false;
+	m_bDebugMessages = CommandLine()->HasParm( "-vguimessages" );
 
 	InitReturnVal_t nRetVal = BaseClass::Init();
 	if ( nRetVal != INIT_OK )

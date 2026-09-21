@@ -39,7 +39,7 @@ CTFPlayer *CTFBotCompanion::GetLeader( void )
 	CTFPlayer *leader = NULL;
 	float leaderSpeed = FLT_MAX;
 
-	for( int i=0; i<raidingTeam->GetNumPlayers(); ++i )
+	for( intp i=0; i<raidingTeam->GetNumPlayers(); ++i )
 	{
 		CTFPlayer *player = (CTFPlayer *)raidingTeam->GetPlayer(i);
 

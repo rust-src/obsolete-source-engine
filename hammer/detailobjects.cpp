@@ -112,11 +112,11 @@ void DetailObjects::ParseDetailGroup( intp detailId, KeyValues* pGroupKeyValues 
 
 					if ( pProcModelType )
 					{
-						if ( !Q_stricmp( pProcModelType, "cross" ) )
+						if ( V_strieq( pProcModelType, "cross" ) )
 						{
 							model.m_Type = DETAIL_PROP_TYPE_SHAPE_CROSS;
 						}
-						else if ( !Q_stricmp( pProcModelType, "tri" ) )
+						else if ( V_strieq( pProcModelType, "tri" ) )
 						{
 							model.m_Type = DETAIL_PROP_TYPE_SHAPE_TRI;
 						}
@@ -255,7 +255,7 @@ const char *DetailObjects::FindDetailVBSPName( void )
 	for( int i = 0; i < num_entities; i++ )
 	{
 		char* pEntity = ValueForKey( &entities[i], "classname" );
-		if ( !strcmp( pEntity, "worldspawn" ) )
+		if ( V_streq( pEntity, "worldspawn" ) )
 		{
 			const char *pDetailVBSP = ValueForKey( &entities[i], "detailvbsp" );
 			if ( !pDetailVBSP || !pDetailVBSP[0] ) 

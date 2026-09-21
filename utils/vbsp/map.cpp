@@ -911,43 +911,43 @@ ChunkFileResult_t LoadDispInfoCallback(CChunkFile *pFile, mapdispinfo_t **ppMapD
 //-----------------------------------------------------------------------------
 ChunkFileResult_t LoadDispInfoKeyCallback(const char *szKey, const char *szValue, mapdispinfo_t *pMapDispInfo)
 {
-	if (!stricmp(szKey, "power"))
+	if (V_strieq(szKey, "power"))
 	{
 		CChunkFile::ReadKeyValueInt(szValue, pMapDispInfo->power);
 	}
 #ifdef VSVMFIO
-	else if (!stricmp(szKey, "elevation"))
+	else if (V_strieq(szKey, "elevation"))
 	{
 		CChunkFile::ReadKeyValueFloat(szValue, pMapDispInfo->m_elevation);
 	}
 #endif // VSVMFIO
-	else if (!stricmp(szKey, "uaxis"))
+	else if (V_strieq(szKey, "uaxis"))
 	{
 		CChunkFile::ReadKeyValueVector3(szValue, pMapDispInfo->uAxis);
 	}
-	else if (!stricmp(szKey, "vaxis"))
+	else if (V_strieq(szKey, "vaxis"))
 	{
 		CChunkFile::ReadKeyValueVector3(szValue, pMapDispInfo->vAxis);
 	}
-	else if( !stricmp( szKey, "startposition" ) )
+	else if( V_strieq( szKey, "startposition" ) )
 	{
 		CChunkFile::ReadKeyValueVector3( szValue, pMapDispInfo->startPosition );
 	}
-	else if( !stricmp( szKey, "flags" ) )
+	else if( V_strieq( szKey, "flags" ) )
 	{
 		CChunkFile::ReadKeyValueInt( szValue, pMapDispInfo->flags );
 	}
 #if 0 // old data
-	else if (!stricmp( szKey, "alpha" ) )
+	else if (V_strieq( szKey, "alpha" ) )
 	{
 		CChunkFile::ReadKeyValueVector4( szValue, pMapDispInfo->alphaValues );
 	}
 #endif
-	else if (!stricmp(szKey, "mintess"))
+	else if (V_strieq(szKey, "mintess"))
 	{
 	    CChunkFile::ReadKeyValueInt(szValue, pMapDispInfo->minTess);
 	}
-	else if (!stricmp(szKey, "smooth"))
+	else if (V_strieq(szKey, "smooth"))
 	{
 		CChunkFile::ReadKeyValueFloat(szValue, pMapDispInfo->smoothingAngle);
 	}
@@ -1322,7 +1322,7 @@ ChunkFileResult_t HandleNoDynamicShadowsEnt( entity_t *pMapEnt )
 
 static ChunkFileResult_t LoadOverlayDataTransitionKeyCallback( const char *szKey, const char *szValue, mapoverlay_t *pOverlay )
 {
-	if ( !stricmp( szKey, "material" ) )
+	if ( V_strieq( szKey, "material" ) )
 	{
 		// Get the material name.
 		const char *pMaterialName = szValue;
@@ -1339,55 +1339,55 @@ static ChunkFileResult_t LoadOverlayDataTransitionKeyCallback( const char *szKey
 		}
 		V_strcpy_safe( pOverlay->szMaterialName, pMaterialName );	
 	}
-	else if ( !stricmp( szKey, "StartU") )
+	else if ( V_strieq( szKey, "StartU") )
 	{
 		CChunkFile::ReadKeyValueFloat( szValue, pOverlay->flU[0] );
 	}
-	else if ( !stricmp( szKey, "EndU" ) )
+	else if ( V_strieq( szKey, "EndU" ) )
 	{
 		CChunkFile::ReadKeyValueFloat( szValue, pOverlay->flU[1] );
 	}
-	else if ( !stricmp( szKey, "StartV" ) )
+	else if ( V_strieq( szKey, "StartV" ) )
 	{
 		CChunkFile::ReadKeyValueFloat( szValue, pOverlay->flV[0] );
 	}
-	else if ( !stricmp( szKey, "EndV" ) )
+	else if ( V_strieq( szKey, "EndV" ) )
 	{
 		CChunkFile::ReadKeyValueFloat( szValue, pOverlay->flV[1] );
 	}
-	else if ( !stricmp( szKey, "BasisOrigin" ) )
+	else if ( V_strieq( szKey, "BasisOrigin" ) )
 	{
 		CChunkFile::ReadKeyValueVector3( szValue, pOverlay->vecOrigin );
 	}
-	else if ( !stricmp( szKey, "BasisU" ) )
+	else if ( V_strieq( szKey, "BasisU" ) )
 	{
 		CChunkFile::ReadKeyValueVector3( szValue, pOverlay->vecBasis[0] );
 	}
-	else if ( !stricmp( szKey, "BasisV" ) )
+	else if ( V_strieq( szKey, "BasisV" ) )
 	{
 		CChunkFile::ReadKeyValueVector3( szValue, pOverlay->vecBasis[1] );
 	}
-	else if ( !stricmp( szKey, "BasisNormal" ) )
+	else if ( V_strieq( szKey, "BasisNormal" ) )
 	{
 		CChunkFile::ReadKeyValueVector3( szValue, pOverlay->vecBasis[2] );
 	}
-	else if ( !stricmp( szKey, "uv0" ) )
+	else if ( V_strieq( szKey, "uv0" ) )
 	{
 		CChunkFile::ReadKeyValueVector3( szValue, pOverlay->vecUVPoints[0] );
 	}
-	else if ( !stricmp( szKey, "uv1" ) )
+	else if ( V_strieq( szKey, "uv1" ) )
 	{
 		CChunkFile::ReadKeyValueVector3( szValue, pOverlay->vecUVPoints[1] );
 	}
-	else if ( !stricmp( szKey, "uv2" ) )
+	else if ( V_strieq( szKey, "uv2" ) )
 	{
 		CChunkFile::ReadKeyValueVector3( szValue, pOverlay->vecUVPoints[2] );
 	}
-	else if ( !stricmp( szKey, "uv3" ) )
+	else if ( V_strieq( szKey, "uv3" ) )
 	{
 		CChunkFile::ReadKeyValueVector3( szValue, pOverlay->vecUVPoints[3] );
 	}
-	else if ( !stricmp( szKey, "sides" ) )
+	else if ( V_strieq( szKey, "sides" ) )
 	{
 		const char *pSideList = szValue;
 
@@ -1589,7 +1589,7 @@ ChunkFileResult_t CMapFile::LoadEntityCallback(CChunkFile *pFile, void* nParam)
 		//
 		const char *pClassName = ValueForKey( mapent, "classname" );
 
-		if ( !strcmp( "func_detail", pClassName ) )
+		if ( V_streq( "func_detail", pClassName ) )
 		{
 			MoveBrushesToWorld (mapent);
 			mapent->numbrushes = 0;
@@ -1601,7 +1601,7 @@ ChunkFileResult_t CMapFile::LoadEntityCallback(CChunkFile *pFile, void* nParam)
 
 		// these get added to a list for processing the portal file
 		// but aren't necessary to emit to the BSP
-		if ( !strcmp( "func_viscluster", pClassName ) )
+		if ( V_streq( "func_viscluster", pClassName ) )
 		{
 			AddVisCluster(mapent);
 			return(ChunkFile_Ok);
@@ -1611,7 +1611,7 @@ ChunkFileResult_t CMapFile::LoadEntityCallback(CChunkFile *pFile, void* nParam)
 		// func_ladder brushes are moved into the world entity.  We convert the func_ladder to an info_ladder
 		// that holds the ladder's mins and maxs, and leave the entity.  This helps the bots figure out ladders.
 		//
-		if ( !strcmp( "func_ladder", pClassName ) )
+		if ( V_streq( "func_ladder", pClassName ) )
 		{
 			AddLadderKeys( mapent );
 
@@ -1623,7 +1623,7 @@ ChunkFileResult_t CMapFile::LoadEntityCallback(CChunkFile *pFile, void* nParam)
 			return(ChunkFile_Ok);
 		}
 
-		if( !strcmp( "env_cubemap", pClassName ) )
+		if( V_streq( "env_cubemap", pClassName ) )
 		{
 			if( ( g_nDXLevel == 0 ) || ( g_nDXLevel >= 70 ) )
 			{
@@ -1637,13 +1637,13 @@ ChunkFileResult_t CMapFile::LoadEntityCallback(CChunkFile *pFile, void* nParam)
 			return(ChunkFile_Ok);
 		}
 
-		if ( !strcmp( "test_sidelist", pClassName ) )
+		if ( V_streq( "test_sidelist", pClassName ) )
 		{
 			ConvertSideList(mapent, "sides");
 			return ChunkFile_Ok;
 		}
 
-		if ( !strcmp( "info_overlay", pClassName ) )
+		if ( V_streq( "info_overlay", pClassName ) )
 		{
 			int iAccessorID = Overlay_GetFromEntity( mapent );
 
@@ -1659,26 +1659,26 @@ ChunkFileResult_t CMapFile::LoadEntityCallback(CChunkFile *pFile, void* nParam)
 
 				// Remember the id for accessing the overlay
 				char buf[16];
-				Q_snprintf( buf, sizeof(buf), "%i", iAccessorID );
+				V_to_chars( buf, iAccessorID );
 				SetKeyValue( mapent, "OverlayID", buf );
 			}
 
 			return ( ChunkFile_Ok );
 		}
 
-		if ( !strcmp( "info_overlay_transition", pClassName ) )
+		if ( V_streq( "info_overlay_transition", pClassName ) )
 		{
 			// Clear out this entity.
 			mapent->epairs = NULL;
 			return ( ChunkFile_Ok );
 		}
 
-		if ( Q_stricmp( pClassName, "info_no_dynamic_shadow" ) == 0 )
+		if ( V_strieq( pClassName, "info_no_dynamic_shadow" ) )
 		{
 			return HandleNoDynamicShadowsEnt( mapent );
 		}
 
-		if ( Q_stricmp( pClassName, "func_instance_parms" ) == 0 )
+		if ( V_strieq( pClassName, "func_instance_parms" ) )
 		{
 			// Clear out this entity.
 			mapent->epairs = NULL;
@@ -1710,7 +1710,7 @@ ChunkFileResult_t CMapFile::LoadEntityCallback(CChunkFile *pFile, void* nParam)
 		}
 
 #ifdef VSVMFIO
-		if ( !Q_stricmp( pClassName, "light" ) )
+		if ( V_strieq( pClassName, "light" ) )
 		{
 			CVmfImport::GetVmfImporter()->ImportLightCallback(
 				ValueForKey( mapent, "hammerid" ),
@@ -1721,7 +1721,7 @@ ChunkFileResult_t CMapFile::LoadEntityCallback(CChunkFile *pFile, void* nParam)
 				ValueForKey( mapent, "_quadratic_attn" ) );
 		}
 
-		if ( !Q_stricmp( pClassName, "light_spot" ) )
+		if ( V_strieq( pClassName, "light_spot" ) )
 		{
 			CVmfImport::GetVmfImporter()->ImportLightSpotCallback(
 				ValueForKey( mapent, "hammerid" ),
@@ -1737,7 +1737,7 @@ ChunkFileResult_t CMapFile::LoadEntityCallback(CChunkFile *pFile, void* nParam)
 				ValueForKey( mapent, "_exponent" ) );
 		}
 
-		if ( !Q_stricmp( pClassName, "light_dynamic" ) )
+		if ( V_strieq( pClassName, "light_dynamic" ) )
 		{
 			CVmfImport::GetVmfImporter()->ImportLightDynamicCallback(
 				ValueForKey( mapent, "hammerid" ),
@@ -1753,7 +1753,7 @@ ChunkFileResult_t CMapFile::LoadEntityCallback(CChunkFile *pFile, void* nParam)
 				ValueForKey( mapent, "spotlight_radius" ) );
 		}
 
-		if ( !Q_stricmp( pClassName, "light_environment" ) )
+		if ( V_strieq( pClassName, "light_environment" ) )
 		{
 			CVmfImport::GetVmfImporter()->ImportLightEnvironmentCallback(
 				ValueForKey( mapent, "hammerid" ),
@@ -1828,7 +1828,7 @@ void CMapFile::ForceFuncAreaPortalWindowContents()
 		// Don't do this on "normal" func_areaportal entities.  Those are tied to doors
 		// and should be opaque when closed.  But areaportal windows (and any other 
 		// distance-based areaportals) should be windows because they are normally open/transparent
-		if( !IsAreaPortal( pClassName ) || !Q_stricmp( pClassName, "func_areaportal" ) )
+		if( !IsAreaPortal( pClassName ) || V_strieq( pClassName, "func_areaportal" ) )
 			continue;
 
 //		const char *pTestEntName = ValueForKey( e, "targetname" );
@@ -2027,7 +2027,7 @@ void CMapFile::CheckForInstances( const char *pszFileName )
 	for ( int i = 0; i < num_entities; i++ )
 	{
 		const char *pEntity = ValueForKey( &entities[ i ], "classname" );
-		if ( !strcmp( pEntity, "func_instance" ) )
+		if ( V_streq( pEntity, "func_instance" ) )
 		{
 			const char *pInstanceFile = ValueForKey( &entities[ i ], "file" );
 			if ( pInstanceFile[ 0 ] )
@@ -2348,11 +2348,11 @@ void CMapFile::MergeEntities( entity_t *pInstanceEntity, CMapFile *Instance, Vec
 	const char *pName = ValueForKey( pInstanceEntity, "name" );
 	if ( pTargetName[ 0 ] )
 	{
-		V_sprintf_safe( NameFixup, "%s", pTargetName );
+		V_strcpy_safe( NameFixup, pTargetName );
 	}
 	else if ( pName[ 0 ] )
 	{
-		V_sprintf_safe( NameFixup, "%s", pName );
+		V_strcpy_safe( NameFixup, pName );
 	}
 	else
 	{
@@ -2392,7 +2392,7 @@ void CMapFile::MergeEntities( entity_t *pInstanceEntity, CMapFile *Instance, Vec
 		}
 
 		const char *pEntity = ValueForKey( entity, "classname" );
-		if ( strcmpi( pEntity, "worldspawn" ) == 0 )
+		if ( V_strieq( pEntity, "worldspawn" ) )
 		{
 			WorldspawnEnt = entity;
 		}
@@ -2434,7 +2434,7 @@ void CMapFile::MergeEntities( entity_t *pInstanceEntity, CMapFile *Instance, Vec
 				}
 			}
 
-			if ( strcmpi( pEntity, "func_simpleladder" ) == 0 )
+			if ( V_strieq( pEntity, "func_simpleladder" ) )
 			{	// hate having to do this, but the key values are so screwed up
 				AddLadderKeys( entity );
 /*				Vector	vInNormal, vOutNormal;
@@ -2444,13 +2444,13 @@ void CMapFile::MergeEntities( entity_t *pInstanceEntity, CMapFile *Instance, Vec
 				vInNormal.z = FloatForKey( entity, "normal.z" );
 				VectorRotate( vInNormal, InstanceMatrix, vOutNormal );
 
-				Q_snprintf( temp, sizeof( temp ), "%f", vOutNormal.x );
+				V_to_chars( temp, vOutNormal.x );
 				SetKeyValue( entity, "normal.x", temp );
 
-				Q_snprintf( temp, sizeof( temp ), "%f", vOutNormal.y );
+				V_to_chars( temp, vOutNormal.y );
 				SetKeyValue( entity, "normal.y", temp );
 
-				Q_snprintf( temp, sizeof( temp ), "%f", vOutNormal.z );
+				V_to_chars( temp, vOutNormal.z );
 				SetKeyValue( entity, "normal.z", temp );*/
 			}
 		}
@@ -2557,7 +2557,7 @@ bool LoadMapFile( const char *pszFileName )
 	g_nMapFileVersion = 400;
 
 	const char *pszExtension =V_GetFileExtension( pszFileName );
-	if ( pszExtension && strcmpi( pszExtension, "vmm" ) == 0 )
+	if ( pszExtension && V_strieq( pszExtension, "vmm" ) )
 	{
 		pMainManifest = new CManifest();
 		if ( pMainManifest->LoadVMFManifest( pszFileName ) )
@@ -2821,7 +2821,7 @@ ChunkFileResult_t CMapFile::LoadSideCallback(CChunkFile *pFile, LoadSide_t *pSid
 //-----------------------------------------------------------------------------
 ChunkFileResult_t LoadSideKeyCallback(const char *szKey, const char *szValue, LoadSide_t *pSideInfo)
 {
-	if (!stricmp(szKey, "plane"))
+	if (V_strieq(szKey, "plane"))
 	{
 		int nRead = sscanf(szValue, "(%f %f %f) (%f %f %f) (%f %f %f)",
 			&pSideInfo->planepts[0][0], &pSideInfo->planepts[0][1], &pSideInfo->planepts[0][2],
@@ -2833,7 +2833,7 @@ ChunkFileResult_t LoadSideKeyCallback(const char *szKey, const char *szValue, Lo
 			g_MapError.ReportError("parsing plane definition");
 		}
 	}
-	else if (!stricmp(szKey, "material"))
+	else if (V_strieq(szKey, "material"))
 	{
 		// Get the material name.
 		if( g_ReplaceMaterials )
@@ -2852,7 +2852,7 @@ ChunkFileResult_t LoadSideKeyCallback(const char *szKey, const char *szValue, Lo
 		pSideInfo->pSide->contents = textureref[mt].contents;
 		pSideInfo->pSide->surf = pSideInfo->td.flags;
 	}
-	else if (!stricmp(szKey, "uaxis"))
+	else if (V_strieq(szKey, "uaxis"))
 	{
 		int nRead = sscanf(szValue, "[%f %f %f %f] %f", &pSideInfo->td.UAxis[0], &pSideInfo->td.UAxis[1], &pSideInfo->td.UAxis[2], &pSideInfo->td.shift[0], &pSideInfo->td.textureWorldUnitsPerTexel[0]);
 		if (nRead != 5)
@@ -2860,7 +2860,7 @@ ChunkFileResult_t LoadSideKeyCallback(const char *szKey, const char *szValue, Lo
 			g_MapError.ReportError("parsing U axis definition");
 		}
 	}
-	else if (!stricmp(szKey, "vaxis"))
+	else if (V_strieq(szKey, "vaxis"))
 	{
 		int nRead = sscanf(szValue, "[%f %f %f %f] %f", &pSideInfo->td.VAxis[0], &pSideInfo->td.VAxis[1], &pSideInfo->td.VAxis[2], &pSideInfo->td.shift[1], &pSideInfo->td.textureWorldUnitsPerTexel[1]);
 		if (nRead != 5)
@@ -2868,7 +2868,7 @@ ChunkFileResult_t LoadSideKeyCallback(const char *szKey, const char *szValue, Lo
 			g_MapError.ReportError("parsing V axis definition");
 		}
 	}
-	else if (!stricmp(szKey, "lightmapscale"))
+	else if (V_strieq(szKey, "lightmapscale"))
 	{
 		// dimhotepus: atof -> strtof.
 		pSideInfo->td.lightmapWorldUnitsPerLuxel = strtof(szValue, nullptr);
@@ -2883,20 +2883,20 @@ ChunkFileResult_t LoadSideKeyCallback(const char *szKey, const char *szValue, Lo
 			pSideInfo->td.lightmapWorldUnitsPerLuxel = g_minLuxelScale;
 		}
 	}
-	else if (!stricmp(szKey, "contents"))
+	else if (V_strieq(szKey, "contents"))
 	{
 		pSideInfo->pSide->contents |= atoi(szValue);
 	}
-	else if (!stricmp(szKey, "flags"))
+	else if (V_strieq(szKey, "flags"))
 	{
 		pSideInfo->td.flags |= atoi(szValue);
 		pSideInfo->pSide->surf = pSideInfo->td.flags;
 	}
-	else if (!stricmp(szKey, "id"))
+	else if (V_strieq(szKey, "id"))
 	{
 		pSideInfo->pSide->id = atoi( szValue );
 	}
-	else if (!stricmp(szKey, "smoothing_groups"))
+	else if (V_strieq(szKey, "smoothing_groups"))
 	{
 		pSideInfo->pSide->smoothingGroups = atoi( szValue );
 	}
@@ -3124,7 +3124,7 @@ ChunkFileResult_t CMapFile::LoadSolidCallback(CChunkFile *pFile, LoadEntity_t *p
 //-----------------------------------------------------------------------------
 ChunkFileResult_t LoadSolidKeyCallback(const char *szKey, const char *szValue, mapbrush_t *pLoadBrush)
 {
-	if (!stricmp(szKey, "id"))
+	if (V_strieq(szKey, "id"))
 	{
 		pLoadBrush->id = atoi(szValue);
 		g_MapError.BrushState(pLoadBrush->id);

@@ -572,10 +572,13 @@ CDialogMenu::CDialogMenu() : BaseClass( NULL, "DialogMenu" )
 
 	m_pParent			= NULL;
 	m_pHeader			= NULL;
+	m_pScheme			= NULL;
+	m_szFilter[0]		= '\0';
 	m_bUseFilter		= false;
 	m_bHasHeader		= false;
 	m_nItemSpacing		= 0;
 	m_nMinWide			= 0;
+	m_bInitialized		= false;
 	m_nActive			= -1;
 	m_nActiveColumn		= -1;
 	m_nBaseRowIdx		= 0;
@@ -735,7 +738,7 @@ void CDialogMenu::ApplySettings( KeyValues *pResourceData )
 		const char *ppHeader[MAX_COLUMNS];
 		for ( KeyValues *pColumn = pColumnData->GetFirstSubKey(); pColumn != NULL; pColumn = pColumn->GetNextKey() )
 		{
-			if ( !Q_stricmp( pColumn->GetName(), "Column" ) )
+			if ( V_strieq( pColumn->GetName(), "Column" ) )
 			{
 				columninfo_s col;
 				col.bSortDown	= true;
@@ -791,7 +794,7 @@ void CDialogMenu::ApplySettings( KeyValues *pResourceData )
 		// Give our parent a chance to change the properties of this item
 		m_pParent->OverrideMenuItem( pMenuData );
 
-		if ( !Q_stricmp( pMenuData->GetName(), "CommandItem" ) )
+		if ( V_strieq( pMenuData->GetName(), "CommandItem" ) )
 		{
 			// New Command Item
 			const char *label		= pMenuData->GetString( "label", "<unknown>" );
@@ -800,7 +803,7 @@ void CDialogMenu::ApplySettings( KeyValues *pResourceData )
 
 			AddCommandItem( label, description, command );
 		}
-		else if ( !Q_stricmp( pMenuData->GetName(), "OptionsItem" ) )
+		else if ( V_strieq( pMenuData->GetName(), "OptionsItem" ) )
 		{
 			// New Options Item
 			COptionsItem *pItem = AddOptionsItem( pMenuData->GetString( "label", "<unknown>" ) );
@@ -812,7 +815,7 @@ void CDialogMenu::ApplySettings( KeyValues *pResourceData )
 			// Add all the options
 			for ( KeyValues *pValue = pMenuData->GetFirstSubKey(); pValue != NULL; pValue = pValue->GetNextKey() )
 			{
-				if ( !Q_stricmp( pValue->GetName(), "Option" ) )
+				if ( V_strieq( pValue->GetName(), "Option" ) )
 				{
 					sessionProperty_t prop;
 					prop.nType = SESSION_CONTEXT;

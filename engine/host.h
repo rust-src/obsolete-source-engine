@@ -6,16 +6,17 @@
 // $Date:         $
 // $NoKeywords: $
 //=============================================================================//
-#if !defined( HOST_H )
-#define HOST_H
-#ifdef _WIN32
-#pragma once
-#endif
+#ifndef SE_ENGINE_HOST_H
+#define SE_ENGINE_HOST_H
 
-#include "convar.h"
+#include <type_traits>
+
+#include "tier1/convar.h"
+#include "tier1/strtools.h"  // dimhotepus: For CORRECT_PATH_SEPARATOR_S 
 #include "steam/steamclientpublic.h"
 
-#define SCRIPT_DIR			"scripts/"
+// dimhotepus: Use correct path separator.
+#define SCRIPT_DIR			"scripts" CORRECT_PATH_SEPARATOR_S
 
 struct model_t;
 struct AudioState_t;
@@ -107,7 +108,6 @@ void Host_FreeToLowMark( bool server );
 void Host_FreeStateAndWorld( bool server );
 void Host_Disconnect( bool bShowMainMenu, const char *pszReason = "" );
 void Host_RunFrame( float time );
-void Host_DumpMemoryStats( void );
 void Host_UpdateMapList( void );
 float Host_GetSoundDuration( const char *pSample );
 bool Host_IsSinglePlayerGame( void );
@@ -136,7 +136,12 @@ class NET_SetConVar;
 void		Host_BuildConVarUpdateMessage( NET_SetConVar *cvarMsg, int flags, bool nonDefault );
 char const *Host_CleanupConVarStringValue( char const *invalue );
 void		Host_SetAudioState( const AudioState_t &audioState );
-void		Host_DefaultMapFileName( const char *pFullMapName, /* out */ char *pDiskName, unsigned int nDiskNameSize );
+void		Host_DefaultMapFileName( const char *pFullMapName, OUT_Z_CAP(nDiskNameSize) char *pDiskName, size_t nDiskNameSize );
+template<size_t nDiskNameSize>
+void		Host_DefaultMapFileName( const char *pFullMapName, INOUT_Z_ARRAY char (&pDiskName)[nDiskNameSize] )
+{
+	Host_DefaultMapFileName( pFullMapName, pDiskName, nDiskNameSize );
+}
 
 bool CheckVarRange_Generic( ConVar *pVar, int minVal, int maxVal );
 
@@ -148,14 +153,34 @@ extern int	host_frameticks;
 extern int	host_currentframetick;
 
 // PERFORMANCE INFO
-#define MIN_FPS         0.1F         // Host minimum fps value for maxfps.
-#define MAX_FPS         1000.0F        // Upper limit for maxfps.
+constexpr inline float MIN_FPS{0.1F};  // Host minimum fps value for maxfps.
+constexpr inline float MAX_FPS{1000.0F};  // Upper limit for maxfps.
 
-#define MAX_FRAMETIME	0.1F
-#define MIN_FRAMETIME	0.001F
+constexpr inline float MAX_FRAMETIME{0.1F};
+constexpr inline float MIN_FRAMETIME{1.0F / MAX_FPS};
 
-#define TIME_TO_TICKS( dt )		( (int)( 0.5f + (float)(dt) / host_state.interval_per_tick ) )
-#define TICKS_TO_TIME( dt )		( host_state.interval_per_tick * (float)(dt) )
+template<typename TDelta, typename TValue>
+using TimeDeltaConcept = typename std::enable_if_t<
+	std::is_integral_v<TDelta> ||
+	std::is_floating_point_v<TDelta>, TValue>;
+
+template<typename TDelta>
+[[nodiscard]]
+inline
+TimeDeltaConcept<TDelta, int>
+TIME_TO_TICKS( TDelta dt )
+{
+	return static_cast<int>( 0.5f + static_cast<float>( dt ) / host_state.interval_per_tick );
+}
+
+template<typename TDelta>
+[[nodiscard]]
+inline
+TimeDeltaConcept<TDelta, float>
+TICKS_TO_TIME( TDelta dt )
+{
+	return host_state.interval_per_tick * static_cast<float>( dt );
+}
 
 // Normally, this is off, and it keeps the VCR file size smaller, but it can help
 // to turn it on when tracking down out-of-sync errors, because it verifies that more
@@ -171,5 +196,5 @@ extern EUniverse GetSteamUniverse();
 #define STEAMREMOTESTORAGE_CLOUD_OFF	0
 #define STEAMREMOTESTORAGE_CLOUD_ON		1
 
-#endif // HOST_H
+#endif // !SE_ENGINE_HOST_H
 

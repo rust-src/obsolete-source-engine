@@ -8305,7 +8305,7 @@ void CTFPlayerShared::ProcessDisguiseImpulse( CTFPlayer *pPlayer )
 	if ( pPlayer->GetImpulse() > 200 )
 	{ 
 		char szImpulse[6];
-		Q_snprintf( szImpulse, sizeof( szImpulse ), "%d", pPlayer->GetImpulse() );
+		V_to_chars( szImpulse, pPlayer->GetImpulse() );
 
 		char szTeam[3];
 		Q_snprintf( szTeam, sizeof( szTeam ), "%c", szImpulse[1] );
@@ -11481,7 +11481,7 @@ const char *CTFPlayer::GetOverrideStepSound( const char *pszBaseStepSoundName )
 			if ( iOverrideFootstepSoundSet == s_ReplacementSounds[i].iOverrideIndex )
 			{
 				if ( !s_ReplacementSounds[i].pszBaseSoundName[0] ||
-					 !Q_stricmp( pszBaseStepSoundName, s_ReplacementSounds[i].pszBaseSoundName ) )
+					 V_strieq( pszBaseStepSoundName, s_ReplacementSounds[i].pszBaseSoundName ) )
 					return s_ReplacementSounds[i].pszNewSoundName;
 			}
 		}
@@ -13873,7 +13873,7 @@ void CTFPlayerShared::FireGameEvent( IGameEvent *event )
 #ifdef GAME_DLL
 	const char *eventName = event->GetName();
 
-	if ( !Q_strcmp( eventName, "player_disconnect" ) )
+	if ( V_streq( eventName, "player_disconnect" ) )
 	{
 		CBasePlayer *pPlayer = UTIL_PlayerByUserId( event->GetInt( "userid" ) );
 		if ( pPlayer )

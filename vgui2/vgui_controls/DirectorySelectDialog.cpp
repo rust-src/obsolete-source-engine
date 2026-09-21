@@ -93,7 +93,7 @@ public:
 
 	void OnCommand(const char *command) override
 	{
-		if (!stricmp(command, "OK"))
+		if (V_strieq(command, "OK"))
 		{
 			PostActionSignal(new KeyValues("CreateDirectory", "dir", GetControlString("NameEntry")));
 			Close();
@@ -262,7 +262,7 @@ void DirectorySelectDialog::ExpandTreeToPath( const char *lpszPath, bool bSelect
 			KeyValues *pValues = m_pDirTree->GetItemData( nChild );
 
 			// See if this matches
-			if ( Q_stricmp( pValues->GetString( "Text" ), subDirName ) == 0 )
+			if ( V_strieq( pValues->GetString( "Text" ), subDirName ) )
 			{
 				// This is the new root item
 				nItemIndex = nChild;
@@ -351,7 +351,7 @@ void DirectorySelectDialog::BuildDriveChoices()
 	{
 		kv->SetString("drive", pBuf);
 		int itemID = m_pDriveCombo->AddItem(pBuf, kv);
-		if (!stricmp(pBuf, m_szCurrentDrive))
+		if (V_strieq(pBuf, m_szCurrentDrive))
 		{
 			m_pDriveCombo->ActivateItem(itemID);
 		}
@@ -398,7 +398,7 @@ void DirectorySelectDialog::ExpandTreeNode(const char *path, intp parentNodeInde
 
 	for ( ; pFileName; pFileName = g_pFullFileSystem->FindNext( h ) )
 	{
-		if ( !Q_stricmp( pFileName, ".." ) || !Q_stricmp( pFileName, "." ) )
+		if ( V_streq( pFileName, ".." ) || V_streq( pFileName, "." ) )
 			continue;
 
 		KeyValuesAD kv("item");
@@ -553,11 +553,11 @@ void DirectorySelectDialog::OnClose()
 //-----------------------------------------------------------------------------
 void DirectorySelectDialog::OnCommand(const char *command)
 {
-	if (!stricmp(command, "Cancel"))
+	if (V_strieq(command, "Cancel"))
 	{
 		Close();
 	}
-	else if (!stricmp(command, "Select"))
+	else if (V_strieq(command, "Select"))
 	{
 		// path selected
 		intp selectedIndex = m_pDirTree->GetFirstSelectedItem();
@@ -569,7 +569,7 @@ void DirectorySelectDialog::OnCommand(const char *command)
 			Close();
 		}
 	}
-	else if (!stricmp(command, "Create"))
+	else if (V_strieq(command, "Create"))
 	{
 		intp selectedIndex = m_pDirTree->GetFirstSelectedItem();
 		if (m_pDirTree->IsItemIDValid(selectedIndex))

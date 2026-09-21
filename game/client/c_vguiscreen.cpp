@@ -645,12 +645,6 @@ C_VGuiScreen *CVGuiScreenEnumerator::GetVGuiScreen( int index )
 //-----------------------------------------------------------------------------
 C_BaseEntity *FindNearbyVguiScreen( const Vector &viewPosition, const QAngle &viewAngle, int nTeam )
 {
-	if ( IsX360() )
-	{
-		// X360TBD: Turn this on if feature actually used
-		return NULL;
-	}
-
 	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
 
 	Assert( pLocalPlayer );
@@ -779,7 +773,7 @@ CVGuiScreenPanel::CVGuiScreenPanel( vgui::Panel *parent, const char *panelName, 
 bool CVGuiScreenPanel::Init( KeyValues* pKeyValues, VGuiScreenInitData_t* pInitData )
 {
 	const char *pResFile = pKeyValues->GetString( "resfile" );
-	if (pResFile[0] != 0)
+	if (!Q_isempty( pResFile ))
 	{
 		LoadControlSettings( pResFile, NULL, NULL );
 	}

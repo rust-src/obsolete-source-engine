@@ -333,7 +333,7 @@ HScheme CSchemeManager::FindLoadedScheme(const char *fileName)
 	for (intp i = 1; i < m_Schemes.Count(); i++)
 	{
 		char const *schemeFileName = m_Schemes[i]->GetFileName();
-		if (!stricmp(schemeFileName, fileName))
+		if (V_strieq(schemeFileName, fileName))
 			return i;
 	}
 
@@ -673,13 +673,13 @@ void CScheme::SetFontRange( const char *fontname, int nMin, int nMax )
 void CScheme::LoadFonts()
 {
 	char language[64];
-	memset( language, 0, sizeof( language ) );
+	BitwiseClear( language );
 
 	// get our language
 	bool bValid = vgui::g_pSystem->GetRegistryString( "HKEY_CURRENT_USER\\Software\\Valve\\Source\\Language", language, sizeof( language ) - 1 );
 	if ( !bValid )
 	{
-		Q_strncpy( language, "english", sizeof( language ) );
+		V_strcpy_safe( language, "english" );
 	}
 
 	// add our custom fonts
@@ -700,18 +700,18 @@ void CScheme::LoadFonts()
 			for ( KeyValues *pData = kv->GetFirstSubKey(); pData != NULL; pData = pData->GetNextKey() )
 			{
 				const char *pszKey = pData->GetName();
-				if ( !Q_stricmp( pszKey, "font" ) )
+				if ( V_strieq( pszKey, "font" ) )
 				{
 					fontFile = pData->GetString();
 				}
-				else if ( !Q_stricmp( pszKey, "name" ) )
+				else if ( V_strieq( pszKey, "name" ) )
 				{
 					pszName = pData->GetString();
 				}
 				else
 				{
 					// we must have a language
-					if ( Q_stricmp( language, pszKey ) == 0 ) // matches the language we're running?
+					if ( V_strieq( language, pszKey ) ) // matches the language we're running?
 					{
 						// get the range
 						KeyValues *pRange = pData->FindKey( "range" );
@@ -997,11 +997,11 @@ void CScheme::LoadBorders()
 			const char *pszBorderType = kv->GetString( "bordertype", NULL );
 			if ( pszBorderType && pszBorderType[0] )
 			{
-				if ( !stricmp(pszBorderType,"image") )
+				if ( V_strieq(pszBorderType,"image") )
 				{
 					border = new ImageBorder();
 				}
-				else if ( !stricmp(pszBorderType,"scalable_image") )
+				else if ( V_strieq(pszBorderType,"scalable_image") )
 				{
 					border = new ScalableImageBorder();
 				}
@@ -1129,7 +1129,7 @@ HScheme CSchemeManager::GetScheme(const char *tag)
 {
 	for (intp i=1;i<m_Schemes.Count();i++)
 	{
-		if ( !stricmp(tag,m_Schemes[i]->GetName()) )
+		if ( V_strieq(tag,m_Schemes[i]->GetName()) )
 		{
 			return i;
 		}
@@ -1276,7 +1276,7 @@ IImage *CSchemeManager::GetImage(const char *imageName, bool hardwareFiltered, b
 
 	if ( Q_stristr( imageName, ".pic" ) )
 	{
-		V_sprintf_safe( szFileName, "%s", imageName );
+		V_strcpy_safe( szFileName, imageName );
 	}
 	else
 	{
@@ -1337,7 +1337,7 @@ bool CSchemeManager::DeleteImage( const char *pImageName )
 	char szFileName[256];
 	if ( Q_stristr( pImageName, ".pic" ) )
 	{
-		Q_snprintf( szFileName, sizeof(szFileName), "%s", pImageName );
+		V_strcpy_safe( szFileName, pImageName );
 	}
 	else
 	{
@@ -1534,16 +1534,16 @@ int CScheme::GetMinimumFontHeightForCurrentLanguage()
 	bool bValid = vgui::g_pSystem->GetRegistryString( "HKEY_CURRENT_USER\\Software\\Valve\\Source\\Language", language, sizeof(language)-1 );
 	if ( bValid )
 	{
-		if (!stricmp(language, "korean")
-			|| !stricmp(language, "tchinese")
-			|| !stricmp(language, "schinese")
-			|| !stricmp(language, "japanese"))
+		if (V_strieq(language, "korean")
+			|| V_strieq(language, "tchinese")
+			|| V_strieq(language, "schinese")
+			|| V_strieq(language, "japanese"))
 		{
 			// the bitmap-based fonts for these languages simply don't work with a pt. size of less than 9 (13 pixels)
 			return 13;
 		}
 
-		if ( !stricmp(language, "thai" ) )
+		if ( V_strieq(language, "thai" ) )
 		{
 			// thai has problems below 18 pts
 			return 18;

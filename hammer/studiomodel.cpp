@@ -50,7 +50,7 @@ public:
 
 private:
 	// CFileChangeWatcher::ICallbacks..
-	virtual void OnFileChange( const char *pRelativeFilename, const char *pFullFilename );
+	void OnFileChange( const char *pRelativeFilename, const char *pFullFilename ) override;
 
 private:
 	CFileChangeWatcher m_Watcher;
@@ -94,7 +94,7 @@ StudioModel *CStudioModelCache::FindModel(const char *pszModelPath)
 		V_strncpy( testPath2, m_Cache[i].pszPath, sizeof( testPath2 ) );
 		V_FixSlashes( testPath2 );
 		
-		if (!stricmp(testPath, testPath2))
+		if (V_strieq(testPath, testPath2))
 		{
 			m_Cache[i].nRefCount++;
 			return(m_Cache[i].pModel);
@@ -299,10 +299,10 @@ void CStudioFileChangeWatcher::OnFileChange( const char *pRelativeFilename, cons
 	if ( !pExt )
 		return;			 
 		
-	if ( V_stricmp( pExt, "mdl" ) == 0 ||
-		 V_stricmp( pExt, "vtx" ) == 0 ||
-		 V_stricmp( pExt, "phy" ) == 0 ||
-		 V_stricmp( pExt, "vvd" ) == 0 )
+	if ( V_strieq( pExt, "mdl" ) ||
+		 V_strieq( pExt, "vtx" ) ||
+		 V_strieq( pExt, "phy" ) ||
+		 V_strieq( pExt, "vvd" ) )
 	{
 		// Ok, it's at least related to a model. Flush out the model.
 		char tempFilename[MAX_PATH];

@@ -307,7 +307,7 @@ void CTFStats::CollectFrameStats( )
 	for (int i = 0; i < MAX_TF_TEAMS; ++i)
 	{
 		CTFTeam *pTeam = GetGlobalTFTeam(i);
-		for (int j = pTeam->GetNumPlayers(); --j >= 0; )
+		for (intp j = pTeam->GetNumPlayers(); --j >= 0; )
 		{
 			CBaseTFPlayer *pPlayer = static_cast<CBaseTFPlayer*>(pTeam->GetPlayer(j));
 			if (!pPlayer)
@@ -377,7 +377,7 @@ void CTFStats::CollectStats( )
 
 		bool bClassEncountered[TFCLASS_CLASS_COUNT];
 		memset( bClassEncountered, 0, TFCLASS_CLASS_COUNT * sizeof(bool) );
-		for (int j = pTeam->GetNumPlayers(); --j >= 0; )
+		for (intp j = pTeam->GetNumPlayers(); --j >= 0; )
 		{
 			bAtLeastOnePlayer = true;
 

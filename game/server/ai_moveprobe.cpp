@@ -331,7 +331,7 @@ bool CAI_MoveProbe::CheckStep( const CheckStepArgs_t &args, CheckStepResult_t *p
 				if ( landingTrace.fraction < 1 )
 				{
 					if ( g_bAIDebugStep )
-						NDebugOverlay::Box( landingTrace.endpos, WorldAlignMins() + Vector(0, 0, 0.1), WorldAlignMaxs() + Vector(0, 0, 0.1), 255, 0, 0, 0, 5 );
+						NDebugOverlay::Box( landingTrace.endpos, WorldAlignMins() + Vector(0, 0, 0.1f), WorldAlignMaxs() + Vector(0, 0, 0.1f), 255, 0, 0, 0, 5 );
 
 					bRejectStep = true;
 					if ( landingTrace.m_pEnt )
@@ -341,7 +341,7 @@ bool CAI_MoveProbe::CheckStep( const CheckStepArgs_t &args, CheckStepResult_t *p
 			else if ( ( stepTrace.endpos.AsVector2D() - stepStart.AsVector2D() ).LengthSqr() < requiredLandingDistSq )
 			{
 				if ( g_bAIDebugStep )
-					NDebugOverlay::Box( stepTrace.endpos, WorldAlignMins() + Vector(0, 0, 0.1), WorldAlignMaxs() + Vector(0, 0, 0.1), 255, 0, 0, 0, 5 );
+					NDebugOverlay::Box( stepTrace.endpos, WorldAlignMins() + Vector(0, 0, 0.1f), WorldAlignMaxs() + Vector(0, 0, 0.1f), 255, 0, 0, 0, 5 );
 
 				bRejectStep = true;
 			}
@@ -368,7 +368,7 @@ bool CAI_MoveProbe::CheckStep( const CheckStepArgs_t &args, CheckStepResult_t *p
 	AI_PROFILE_SCOPE_BEGIN( CAI_Motor_CheckStep_Down );
 	// seems okay, now find the ground
 	// The ground is only valid if it's within a step height of the original position
-	Assert( VectorsAreEqual( trace.endpos, stepEnd, 1e-3 ) );
+	Assert( VectorsAreEqual( trace.endpos, stepEnd, 1e-3f ) );
 	stepStart = stepEnd; 
 	stepEnd.z = args.vecStart.z - args.stepHeight * args.stepDownMultiplier - MOVE_HEIGHT_EPSILON;
 
@@ -594,13 +594,13 @@ bool CAI_MoveProbe::TestGroundMove( const Vector &vecActualStart, const Vector &
 		{
 			if ( !CheckStandPosition(checkStepResult.endPoint, collisionMask) )
 			{
-				NDebugOverlay::Box( checkStepResult.endPoint, WorldAlignMins(), WorldAlignMaxs(), 255, 0, 0, 0, 0.1 );
-				NDebugOverlay::Cross3D( checkStepResult.endPoint, 16, 255, 0, 0, true, 0.1 );
+				NDebugOverlay::Box( checkStepResult.endPoint, WorldAlignMins(), WorldAlignMaxs(), 255, 0, 0, 0, 0.1f );
+				NDebugOverlay::Cross3D( checkStepResult.endPoint, 16, 255, 0, 0, true, 0.1f );
 			}
 			else
 			{
-				NDebugOverlay::Box( checkStepResult.endPoint, WorldAlignMins(), WorldAlignMaxs(), 0, 255, 0, 0, 0.1 );
-				NDebugOverlay::Cross3D( checkStepResult.endPoint, 16, 0, 255, 0, true, 0.1 );
+				NDebugOverlay::Box( checkStepResult.endPoint, WorldAlignMins(), WorldAlignMaxs(), 0, 255, 0, 0, 0.1f );
+				NDebugOverlay::Cross3D( checkStepResult.endPoint, 16, 0, 255, 0, true, 0.1f );
 			}
 		}
 

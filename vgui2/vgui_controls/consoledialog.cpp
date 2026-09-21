@@ -191,47 +191,14 @@ void CHistoryItem::SetText( const char *text, const char *extra )
 // Console page completion item starts here
 //
 //-----------------------------------------------------------------------------
-CConsolePanel::CompletionItem::CompletionItem( void )
+CConsolePanel::CompletionItem::CompletionItem()
+	: m_bIsCommand{true},
+	m_pCommand{nullptr},
+	m_pText{nullptr}
 {
-	m_bIsCommand = true;
-	m_pCommand = NULL;
-	m_pText = NULL;
 }
 
-CConsolePanel::CompletionItem::CompletionItem( const CompletionItem& src )
-{
-	m_bIsCommand = src.m_bIsCommand;
-	m_pCommand = src.m_pCommand;
-	if ( src.m_pText )
-	{
-		m_pText = new CHistoryItem( *src.m_pText );
-	}
-	else
-	{
-		m_pText = NULL;
-	}
-}
-
-CConsolePanel::CompletionItem& CConsolePanel::CompletionItem::operator =( const CompletionItem& src )
-{
-	if ( this == &src )
-		return *this;
-
-	m_bIsCommand = src.m_bIsCommand;
-	m_pCommand = src.m_pCommand;
-	if ( src.m_pText )
-	{
-		m_pText = new CHistoryItem( *src.m_pText );
-	}
-	else
-	{
-		m_pText = NULL;
-	}
-
-	return *this;
-}
-
-CConsolePanel::CompletionItem::~CompletionItem( void )
+CConsolePanel::CompletionItem::~CompletionItem()
 {
 	if ( m_pText )
 	{
@@ -247,7 +214,7 @@ const char *CConsolePanel::CompletionItem::GetName() const
 	return m_pCommand ? m_pCommand->GetName() : GetCommand();
 }
 
-const char *CConsolePanel::CompletionItem::GetItemText( void )
+const char *CConsolePanel::CompletionItem::GetItemText() const
 {
 	static char text[256];
 	text[0] = 0;
@@ -265,7 +232,7 @@ const char *CConsolePanel::CompletionItem::GetItemText( void )
 	return text;
 }	
 
-const char *CConsolePanel::CompletionItem::GetCommand( void ) const
+const char *CConsolePanel::CompletionItem::GetCommand() const
 {
 	static char text[256];
 	text[0] = 0;
@@ -329,6 +296,7 @@ CConsolePanel::CConsolePanel( vgui::Panel *pParent, const char *pName, bool bSta
 
 	m_pEntry->SetTabPosition(1);
 
+	m_iNextCompletion = 0;
 	m_bAutoCompleteMode = false;
 	m_szPartialText[0] = 0;
 	m_szPreviousPartialText[0]=0;
@@ -343,9 +311,9 @@ CConsolePanel::CConsolePanel( vgui::Panel *pParent, const char *pName, bool bSta
 //-----------------------------------------------------------------------------
 CConsolePanel::~CConsolePanel()
 {
+	g_pCVar->RemoveConsoleDisplayFunc( this );
 	ClearCompletionList();
 	m_CommandHistory.Purge();
-	g_pCVar->RemoveConsoleDisplayFunc( this );
 }
 
 
@@ -441,6 +409,26 @@ static ConCommand *FindAutoCompleteCommmandFromPartial( const char *partial )
 	return cmd;
 }
 
+// dimhotepus: Add chained commands autocomplete (callumok2004).
+static intp FindChainedPrefix( const char *szText )
+{
+	bool bInQuotes = false;
+	const char *pLastSplit = nullptr;
+	for ( const char *p = szText; *p; p++ )
+	{
+		if ( *p == '"' )
+			bInQuotes = !bInQuotes;
+		else if ( *p == ';' && !bInQuotes )
+			pLastSplit = p;
+	}
+	if ( !pLastSplit )
+		return 0;
+	pLastSplit++;
+	while ( *pLastSplit == ' ' )
+		pLastSplit++;
+	return pLastSplit - szText;
+}
+
 
 //-----------------------------------------------------------------------------
 // Purpose: rebuilds the list of possible completions from the current entered text
@@ -457,11 +445,10 @@ void CConsolePanel::RebuildCompletionList(const char *text)
 		for ( const auto &item : m_CommandHistory )
 		{
 			auto *comp = new CompletionItem();
-			m_CompletionList.AddToTail( comp );
-
 			comp->m_bIsCommand = false;
 			comp->m_pCommand = nullptr;
 			comp->m_pText = new CHistoryItem( item );
+			m_CompletionList.AddToTail( comp );
 		}
 		return;
 	}
@@ -563,6 +550,19 @@ void CConsolePanel::RebuildCompletionList(const char *text)
 	}
 }
 
+// dimhotepus: Add chained commands autocomplete (callumok2004).
+static void SetAutocompleteEntryText( const char *pszPartial, vgui::TextEntry *pEntry, const char *pszCompleted )
+{
+	intp nPrefix = FindChainedPrefix( pszPartial );
+	char szFull[512];
+	if ( nPrefix > 0 )
+		V_sprintf_safe( szFull, "%.*s%s", nPrefix, pszPartial, pszCompleted );
+	else
+		V_strcpy_safe( szFull, pszCompleted );
+
+	pEntry->SetText( szFull );
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: auto completes current text
 //-----------------------------------------------------------------------------
@@ -616,7 +616,9 @@ void CConsolePanel::OnAutoComplete(bool reverse)
 		V_strcat_safe(completedText, " " );
 	}
 
-	m_pEntry->SetText(completedText);
+	// dimhotepus: Add chained commands autocomplete (callumok2004).
+	SetAutocompleteEntryText( m_szPartialText, m_pEntry, completedText );
+
 	m_pEntry->GotoTextEnd();
 	m_pEntry->SelectNone();
 
@@ -669,7 +671,9 @@ void CConsolePanel::OnTextChanged(Panel *panel)
 	// clear auto-complete state since the user has typed
 	m_bAutoCompleteMode = false;
 
-	RebuildCompletionList(m_szPartialText);
+	// dimhotepus: Add chained commands autocomplete (callumok2004).
+	intp nPrefix = FindChainedPrefix( m_szPartialText );
+	RebuildCompletionList( m_szPartialText + nPrefix );
 
 	// build the menu
 	if ( m_CompletionList.Count() < 1 )
@@ -715,7 +719,7 @@ void CConsolePanel::OnTextChanged(Panel *panel)
 //-----------------------------------------------------------------------------
 void CConsolePanel::OnCommand(const char *command)
 {
-	if ( !Q_stricmp( command, "Submit" ) )
+	if ( V_strieq( command, "Submit" ) )
 	{
 		// submit the entry as a console commmand
 		char szCommand[256];
@@ -929,7 +933,12 @@ void CConsolePanel::OnMenuItemSelected(const char *command)
 	}
 	else
 	{
-		m_pEntry->SetText(command);
+		char szEntry[256];
+		m_pEntry->GetText( szEntry );
+
+		// dimhotepus: Add chained commands autocomplete (callumok2004).
+		SetAutocompleteEntryText( szEntry, m_pEntry, command );
+
 		m_pEntry->GotoTextEnd();
 		m_pEntry->InsertChar(' ');
 		m_pEntry->GotoTextEnd();
@@ -1015,7 +1024,7 @@ void CConsolePanel::AddToHistory( const char *commandText, const char *extraText
 	RebuildCompletionList( m_szPartialText );
 }
 
-void CConsolePanel::GetConsoleText( char *pchText, intp bufSize ) const
+void CConsolePanel::GetConsoleText( char *pchText, int bufSize ) const
 {
 	// dimhotepus: Use unique_ptr<[]>. Can't allocate on stack as text may be long.
 	std::unique_ptr<wchar_t[]> temp = std::make_unique<wchar_t[]>( bufSize );

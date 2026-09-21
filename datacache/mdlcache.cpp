@@ -266,8 +266,8 @@ struct ModelParts_t
 	int				nExpectedParts;
 
 private:
-	ModelParts_t(const ModelParts_t&); // no impl
-	ModelParts_t& operator=(const ModelParts_t&); // no impl
+	ModelParts_t(const ModelParts_t&) = delete;
+	ModelParts_t& operator=(const ModelParts_t&) = delete;
 };
 
 struct CleanupModelParts_t
@@ -771,9 +771,9 @@ void CMDLCache::InitStudioData( MDLHandle_t handle )
 {
 	Assert( m_MDLDict[handle] == NULL );
 
-	studiodata_t *pStudioData = new studiodata_t;
+	auto *pStudioData = new studiodata_t;
+	memset( pStudioData, 0, sizeof( *pStudioData ) );
 	m_MDLDict[handle] = pStudioData;
-	memset( pStudioData, 0, sizeof( studiodata_t ) );
 }
 
 void CMDLCache::ShutdownStudioData( MDLHandle_t handle )
@@ -939,7 +939,7 @@ void CMDLCache::UnserializeVCollide( MDLHandle_t handle, bool synchronousLoad )
 	{
 		// clear existing data
 		pStudioData->m_nFlags &= ~STUDIODATA_FLAGS_VCOLLISION_LOADED;
-		memset( &pStudioData->m_VCollisionData, 0, sizeof( pStudioData->m_VCollisionData ) );
+		BitwiseClear( pStudioData->m_VCollisionData );
 
 #if 0
 		// FIXME:  ywb
@@ -1605,7 +1605,7 @@ void CMDLCache::UnloadHardwareData( MDLHandle_t handle, [[maybe_unused]] bool bC
 		MdlCacheMsg("MDLCache: Unload studiomdl %s\n", GetModelName( handle ) );
 
 		g_pStudioRender->UnloadModel( &pStudioData->m_HardwareData );
-		memset( &pStudioData->m_HardwareData, 0, sizeof( pStudioData->m_HardwareData ) );
+		BitwiseClear( pStudioData->m_HardwareData );
 		pStudioData->m_nFlags &= ~STUDIODATA_FLAGS_STUDIOMESH_LOADED;
 
 		NotifyFileUnloaded( handle, ".mdl" );
@@ -3518,7 +3518,7 @@ bool CMDLCache::PreloadModel( MDLHandle_t handle )
 
 	if ( bNeedsMDL )
 	{
-		V_snprintf( szNameOnDisk, sizeof( szNameOnDisk ), "%s%s.mdl", szFilename, GetPlatformExt() );
+		V_sprintf_safe( szNameOnDisk, "%s%s.mdl", szFilename, GetPlatformExt() );
 		loaderJob.m_pFilename = szNameOnDisk;
 		loaderJob.m_pContext2 = (void *)ModelParts_t::BUFFER_MDL;
 		g_pQueuedLoader->AddJob( &loaderJob );
@@ -3529,7 +3529,7 @@ bool CMDLCache::PreloadModel( MDLHandle_t handle )
 	{
 		// vtx extensions are .xxx.vtx, need to re-form as, ???.xxx.yyy.vtx
 		char szTempName[MAX_PATH];
-		V_snprintf( szNameOnDisk, sizeof( szNameOnDisk ), "%s%s", szFilename, GetVTXExtension() );
+		V_sprintf_safe( szNameOnDisk, "%s%s", szFilename, GetVTXExtension() );
 		V_StripExtension( szNameOnDisk, szTempName );
 		V_sprintf_safe( szNameOnDisk, "%s%s.vtx", szTempName, GetPlatformExt() );
 		loaderJob.m_pFilename = szNameOnDisk;
@@ -3540,7 +3540,7 @@ bool CMDLCache::PreloadModel( MDLHandle_t handle )
 
 	if ( bNeedsVVD )
 	{
-		V_snprintf( szNameOnDisk, sizeof( szNameOnDisk ), "%s%s.vvd", szFilename, GetPlatformExt() );
+		V_sprintf_safe( szNameOnDisk, "%s%s.vvd", szFilename, GetPlatformExt() );
 		loaderJob.m_pFilename = szNameOnDisk;
 		loaderJob.m_pContext2 = (void *)(intp)ModelParts_t::BUFFER_VVD;
 		g_pQueuedLoader->AddJob( &loaderJob );
@@ -3549,7 +3549,7 @@ bool CMDLCache::PreloadModel( MDLHandle_t handle )
 
 	if ( bNeedsPHY )
 	{
-		V_snprintf( szNameOnDisk, sizeof( szNameOnDisk ), "%s%s.phy", szFilename, GetPlatformExt() );
+		V_sprintf_safe( szNameOnDisk, "%s%s.phy", szFilename, GetPlatformExt() );
 		loaderJob.m_pFilename = szNameOnDisk;
 		loaderJob.m_pContext2 = (void *)(intp)ModelParts_t::BUFFER_PHY;
 		g_pQueuedLoader->AddJob( &loaderJob );

@@ -65,29 +65,28 @@ void SafeCopy( const char *pSrcFilename, const char *pDestFilename )
 	FileHandle_t fpSrc = g_pFullFileSystem->Open( pSrcFilename, "rb" );
 	if ( fpSrc )
 	{
+		RunCodeAtScopeExit(g_pFullFileSystem->Close( fpSrc ));
+
 		FILE *fpDest = fopen( pDestFilename, "wb" );
 		if ( fpDest )
 		{
+			RunCodeAtScopeExit(fclose( fpDest ));
+
 			while ( 1 )
 			{
 				char tempData[4096];
-				int nBytesRead = g_pFullFileSystem->Read( tempData, sizeof( tempData ), fpSrc );
+				int nBytesRead = g_pFullFileSystem->Read( tempData, fpSrc );
 				if ( nBytesRead )
 					fwrite( tempData, 1, nBytesRead, fpDest );
 
 				if ( nBytesRead < sizeof( tempData ) )
 					break;
 			}
-
-			fclose( fpDest );
 		}
 		else
 		{
 			Warning( "SafeCopy: can't open %s for writing.", pDestFilename );
 		}
-
-
-		g_pFullFileSystem->Close( fpSrc );
 	}
 	else
 	{
@@ -207,7 +206,7 @@ public:
 		{
 			// Write file that ensures we never perform this check again
 			fp = g_pFullFileSystem->Open( SHOW_DEPRECATED_APP_ID_MARKER, "wb" );
-			g_pFullFileSystem->Close( fp );
+			RunCodeAtScopeExit(g_pFullFileSystem->Close( fp ));
 
 			//
 			// Look for all of the mods under 'SourceMods', check if the SteamAppId is out of date, and warn the user if 
@@ -240,8 +239,7 @@ public:
 				// GameInfo.txt exists so let's inspect it...
 				if ( fpGameInfo )
 				{
-					// Close the file handle
-					g_pFullFileSystem->Close( fpGameInfo );
+					RunCodeAtScopeExit(g_pFullFileSystem->Close( fpGameInfo ));
 				
 					// Load up the "gameinfo.txt"
 					KeyValues *pMainFile, *pFileSystemInfo, *pSearchPaths;
@@ -252,7 +250,7 @@ public:
 						const int iAppId = pFileSystemInfo->GetInt( "SteamAppId", -1 );
 
 						// This is the one that needs replacing add this mod to the list of suspect mods
-                  if ( GetAppSteamAppId( k_App_HL2 ) == iAppId)
+                  		if ( GetAppSteamAppId( k_App_HL2 ) == iAppId)
 						{
 							bProblemModExists = true;
 							Q_strncat( szProblemMods, modDirs[i], MAX_PATH , COPY_ALL_CHARACTERS );
@@ -288,7 +286,7 @@ public:
 
 		// Remember that we showed it.
 		fp = g_pFullFileSystem->Open( SHOW_MIGRATION_MARKER, "wb" );
-		g_pFullFileSystem->Close( fp );
+		RunCodeAtScopeExit( g_pFullFileSystem->Close( fp ) );
 
 		OpenLocalizedURL( "URL_Content_Migration_Notice" );
 	}
@@ -329,32 +327,35 @@ void GetMinFootprintFiles_R( CUtlVector<CMinFootprintFilename> &filenames, const
 	// Make sure the dest directory exists for when we're copying files into it.
 	CreateDirectory( pDestDirName, NULL );
 
-	// Look at all the files.
-	FileFindHandle_t findHandle;
-	const char *pFilename = g_pFullFileSystem->FindFirstEx( wildcard, SDKLAUNCHER_MAIN_PATH_ID, &findHandle );
-	while ( pFilename )
 	{
-		if ( Q_stricmp( pFilename, "." ) != 0 && Q_stricmp( pFilename, ".." ) != 0 )
-		{
-			char fullSrcFilename[MAX_PATH], fullDestFilename[MAX_PATH];
-			Q_snprintf( fullSrcFilename, sizeof( fullSrcFilename ), "%s%c%s", pSrcDirName, CORRECT_PATH_SEPARATOR, pFilename );
-			Q_snprintf( fullDestFilename, sizeof( fullDestFilename ), "%s%c%s", pDestDirName, CORRECT_PATH_SEPARATOR, pFilename );
+		// Look at all the files.
+		FileFindHandle_t findHandle;
+		const char *pFilename = g_pFullFileSystem->FindFirstEx( wildcard, SDKLAUNCHER_MAIN_PATH_ID, &findHandle );
+		RunCodeAtScopeExit(g_pFullFileSystem->FindClose( findHandle ));
 
-			if ( g_pFullFileSystem->FindIsDirectory( findHandle ) )
+		while ( pFilename )
+		{
+			if ( !V_streq( pFilename, "." ) && !V_streq( pFilename, ".." ) )
 			{
-				CTempDirName *pOut = &subDirs[subDirs.AddToTail()];
-				Q_strncpy( pOut->m_SrcDirName, fullSrcFilename, sizeof( pOut->m_SrcDirName ) );
-				Q_strncpy( pOut->m_DestDirName, fullDestFilename, sizeof( pOut->m_DestDirName ) );
+				char fullSrcFilename[MAX_PATH], fullDestFilename[MAX_PATH];
+				Q_snprintf( fullSrcFilename, sizeof( fullSrcFilename ), "%s%c%s", pSrcDirName, CORRECT_PATH_SEPARATOR, pFilename );
+				Q_snprintf( fullDestFilename, sizeof( fullDestFilename ), "%s%c%s", pDestDirName, CORRECT_PATH_SEPARATOR, pFilename );
+
+				if ( g_pFullFileSystem->FindIsDirectory( findHandle ) )
+				{
+					CTempDirName *pOut = &subDirs[subDirs.AddToTail()];
+					Q_strncpy( pOut->m_SrcDirName, fullSrcFilename, sizeof( pOut->m_SrcDirName ) );
+					Q_strncpy( pOut->m_DestDirName, fullDestFilename, sizeof( pOut->m_DestDirName ) );
+				}
+				else
+				{
+					AddMinFootprintFile( filenames, fullSrcFilename, fullDestFilename, 0 );
+				}
 			}
-			else
-			{
-				AddMinFootprintFile( filenames, fullSrcFilename, fullDestFilename, 0 );
-			}
+			
+			pFilename = g_pFullFileSystem->FindNext( findHandle );
 		}
-		
-		pFilename = g_pFullFileSystem->FindNext( findHandle );
 	}
-	g_pFullFileSystem->FindClose( findHandle );
 	
 	// Recurse.
 	for ( int i=0; i < subDirs.Count(); i++ )
@@ -412,7 +413,7 @@ void DumpMinFootprintFiles( bool bForceRefresh )
 	// NOTE: copy files that are set to always_copy whether the version changed or not.
 	for ( KeyValues *pCur=pFileList->GetFirstSubKey(); pCur; pCur=pCur->GetNextKey() )
 	{
-		if ( ( Q_stricmp( pCur->GetName(), "mapping" ) == 0 ) && bVersionChanged )
+		if ( V_strieq( pCur->GetName(), "mapping" ) && bVersionChanged )
 		{
 			const char *pSrcMapping  = pCur->GetString( "src" );
 			const char *pDestMapping = pCur->GetString( "dest" );
@@ -423,7 +424,7 @@ void DumpMinFootprintFiles( bool bForceRefresh )
 
 			GetMinFootprintFiles_R( pDisplay->m_Filenames, pSrcMapping, destDir );
 		}
-		else if ( Q_stricmp( pCur->GetName(), "single_file" ) == 0 )
+		else if ( V_strieq( pCur->GetName(), "single_file" ) )
 		{
 			const char *pDestMapping = pCur->GetString();
 			
@@ -451,7 +452,7 @@ void DumpMinFootprintFiles( bool bForceRefresh )
 				AddMinFootprintFile( pDisplay->m_Filenames, pDestMapping, destFile, flags );
 			}
 		}
-		else if ( ( Q_stricmp( pCur->GetName(), "create_directory" ) == 0 ) && bVersionChanged )
+		else if ( V_strieq( pCur->GetName(), "create_directory" ) && bVersionChanged )
 		{
 			// Create an empty directory?
 			char destFile[MAX_PATH], destFileTemp[MAX_PATH];

@@ -616,7 +616,7 @@ static bool SetWanderGoalByRandomVector(CAI_Navigator *pNav, float minRadius, fl
 	while (--numTries >= 0)
 	{
 		float dist = random->RandomFloat( minRadius, maxRadius );
-		Vector dir = UTIL_YawToVector( random->RandomFloat( 0, 359.99 ) );
+		Vector dir = UTIL_YawToVector( random->RandomFloat( 0, 359.99f ) );
 
 		if ( pNav->SetVectorGoal( dir, dist, minRadius ) )
 			return true;
@@ -2188,7 +2188,7 @@ bool CAI_Navigator::OnMoveBlocked( AIMoveResult_t *pResult )
 
 	SetActivity( GetOuter()->GetStoppedActivity() );
 
-	constexpr float EPS = 0.1;
+	constexpr float EPS = 0.1f;
 	
 	flWaypointDist = ComputePathDistance( GetNavType(), GetLocalOrigin(), GetPath()->ActualGoalPosition() );
 
@@ -2655,11 +2655,11 @@ float CAI_Navigator::GetStepDownMultiplier()
 	if ( m_hBigStepGroundEnt )
 	{
 		if ( !m_hBigStepGroundEnt->IsPlayer() )
-			return 2.6;
+			return 2.6f;
 		else
-			return 10.0;
+			return 10.0f;
 	}
-	return 1.0;
+	return 1.0f;
 }
 
 //-----------------------------------------------------------------------------
@@ -2730,7 +2730,7 @@ ConVar ai_disable_path_simplification( "ai_disable_path_simplification","0" );
 #define IsSimplifyPathDisabled() false
 #endif
 
-constexpr inline float MIN_ANGLE_COS_SIMPLIFY = 0.766; // 40 deg left or right
+constexpr inline float MIN_ANGLE_COS_SIMPLIFY = 0.766f; // 40 deg left or right
 
 bool CAI_Navigator::ShouldAttemptSimplifyTo( const Vector &pos )
 {
@@ -2999,16 +2999,16 @@ bool CAI_Navigator::SimplifyPathQuick()
 	static SimplifyForwardScanParams quickScanParams[2] = 
 	{ 
 		{
-			(12.0 * 12.0) - 0.1,	// Distance to move out path
+			(12.0f * 12.0f) - 0.1f,	// Distance to move out path
 			12 * 12, 				// Radius within which a point must be to be valid
-			0.5 * 12, 				// Increment to move out on
+			0.5f * 12, 				// Increment to move out on
 			1, 						// maximum number of point samples
 		},
 		// Strong optimization version
 		{
-			(6.0 * 12.0) - 0.1,	// Distance to move out path
+			(6.0f * 12.0f) - 0.1f,	// Distance to move out path
 			8 * 12, 				// Radius within which a point must be to be valid
-			1.0 * 12, 				// Increment to move out on
+			1.0f * 12, 				// Increment to move out on
 			1, 						// maximum number of point samples
 		} 
 	};
@@ -3293,7 +3293,7 @@ bool CAI_Navigator::CanFitAtPosition( const Vector &vStartPos, unsigned int coll
 	CTraceFilterNav traceFilter( const_cast<CAI_BaseNPC *>(GetOuter()), bIgnoreTransients, GetOuter(), COLLISION_GROUP_NONE, bAllowPlayerAvoid );
 
 	Vector vEndPos	= vStartPos;
-	vEndPos.z += 0.01;
+	vEndPos.z += 0.01f;
 	trace_t tr;
 	AI_TraceHull( vStartPos, vEndPos, 
 				  GetHullMins(), GetHullMaxs(), 
@@ -3481,7 +3481,7 @@ bool CAI_Navigator::MarkCurWaypointFailedLink( void )
 			{
 				Vector vStartPos = GetNetwork()->GetNode( endID )->GetPosition( GetHullType() );
 				Vector vEndPos = vStartPos;
-				vEndPos.z += 0.01;
+				vEndPos.z += 0.01f;
 				trace_t tr;
 
 				UTIL_TraceModel( vStartPos, vEndPos, GetHullMins(), GetHullMaxs(), m_hLastBlockingEnt, COLLISION_GROUP_NONE, &tr );
@@ -3580,13 +3580,13 @@ bool CAI_Navigator::DoFindPathToPos(void)
 		  ShouldOptimizeInitialPathSegment( pFirstWaypoint ) )
 	{
 		// If we're seemingly beyond the waypoint, and our hull is over the line, move on
-		constexpr float EPS = 0.1;
+		constexpr float EPS = 0.1f;
 		Vector vClosest;
 		CalcClosestPointOnLineSegment( origin, 
 									   pFirstWaypoint->GetPos(), pFirstWaypoint->GetNext()->GetPos(), 
 									   vClosest );
 		if ( ( pFirstWaypoint->GetPos() - vClosest ).Length() > EPS &&
-			 ( origin - vClosest ).Length() < GetHullWidth() * 0.5 )
+			 ( origin - vClosest ).Length() < GetHullWidth() * 0.5f )
 		{
 			pPath->Advance();
 		}

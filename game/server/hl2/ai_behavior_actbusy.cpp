@@ -177,27 +177,27 @@ bool CActBusyAnimData::ParseActBusyFromKV( busyanim_t *pAnim, KeyValues *pSectio
 	pAnim->bUseAutomovement = pSection->GetInt( "use_automovement", 0 ) != 0;
 
 	const char *sInterrupt = pSection->GetString( "interrupts", "BA_INT_DANGER" );
-	if ( !strcmp( sInterrupt, "BA_INT_PLAYER" ) )
+	if ( V_streq( sInterrupt, "BA_INT_PLAYER" ) )
 	{
 		pAnim->iBusyInterruptType = BA_INT_PLAYER;
 	}
-	else if ( !strcmp( sInterrupt, "BA_INT_DANGER" ) )
+	else if ( V_streq( sInterrupt, "BA_INT_DANGER" ) )
 	{
 		pAnim->iBusyInterruptType = BA_INT_DANGER;
 	}
-	else if ( !strcmp( sInterrupt, "BA_INT_AMBUSH" ) )
+	else if ( V_streq( sInterrupt, "BA_INT_AMBUSH" ) )
 	{
 		pAnim->iBusyInterruptType = BA_INT_AMBUSH;
 	}
-	else if ( !strcmp( sInterrupt, "BA_INT_COMBAT" ) )
+	else if ( V_streq( sInterrupt, "BA_INT_COMBAT" ) )
 	{
 		pAnim->iBusyInterruptType = BA_INT_COMBAT;
 	}
-	else if ( !strcmp( sInterrupt, "BA_INT_ZOMBIESLUMP" ))
+	else if ( V_streq( sInterrupt, "BA_INT_ZOMBIESLUMP" ))
 	{
 		pAnim->iBusyInterruptType = BA_INT_ZOMBIESLUMP;
 	}
-	else if ( !strcmp( sInterrupt, "BA_INT_SIEGE_DEFENSE" ))
+	else if ( V_streq( sInterrupt, "BA_INT_SIEGE_DEFENSE" ))
 	{
 		pAnim->iBusyInterruptType = BA_INT_SIEGE_DEFENSE;
 	}
@@ -220,7 +220,7 @@ intp CActBusyAnimData::FindBusyAnim( Activity iActivity, const char *pSequence )
 		busyanim_t *pBusyAnim = &m_ActBusyAnims[i];
 		Assert( pBusyAnim );
 
-		if ( pSequence && pBusyAnim->iszName != NULL_STRING && !Q_stricmp( STRING(pBusyAnim->iszName), pSequence ) )
+		if ( pSequence && pBusyAnim->iszName != NULL_STRING && V_strieq( STRING(pBusyAnim->iszName), pSequence ) )
 			return i;
 
 		if ( iActivity != ACT_INVALID && pBusyAnim->iActivities[BA_BUSY] == iActivity )
@@ -2016,7 +2016,7 @@ void CAI_ActBusyBehavior::RunTask( const Task_t *pTask )
 				if ( GetHintNode() )
 				{
 					// Show which actbusy we're moving towards
-					NDebugOverlay::Line( GetOuter()->WorldSpaceCenter(), GetHintNode()->GetAbsOrigin(), 0, 255, 0, true, 0.2 );
+					NDebugOverlay::Line( GetOuter()->WorldSpaceCenter(), GetHintNode()->GetAbsOrigin(), 0, 255, 0, true, 0.2f );
 				}
 			}
 
@@ -2730,11 +2730,11 @@ void CAI_ActBusyQueueGoal::DrawDebugGeometryOverlays( void )
 			continue;
 		if ( m_bPlayerBlockedNodes[i] )
 		{
-			NDebugOverlay::Box( m_hNodes[i]->GetAbsOrigin(), -Vector(5,5,5), Vector(5,5,5), 255, 0, 0, 0, 0.1 );
+			NDebugOverlay::Box( m_hNodes[i]->GetAbsOrigin(), -Vector(5,5,5), Vector(5,5,5), 255, 0, 0, 0, 0.1f );
 		}
 		else
 		{
-			NDebugOverlay::Box( m_hNodes[i]->GetAbsOrigin(), -Vector(5,5,5), Vector(5,5,5), 255, 255, 255, 0, 0.1 );
+			NDebugOverlay::Box( m_hNodes[i]->GetAbsOrigin(), -Vector(5,5,5), Vector(5,5,5), 255, 255, 255, 0, 0.1f );
 		}
 	}
 }
@@ -3009,7 +3009,7 @@ void CAI_ActBusyQueueGoal::MoveQueueUp( void )
 	// Find the node the NPC has arrived at, and tell the guy behind him to move forward
 	if ( GetNextThink( QUEUE_MOVEUP_THINK_CONTEXT ) < gpGlobals->curtime )
 	{
-		float flTime = gpGlobals->curtime + RandomFloat( 0.3, 0.5 );
+		float flTime = gpGlobals->curtime + RandomFloat( 0.3f, 0.5f );
 		SetContextThink( &CAI_ActBusyQueueGoal::MoveQueueUpThink, flTime, QUEUE_MOVEUP_THINK_CONTEXT );
 	}
 }

@@ -744,7 +744,7 @@ void CChoreoChannelWidget::SetUsingCombinedFieldByTokenName( char const *token, 
 	for ( intp i = 0; i < c; ++i )
 	{
 		CChoreoEvent *e = GetEvent( i )->GetEvent();
-		if ( !Q_stricmp( e->GetCloseCaptionToken(), token ) )
+		if ( V_strieq( e->GetCloseCaptionToken(), token ) )
 		{
 			e->SetUsingCombinedFile( usingcombinedfile );
 		}
@@ -945,7 +945,7 @@ void CChoreoChannelWidget::GetMasterAndSlaves( CChoreoEvent *master, CUtlVector<
 	for ( i = 0; i < c; ++i )
 	{
 		CChoreoEvent *e = GetEvent( i )->GetEvent();
-		if ( !Q_stricmp( master->GetCloseCaptionToken(), e->GetCloseCaptionToken() ) )
+		if ( V_strieq( master->GetCloseCaptionToken(), e->GetCloseCaptionToken() ) )
 		{
 			if ( fulllist.Find( e ) == fulllist.InvalidIndex() )
 			{
@@ -1123,7 +1123,7 @@ void CChoreoChannelWidget::redrawStatus( CChoreoWidgetDrawHelper& drawHelper, RE
 					statusClr = RGB( 255, 0, 0 );
 				}
 
-				Q_snprintf( exist, sizeof( exist ), "%s", valid ? "exist" : "missing!" );
+				V_strcpy_safe( exist, valid ? "exist" : "missing!" );
 			}
 			else
 			{
@@ -1133,7 +1133,7 @@ void CChoreoChannelWidget::redrawStatus( CChoreoWidgetDrawHelper& drawHelper, RE
 					statusClr = RGB( 255, 0, 0 );
 				}
 
-				Q_snprintf( exist, sizeof( exist ), "%s", valid ? "exists" : "missing!" );
+				V_strcpy_safe( exist, valid ? "exists" : "missing!" );
 			}
 
 			RECT rcPartial = rcText;

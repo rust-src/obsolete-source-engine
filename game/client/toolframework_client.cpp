@@ -298,13 +298,13 @@ void ToolFramework_RecordMaterialParams( IMaterial *pMaterial )
 				switch ( dim )
 				{
 				case 2:
-					V_snprintf( str, sizeof( str ), "vector2d: %f %f", pVal[ 0 ], pVal[ 1 ] );
+					V_sprintf_safe( str, "vector2d: %f %f", pVal[ 0 ], pVal[ 1 ] );
 					break;
 				case 3:
-					V_snprintf( str, sizeof( str ), "vector3d: %f %f %f", pVal[ 0 ], pVal[ 1 ], pVal[ 2 ] );
+					V_sprintf_safe( str, "vector3d: %f %f %f", pVal[ 0 ], pVal[ 1 ], pVal[ 2 ] );
 					break;
 				case 4:
-					V_snprintf( str, sizeof( str ), "vector4d: %f %f %f %f", pVal[ 0 ], pVal[ 1 ], pVal[ 2 ], pVal[ 3 ] );
+					V_sprintf_safe( str, "vector4d: %f %f %f %f", pVal[ 0 ], pVal[ 1 ], pVal[ 2 ], pVal[ 3 ] );
 					break;
 				default:
 					Assert( 0 );
@@ -318,7 +318,7 @@ void ToolFramework_RecordMaterialParams( IMaterial *pMaterial )
 			{
 				const VMatrix &matrix = pVar->GetMatrixValue();
 				const float *pVal = matrix.Base();
-				V_snprintf( str, sizeof( str ),
+				V_sprintf_safe( str,
 					"matrix: %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",
 					pVal[ 0 ],  pVal[ 1 ],  pVal[ 2 ],  pVal[ 3 ],
 					pVal[ 4 ],  pVal[ 5 ],  pVal[ 6 ],  pVal[ 7 ],
@@ -329,12 +329,12 @@ void ToolFramework_RecordMaterialParams( IMaterial *pMaterial )
 			break;
 
 		case MATERIAL_VAR_TYPE_TEXTURE:
-			//			V_snprintf( str, sizeof( str ), "texture: %x", pVar->GetTextureValue() );
+			//			V_sprintf_safe( str, "texture: %x", pVar->GetTextureValue() );
 			//			msg->SetString( pVarName, str );
 			break;
 
 		case MATERIAL_VAR_TYPE_MATERIAL:
-			//			V_snprintf( str, sizeof( str ), "material: %x", pVar->GetMaterialValue() );
+			//			V_sprintf_safe( str, "material: %x", pVar->GetMaterialValue() );
 			//			msg->SetString( pVarName, str );
 			break;
 

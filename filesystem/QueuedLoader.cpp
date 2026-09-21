@@ -77,7 +77,7 @@ struct FileJob_t
 {
 	FileJob_t()
 	{
-		Q_memset( this, 0, sizeof( FileJob_t ) );
+		Q_memset( this, 0, sizeof( *this ) );
 	}
 
 	FileNameHandle_t		m_hFilename;
@@ -289,6 +289,8 @@ CQueuedLoader::CQueuedLoader() : BaseClass( false )
 	m_bSameMap = false;
 
 	m_nSubmitCount = 0;
+	m_StartTime = 0;
+	m_EndTime = 0;
 
 	m_pfnDynamicCallback = NULL;
 	m_pDynamicContext = NULL;
@@ -296,8 +298,9 @@ CQueuedLoader::CQueuedLoader() : BaseClass( false )
 
 	m_szMapNameToCompareSame[0] = '\0';
 
+	BitwiseClear( m_LoaderTimes ); 
 	m_pProgress = &s_DummyProgress;
-	V_memset( m_pLoaders, 0, sizeof( m_pLoaders ) );
+	BitwiseClear( m_pLoaders );
 
 	// set resource dictionaries sort context
 	for ( int i = 0; i < RESOURCEPRELOAD_COUNT; i++ )
@@ -391,7 +394,7 @@ void CQueuedLoader::BuildMaterialResources( IResourcePreload *pLoader, ResourceL
 		if ( numUnderscores == 0 )
 		{
 			*pEndFilename = '\0';
-			if ( !V_strcmp( szLastFilename, pFilename ) )
+			if ( V_streq( szLastFilename, pFilename ) )
 			{
 				// same cubemap material base already processed, skip it
 				continue;
@@ -655,7 +658,7 @@ bool CQueuedLoader::CResourceNameLessFunc::Less( const FileNameHandle_t &hFilena
 			{
 				return ( bIsCubemapLHS == true && bIsCubemapRHS == false );
 			}
-			return ( V_stricmp( pNameLHS, pNameRHS ) < 0 );
+			return V_stricmp( pNameLHS, pNameRHS ) < 0;
 		}
 		break;
 
@@ -1394,17 +1397,17 @@ void CQueuedLoader::AddResourceToTable( const char *pFilename )
 	const char *pName = pFilename;
 	ResourcePreload_t type = RESOURCEPRELOAD_UNKNOWN;
 
-	if ( !V_stricmp( pExt, "wav" ) )
+	if ( V_strieq( pExt, "wav" ) )
 	{
 		type = RESOURCEPRELOAD_SOUND;
 		pTypeDir = "sound\\";
 	}
-	else if ( !V_stricmp( pExt, "vmt" ) )
+	else if ( V_strieq( pExt, "vmt" ) )
 	{
 		type = RESOURCEPRELOAD_MATERIAL;
 		pTypeDir = "materials\\";
 	}
-	else if ( !V_stricmp( pExt, "vtf" ) )
+	else if ( V_strieq( pExt, "vtf" ) )
 	{
 		if ( V_stristr( pFilename, "maps\\" ) )
 		{
@@ -1425,12 +1428,12 @@ void CQueuedLoader::AddResourceToTable( const char *pFilename )
 			return;
 		}
 	}
-	else if ( !V_stricmp( pExt, "mdl" ) )
+	else if ( V_strieq( pExt, "mdl" ) )
 	{
 		type = RESOURCEPRELOAD_MODEL;
 		pTypeDir = "models\\";	
 	}
-	else if ( !V_stricmp( pExt, "vhv" ) )
+	else if ( V_strieq( pExt, "vhv" ) )
 	{
 		// want static props only
 		pName = V_stristr( pFilename, "sp_" );

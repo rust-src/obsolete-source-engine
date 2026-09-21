@@ -99,7 +99,8 @@ int main(int argc, char* argv[])
 		const char *pTimeout = FindArg( argc, argv, "-patch", "60" );
 		if ( pTimeout )
 		{
-			if ( isdigit( pTimeout[0] ) )
+			// dimhotepus: isdigit -> V_isdigit.
+			if ( V_isdigit( pTimeout[0] ) )
 			{
 				cRequest = VMPI_SERVICE_PATCH;
 				timeout = atoi( pTimeout );
@@ -121,7 +122,7 @@ int main(int argc, char* argv[])
 		for ( int i=VMPI_SERVICE_PORT; i <= VMPI_LAST_SERVICE_PORT; i++ )
 		{
 			unsigned char data[256];
-			bf_write buf( data, sizeof( data ) );
+			bf_write buf( data );
 			buf.WriteByte( VMPI_PROTOCOL_VERSION );
 			buf.WriteString( pPassword );
 			buf.WriteByte( cRequest );

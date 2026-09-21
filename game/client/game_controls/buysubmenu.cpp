@@ -47,7 +47,7 @@ CBuySubMenu::~CBuySubMenu()
 //-----------------------------------------------------------------------------
 Panel *CBuySubMenu::CreateControlByName( const char *controlName )
 {
-	if( !Q_stricmp( "MouseOverPanelButton", controlName ) )
+	if( V_strieq( "MouseOverPanelButton", controlName ) )
 	{
 		MouseOverPanelButton *newButton = CreateNewMouseOverPanelButton( m_pPanel );
 		
@@ -107,7 +107,7 @@ void CBuySubMenu::OnCommand( const char *command)
 		// check the cache
 		for ( i = 0; i < m_SubMenus.Count(); i++ )
 		{
-			if ( !Q_stricmp( m_SubMenus[i].filename, command ) )
+			if ( V_strieq( m_SubMenus[i].filename, command ) )
 			{
 				m_NextPanel = m_SubMenus[i].panel;
 				Assert( m_NextPanel );
@@ -137,7 +137,7 @@ void CBuySubMenu::OnCommand( const char *command)
 		GetWizardPanel()->Close();
 		gViewPortInterface->ShowBackGround( false );
 	
-		if ( Q_stricmp( command, "vguicancel" ) != 0 )
+		if ( !V_strieq( command, "vguicancel" ) )
 			engine->ClientCmd( command );
 
 		BaseClass::OnCommand(command);

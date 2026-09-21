@@ -127,7 +127,7 @@ void CTFTrainingComplete::SetUpResults( IGameEvent *event )
 	const char *map = event->GetString( "map" );
 	const char *nextMap = event->GetString( "next_map" );
 	const char *endText = event->GetString( "text" );
-	bool bHasNextMap = Q_stricmp( nextMap, "" ) != 0;
+	bool bHasNextMap = !Q_isempty( nextMap );
 
 	// title
 	{
@@ -138,11 +138,11 @@ void CTFTrainingComplete::SetUpResults( IGameEvent *event )
 
 	// record that the player has completed training with the current class
 	C_TFPlayer *pLocalPlayer = C_TFPlayer::GetLocalTFPlayer();
-	if ( pLocalPlayer && !V_stricmp(map, "tr_target" ) )
+	if ( pLocalPlayer && V_strieq(map, "tr_target" ) )
 	{
 		Training_MarkClassComplete( pLocalPlayer->GetPlayerClass()->GetClassIndex(), 1 );
 	}
-	else if ( !V_stricmp(map, "tr_dustbowl" ) )
+	else if ( V_strieq(map, "tr_dustbowl" ) )
 	{
 		Training_MarkClassComplete( TF_CLASS_SOLDIER, 2 );
 	}
@@ -170,7 +170,7 @@ void CTFTrainingComplete::SetUpResults( IGameEvent *event )
 		g_pVGuiLocalize->ConstructString_safe( wsResult, g_pVGuiLocalize->Find( endText ), 2, wsText_LastMap, wsText_NextMap );
 		pRichText->SetText( wsResult );
 
-		bHasNextMap = Q_stricmp( nextMap, "" ) != 0;
+		bHasNextMap = !Q_isempty( nextMap );
 		m_pNext->SetVisible( bHasNextMap );
 		m_pQuit->SetVisible( !bHasNextMap );
 	}
@@ -394,15 +394,15 @@ void CTFTrainingComplete::OnThink()
 //-----------------------------------------------------------------------------
 void CTFTrainingComplete::OnCommand( const char *command )
 {
-	if ( !Q_strcmp( command, "next" ) )
+	if ( V_streq( command, "next" ) )
 	{
 		tf_training_client_message.SetValue( (int)TRAINING_CLIENT_MESSAGE_NEXT_MAP );
 	}
-	else if ( !Q_strcmp( command, "replay" ) )
+	else if ( V_streq( command, "replay" ) )
 	{
 		tf_training_client_message.SetValue( (int)TRAINING_CLIENT_MESSAGE_REPLAY );
 	}
-	else if ( !Q_strcmp( command, "quit" ) )
+	else if ( V_streq( command, "quit" ) )
 	{
 		engine->ExecuteClientCmd( "disconnect\n" );
 		IViewPortPanel *pMMOverride = ( gViewPortInterface->FindPanelByName( PANEL_MAINMENUOVERRIDE ) );

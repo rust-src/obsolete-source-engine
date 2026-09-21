@@ -443,7 +443,7 @@ void CMapLoadHelper::Init( model_t *pMapModel, const char *loadname )
 		return;
 	}
 
-	g_pFileSystem->Read( &s_MapHeader, sizeof( dheader_t ), s_MapFileHandle );
+	g_pFileSystem->Read( s_MapHeader, s_MapFileHandle );
 	if ( s_MapHeader.ident != IDBSPHEADER )
 	{
 		g_pFileSystem->Close( s_MapFileHandle );
@@ -502,7 +502,7 @@ void CMapLoadHelper::Init( model_t *pMapModel, const char *loadname )
 
 			// Read the lump header
 			BitwiseClear( lumpHeader );
-			g_pFileSystem->Read( &lumpHeader, sizeof( lumpfileheader_t ), lumpFile );
+			g_pFileSystem->Read( lumpHeader, lumpFile );
 
 			if ( lumpHeader.lumpID >= 0 && lumpHeader.lumpID < HEADER_LUMPS )
 			{
@@ -2281,7 +2281,7 @@ void Mod_LoadCubemapSamples( void )
 	}
 	else
 	{
-		if ( CommandLine()->CheckParm( "-requirecubemaps" ) )
+		if ( CommandLine()->HasParm( "-requirecubemaps" ) )
 		{
 			Sys_Error( "Map \"%s\" does not have cubemaps!", lh.GetMapName() );
 		}
@@ -2965,7 +2965,7 @@ class CResourcePreloadModel : public CResourcePreload
 				// create an anonymous job to perform i/o operation to mount the .ain
 				// the .ain gets claimed later
 				char szAINName[MAX_PATH] = { 0 };
-				V_snprintf( szAINName, sizeof( szAINName ), "maps/graphs/%s.360.ain", szLoadName );
+				V_sprintf_safe( szAINName, "maps/graphs/%s.360.ain", szLoadName );
 				LoaderJob_t loaderJobAIN;
 				loaderJobAIN.m_pFilename = szAINName;
 				loaderJobAIN.m_pPathID = "GAME";
@@ -3446,11 +3446,15 @@ model_t	*CModelLoader::LoadModel( model_t *mod, REFERENCETYPE *pReferencetype )
 			}
 
 			BeginLoadingUpdates( MATERIAL_NON_INTERACTIVE_MODE_LEVEL_LOAD );
-			g_pFileSystem->BeginMapAccess();
-			Map_LoadModel( mod );
-			g_pFileSystem->EndMapAccess();
+
+			{
+				g_pFileSystem->BeginMapAccess();
+				RunCodeAtScopeExit(g_pFileSystem->EndMapAccess());
+
+				Map_LoadModel( mod );
+			}
 	
-			double t2 = Plat_FloatTime();
+			const double t2 = Plat_FloatTime();
 			g_flAccumulatedModelLoadTimeBrush += (t2 - t1);
 		}
 		break;
@@ -3482,7 +3486,7 @@ static void BuildSpriteLoadName( const char *pName, char *pOut, int outLen, bool
 	const char *pExt = V_GetFileExtension( pName );
 	if ( pExt != NULL )
 	{
-		bIsVMT = !Q_stricmp( pExt, "vmt" );
+		bIsVMT = V_strieq( pExt, "vmt" );
 		if ( !bIsVMT )
 		{
 			if ( g_pVideo )
@@ -4673,6 +4677,7 @@ void CModelLoader::Sprite_UnloadModel( model_t *mod )
 void CModelLoader::Studio_ReloadModels( CModelLoader::ReloadType_t reloadType )
 {
 	// RaphaelIT7: We need to flush the materialsystem queue thread as it may work with static prop data while were nuking that
+	// See https://github.com/Facepunch/garrysmod-issues/issues/6467
 	g_pMaterialSystem->Unlock( g_pMaterialSystem->Lock() );
 
 #if !defined( SWDS )
@@ -5173,7 +5178,7 @@ bool CModelLoader::Map_IsValid( char const *pMapFile, bool bQuiet /* = false */ 
 		dheader_t header;
 		BitwiseClear( header );
 
-		g_pFileSystem->Read( &header, sizeof( dheader_t ), mapfile );
+		g_pFileSystem->Read( header, mapfile );
 
 		if ( header.ident == IDBSPHEADER )
 		{
@@ -5208,7 +5213,7 @@ bool CModelLoader::Map_IsValid( char const *pMapFile, bool bQuiet /* = false */ 
 	}
 
 	// Get outta here if we are checking vidmemstats.
-	if ( CommandLine()->CheckParm( "-dumpvidmemstats" ) )
+	if ( CommandLine()->HasParm( "-dumpvidmemstats" ) )
 	{
 		Cbuf_AddText( "quit\n" );
 	}
@@ -5235,15 +5240,15 @@ modtype_t CModelLoader::GetTypeFromName( const char *pModelName )
 	const char *pExt = V_GetFileExtension( pModelName );
 	if ( pExt )
 	{
-		if ( !V_stricmp( pExt, "spr" ) || !V_stricmp( pExt, "vmt" )  )
+		if ( V_strieq( pExt, "spr" ) || V_strieq( pExt, "vmt" )  )
 		{
 			return mod_sprite;
 		}
-		else if ( !V_stricmp( pExt, "bsp" ) )
+		else if ( V_strieq( pExt, "bsp" ) )
 		{
 			return mod_brush;
 		}
-		else if ( !V_stricmp( pExt, "mdl" ) )
+		else if ( V_strieq( pExt, "mdl" ) )
 		{
 			return mod_studio;
 		}
@@ -5301,6 +5306,11 @@ void CModelLoader::UnloadModel( model_t *pModel )
 	case mod_sprite:
 		Sprite_UnloadModel( pModel );
 		break;
+
+	// dimhotepus: Dump unexpected model types.
+	default:
+		AssertMsg( false, "Unexpected model type %d", pModel->type );
+		DevWarning( "Unexpected model type %d", pModel->type );
 	}
 }
 

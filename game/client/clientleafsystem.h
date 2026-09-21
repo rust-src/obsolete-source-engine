@@ -86,6 +86,10 @@ struct SetupRenderInfo_t
 
 	SetupRenderInfo_t()
 	{
+		m_pWorldListInfo = nullptr;
+		m_pRenderList = nullptr;
+		m_nRenderFrame = m_nDetailBuildFrame = -1;
+		m_flRenderDistSq = 0.f;
 		m_bDrawDetailObjects = true;
 		m_bDrawTranslucentObjects = true;
 	}

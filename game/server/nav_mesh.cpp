@@ -1205,7 +1205,7 @@ Place CNavMesh::PartialNameToPlace( const char *name ) const
 		if (!strnicmp( m_placeName[i], name, strlen( name ) ))
 		{
 			// check for exact match in case of subsets of other strings
-			if (!stricmp( m_placeName[i], name ))
+			if (V_strieq( m_placeName[i], name ))
 			{
 				found = NameToPlace( m_placeName[i] );
 				isAmbiguous = false;
@@ -2643,7 +2643,7 @@ void CommandNavAnalyzeScripted( const CCommand &args )
 		pszCmd = args[1];
 	}
 
-	bool bForceAnalyze = pszCmd && !Q_stricmp( pszCmd, "force" );
+	bool bForceAnalyze = pszCmd && V_strieq( pszCmd, "force" );
 
 	if ( TheNavMesh->IsAnalyzed() && !bForceAnalyze )
 	{
@@ -2866,7 +2866,7 @@ NavAttributeType NameToNavAttribute( const char *name )
 {
 	for( unsigned int i=0; TheNavAttributeTable[i].name; ++i )
 	{
-		if ( !Q_stricmp( TheNavAttributeTable[i].name, name ) )
+		if ( V_strieq( TheNavAttributeTable[i].name, name ) )
 		{
 			return TheNavAttributeTable[i].attribute;
 		}

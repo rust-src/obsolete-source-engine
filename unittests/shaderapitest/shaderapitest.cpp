@@ -254,7 +254,7 @@ bool CShaderAPITestApp::Create()
 		pShaderDLL = "shaderapidx10.dll";
 	}
 
-	if ( !bIsVistaOrHigher && !Q_stricmp( pShaderDLL, "shaderapidx10.dll" ) )
+	if ( !bIsVistaOrHigher && V_strieq( pShaderDLL, "shaderapidx10.dll" ) )
 	{
 		pShaderDLL = "shaderapidx9.dll";
 	}
@@ -402,7 +402,7 @@ bool CShaderAPITestApp::PreInit( )
 	const char *pArg;
 	int iWidth = 1024;
 	int iHeight = 768;
-	bool bWindowed = (CommandLine()->CheckParm( "-fullscreen" ) == NULL);
+	bool bWindowed = !CommandLine()->HasParm( "-fullscreen" );
 	if (CommandLine()->CheckParm( "-width", &pArg ))
 	{
 		iWidth = atoi( pArg );
@@ -927,14 +927,15 @@ void CShaderAPITestApp::LoadShaderFile( const char *pName, bool bVertexShader )
 	Q_snprintf( pFileName, MAX_PATH, "..\\hl2\\shaders\\fxc\\%s.vcs", pName );
 
 	FileHandle_t hFile = g_pFullFileSystem->Open( pFileName, "rb", "EXECUTABLE_PATH" );
-	if ( hFile == FILESYSTEM_INVALID_HANDLE )
+	if ( !hFile )
 	{
 		Warning( "Couldn't load %s shader %s\n", bVertexShader ? "vertex" : "pixel", pName );
 		return;
 	}
+	RunCodeAtScopeExit(	g_pFullFileSystem->Close( hFile ));
 
 	ShaderHeader_t header; 
-	g_pFullFileSystem->Read( &header, sizeof( ShaderHeader_t ), hFile );
+	g_pFullFileSystem->Read( header, hFile );
 
 	// cache the dictionary
 	int nComboSize =  header.m_nNumStaticCombos * sizeof( StaticComboRecord_t );
@@ -957,8 +958,6 @@ void CShaderAPITestApp::LoadShaderFile( const char *pName, bool bVertexShader )
 	}
 
 	free( pRecords );
-	g_pFullFileSystem->Close( hFile );
-
 }
 
 
@@ -1028,7 +1027,7 @@ int CShaderAPITestApp::Main()
 			{
 				TestColoredQuad( (ShaderBufferType_t)nVBType, (ShaderBufferType_t)nIBType, nBuffered != 0 );
 
-				sprintf( buf, "TestColoredQuad results VB: %d IB: %d Buffered: %d HIT A KEY!", 
+				V_sprintf_safe( buf, "TestColoredQuad results VB: %d IB: %d Buffered: %d HIT A KEY!", 
 					nVBType, nIBType, nBuffered != 0 );
 				SetWindowText( m_HWnd, buf );
 

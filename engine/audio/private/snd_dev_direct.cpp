@@ -115,7 +115,7 @@ private:
 	void		S_TransferSurround16Interleaved_FullLock( const portable_samplepair_t *pfront, const portable_samplepair_t *prear, const portable_samplepair_t *pcenter, int lpaintedtime, int endtime);
 
 	int			m_deviceChannels;					// channels per hardware output buffer (1 for quad/5.1, 2 for stereo)
-	int			m_deviceSampleBits;					// bits per sample (16)
+	unsigned short	m_deviceSampleBits;				// bits per sample (16)
 	int			m_deviceSampleCount;				// count of mono samples in output buffer
 	int			m_deviceDmaSpeed;					// samples per second per output buffer
 	int			m_bufferSizeBytes;					// size of a single hardware output buffer, in bytes
@@ -152,14 +152,10 @@ bool CAudioDirectSound::Init( void )
 {
 	m_hInstDS = NULL;
 
-	static bool first = true;
-	if ( first )
-	{
-		snd_surround.InstallChangeCallback( &OnSndSurroundCvarChanged );
-		snd_legacy_surround.InstallChangeCallback( &OnSndSurroundLegacyChanged );
-		snd_mute_losefocus.InstallChangeCallback( &OnSndVarChanged );
-		first = false;
-	}
+	// dimhotepus: Always reinitialize as device may be changed before sound subsystem restart.
+	snd_surround.InstallChangeCallback( &OnSndSurroundCvarChanged );
+	snd_legacy_surround.InstallChangeCallback( &OnSndSurroundLegacyChanged );
+	snd_mute_losefocus.InstallChangeCallback( &OnSndVarChanged );
 
 	if ( SNDDMA_InitDirect() == SIS_SUCCESS )
 	{
@@ -216,6 +212,13 @@ void CAudioDirectSound::Shutdown()
 	{
 		CAudioDirectSound::m_pSingleton = NULL;
 	}
+
+	snd_mute_losefocus.InstallChangeCallback( nullptr );
+	snd_mute_losefocus.Revert();
+	snd_legacy_surround.InstallChangeCallback( nullptr );
+	snd_legacy_surround.Revert();
+	snd_surround.InstallChangeCallback( nullptr );
+	snd_surround.Revert();
 }
 
 // Total number of samples that have played out to hardware
@@ -847,7 +850,7 @@ sndinitstat CAudioDirectSound::SNDDMA_InitDirect( void )
 	buffer_caps.dwSize = sizeof(buffer_caps);
 	
 	bool primary_format_set = false;
-	if ( !CommandLine()->CheckParm("-snoforceformat"))
+	if ( !CommandLine()->HasParm("-snoforceformat"))
 	{
 		if (SUCCEEDED(hr = pDS->CreateSoundBuffer(&buffer_desc, &pDSPBuf, nullptr)))
 		{
@@ -905,10 +908,10 @@ sndinitstat CAudioDirectSound::SNDDMA_InitDirect( void )
 
 	if ( !m_bSurround )
 	{
-		if ( !primary_format_set || !CommandLine()->CheckParm ("-primarysound") )
+		if ( !primary_format_set || !CommandLine()->HasParm ("-primarysound") )
 		{
 			// create the secondary buffer we'll actually work with
-			Q_memset( &buffer_desc, 0, sizeof(buffer_desc) );
+			BitwiseClear( buffer_desc );
 			buffer_desc.dwSize = sizeof(DSBUFFERDESC);
 			buffer_desc.dwFlags = DSBCAPS_LOCSOFTWARE;		// NOTE: don't use CTRLFREQUENCY (slow)
 			buffer_desc.dwBufferBytes = SECONDARY_BUFFER_SIZE;
@@ -928,7 +931,7 @@ sndinitstat CAudioDirectSound::SNDDMA_InitDirect( void )
 			m_deviceSampleBits = primary_format.wBitsPerSample;
 			m_deviceDmaSpeed   = primary_format.nSamplesPerSec;
 
-			Q_memset(&buffer_caps, 0, sizeof(buffer_caps));
+			BitwiseClear( buffer_caps );
 			buffer_caps.dwSize = sizeof(buffer_caps);
 
 			if (DS_OK != pDSBuf->GetCaps( &buffer_caps ))
@@ -950,7 +953,7 @@ sndinitstat CAudioDirectSound::SNDDMA_InitDirect( void )
 				return SIS_FAILURE;
 			}
 
-			Q_memset(&buffer_caps, 0, sizeof(buffer_caps));
+			BitwiseClear( buffer_caps );
 			buffer_caps.dwSize = sizeof(buffer_caps);
 			if (FAILED(pDSPBuf->GetCaps(&buffer_caps)))
 			{
@@ -1357,7 +1360,7 @@ bool CAudioDirectSound::SNDDMA_InitSurround(LPDIRECTSOUND8 lpDS, WAVEFORMATEX* l
 	wvex.nBlockAlign = wvex.nChannels * wvex.wBitsPerSample / 8;
 	wvex.nAvgBytesPerSec = wvex.nSamplesPerSec	* wvex.nBlockAlign; 
 
-	memset (&dsbuf, 0, sizeof(dsbuf));
+	BitwiseClear(dsbuf);
 	dsbuf.dwSize = sizeof(DSBUFFERDESC);
 														 // NOTE: LOCHARDWARE causes SB AWE64 to crash in it's DSOUND driver
 	dsbuf.dwFlags = DSBCAPS_CTRL3D;						 // don't use CTRLFREQUENCY (slow)
@@ -1522,7 +1525,7 @@ bool CAudioDirectSound::SNDDMA_InitSurround(LPDIRECTSOUND8 lpDS, WAVEFORMATEX* l
 	m_deviceSampleBits = lpFormat->wBitsPerSample;
 	m_deviceDmaSpeed = lpFormat->nSamplesPerSec;
 
-	memset(lpdsbc, 0, sizeof(DSBCAPS));
+	BitwiseClear(*lpdsbc);
 	lpdsbc->dwSize = sizeof(DSBCAPS);
 
 	if (DS_OK != pDSBufFL->GetCaps (lpdsbc))

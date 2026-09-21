@@ -110,7 +110,7 @@ void CParticleFunctionPickerFrame::RefreshParticleFunctions( CDmeParticleSystemD
 
 	// Build a list of used operator IDs
 	bool pUsedIDs[OPERATOR_ID_COUNT];
-	memset( pUsedIDs, 0, sizeof(pUsedIDs) );
+	BitwiseClear( pUsedIDs );
 
 	int nFunctionCount = pParticleSystem->GetParticleFunctionCount( type );
 	for ( int i = 0; i < nFunctionCount; ++i )
@@ -190,7 +190,7 @@ void CParticleFunctionPickerFrame::DoModal( CDmeParticleSystemDefinition *pParti
 //-----------------------------------------------------------------------------
 void CParticleFunctionPickerFrame::OnCommand( const char *pCommand )
 {
-	if ( !Q_stricmp( pCommand, "Ok" ) )
+	if ( V_strieq( pCommand, "Ok" ) )
 	{
 		int nSelectedItemCount = m_pFunctionList->GetSelectedItemsCount();
 		if ( nSelectedItemCount == 0 )
@@ -216,7 +216,7 @@ void CParticleFunctionPickerFrame::OnCommand( const char *pCommand )
 		return;
 	}
 
-	if ( !Q_stricmp( pCommand, "Cancel" ) )
+	if ( V_strieq( pCommand, "Cancel" ) )
 	{
 		CloseModal();
 		return;
@@ -364,7 +364,7 @@ void CParticleChildrenPickerFrame::DoModal( CDmeParticleSystemDefinition *pParti
 //-----------------------------------------------------------------------------
 void CParticleChildrenPickerFrame::OnCommand( const char *pCommand )
 {
-	if ( !Q_stricmp( pCommand, "Ok" ) )
+	if ( V_strieq( pCommand, "Ok" ) )
 	{
 		int nSelectedItemCount = m_pChildrenList->GetSelectedItemsCount();
 		if ( nSelectedItemCount == 0 )
@@ -391,7 +391,7 @@ void CParticleChildrenPickerFrame::OnCommand( const char *pCommand )
 		return;
 	}
 
-	if ( !Q_stricmp( pCommand, "Cancel" ) )
+	if ( V_strieq( pCommand, "Cancel" ) )
 	{
 		CloseModal();
 		return;

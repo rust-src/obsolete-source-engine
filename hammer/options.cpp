@@ -103,7 +103,7 @@ CGameConfig *COptionsConfigs::FindConfigForGame(const char *szGame)
 	for (int i = 0; i < nConfigs; i++)
 	{
 		char *pszGameDir = Configs[i]->m_szModDir;
-		if ( Q_stricmp( pszGameDir, szGame ) == 0 )
+		if ( V_strieq( pszGameDir, szGame ) )
 			return Configs[i];
 	}
 
@@ -338,7 +338,7 @@ void COptionsConfigs::SaveGameConfigs()
 		bFoundConfig = false;
 		for ( int i = 0; i < nConfigs; i++ )
 		{
-			if ( !Q_stricmp( pConfig->GetName(), Configs.GetAt(i)->szName ) )
+			if ( V_strieq( pConfig->GetName(), Configs.GetAt(i)->szName ) )
 			{
 				bFoundConfig = true;
 				break;

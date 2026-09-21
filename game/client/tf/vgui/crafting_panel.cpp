@@ -766,23 +766,23 @@ const char *CCraftingPanel::GetItemTextForCriteria( const CItemSelectionCriteria
 			return ItemSystem()->GetItemSchema()->GetLoadoutStringsForDisplay( EEquipType_t::EQUIP_TYPE_CLASS )[iSlot];
 
 		// Is it a craft material type?
-		if ( V_stricmp( pszVal, "weapon" ) == 0 )
+		if ( V_strieq( pszVal, "weapon" ) )
 		{
 			return "#RI_W";
 		}
-		else if ( V_stricmp( pszVal, "hat" ) == 0 )
+		else if ( V_strieq( pszVal, "hat" ) )
 		{
 			return "#RI_Hg";
 		}
-		else if ( V_stricmp( pszVal, "craft_token" ) == 0 )
+		else if ( V_strieq( pszVal, "craft_token" ) )
 		{
 			return "#RI_T";
 		}
-		else if ( V_stricmp( pszVal, "class_token" ) == 0 )
+		else if ( V_strieq( pszVal, "class_token" ) )
 		{
 			return "#CI_T_C";
 		}
-		else if ( V_stricmp( pszVal, "slot_token" ) == 0 )
+		else if ( V_strieq( pszVal, "slot_token" ) )
 		{
 			return "#CI_T_S";
 		}
@@ -977,13 +977,13 @@ void CCraftingPanel::OnCommand( const char *command )
 		}
 		return;
 	}
-	else if ( !Q_stricmp( command, "upgrade" ) )
+	else if ( V_strieq( command, "upgrade" ) )
 	{
 		EconUI()->CloseEconUI();
 		EconUI()->OpenStorePanel( STOREPANEL_SHOW_UPGRADESTEPS, false );
 		return;
 	}
-	else if ( !Q_stricmp( command, "reloadscheme" ) )
+	else if ( V_strieq( command, "reloadscheme" ) )
 	{
 		InvalidateLayout( true, true );
 	}
@@ -1306,7 +1306,7 @@ void CCraftingStatusDialog::OnCommand( const char *command )
 {
 	bool bClose = false;
 
-	if ( !Q_stricmp( command, "close" ) )
+	if ( V_strieq( command, "close" ) )
 	{
 		// If we were a success, show the player their new crafted items
 		if ( m_bShowOnExit )
@@ -1321,7 +1321,7 @@ void CCraftingStatusDialog::OnCommand( const char *command )
 
 		bClose = true;
 	}
-	else if ( !Q_stricmp( command, "forceclose" ) )
+	else if ( V_strieq( command, "forceclose" ) )
 	{
 		bClose = true;
 	}
@@ -1629,7 +1629,8 @@ private:
 		{
 			if ( steamapicontext && steamapicontext->SteamFriends() )
 			{
-				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( "http://www.teamfortress.com/saxxyawards/winners.php" );
+				// dimhotepus: http:// -> https://
+				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( "https://www.teamfortress.com/saxxyawards/winners.php" );
 			}
 			MarkForDeletion();
 		}

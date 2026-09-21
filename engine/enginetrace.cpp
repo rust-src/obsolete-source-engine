@@ -70,7 +70,7 @@ static CUtlVector<Ray_t> s_BenchmarkRays;
 abstract_class CEngineTrace : public IEngineTrace
 {
 public:
-	CEngineTrace() { m_pRootMoveParent = NULL; }
+	CEngineTrace() { m_pRootMoveParent = NULL; BitwiseClear( m_traceStatCounters ); }
 	// Returns the contents mask at a particular world-space position
 	virtual int		GetPointContents( const Vector &vecAbsPosition, IHandleEntity** ppEntity );
 
@@ -577,15 +577,15 @@ void CEngineTrace::GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, C
 	CCollisionBSPData *pBSPData = GetCollisionBSPData();
 
 	Vector ptBBoxExtents[8]; //for fast plane checking
-	for( int i = 0; i < 8; ++i )
+	for( int i = 0; i < std::size(ptBBoxExtents); ++i )
 	{
 		//set these up to be opposite that of cplane_t's signbits for it's normal
 		ptBBoxExtents[i].x = (i & (1<<0)) ? (vMaxs.x) : (vMins.x);
 		ptBBoxExtents[i].y = (i & (1<<1)) ? (vMaxs.y) : (vMins.y);
 		ptBBoxExtents[i].z = (i & (1<<2)) ? (vMaxs.z) : (vMins.z);
-	}	
+	}
 
-	int *pLeafList = (int *)stackalloc( pBSPData->numleafs * 2 * sizeof( int ) ); // *2 just in case
+	int *pLeafList = stackallocT( int, pBSPData->numleafs * 2 ); // *2 just in case
 	int iNumLeafs = CM_BoxLeafnums( vMins, vMaxs, pLeafList, pBSPData->numleafs * 2, NULL );
 
 	CUtlVector<int> counters;
@@ -608,7 +608,7 @@ CPhysCollide* CEngineTrace::GetCollidableFromDisplacementsInAABB( const Vector& 
 {
 	CCollisionBSPData *pBSPData = GetCollisionBSPData();
 
-	int *pLeafList = (int *)stackalloc( pBSPData->numleafs * sizeof( int ) ); 
+	int *pLeafList = stackallocT( int, pBSPData->numleafs ); 
 	int iLeafCount = CM_BoxLeafnums( vMins, vMaxs, pLeafList, pBSPData->numleafs, NULL );
 
 	// Get all the triangles for displacement surfaces in this box, add them to a polysoup
@@ -1543,7 +1543,7 @@ CON_COMMAND( ray_save, "Save the rays" )
 		{
 			RunCodeAtScopeExit(g_pFileSystem->Close(hFile));
 
-			g_pFileSystem->Write( &count, sizeof(count), hFile );
+			g_pFileSystem->Write( count, hFile );
 			g_pFileSystem->Write( s_BenchmarkRays.Base(), sizeof(s_BenchmarkRays[0])*count, hFile );
 		}
 	}
@@ -1563,7 +1563,7 @@ CON_COMMAND( ray_load, "Load the rays" )
 		RunCodeAtScopeExit(g_pFileSystem->Close(hFile));
 
 		int count = 0;
-		g_pFileSystem->Read( &count, sizeof(count), hFile );
+		g_pFileSystem->Read( count, hFile );
 		if ( count )
 		{
 			s_BenchmarkRays.EnsureCount( count );
@@ -1980,7 +1980,7 @@ public:
 
 		CEntList list;
 		list.m_pClosest = NULL;
-		list.m_flClosestDist = FLT_MAX;
+		list.m_flClosestDist = std::numeric_limits<vec_t>::max();
 		g_pEngineTraceServer->EnumerateEntities( MainViewOrigin() - Vector( 200, 200, 200 ), MainViewOrigin() + Vector( 200, 200, 200 ), &list );
 
 		if ( !list.m_pClosest )

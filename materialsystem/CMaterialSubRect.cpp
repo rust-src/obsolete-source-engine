@@ -321,7 +321,7 @@ CMaterialSubRect::CMaterialSubRect( const char *pMaterialName, const char *pText
 
 	// Name with extension stripped off.
 	intp len = Q_strlen( pMaterialName );
-	char* pTemp = ( char* )_alloca( len + 1 );
+	char* pTemp = stackallocT( char, len + 1 );
 	Q_strncpy( pTemp, pMaterialName, len + 1 );
 	Q_strlower( pTemp );
 	pTemp[ len - 4 ] = '\0';
@@ -646,26 +646,26 @@ void CMaterialSubRect::ParseMaterialVars( KeyValues &keyValues )
 
 	// Verify we have the correct "shader."  There is only one type.
 	// Needs to be case insensitive because we can't guarantee case specified in VMTs
-	if ( !Q_stricmp( pShaderName, "Subrect" ) )
+	if ( V_strieq( pShaderName, "Subrect" ) )
 	{
 		KeyValues *pVar = pKeyValues->GetFirstSubKey();
 		while ( pVar )
 		{
-			if ( !Q_stricmp( pVar->GetName(), "$Pos" ) )
+			if ( V_strieq( pVar->GetName(), "$Pos" ) )
 			{
 				sscanf( pVar->GetString(), "%f %f", &m_vecOffset.x, &m_vecOffset.y );
 			}
-			else if ( !Q_stricmp( pVar->GetName(), "$Size" ) )
+			else if ( V_strieq( pVar->GetName(), "$Size" ) )
 			{
 				sscanf( pVar->GetString(), "%f %f", &m_vecSize.x, &m_vecSize.y );
 			}
-			else if ( !Q_stricmp( pVar->GetName(), "$Material" ) )
+			else if ( V_strieq( pVar->GetName(), "$Material" ) )
 			{
 				m_pMaterialPage = static_cast<IMaterialInternal*>( MaterialSystem()->FindMaterial( pVar->GetString(), TEXTURE_GROUP_DECAL ) );
 				m_pMaterialPage = m_pMaterialPage->GetRealTimeVersion(); //always work with the realtime material internally
 			}
 
-//			else if ( !Q_stricmp( pVar->GetName(), "$decalscale" ) )
+//			else if ( V_strieq( pVar->GetName(), "$decalscale" ) )
 //			{
 //				m_flDecalScale = pVar->GetFloat();
 //			}

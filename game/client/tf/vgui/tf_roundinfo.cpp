@@ -294,7 +294,7 @@ void RoundInfoOverlay::Update( const char *szMapName )
 				{
 					roundinfo_control_point_t point;
 
-					Q_snprintf( point.m_szName, sizeof(point.m_szName), "%s", pData->GetName() );
+					V_strcpy_safe( point.m_szName, pData->GetName() );
 
 					// These x,y coords are relative to a 640x480 parent panel.
 					int wide, tall;
@@ -518,7 +518,7 @@ void CTFRoundInfo::ShowPanel( bool bShow )
 //-----------------------------------------------------------------------------
 void CTFRoundInfo::OnCommand( const char *command )
 {
-	if ( !Q_strcmp( command, "continue" ) )
+	if ( V_streq( command, "continue" ) )
 	{
 		m_pViewPort->ShowPanel( this, false );
 	}
@@ -533,7 +533,7 @@ void CTFRoundInfo::OnCommand( const char *command )
 //-----------------------------------------------------------------------------
 void CTFRoundInfo::UpdateImage( ImagePanel *pImagePanel, const char *pszImageName )
 {
-	if ( pImagePanel && ( Q_strlen( pszImageName ) > 0 ) )
+	if ( pImagePanel && !Q_isempty( pszImageName ) )
 	{
 		char szTemp[255];
 		Q_snprintf( szTemp, sizeof( szTemp ), "VGUI/%s", pszImageName );

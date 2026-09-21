@@ -88,7 +88,7 @@ CUtlCharConversion *GetNoEscCharConversion()
 CUtlCStringConversion::CUtlCStringConversion( char nEscapeChar, const char *pDelimiter, intp nCount, ConversionArray_t *pArray ) : 
 	CUtlCharConversion( nEscapeChar, pDelimiter, nCount, pArray )
 {
-	memset( m_pConversion, 0x0, sizeof(m_pConversion) );
+	BitwiseClear( m_pConversion );
 	for ( intp i = 0; i < nCount; ++i )
 	{
 		m_pConversion[ (unsigned char) pArray[i].m_pReplacementString[0] ] = pArray[i].m_nActualChar;
@@ -116,7 +116,7 @@ CUtlCharConversion::CUtlCharConversion( char nEscapeChar, const char *pDelimiter
 	m_nDelimiterLength = Q_strlen( pDelimiter );
 	m_nMaxConversionLength = 0;
 
-	memset( m_pReplacements, 0, sizeof(m_pReplacements) );
+	BitwiseClear( m_pReplacements );
 
 	for ( intp i = 0; i < nCount; ++i )
 	{
@@ -178,7 +178,7 @@ char CUtlCharConversion::FindConversion( const char *pString, intp *pLength ) co
 {
 	for ( intp i = 0; i < m_nCount; ++i )
 	{
-		if ( !Q_strcmp( pString, m_pReplacements[ (unsigned char) m_pList[i] ].m_pReplacementString ) )
+		if ( V_streq( pString, m_pReplacements[ (unsigned char) m_pList[i] ].m_pReplacementString ) )
 		{
 			*pLength = m_pReplacements[ (unsigned char) m_pList[i] ].m_nLength;
 			return m_pList[i];
@@ -440,7 +440,7 @@ intp CUtlBuffer::PeekWhiteSpace( intp nOffset )
 
 	while ( CheckPeekGet( nOffset, sizeof(char) ) )
 	{
-		if ( !V_isspace( *(unsigned char*)PeekGet( nOffset ) ) )
+		if ( !V_isspace( *(const unsigned char*)PeekGet( nOffset ) ) )
 			break;
 		nOffset += sizeof(char);
 	}
@@ -457,7 +457,7 @@ intp	CUtlBuffer::PeekStringLength()
 	if ( !IsValid() )
 		return 0;
 
-	// Eat preceeding whitespace
+	// Eat preceding whitespace
 	intp nOffset = 0;
 	if ( IsText() )
 	{
@@ -566,7 +566,7 @@ intp CUtlBuffer::PeekDelimitedStringLength( CUtlCharConversion *pConv, bool bAct
 	if ( !IsText() || !pConv )
 		return PeekStringLength();
 
-	// Eat preceeding whitespace
+	// Eat preceding whitespace
 	intp nOffset = 0;
 	if ( IsText() )
 	{
@@ -847,7 +847,13 @@ bool CUtlBuffer::CheckArbitraryPeekGet( intp nOffset, intp &nIncrement )
 
 	// NOTE: CheckPeekGet could modify TellMaxPut for streaming files
 	// We have to call TellMaxPut again here
-	CheckPeekGet( nOffset, nIncrement );
+	// dimhotepus: Check peek get succeeds.
+	if ( !CheckPeekGet( nOffset, nIncrement ) )
+	{
+		const intp nOldIncrement = std::exchange( nIncrement, 0 );
+		AssertMsg( false, "Unable to peek %zd bytes at offset %zd.", nOldIncrement, nOffset );
+		return false;
+	}
 	intp nMaxGet = TellMaxPut() - TellGet();
 	if ( nMaxGet < nIncrement )
 	{
@@ -985,8 +991,8 @@ intp CUtlBuffer::VaScanf( const char* pFmt, va_list list )
 								return numScanned;
 							}
 
-							*i = (int)strtol( (char*)PeekGet(), &pEnd, 10 );
-							intp nBytesRead = pEnd - (char*)PeekGet();
+							*i = (int)strtol( (const char*)PeekGet(), &pEnd, 10 );
+							intp nBytesRead = pEnd - (const char*)PeekGet();
 							if ( nBytesRead == 0 )
 								return numScanned;
 							m_Get += nBytesRead;
@@ -1005,8 +1011,8 @@ intp CUtlBuffer::VaScanf( const char* pFmt, va_list list )
 									return numScanned;
 								}
 
-								*i = (short)strtol( (char*)PeekGet(), &pEnd, 10 );
-								intp nBytesRead = pEnd - (char*)PeekGet();
+								*i = (short)strtol( (const char*)PeekGet(), &pEnd, 10 );
+								intp nBytesRead = pEnd - (const char*)PeekGet();
 								if ( nBytesRead == 0 )
 									return numScanned;
 								m_Get += nBytesRead;
@@ -1023,8 +1029,8 @@ intp CUtlBuffer::VaScanf( const char* pFmt, va_list list )
 									return numScanned;
 								}
 
-								*i = (signed char)strtol( (char*)PeekGet(), &pEnd, 10 );
-								intp nBytesRead = pEnd - (char*)PeekGet();
+								*i = (signed char)strtol( (const char*)PeekGet(), &pEnd, 10 );
+								intp nBytesRead = pEnd - (const char*)PeekGet();
 								if ( nBytesRead == 0 )
 									return numScanned;
 								m_Get += nBytesRead;
@@ -1041,8 +1047,8 @@ intp CUtlBuffer::VaScanf( const char* pFmt, va_list list )
 									return numScanned;
 								}
 
-								*i = strtol( (char*)PeekGet(), &pEnd, 10 );
-								intp nBytesRead = pEnd - (char*)PeekGet();
+								*i = strtol( (const char*)PeekGet(), &pEnd, 10 );
+								intp nBytesRead = pEnd - (const char*)PeekGet();
 								if ( nBytesRead == 0 )
 									return numScanned;
 								m_Get += nBytesRead;
@@ -1059,8 +1065,8 @@ intp CUtlBuffer::VaScanf( const char* pFmt, va_list list )
 									return numScanned;
 								}
 
-								*i = strtoll( (char*)PeekGet(), &pEnd, 10 );
-								intp nBytesRead = pEnd - (char*)PeekGet();
+								*i = strtoll( (const char*)PeekGet(), &pEnd, 10 );
+								intp nBytesRead = pEnd - (const char*)PeekGet();
 								if ( nBytesRead == 0 )
 									return numScanned;
 								m_Get += nBytesRead;
@@ -1112,8 +1118,8 @@ intp CUtlBuffer::VaScanf( const char* pFmt, va_list list )
 								return numScanned;
 							}
 
-							*i = (unsigned int)strtoul( (char*)PeekGet(), &pEnd, base );
-							intp nBytesRead = pEnd - (char*)PeekGet();
+							*i = (unsigned int)strtoul( (const char*)PeekGet(), &pEnd, base );
+							intp nBytesRead = pEnd - (const char*)PeekGet();
 							if ( nBytesRead == 0 )
 								return numScanned;
 							m_Get += nBytesRead;
@@ -1132,8 +1138,8 @@ intp CUtlBuffer::VaScanf( const char* pFmt, va_list list )
 									return numScanned;
 								}
 
-								*i = (unsigned short)strtoul( (char*)PeekGet(), &pEnd, base );
-								intp nBytesRead = pEnd - (char*)PeekGet();
+								*i = (unsigned short)strtoul( (const char*)PeekGet(), &pEnd, base );
+								intp nBytesRead = pEnd - (const char*)PeekGet();
 								if ( nBytesRead == 0 )
 									return numScanned;
 								m_Get += nBytesRead;
@@ -1150,8 +1156,8 @@ intp CUtlBuffer::VaScanf( const char* pFmt, va_list list )
 									return numScanned;
 								}
 
-								*i = (unsigned char)strtoul( (char*)PeekGet(), &pEnd, base );
-								intp nBytesRead = pEnd - (char*)PeekGet();
+								*i = (unsigned char)strtoul( (const char*)PeekGet(), &pEnd, base );
+								intp nBytesRead = pEnd - (const char*)PeekGet();
 								if ( nBytesRead == 0 )
 									return numScanned;
 								m_Get += nBytesRead;
@@ -1168,8 +1174,8 @@ intp CUtlBuffer::VaScanf( const char* pFmt, va_list list )
 									return numScanned;
 								}
 
-								*i = strtoul( (char*)PeekGet(), &pEnd, base );
-								intp nBytesRead = pEnd - (char*)PeekGet();
+								*i = strtoul( (const char*)PeekGet(), &pEnd, base );
+								intp nBytesRead = pEnd - (const char*)PeekGet();
 								if ( nBytesRead == 0 )
 									return numScanned;
 								m_Get += nBytesRead;
@@ -1186,8 +1192,8 @@ intp CUtlBuffer::VaScanf( const char* pFmt, va_list list )
 									return numScanned;
 								}
 
-								*i = strtoull( (char*)PeekGet(), &pEnd, base );
-								intp nBytesRead = pEnd - (char*)PeekGet();
+								*i = strtoull( (const char*)PeekGet(), &pEnd, base );
+								intp nBytesRead = pEnd - (const char*)PeekGet();
 								if ( nBytesRead == 0 )
 									return numScanned;
 								m_Get += nBytesRead;
@@ -1219,8 +1225,8 @@ intp CUtlBuffer::VaScanf( const char* pFmt, va_list list )
 								return numScanned;
 							}
 
-							*f = strtof( (char*)PeekGet(), &pEnd );
-							intp nBytesRead = pEnd - (char*)PeekGet();
+							*f = strtof( (const char*)PeekGet(), &pEnd );
+							intp nBytesRead = pEnd - (const char*)PeekGet();
 							if ( nBytesRead == 0 )
 								return numScanned;
 							m_Get += nBytesRead;
@@ -1237,8 +1243,8 @@ intp CUtlBuffer::VaScanf( const char* pFmt, va_list list )
 								return numScanned;
 							}
 
-							*f = strtod( (char*)PeekGet(), &pEnd );
-							intp nBytesRead = pEnd - (char*)PeekGet();
+							*f = strtod( (const char*)PeekGet(), &pEnd );
+							intp nBytesRead = pEnd - (const char*)PeekGet();
 							if ( nBytesRead == 0 )
 								return numScanned;
 							m_Get += nBytesRead;
@@ -1359,8 +1365,12 @@ bool CUtlBuffer::GetToken( const char *pToken )
 // If successful, the get index is advanced and the function returns true,
 // otherwise the index is not advanced and the function returns false.
 //-----------------------------------------------------------------------------
-bool CUtlBuffer::ParseToken( const char *pStartingDelim, const char *pEndingDelim, char* pString, intp nMaxLen )
+bool CUtlBuffer::ParseToken( const char *pStartingDelim, const char *pEndingDelim, OUT_Z_CAP(nMaxLen) char* pString, intp nMaxLen )
 {
+	Assert( nMaxLen > 0 );
+	if ( nMaxLen > 0 )
+		pString[0] = '\0';
+
 	intp nCharsToCopy = 0;
 	intp nCurrentGet = 0;
 
@@ -1384,9 +1394,10 @@ bool CUtlBuffer::ParseToken( const char *pStartingDelim, const char *pEndingDeli
 	while ( *pStartingDelim )
 	{
 		nCurrChar = *pStartingDelim++;
-		if ( !V_isspace((unsigned char)nCurrChar) )
+		if ( !V_isspace(nCurrChar) )
 		{
-			if ( tolower( GetChar() ) != tolower( nCurrChar ) )
+			// dimhotepus: tolower -> V_tolower
+			if ( V_tolower( GetChar() ) != V_tolower( nCurrChar ) )
 				goto parseFailed;
 		}
 		else
@@ -1438,10 +1449,11 @@ parseFailed:
 //-----------------------------------------------------------------------------
 // Parses the next token, given a set of character breaks to stop at
 //-----------------------------------------------------------------------------
-intp CUtlBuffer::ParseToken( const characterset_t *pBreaks, char *pTokenBuf, intp nMaxLen, bool bParseComments )
+intp CUtlBuffer::ParseToken( const characterset_t *pBreaks, OUT_Z_CAP(nMaxLen) char *pTokenBuf, intp nMaxLen, bool bParseComments )
 {
 	Assert( nMaxLen > 0 );
-	pTokenBuf[0] = 0;
+	if ( nMaxLen > 0 )
+		pTokenBuf[0] = 0;
 
 	// skip whitespace + comments
 	while ( true )
@@ -1486,7 +1498,7 @@ intp CUtlBuffer::ParseToken( const characterset_t *pBreaks, char *pTokenBuf, int
 			}
 		}
 
-		// In this case, we hit the end of the buffer before hitting the end qoute
+		// In this case, we hit the end of the buffer before hitting the end quote
 		pTokenBuf[nLen] = 0;
 		return nLen;
 	}
@@ -1494,9 +1506,19 @@ intp CUtlBuffer::ParseToken( const characterset_t *pBreaks, char *pTokenBuf, int
 	// parse single characters
 	if ( pBreaks->HasChar( c ) )
 	{
-		pTokenBuf[0] = c;
-		pTokenBuf[1] = 0;
-		return 1;
+		// dimhotepus: Do not overflow buffer of 1 length.
+		if ( nMaxLen > 1 )
+		{
+			pTokenBuf[0] = c;
+			pTokenBuf[1] = 0;
+			return 1;
+		}
+
+		if ( nMaxLen > 0 )
+			pTokenBuf[0] = 0;
+
+		AssertMsg( nMaxLen > 1, "Unable to parse single char token. Max length %zd should be at least 1", nMaxLen );
+		return -1;
 	}
 
 	// parse a regular word

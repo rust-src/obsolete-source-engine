@@ -56,21 +56,21 @@ void MapReslistGenerator_Usage()
 void MapReslistGenerator_Init()
 {
 	// check for reslist generation
-	if ( CommandLine()->FindParm("-makereslists") )
+	if ( CommandLine()->HasParm("-makereslists") )
 	{
 		bool usemaplistfile = false;
-		if ( CommandLine()->FindParm("-usereslistfile") )
+		if ( CommandLine()->HasParm("-usereslistfile") )
 		{
 			usemaplistfile = true;
 		}
 		MapReslistGenerator().EnableReslistGeneration( usemaplistfile );
 	}
-	else if ( CommandLine()->FindParm( "-rebuildaudio" ) )
+	else if ( CommandLine()->HasParm( "-rebuildaudio" ) )
 	{
 		MapReslistGenerator().SetAutoQuit( true );
 	}
 
-	if ( CommandLine()->FindParm( "-trackdeletions" ) )
+	if ( CommandLine()->HasParm( "-trackdeletions" ) )
 	{
 		MapReslistGenerator().EnableDeletionsTracking();
 	}
@@ -141,8 +141,8 @@ void CMapReslistGenerator::BuildMapList()
 	CommandLine()->CheckParm( "-usereslistfile", &pMapFile );
 
 	// +map argument precludes using a maplist file
-	bool bUseMap = CommandLine()->FindParm("+map") != 0;
-	bool bUseMapListFile = bUseMap ? false : CommandLine()->FindParm("-usereslistfile") != 0;
+	bool bUseMap = CommandLine()->HasParm("+map");
+	bool bUseMapListFile = bUseMap ? false : CommandLine()->HasParm("-usereslistfile");
 
 	// Build the map list
 	if ( !BuildGeneralMapList( &m_Maps, bUseMapListFile, pMapFile, "reslists", &m_iCurrentMap ) )
@@ -292,7 +292,7 @@ bool BuildGeneralMapList( CUtlVector<maplist_map_t> *aMaps, bool bUseMapListFile
 	{
 		for ( intp i = 0 ; i < c; ++i )
 		{
-			if ( !Q_stricmp( aMaps->Element(i).name, startmap ) )
+			if ( V_strieq( aMaps->Element(i).name, startmap ) )
 			{
 				*iCurrentMap = i;
 			}
@@ -383,7 +383,7 @@ void CMapReslistGenerator::LogToEngineReslist( char const *pLine )
 void CMapReslistGenerator::EnableReslistGeneration( bool usemaplistfile )
 {
 	//hackhack !!!! This is a work-around until CS precaches things on level start, not player spawn
-	if ( !Q_stricmp( "cstrike", GetCurrentMod() ))
+	if ( V_strieq( "cstrike", GetCurrentMod() ))
 	{
 		m_iPauseTimeBetweenMaps = PAUSE_TIME_BETWEEN_MAPS * 3;
 		m_iPauseFramesBetweenMaps = PAUSE_FRAMES_BETWEEN_MAPS * 3;
@@ -412,7 +412,7 @@ void CMapReslistGenerator::EnableReslistGeneration( bool usemaplistfile )
 	g_pFileSystem->CreateDirHierarchy( m_sResListDir.String() , "DEFAULT_WRITE_PATH" );
 
 	// Leave the existing one if resuming from a specific map, otherwise, blow it away
-	if ( !CommandLine()->FindParm( "-startmap" ) )
+	if ( !CommandLine()->HasParm( "-startmap" ) )
 	{
 		g_pFileSystem->RemoveFile( CFmtStr( "%s\\%s", m_sResListDir.String(), ENGINE_RESLIST_FILE ), "DEFAULT_WRITE_PATH" );
 		m_EngineLog.RemoveAll();
@@ -516,12 +516,10 @@ bool CMapReslistGenerator::ShouldRebuildCaches()
 {
 	if ( !IsEnabled() )
 	{
-		return CommandLine()->FindParm( "-rebuildaudio" ) != 0;
+		return CommandLine()->HasParm( "-rebuildaudio" );
 	}
 
-	if ( !CommandLine()->FindParm( "-norebuildaudio" ) )
-		return true;
-	return false;
+	return !CommandLine()->HasParm( "-norebuildaudio" );
 }
 
 char const *CMapReslistGenerator::GetResListDirectory() const
@@ -590,7 +588,7 @@ void CMapReslistGenerator::RunFrame()
 		else
 		{
 			// no more levels, just quit
-			if ( !CommandLine()->FindParm( "-forever" ) )
+			if ( !CommandLine()->HasParm( "-forever" ) )
 			{
 				DoQuit();
 			}
@@ -676,7 +674,7 @@ void CMapReslistGenerator::OnResourcePrecached(const char *relativePathFileName)
 		return;
 
 	// ignore empty string
-	if (relativePathFileName[0] == 0)
+	if (Q_isempty( relativePathFileName ))
 		return;
 
 	// ignore files that start with '*' since they signify special models
@@ -834,7 +832,7 @@ void CMapReslistGenerator::EnableDeletionsTracking()
 					if ( Q_isempty( token ) )
 						break;
 
-					if ( !Q_stricmp( token, "del" ) )
+					if ( V_strieq( token, "del" ) )
 						continue;
 
 					Q_snprintf(filename, sizeof( filename ), "%s/%s", com_gamedir, token );

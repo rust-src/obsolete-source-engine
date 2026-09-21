@@ -75,7 +75,7 @@ int WalkStack( void **ppAddresses, int nMaxAddresses, int nSkip = 0 )
 
 	STACKFRAME64 frame;
 
-	memset(&frame, 0, sizeof(frame));
+	BitwiseClear(frame);
 	DWORD valEsp, valEbp;
 	__asm
 	{
@@ -457,9 +457,9 @@ public:
 	[[nodiscard]] const_pointer address (const_reference value) const { return &value;}
 	[[nodiscard]] size_type max_size() const { return INT_MAX; }
 
-	pointer allocate(size_type num, const void* = nullptr)  { return (pointer)DebugAlloc(num * sizeof(T)); }
+	pointer allocate(size_type num, const void* = nullptr)  { return static_cast<pointer>(DebugAlloc(num * sizeof(T))); }
 	void deallocate (pointer p, size_type num) { DebugFree(p); }
-	void construct(pointer p, const T& value) {	new((void*)p)T(value); }
+	void construct(pointer p, const T& value) {	new(static_cast<void*>(p))T(value); }
 	void destroy (pointer p) { p->~T(); }
 };
 
@@ -721,8 +721,8 @@ struct DbgInfoStack_t
 	int m_nLine;
 };
 
-thread_local DbgInfoStack_t* g_DbgInfoStack CONSTRUCT_EARLY;
-thread_local int				g_nDbgInfoStackDepth CONSTRUCT_EARLY;
+static thread_local DbgInfoStack_t* g_DbgInfoStack CONSTRUCT_EARLY;
+static thread_local int				g_nDbgInfoStackDepth CONSTRUCT_EARLY;
 
 //-----------------------------------------------------------------------------
 // Singleton...
@@ -737,7 +737,7 @@ IMemAlloc *g_pActualAlloc = &s_DbgMemAlloc;
 
 //-----------------------------------------------------------------------------
 
-CThreadMutex g_DbgMemMutex CONSTRUCT_EARLY;
+static CThreadMutex g_DbgMemMutex CONSTRUCT_EARLY;
 
 #define HEAP_LOCK() AUTO_LOCK( g_DbgMemMutex )
 
@@ -764,7 +764,7 @@ const char *CDbgMemAlloc::s_pCountHeader[CDbgMemAlloc::NUM_BYTE_COUNT_BUCKETS] =
 //-----------------------------------------------------------------------------
 static FILE* s_DbgFile;
 
-static void DefaultHeapReportFunc( char const *pFormat, ... )
+static void DefaultHeapReportFunc( PRINTF_FORMAT_STRING char const *pFormat, ... )
 {
 	va_list args;
 	va_start( args, pFormat ); //-V2018 //-V2019
@@ -909,7 +909,7 @@ void *CDbgMemAlloc::Expand_NoLongerSupported( void *, size_t )
 	return nullptr;
 }
 
-void SetupDebugInfoStack(DbgInfoStack_t *&stack, int &stack_depth)
+static void SetupDebugInfoStack(DbgInfoStack_t *&stack, int &stack_depth)
 {
 	stack = (DbgInfoStack_t *)DebugAlloc( sizeof(DbgInfoStack_t) * DBG_INFO_STACK_DEPTH );
 	stack_depth = -1;
@@ -1404,7 +1404,7 @@ void* CDbgMemAlloc::CrtSetReportFile( int nRptType, void* hFile )
 #ifdef POSIX
 	return 0;
 #else
-	return (void*)_CrtSetReportFile( nRptType, (_HFILE)hFile );
+	return _CrtSetReportFile( nRptType, hFile );
 #endif
 }
 
@@ -1413,7 +1413,7 @@ void* CDbgMemAlloc::CrtSetReportHook( void* pfnNewHook )
 #ifdef POSIX
 	return 0;
 #else
-	return (void*)_CrtSetReportHook( (_CRT_REPORT_HOOK)pfnNewHook );
+	return reinterpret_cast<void*>( _CrtSetReportHook( reinterpret_cast<_CRT_REPORT_HOOK>( pfnNewHook ) ) );
 #endif
 }
 
@@ -1438,7 +1438,7 @@ int CDbgMemAlloc::heapchk()
 
 void CDbgMemAlloc::DumpBlockStats( void *p )
 {
-	if ( auto *pBlock = (DbgMemHeader_t *)p - 1; !CrtIsValidHeapPointer( pBlock ) )
+	if ( auto *pBlock = static_cast<DbgMemHeader_t *>( p ) - 1; !CrtIsValidHeapPointer( pBlock ) )
 	{
 		Msg( "0x%p is not valid heap pointer\n", p );
 		return;
@@ -1447,7 +1447,7 @@ void CDbgMemAlloc::DumpBlockStats( void *p )
 	const char *pFileName = GetAllocatonFileName( p );
 	int line = GetAllocatonLineNumber( p );
 
-	Msg( "0x%p allocated by %s line %d, %llu bytes\n", p, pFileName, line, (uint64)GetSize( p ) );
+	Msg( "0x%p allocated by %s line %d, %zu bytes\n", p, pFileName, line, GetSize( p ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -1458,12 +1458,12 @@ void CDbgMemAlloc::DumpMemInfo( const char *pAllocationName, int line, const Mem
 	m_OutputFunc("%s, line %i\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%d\t%d\t%d\t%d",
 		pAllocationName,
 		line,
-		info.m_nCurrentSize / 1024.0f,
-		info.m_nPeakSize / 1024.0f,
-		info.m_nTotalSize / 1024.0f,
-		info.m_nOverheadSize / 1024.0f,
-		info.m_nPeakOverheadSize / 1024.0f,
-		(int)(info.m_nTime / 1000),
+		info.m_nCurrentSize / 1024.0,
+		info.m_nPeakSize / 1024.0,
+		info.m_nTotalSize / 1024.0,
+		info.m_nOverheadSize / 1024.0,
+		info.m_nPeakOverheadSize / 1024.0,
+		static_cast<int>(info.m_nTime / 1000),
 		info.m_nCurrentCount,
 		info.m_nPeakCount,
 		info.m_nTotalCount

@@ -67,18 +67,20 @@ public:
 	// which are about to be destroyed. It can also be explicitly invoked with
 	// std::move().
 	CUtlString( CUtlString&& rhs ) noexcept
+		: m_pString{std::move(rhs.m_pString)}
 	{
 		// Move the string pointer from the source to this -- be sure to
 		// zero out the source to avoid double frees.
-		m_pString = rhs.m_pString;
 		rhs.m_pString = nullptr;
 	}
 	CUtlString& operator=( CUtlString&& rhs ) noexcept
 	{
+		using std::swap;
+
 		// Move the string pointer from the source to this -- be sure to
 		// zero out the source to avoid double frees.
 		// dimhotepus: Current string should be disposed when source does.
-		std::swap( m_pString, rhs.m_pString );
+		swap( m_pString, rhs.m_pString );
 		return *this;
 	}
 
@@ -304,7 +306,7 @@ inline intp CUtlString::Length() const
 
 inline bool CUtlString::IsEmpty() const
 {
-	return !m_pString || m_pString[0] == 0;
+	return Q_isempty( m_pString );
 }
 
 inline int __cdecl CUtlString::SortCaseInsensitive( const CUtlString *pString1, const CUtlString *pString2 )
@@ -356,7 +358,7 @@ public:
 	// Note that this function takes a character count, and does not guarantee null-termination.
 	static void		   Copy( OUT_CAP(iLengthInChars) char *out_pOut, const char *pIn, intp iLengthInChars ) { strncpy( out_pOut, pIn, iLengthInChars ); }
 	static int		   Compare( const char *pLhs, const char *pRhs ) { return strcmp( pLhs, pRhs ); }
-	static int		   CaselessCompare( const char *pLhs, const char *pRhs ) { return Q_strcasecmp( pLhs, pRhs ); }
+	static int		   CaselessCompare( const char *pLhs, const char *pRhs ) { return V_stricmp( pLhs, pRhs ); }
 	static intp		   Length( const char *pValue ) { return strlen( pValue ); }
 	static const char *FindChar( const char *pStr, const char cSearch ) { return strchr( pStr, cSearch ); }
 	static const char *EmptyString() { return ""; }
@@ -389,18 +391,18 @@ template < typename T = char >
 class CUtlConstStringBase
 {
 public:
-	CUtlConstStringBase() : m_pString( NULL ) {}
-	explicit CUtlConstStringBase( const T *pString ) : m_pString( NULL ) { Set( pString ); }
-	CUtlConstStringBase( const CUtlConstStringBase& src ) : m_pString( NULL ) { Set( src.m_pString ); }
-	~CUtlConstStringBase() { Set( NULL ); }
+	CUtlConstStringBase() : m_pString( nullptr ) {}
+	explicit CUtlConstStringBase( const T *pString ) : m_pString( nullptr ) { Set( pString ); }
+	CUtlConstStringBase( const CUtlConstStringBase& src ) : m_pString( nullptr ) { Set( src.m_pString ); }
+	~CUtlConstStringBase() { Set( nullptr ); }
 
 	void Set( const T *pValue );
-	void Clear() { Set( NULL ); }
+	void Clear() { Set( nullptr ); }
 
 	const T *Get() const { return m_pString ? m_pString : StringFuncs<T>::EmptyString(); }
 	operator const T*() const { return m_pString ? m_pString : StringFuncs<T>::EmptyString(); }
 
-	[[nodiscard]] bool IsEmpty() const { return m_pString == NULL; } // Note: empty strings are never stored by Set
+	[[nodiscard]] bool IsEmpty() const { return m_pString == nullptr; } // Note: empty strings are never stored by Set
 
 	int Compare( const T *rhs ) const;
 
@@ -436,7 +438,7 @@ void CUtlConstStringBase<T>::Set( const T *pValue )
 	if ( pValue != m_pString )
 	{
 		free( m_pString );
-		m_pString = pValue && pValue[0] ? StringFuncs<T>::Duplicate( pValue ) : NULL;
+		m_pString = pValue && pValue[0] ? StringFuncs<T>::Duplicate( pValue ) : nullptr;
 	}
 }
 

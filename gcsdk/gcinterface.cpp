@@ -247,6 +247,13 @@ CGCInterface::CGCInterface()
 CGCInterface::~CGCInterface()
 {
 	m_BlockEmitStrings.PurgeAndDeleteElements();
+
+	// dimhotepus: Close parent process handle.
+	if ( m_hParentProcess )
+	{
+		CloseHandle( m_hParentProcess );
+	}
+
 	ClearAssertInfo();
 	delete m_pGC;
 }
@@ -390,7 +397,7 @@ void CGCInterface::InitConVars( KeyValues *pkvConvars )
 
 		ConVar *pVar = NULL;
 		const char *pchSuffix = V_strrchr( pkvVar->GetName(), '_' );
-		if ( NULL != pchSuffix && 0 == V_strcmp( pchSuffix, CFmtStr( "_%u", GetAppID() ) ) )
+		if ( NULL != pchSuffix && V_streq( pchSuffix, CFmtStr( "_%u", GetAppID() ) ) )
 		{
 			pVar = g_pCVar->FindVar( pkvVar->GetName() );
 		}
@@ -690,7 +697,8 @@ bool CGCInterface::BAsyncInit( uint32 unAppID, const char *pchDebugName, int iGC
 		if ( const char *pSlash = strrchr( sGCPath.Get(), '\\' ) )
 		{
 			//skip over the slash, and verify that we have a 'v' before the version
-			if( tolower( pSlash[ 1 ] ) == 'v' )
+			// dimhotepus: tolower -> V_tolower.
+			if( V_tolower( pSlash[ 1 ] ) == 'v' )
 			{
 				//grab the version number
 				m_nVersion = ( uint32 )max( 0, atoi( pSlash + 2 ) );
@@ -959,6 +967,13 @@ bool CGCInterface::BAsyncShutdown()
 	bool bResult = false;
 	if ( m_pGC )
 		bResult = m_pGC->BAsyncShutdown();
+
+	// dimhotepus: Close parent process handle.
+	if ( m_hParentProcess )
+	{
+		CloseHandle( m_hParentProcess );
+		m_hParentProcess = nullptr;
+	}
 
 	//if they have requested a shutdown, go ahead and allow exit
 	g_bCrashIfExitDetected = false;

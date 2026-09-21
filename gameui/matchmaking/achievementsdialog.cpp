@@ -65,10 +65,11 @@ bool LoadAchievementIcon( vgui::ImagePanel* pIconPanel, IAchievement *pAchieveme
 //-----------------------------------------------------------------------------
 Color LerpColors ( Color cStart, Color cEnd, float flPercent )
 {
-	float r = (float)((float)(cStart.r()) + (float)(cEnd.r() - cStart.r()) * Bias( flPercent, 0.75 ) );
-	float g = (float)((float)(cStart.g()) + (float)(cEnd.g() - cStart.g()) * Bias( flPercent, 0.75 ) );
-	float b = (float)((float)(cStart.b()) + (float)(cEnd.b() - cStart.b()) * Bias( flPercent, 0.75 ) );
-	float a = (float)((float)(cStart.a()) + (float)(cEnd.a() - cStart.a()) * Bias( flPercent, 0.75 ) );
+	const float flBias = Bias( flPercent, 0.75f );
+	float r = (float)((float)(cStart.r()) + (float)(cEnd.r() - cStart.r()) * flBias );
+	float g = (float)((float)(cStart.g()) + (float)(cEnd.g() - cStart.g()) * flBias );
+	float b = (float)((float)(cStart.b()) + (float)(cEnd.b() - cStart.b()) * flBias );
+	float a = (float)((float)(cStart.a()) + (float)(cEnd.a() - cStart.a()) * flBias );
 	return Color( r, g, b, a );
 }
 
@@ -136,7 +137,7 @@ void UpdateProgressBar( vgui::EditablePanel* pPanel, IAchievement *pAchievement,
 bool GameSupportsAchievementTracker()
 {
 	const char *pGame = Q_UnqualifiedFileName( engine->GetGameDirectory() );
-	if ( ( Q_stricmp( pGame, "tf" ) == 0 ) || ( Q_stricmp( pGame, "tf_beta" ) == 0 ) )
+	if ( V_strieq( pGame, "tf" ) || V_strieq( pGame, "tf_beta" ) )
 		return true;
 
 	return false;
@@ -187,7 +188,7 @@ CAchievementsDialog::CAchievementsDialog(vgui::Panel *parent) : BaseClass(parent
 	int iHighestAchievementIDSeen = -1;
 	int iNextGroupBoundary = 1000;
 
-	Q_memset( m_AchievementGroups, 0, sizeof(m_AchievementGroups) );
+	BitwiseClear( m_AchievementGroups );
 	m_iNumAchievementGroups = 0;
 
 	// Base groups
@@ -683,16 +684,13 @@ void CAchievementsDialog::CreateOrUpdateComboItems( bool bCreate )
 
 	if ( bCreate && ( m_iNumAchievementGroups > NUM_COMBO_BOX_LINES_DEFAULT ) )
 	{
-		if ( m_pAchievementPackCombo )
-		{
-			m_pAchievementPackCombo->SetNumberOfEditLines( ( m_iNumAchievementGroups <= NUM_COMBO_BOX_LINES_MAX ) ? m_iNumAchievementGroups : NUM_COMBO_BOX_LINES_MAX );
-		}
+		m_pAchievementPackCombo->SetNumberOfEditLines( ( m_iNumAchievementGroups <= NUM_COMBO_BOX_LINES_MAX ) ? m_iNumAchievementGroups : NUM_COMBO_BOX_LINES_MAX );
 	}
 }
 
 void CAchievementsDialog::OnCommand( const char *command )
 {
-	if ( !Q_strcasecmp( command, "ongameuiactivated" ) )
+	if ( V_strieq( command, "ongameuiactivated" ) )
 	{
 		UpdateAchievementDialogInfo();
 	}

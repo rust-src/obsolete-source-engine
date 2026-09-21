@@ -1130,7 +1130,7 @@ void CEconItemDetailsRichText::AddDataText( const char *pszText, bool bAddPostLi
 void CEconItemDetailsRichText::DataText_AppendUsageData( const CEconItemDefinition *pBaseDef )
 {
 	// Don't show class/slot usage for class/slot tokens
-	if ( pBaseDef->GetItemClass() && ( !V_strcmp( pBaseDef->GetItemClass(), "class_token" ) || !V_strcmp( pBaseDef->GetItemClass(), "slot_token" ) ) )
+	if ( pBaseDef->GetItemClass() && ( V_streq( pBaseDef->GetItemClass(), "class_token" ) || V_streq( pBaseDef->GetItemClass(), "slot_token" ) ) )
 		return;
 
 #if defined(TF_DLL) || defined(TF_CLIENT_DLL)
@@ -1575,7 +1575,7 @@ void CEconItemDetailsRichText::UpdateToolList( void )
 			const IEconTool *pOtherEconTool = pOtherDef->GetEconTool();
 			Assert( pOtherEconTool );
 				
-			bAlreadyFound = !V_strcmp( pEconTool->GetTypeName(), pOtherEconTool->GetTypeName() );
+			bAlreadyFound = V_streq( pEconTool->GetTypeName(), pOtherEconTool->GetTypeName() );
 			if ( bAlreadyFound )
 			{
 				break;
@@ -1631,15 +1631,15 @@ CExplanationPopup::~CExplanationPopup( void )
 //-----------------------------------------------------------------------------
 void CExplanationPopup::OnCommand( const char *command )
 {
-	if ( !Q_stricmp( command, "close" ) )
+	if ( V_strieq( command, "close" ) )
 	{
 		Hide( 0 );
 	}
-	else if ( !Q_stricmp( command, "nextexplanation" ) )
+	else if ( V_strieq( command, "nextexplanation" ) )
 	{
 		Hide( 1 );
 	}
-	else if ( !Q_stricmp( command, "prevexplanation" ) )
+	else if ( V_strieq( command, "prevexplanation" ) )
 	{
 		Hide( -1 );
 	}
@@ -2242,11 +2242,11 @@ void CGenericWaitingDialog::OnCommand( const char *command )
 {
 	bool bClose = false;
 	
-	if ( !Q_stricmp( command, "close" ) )
+	if ( V_strieq( command, "close" ) )
 	{
 		bClose = true;
 	}
-	else if ( !Q_stricmp( command, "user_close" ) )
+	else if ( V_strieq( command, "user_close" ) )
 	{
 		OnUserClose();
 		bClose = true;

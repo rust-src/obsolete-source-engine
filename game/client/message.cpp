@@ -472,7 +472,7 @@ void CHudMessage::MessageDrawScan( client_textmessage_t *pMessage, float time )
 		// strip off any trailing newlines
 		intp len = Q_strlen( pMessage->pMessage );
 		intp tempLen = len + 2;
-		char *localString = (char *)_alloca( tempLen );
+		char *localString = stackallocT( char, tempLen );
 		Q_strncpy( localString, pMessage->pMessage, tempLen );
 		if (V_iscntrl(localString[len - 1]))
 		{
@@ -743,7 +743,7 @@ void CHudMessage::MessageAdd( const char *pName )
 	{
 		for ( i = 0; i < maxHUDMessages; i++ )
 		{
-			if ( m_pMessages[ i ] && !Q_stricmp( m_pMessages[ i ]->pName, pMessage->pClearMessage ) )
+			if ( m_pMessages[ i ] && V_strieq( m_pMessages[ i ]->pName, pMessage->pClearMessage ) )
 			{
 				m_startTime[ i ] = 0.0f;
 				m_pMessages[ i ] = NULL;

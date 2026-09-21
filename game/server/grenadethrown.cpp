@@ -52,7 +52,7 @@ void CThrownGrenade::Spawn( void )
 
 	// Movement
 	SetGravity( UTIL_ScaleForGravity( 648 ) );
-	SetFriction(0.6);
+	SetFriction(0.6f);
 	QAngle angles;
 	VectorAngles( GetAbsVelocity(), angles );
 	SetLocalAngles( angles );

@@ -315,30 +315,30 @@ bool UploadBugReport(
 	params.m_userid.m_SteamLocalUserID.As64bits = userid.ConvertToUint64();
 
 	params.m_uEngineBuildNumber		= build;
-	Q_strncpy( params.m_sExecutableName, exename, sizeof( params.m_sExecutableName ) );
-	Q_strncpy( params.m_sGameDirectory, pchGamedir, sizeof( params.m_sGameDirectory ) );
-	Q_strncpy( params.m_sMapName, mapname, sizeof( params.m_sMapName ) );
+	V_strcpy_safe( params.m_sExecutableName, exename );
+	V_strcpy_safe( params.m_sGameDirectory, pchGamedir );
+	V_strcpy_safe( params.m_sMapName, mapname );
 
 	params.m_uRAM = ram;
 	params.m_uCPU = cpu;
 
-	Q_strncpy( params.m_sProcessor, processor, sizeof( params.m_sProcessor) );
+	V_strcpy_safe( params.m_sProcessor, processor );
 
 	params.m_uDXVersionHigh = high;
 	params.m_uDXVersionLow  = low;
 	params.m_uDXVendorId = vendor;
 	params.m_uDXDeviceId = device;
 
-	Q_strncpy( params.m_sOSVersion, osversion, sizeof( params.m_sOSVersion ) );
+	V_strcpy_safe( params.m_sOSVersion, osversion );
 
-	Q_strncpy( params.m_sReportType, reporttype, sizeof( params.m_sReportType ) );
-	Q_strncpy( params.m_sEmail, email, sizeof( params.m_sEmail ) );
-	Q_strncpy( params.m_sAccountName, accountname, sizeof( params.m_sAccountName ) );
+	V_strcpy_safe( params.m_sReportType, reporttype );
+	V_strcpy_safe( params.m_sEmail, email );
+	V_strcpy_safe( params.m_sAccountName, accountname );
 
-	Q_strncpy( params.m_sTitle, title, sizeof( params.m_sTitle ) );
-	Q_strncpy( params.m_sBody, body, sizeof( params.m_sBody ) );
+	V_strcpy_safe( params.m_sTitle, title );
+	V_strcpy_safe( params.m_sBody, body );
 
-	Q_strncpy( params.m_sAttachmentFile, attachedfile, sizeof( params.m_sAttachmentFile ) );
+	V_strcpy_safe( params.m_sAttachmentFile, attachedfile );
 	params.m_uAttachmentFileSize = attachedfilesize;
 
 	params.m_uProgressContext = 1u;
@@ -858,19 +858,30 @@ EBugReportUploadStatus Win32UploadBugReportBlocking
 
 	encrypted.PutString( rBugReportParameters.m_sTitle );
 
-	intp bodylen = Q_strlen( rBugReportParameters.m_sBody ) + 1;
+	const intp bodylen = Q_strlen( rBugReportParameters.m_sBody ) + 1;
+	Assert( bodylen <= std::numeric_limits<int>::max() );
 
-	encrypted.PutInt( bodylen );
+	encrypted.PutInt( static_cast<int>( bodylen ) );
 	encrypted.Put( rBugReportParameters.m_sBody, bodylen );
 
 	while ( encrypted.TellPut() % 8 )
 	{
-		encrypted.PutChar( 0 );
+		encrypted.PutUnsignedChar( 0 );
 	}
 
-	EncryptBuffer( cipher, encrypted.Base<unsigned char>(), encrypted.TellPut() );
+	const intp encryptedSize = encrypted.TellPut();
+	EncryptBuffer( cipher, encrypted.Base<unsigned char>(), static_cast<uint>( encryptedSize ) );
+	
+	// dimhotepus: Reject too large reports
+	if ( encryptedSize > std::numeric_limits<short>::max() )
+	{
+		UpdateProgress( rBugReportParameters,
+			"Bug report size in greater than %hd, rejected",
+			std::numeric_limits<short>::max() );
+		return eBugReportUploadFailed;
+	}
 
-	buf.PutShort( (int)encrypted.TellPut() );
+	buf.PutShort( static_cast<short>( encryptedSize ) );
 	buf.Put( encrypted.Base<unsigned char>(), encrypted.TellPut() );
 
 	CBlockingUDPSocket bcs;
@@ -904,20 +915,20 @@ EBugReportUploadStatus Win32UploadBugReportBlocking
 			UpdateProgress( rBugReportParameters, "Checking response." );
 
 			// Parse out data
-			u8 msgtype = (u8)buf.GetChar();
+			u8 msgtype = buf.GetUnsignedChar();
 			if ( M2C_ACKBUGREPORT != msgtype  )
 			{
 				UpdateProgress( rBugReportParameters, "Request denied, invalid message type." );
 				return eBugReportSendingBugReportHeaderFailed;
 			}
-			bool validProtocol = (u8)buf.GetChar() == 1 ? true : false;
+			bool validProtocol = buf.GetUnsignedChar() == 1 ? true : false;
 			if ( !validProtocol )
 			{
 				UpdateProgress( rBugReportParameters, "Request denied, invalid message protocol." );
 				return eBugReportSendingBugReportHeaderFailed;
 			}
 
-			u8 disposition = (u8)buf.GetChar();
+			u8 disposition = buf.GetUnsignedChar();
 			if ( BR_REQEST_FILES != disposition )
 			{
 				// Server doesn't want a bug report, oh well

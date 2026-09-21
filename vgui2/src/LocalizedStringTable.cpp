@@ -202,15 +202,15 @@ bool CLocalizedStringTable::AddFile( const char *szFileName, const char *pPathID
 	// use the correct file based on the chosen language
 	const char LANGUAGE_STRING[] = "%language%";
 	const char ENGLISH_STRING[] = "english";
-	constexpr int MAX_LANGUAGE_NAME_LENGTH = 64;
-	char language[MAX_LANGUAGE_NAME_LENGTH];
-	char fileName[MAX_PATH];
 	intp offs = 0;
 	bool success = false;
-
-	memset( language, 0, sizeof(language) );
-
-	Q_strncpy( fileName, szFileName, sizeof( fileName ) );
+	
+	constexpr int MAX_LANGUAGE_NAME_LENGTH = 64;
+	char language[MAX_LANGUAGE_NAME_LENGTH];
+	BitwiseClear( language );
+	
+	char fileName[MAX_PATH];
+	V_strcpy_safe( fileName, szFileName );
 
 	// Lowercase the *relative* portion of the filename,
 	// in case people look for "Resource/file.txt" etc.  We always
@@ -286,7 +286,7 @@ bool CLocalizedStringTable::AddFile( const char *szFileName, const char *pPathID
 	for ( intp lf = 0; lf < lfc; ++lf )
 	{
 		LocalizationFileInfo_t& entry = m_LocalizationFiles[ lf ];
-		if ( !Q_stricmp( entry.symName.String(), fileName ) )
+		if ( V_strieq( entry.symName.String(), fileName ) )
 		{
 			m_LocalizationFiles.Remove( lf );
 			break;
@@ -411,11 +411,7 @@ bool CLocalizedStringTable::AddFile( const char *szFileName, const char *pPathID
 			bEnglishFile = true;
 		}
 
-		bool spew = false;
-		if ( CommandLine()->FindParm( "-ccsyntax" ) )
-		{
-			spew = true;
-		}
+		bool spew = CommandLine()->HasParm( "-ccsyntax" );
 
 		BuildFastValueLookup();
 
@@ -452,18 +448,18 @@ bool CLocalizedStringTable::AddFile( const char *szFileName, const char *pPathID
 			
 			if (state == STATE_BASE)
 			{
-				if (!stricmp(key, "Language"))
+				if (V_strieq(key, "Language"))
 				{
 					// copy out our language setting
 					char value[MAX_LOCALIZED_CHARS];
 					V_UCS2ToUTF8(valuetoken, value, sizeof(value));
 					V_strcpy_safe(m_szLanguage, value);
 				}
-				else if (!stricmp(key, "Tokens"))
+				else if (V_strieq(key, "Tokens"))
 				{
 					state = STATE_TOKENS;
 				}
-				else if (!stricmp(key, "}"))
+				else if (V_streq(key, "}"))
 				{
 					// we've hit the end
 					break;
@@ -471,7 +467,7 @@ bool CLocalizedStringTable::AddFile( const char *szFileName, const char *pPathID
 			}
 			else if (state == STATE_TOKENS)
 			{
-				if (!stricmp(key, "}"))
+				if (V_streq(key, "}"))
 				{
 					// end of tokens
 					state = STATE_BASE;
@@ -511,18 +507,18 @@ bool CLocalizedStringTable::AddFile( const char *szFileName, const char *pPathID
 							if ( pszKey && pszKey[0] )
 							{
 								pszKey[ V_strlen(pszKey)-1 ] = '\0';
-								if ( !V_stricmp( pszKey, "ENGLISH" ) ||
-									!V_stricmp( pszKey, "JAPANESE" ) ||
-									!V_stricmp( pszKey, "GERMAN" ) ||
-									!V_stricmp( pszKey, "FRENCH" ) ||
-									!V_stricmp( pszKey, "SPANISH" ) ||
-									!V_stricmp( pszKey, "ITALIAN" ) ||
-									!V_stricmp( pszKey, "KOREAN" ) ||
-									!V_stricmp( pszKey, "TCHINESE" ) ||
-									!V_stricmp( pszKey, "PORTUGUESE" ) ||
-									!V_stricmp( pszKey, "SCHINESE" ) ||
-									!V_stricmp( pszKey, "POLISH" ) ||
-									!V_stricmp( pszKey, "RUSSIAN" ) )
+								if ( V_strieq( pszKey, "ENGLISH" ) ||
+									V_strieq( pszKey, "JAPANESE" ) ||
+									V_strieq( pszKey, "GERMAN" ) ||
+									V_strieq( pszKey, "FRENCH" ) ||
+									V_strieq( pszKey, "SPANISH" ) ||
+									V_strieq( pszKey, "ITALIAN" ) ||
+									V_strieq( pszKey, "KOREAN" ) ||
+									V_strieq( pszKey, "TCHINESE" ) ||
+									V_strieq( pszKey, "PORTUGUESE" ) ||
+									V_strieq( pszKey, "SCHINESE" ) ||
+									V_strieq( pszKey, "POLISH" ) ||
+									V_strieq( pszKey, "RUSSIAN" ) )
 								{
 									// the language symbols are true if we are in that language
 									// english is assumed when no language is present
@@ -532,7 +528,7 @@ bool CLocalizedStringTable::AddFile( const char *szFileName, const char *pPathID
 									{
 										pLanguageString = "english";
 									}
-									bool bMatched = ( !V_stricmp( pszKey, pLanguageString ) );
+									bool bMatched = ( V_strieq( pszKey, pLanguageString ) );
 									bAccepted = (bMatched && !bNot) || (!bMatched && bNot);
 								}
 							}
@@ -634,7 +630,7 @@ bool CLocalizedStringTable::SaveToFile( const char *szFileName )
 	// write litte-endian unicode marker
 	unsigned short marker = 0xFEFF;
 	marker = LittleShort( marker );
-	g_pFullFileSystem->Write(&marker, sizeof( marker ), file);
+	g_pFullFileSystem->Write(marker, file);
 
 	const char *startStr = "\"lang\"\r\n{\r\n\"Language\" \"English\"\r\n\"Tokens\"\r\n{\r\n";
 	const char *endStr = "}\r\n}\r\n";
@@ -667,22 +663,22 @@ bool CLocalizedStringTable::SaveToFile( const char *szFileName )
 		// convert the name to a unicode string
 		ConvertANSIToUnicode(name, unicodeString);
 
-		g_pFullFileSystem->Write(&unicodeTab, sizeof(wchar_t), file);
+		g_pFullFileSystem->Write(unicodeTab, file);
 
 		// write out
-		g_pFullFileSystem->Write(&unicodeQuote, sizeof(wchar_t), file);
+		g_pFullFileSystem->Write(unicodeQuote, file);
 		g_pFullFileSystem->Write(unicodeString, V_wcslen( unicodeString ) * static_cast<int>(sizeof(wchar_t)), file);
-		g_pFullFileSystem->Write(&unicodeQuote, sizeof(wchar_t), file);
+		g_pFullFileSystem->Write(unicodeQuote, file);
 
-		g_pFullFileSystem->Write(&unicodeTab, sizeof(wchar_t), file);
-		g_pFullFileSystem->Write(&unicodeTab, sizeof(wchar_t), file);
+		g_pFullFileSystem->Write(unicodeTab, file);
+		g_pFullFileSystem->Write(unicodeTab, file);
 
-		g_pFullFileSystem->Write(&unicodeQuote, sizeof(wchar_t), file);
+		g_pFullFileSystem->Write(unicodeQuote, file);
 		g_pFullFileSystem->Write(value, V_wcslen(value) * static_cast<int>(sizeof(wchar_t)), file);
-		g_pFullFileSystem->Write(&unicodeQuote, sizeof(wchar_t), file);
+		g_pFullFileSystem->Write(unicodeQuote, file);
 
-		g_pFullFileSystem->Write(&unicodeCR, sizeof(wchar_t), file);
-		g_pFullFileSystem->Write(&unicodeNewline, sizeof(wchar_t), file);
+		g_pFullFileSystem->Write(unicodeCR, file);
+		g_pFullFileSystem->Write(unicodeNewline, file);
 	}
 
 	// write end string
@@ -1005,7 +1001,7 @@ bool CLocalizedStringTable::LocalizationFileIsLoaded(const char *name)
 	intp c = m_LocalizationFiles.Count();
 	for ( intp i = 0; i < c; ++i )
 	{
-		if ( !Q_stricmp( m_LocalizationFiles[ i ].symName.String(), name ) )
+		if ( V_strieq( m_LocalizationFiles[ i ].symName.String(), name ) )
 			return true;
 	}
 

@@ -172,7 +172,7 @@ void CGraphPanel::PerformLayout()
 //-----------------------------------------------------------------------------
 void CGraphPanel::OnServerDataResponse(const char *value, const char *response)
 {
-	if (!stricmp(value, "stats"))
+	if (V_strieq(value, "stats"))
 	{
 		// parse the stats out of the response
 		Points_t p;
@@ -250,7 +250,7 @@ void CGraphPanel::CGraphsImage::Paint()
 	float RangePing=maxPing;
 	float RangeFPS=maxFPS;
 	float Range=0;
-	float RangePlayers=maxPlayers;
+	float RangePlayers=size_cast<float>( maxPlayers );
 
 
 	if(ping)
@@ -500,11 +500,11 @@ void CGraphPanel::CGraphsImage::CheckBounds(const Points_t &p)
 
 	if(p.players>maxPlayers)
 	{
-		maxPlayers=avgPoint.players;
+		maxPlayers=static_cast<int>( avgPoint.players );
 	}
 	if(p.players<minPlayers)
 	{
-		minPlayers=avgPoint.players;
+		minPlayers=static_cast<int>( avgPoint.players );
 	}
 	
 }
@@ -607,7 +607,8 @@ void CGraphPanel::CGraphsImage::SetScale(intervals time)
 	points.RemoveAll();
 
 	// and reset the maxes
-	maxIn=maxOut=minIn=minOut=minFPS=maxFPS=minPing=maxPing=maxPlayers=minPlayers=0;
+	maxIn=maxOut=minIn=minOut=minFPS=maxFPS=minPing=maxPing=0;
+	maxPlayers=minPlayers=0;
 
 }
 

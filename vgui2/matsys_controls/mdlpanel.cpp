@@ -272,7 +272,7 @@ static StudioRenderConfig_t s_StudioRenderConfig;
 
 void CMDLPanel::UpdateStudioRenderConfig( void )
 {
-	memset( &s_StudioRenderConfig, 0, sizeof(s_StudioRenderConfig) );
+	BitwiseClear( s_StudioRenderConfig );
 
 	s_StudioRenderConfig.bEyeMove = !!r_eyemove.GetInt();
 	s_StudioRenderConfig.fEyeShiftX = r_eyeshift_x.GetFloat();
@@ -328,7 +328,7 @@ void CMDLPanel::DrawCollisionModel()
 	while ( !pParser->Finished() )
 	{
 		const char *pBlock = pParser->GetCurrentBlockName();
-		if ( !stricmp( pBlock, "solid" ) )
+		if ( V_strieq( pBlock, "solid" ) )
 		{
 			solid_t solid;
 
@@ -443,8 +443,10 @@ void CMDLPanel::OnPaint3D()
 	SetupFlexWeights();
 
 	matrix3x4_t *pBoneToWorld = g_pStudioRender->LockBoneMatrices( studioHdr.numbones() );
-	m_RootMDL.m_MDL.SetUpBones( m_RootMDL.m_MDLToWorld, studioHdr.numbones(), pBoneToWorld, m_PoseParameters, m_SequenceLayers, m_nNumSequenceLayers );
-	g_pStudioRender->UnlockBoneMatrices();
+	{
+		RunCodeAtScopeExit( g_pStudioRender->UnlockBoneMatrices() );
+		m_RootMDL.m_MDL.SetUpBones( m_RootMDL.m_MDLToWorld, studioHdr.numbones(), pBoneToWorld, m_PoseParameters, m_SequenceLayers, m_nNumSequenceLayers );
+	}
 
 	IMaterial* pOverrideMaterial = GetOverrideMaterial( m_RootMDL.m_MDL.GetMDL() );
 	if ( pOverrideMaterial != NULL )
@@ -565,7 +567,7 @@ bool CMDLPanel::SetPoseParameterByName( const char *pszName, float fValue )
 	for ( intp i = 0; i < nPoseCount; ++i )
 	{
 		const mstudioposeparamdesc_t &Pose = studioHdr.pPoseParameter( i );
-		if ( V_strcasecmp( pszName, Pose.pszName() ) == 0 )
+		if ( V_strieq( pszName, Pose.pszName() ) )
 		{
 			m_PoseParameters[ i ] = fValue;
 			return true;
@@ -592,7 +594,7 @@ void CMDLPanel::SetSequenceLayers( const MDLSquenceLayer_t *pSequenceLayers, int
 	else
 	{
 		m_nNumSequenceLayers = 0;
-		V_memset( m_SequenceLayers, 0, sizeof( m_SequenceLayers ) );
+		BitwiseClear( m_SequenceLayers );
 	}
 }
 

@@ -140,6 +140,14 @@ ClientModeDODNormal::ClientModeDODNormal()
 	m_pFreezePanel = NULL;
 }
 
+// dimhotepus: Correctly shut down.
+ClientModeDODNormal::~ClientModeDODNormal()
+{
+	// dimhotepus: Pair with constructor.
+	delete m_pViewport;
+	m_pViewport = nullptr;
+}
+
 void ClientModeDODNormal::Init()
 {
 	BaseClass::Init();
@@ -495,7 +503,7 @@ void ClientModeDODNormal::RadioMessage( const char *pszSoundName, const char *ps
 	int color = COLOR_PLAYERNAME;
 
 	// stop the last played radio message
-	if ( Q_strlen( m_szLastRadioSound ) > 0 )
+	if ( !Q_isempty( m_szLastRadioSound ) )
 	{
 		C_DODPlayer *pLocalPlayer = C_DODPlayer::GetLocalDODPlayer();
 		if ( pLocalPlayer )

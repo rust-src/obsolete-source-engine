@@ -212,7 +212,7 @@ CDirWatcher::~CDirWatcher()
 		pDirWatcherOverlapped->m_pDirWatcher = nullptr;
 	}
 
-	if ( m_hFile )
+	if ( m_hFile != INVALID_HANDLE_VALUE )
 	{
 		// make sure we flush any pending I/O's on the handle
 		::CancelIo( m_hFile );
@@ -229,14 +229,8 @@ CDirWatcher::~CDirWatcher()
 		m_WatcherStream = 0;
 	}
 #endif
-	if ( m_pFileInfo )
-	{
-		free( m_pFileInfo );
-	}
-	if ( m_pOverlapped )
-	{
-		free( m_pOverlapped );
-	}
+	free( m_pFileInfo );
+	free( m_pOverlapped );
 }
 
 
@@ -445,7 +439,7 @@ void CDirWatcher::AddFileToChangeList( const char *pchFile )
 	// make sure it isn't already in the list
 	FOR_EACH_LL( m_listChangedFiles, i )
 	{
-		if ( !Q_stricmp( m_listChangedFiles[i], pchFile ) )
+		if ( V_strieq( m_listChangedFiles[i], pchFile ) )
 			return;
 	}
 

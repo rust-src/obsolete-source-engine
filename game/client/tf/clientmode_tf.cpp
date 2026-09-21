@@ -446,6 +446,9 @@ ClientModeTFNormal::ClientModeTFNormal()
 //-----------------------------------------------------------------------------
 ClientModeTFNormal::~ClientModeTFNormal()
 {
+	// dimhotepus: Pair with constructor.
+	delete m_pViewport;
+	m_pViewport = nullptr;
 }
 
 // See interface.h/.cpp for specifics:  basically this ensures that we actually Sys_UnloadModule the dll and that we don't call Sys_LoadModule 
@@ -767,7 +770,7 @@ void ClientModeTFNormal::FireGameEvent( IGameEvent *event )
 	}
 	else if ( FStrEq( "server_cvar", eventname ) )
 	{		
-		if ( TFGameRules() && TFGameRules()->IsPVEModeActive() && !Q_strcmp( event->GetString("cvarname"), "tf_bot_count" ) )
+		if ( TFGameRules() && TFGameRules()->IsPVEModeActive() && V_streq( event->GetString("cvarname"), "tf_bot_count" ) )
 			return;
 	}
 	else if ( FStrEq( "player_buyback", eventname ) )
@@ -932,17 +935,8 @@ void ClientModeTFNormal::FireGameEvent( IGameEvent *event )
 			const char *hostname = event->GetString( "hostname" );
 			if ( hostname )
 			{
-				if ( m_lastServerName )
-				{
-					delete [] m_lastServerName;
-					m_lastServerName = NULL;
-				}
-
-				int hostnameLength = V_strlen( hostname )+1;
-
-				m_lastServerName = new char[ hostnameLength ];
-
-				V_strncpy( m_lastServerName, hostname, hostnameLength );
+				delete [] m_lastServerName;
+				m_lastServerName = V_strdup( hostname );
 			}
 
 			m_lastServerConnectTime = GetSteamWorksSGameStatsUploader().GetTimeSinceEpoch();

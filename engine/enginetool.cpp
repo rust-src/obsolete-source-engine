@@ -731,10 +731,10 @@ void CEngineTool::SetMainView( const Vector &vecOrigin, const QAngle &angles )
 
 static float ScaleFOVByWidthRatio( float fovDegrees, float ratio )
 {
-	float halfAngleRadians = fovDegrees * ( 0.5f * M_PI / 180.0f );
+	float halfAngleRadians = fovDegrees * ( 0.5f * M_PI_F / 180.0f );
 	float t = tan( halfAngleRadians );
 	t *= ratio;
-	float retDegrees = ( 180.0f / M_PI ) * atan( t );
+	float retDegrees = ( 180.0f / M_PI_F ) * atan( t );
 	return retDegrees * 2.0f;
 }
 
@@ -987,7 +987,7 @@ void CEngineTool::StartRecordingVoiceToFile( const char *filename, const char *p
 
 		byte foo = 'b';
 
-		g_pFileSystem->Write( &foo, 1, fh );
+		g_pFileSystem->Write( foo, fh );
 	}
 
 	g_pFileSystem->RelativePathToFullPath_safe( filename, pPathID, m_szVoiceoverFile );

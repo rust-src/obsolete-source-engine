@@ -153,7 +153,7 @@ bool CRC_MapFile(CRC32_t *crcvalue, const char *pszFileName)
 	startOfs = g_pFileSystem->Tell(fp);
 
 	// Don't CRC the header.
-	if (g_pFileSystem->Read(&header, sizeof(dheader_t), fp) == 0)
+	if (g_pFileSystem->Read(header, fp) == 0)
 	{
 		ConMsg("Could not read BSP header for map [%s].\n", pszFileName);
 		return false;
@@ -229,7 +229,7 @@ bool MD5_MapFile(MD5Value_t *md5value, const char *pszFileName)
 	startOfs = g_pFileSystem->Tell(fp);
 
 	// Don't MD5 the header.
-	if (g_pFileSystem->Read(&header, sizeof(dheader_t), fp) == 0)
+	if (g_pFileSystem->Read(header, fp) == 0)
 	{
 		ConMsg("Could not read BSP header for map [%s].\n", pszFileName);
 		return false;
@@ -291,11 +291,10 @@ bool MD5_MapFile(MD5Value_t *md5value, const char *pszFileName)
 //-----------------------------------------------------------------------------
 bool MD5_Hash_File(unsigned char digest[16], const char *pszFileName, bool bSeed /* = FALSE */, unsigned int seed[4] /* = NULL */)
 {
-	FileHandle_t fp;
 	byte chunk[1024];
 	int nBytesRead;
-	MD5Context_t ctx;
-	
+
+	FileHandle_t fp;
 	int nSize = COM_OpenFile( pszFileName, &fp );
 	if ( !fp )
 		return false;
@@ -303,9 +302,9 @@ bool MD5_Hash_File(unsigned char digest[16], const char *pszFileName, bool bSeed
 	RunCodeAtScopeExit(g_pFileSystem->Close(fp));
 	if ( nSize == -1 )
 		return false;
-
-	memset(&ctx, 0, sizeof(MD5Context_t));
-
+	
+	MD5Context_t ctx;
+	BitwiseClear(ctx);
 	MD5Init(&ctx);
 
 	if (bSeed)
@@ -351,13 +350,12 @@ bool MD5_Hash_File(unsigned char digest[16], const char *pszFileName, bool bSeed
 // Purpose: 
 //-----------------------------------------------------------------------------
 bool MD5_Hash_Buffer( unsigned char pDigest[16], const unsigned char *pBuffer, int nSize, bool bSeed /* = FALSE */, unsigned int seed[4] /* = NULL */ )
-{
-	MD5Context_t ctx;
-	
+{	
 	if ( !pBuffer || !nSize )
 		return false;
-
-	memset( &ctx, 0, sizeof( MD5Context_t ) );
+	
+	MD5Context_t ctx;
+	BitwiseClear( ctx );
 	MD5Init( &ctx );
 
 	if ( bSeed )

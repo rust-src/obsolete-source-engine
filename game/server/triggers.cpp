@@ -955,7 +955,7 @@ void CTriggerMultiple::Spawn( void )
 
 	if (m_flWait == 0)
 	{
-		m_flWait = 0.2;
+		m_flWait = 0.2f;
 	}
 
 	ASSERTSZ(m_iHealth == 0, "trigger_multiple with health");
@@ -2089,7 +2089,7 @@ int CChangeLevel::AddDependentEntities( int nCount, CBaseEntity **ppEntList, int
 		if ( !nDepCount )
 			continue;
 
-		CBaseEntity **ppDependentEntities = (CBaseEntity**)stackalloc( nDepCount * sizeof(CBaseEntity*) );
+		CBaseEntity **ppDependentEntities = stackallocT( CBaseEntity*, nDepCount );
 		pSaveUtils->GetEntityDependencies( pEntity, nDepCount, ppDependentEntities );
 		for ( int j = 0; j < nDepCount; ++j )
 		{
@@ -3364,8 +3364,8 @@ void CTriggerCamera::FollowTarget( )
 
 	if (!HasSpawnFlags(SF_CAMERA_PLAYER_TAKECONTROL))	
 	{
-		SetAbsVelocity( GetAbsVelocity() * 0.8 );
-		if (GetAbsVelocity().Length( ) < 10.0)
+		SetAbsVelocity( GetAbsVelocity() * 0.8f );
+		if (GetAbsVelocity().Length( ) < 10.0f)
 		{
 			SetAbsVelocity( vec3_origin );
 		}

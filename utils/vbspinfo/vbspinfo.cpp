@@ -208,9 +208,9 @@ void PrintModelStats(FILE *fp) {
     const char *pClassName = NULL;
     const char *pModelName = NULL;
     for (; pEPair; pEPair = pEPair->next) {
-      if (Q_stricmp(pEPair->key, "classname") == 0) {
+      if (V_strieq(pEPair->key, "classname")) {
         pClassName = pEPair->value;
-      } else if (Q_stricmp(pEPair->key, "model") == 0) {
+      } else if (V_strieq(pEPair->key, "model")) {
         if (StringHasPrefix(pEPair->value, "models")) {
           pModelName = pEPair->value;
         }
@@ -299,7 +299,7 @@ int main(int argc, char **argv) {
   constexpr char kEnUsUtf8Locale[]{"en_US.UTF-8"};
 
   const se::ScopedAppLocale scoped_app_locale{kEnUsUtf8Locale};
-  if (V_stricmp(se::ScopedAppLocale::GetCurrentLocale(), kEnUsUtf8Locale)) {
+  if (!V_strieq(se::ScopedAppLocale::GetCurrentLocale(), kEnUsUtf8Locale)) {
     Warning("setlocale('%s') failed, current locale is '%s'.\n",
             kEnUsUtf8Locale, se::ScopedAppLocale::GetCurrentLocale());
   }

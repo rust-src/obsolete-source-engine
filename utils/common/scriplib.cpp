@@ -226,7 +226,7 @@ static bool AddMacroToStack( char *macroname, char (&out)[MAXTOKEN] )
 	int i;
 	for (i = 0; i < nummacros; i++)
 	{
-		if (strcmpi( macrolist[i]->filename, &macroname[1] ) == 0)
+		if (V_strieq( macrolist[i]->filename, &macroname[1] ))
 		{
 			break;
 		}
@@ -448,7 +448,7 @@ void PushMemoryScript( char *pszBuffer, const int nSize )
 //-----------------------------------------------------------------------------
 bool PopMemoryScript()
 {
-	if ( V_stricmp( script->filename, "memory buffer" ) )
+	if ( !V_strieq( script->filename, "memory buffer" ) )
 		return false;
 
 	if ( script == scriptstack )
@@ -490,7 +490,7 @@ qboolean EndOfScript (qboolean crossline, char (&out)[MAXTOKEN])
 	if (!crossline)
 		Error ("Line %i is incomplete\n",scriptline);
 
-	if (!strcmp (script->filename, "memory buffer"))
+	if (V_streq (script->filename, "memory buffer"))
 	{
 		endofscript = true;
 		return false;
@@ -700,7 +700,7 @@ skipspace:
 	*token_p = 0;
 
 	// check for other commands
-	if ( !stricmp( out, "$include" ) )
+	if ( V_strieq( out, "$include" ) )
 	{
 		GetToken( false, out );
 
@@ -737,13 +737,13 @@ skipspace:
 
 		return GetToken( crossline, out );
 	}
-	else if (!stricmp (out, "$definemacro"))
+	else if (V_strieq (out, "$definemacro"))
 	{
 		GetToken (false, out);
 		DefineMacro(out, out);
 		return GetToken( crossline, out );
 	}
-	else if (!stricmp (out, "$definevariable"))
+	else if (V_strieq (out, "$definevariable"))
 	{
 		GetToken (false, out);
 		DefineVariable(out, out);
@@ -862,7 +862,7 @@ skipspace:
 
 	*token_p = 0;
 
-	if (!stricmp (out, "$include"))
+	if (V_strieq (out, "$include"))
 	{
 		GetToken (false, out);
 		AddScriptToStack (out);
@@ -1183,10 +1183,10 @@ intp CScriptLib::GetFileList( const char* pDirPath, const char* pPattern, CUtlVe
 				continue;
 		}
 
-		if ( !stricmp( findData.name, "." ) )
+		if ( V_streq( findData.name, "." ) )
 			continue;
 
-		if ( !stricmp( findData.name, ".." ) )
+		if ( V_streq( findData.name, ".." ) )
 			continue;
 
 		char fileName[MAX_PATH];
@@ -1225,10 +1225,10 @@ intp CScriptLib::GetFileList( const char* pDirPath, const char* pPattern, CUtlVe
 				continue;
 		}
 
-		if ( !stricmp( findData.cFileName, "." ) )
+		if ( V_streq( findData.cFileName, "." ) )
 			continue;
 
-		if ( !stricmp( findData.cFileName, ".." ) )
+		if ( V_streq( findData.cFileName, ".." ) )
 			continue;
 
 		char fileName[MAX_PATH];

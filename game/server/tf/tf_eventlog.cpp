@@ -316,8 +316,8 @@ protected:
 		else if ( FStrEq( eventName, "tf_game_over" ) || FStrEq( eventName, "teamplay_game_over" ) )
 		{
 			UTIL_LogPrintf( "World triggered \"Game_Over\" reason \"%s\"\n", event->GetString( "reason" ) );
-			UTIL_LogPrintf( "Team \"Red\" final score \"%d\" with \"%d\" players\n", GetGlobalTeam( TF_TEAM_RED )->GetScore(), GetGlobalTeam( TF_TEAM_RED )->GetNumPlayers() );
-			UTIL_LogPrintf( "Team \"Blue\" final score \"%d\" with \"%d\" players\n", GetGlobalTeam( TF_TEAM_BLUE )->GetScore(), GetGlobalTeam( TF_TEAM_BLUE )->GetNumPlayers() );
+			UTIL_LogPrintf( "Team \"Red\" final score \"%d\" with \"%zd\" players\n", GetGlobalTeam( TF_TEAM_RED )->GetScore(), GetGlobalTeam( TF_TEAM_RED )->GetNumPlayers() );
+			UTIL_LogPrintf( "Team \"Blue\" final score \"%d\" with \"%zd\" players\n", GetGlobalTeam( TF_TEAM_BLUE )->GetScore(), GetGlobalTeam( TF_TEAM_BLUE )->GetNumPlayers() );
  			return true;		
  		}
  		else if ( FStrEq( eventName, "player_chargedeployed" ) )
@@ -622,8 +622,8 @@ protected:
 
 			if ( bShowScores )
 			{
-				UTIL_LogPrintf( "Team \"Red\" current score \"%d\" with \"%d\" players\n", GetGlobalTeam( TF_TEAM_RED )->GetScore(), GetGlobalTeam( TF_TEAM_RED )->GetNumPlayers() );
-				UTIL_LogPrintf( "Team \"Blue\" current score \"%d\" with \"%d\" players\n", GetGlobalTeam( TF_TEAM_BLUE )->GetScore(), GetGlobalTeam( TF_TEAM_BLUE )->GetNumPlayers() );
+				UTIL_LogPrintf( "Team \"Red\" current score \"%d\" with \"%zd\" players\n", GetGlobalTeam( TF_TEAM_RED )->GetScore(), GetGlobalTeam( TF_TEAM_RED )->GetNumPlayers() );
+				UTIL_LogPrintf( "Team \"Blue\" current score \"%d\" with \"%zd\" players\n", GetGlobalTeam( TF_TEAM_BLUE )->GetScore(), GetGlobalTeam( TF_TEAM_BLUE )->GetNumPlayers() );
 			}
 		}
 		else if ( FStrEq( eventName, "medic_death" ) )

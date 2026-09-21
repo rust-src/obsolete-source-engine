@@ -92,7 +92,7 @@ void* SendProxy_OnlyToTeam( const SendProp *pProp, const void *pStruct, const vo
 		if ( pTeam )
 		{
 			pRecipients->ClearAllRecipients();
-			for ( int i=0; i < pTeam->GetNumPlayers(); i++ )
+			for ( intp i=0; i < pTeam->GetNumPlayers(); i++ )
 				pRecipients->SetRecipient( pTeam->GetPlayer( i )->GetClientIndex() );
 		
 			return (void*)pVarData;

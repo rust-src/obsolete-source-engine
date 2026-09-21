@@ -473,12 +473,12 @@ void CPortal_Player::OnRestore( void )
 
 bool CPortal_Player::ValidatePlayerModel( const char *pModel )
 {
-	if ( !Q_stricmp( g_pszPlayerModel, pModel ) )
+	if ( V_strieq( g_pszPlayerModel, pModel ) )
 	{
 		return true;
 	}
 
-	if ( !Q_stricmp( g_pszChellModel, pModel ) )
+	if ( V_strieq( g_pszChellModel, pModel ) )
 	{
 		return true;
 	}
@@ -980,7 +980,9 @@ void CPortal_Player::SetupBones( matrix3x4_t *pBoneToWorld, int boneMask )
 				q, 
 				pBoneToWorld, 
 				pParent, 
-				pParentCache );
+				pParentCache,
+				// dimhotepus: Take into account bone mask for initialized quaternion and position.
+				boneMask );
 
 			return;
 		}

@@ -123,7 +123,7 @@ const char *IFaceposerModels::CFacePoserModel::GetBitmapChecksum( intp sequence 
 	char hex[ 16 ];
 	V_binarytohex( crc, hex );
 
-	V_sprintf_safe( filename, "%s", hex );
+	V_strcpy_safe( filename, hex );
 	return filename;
 }
 
@@ -585,7 +585,7 @@ void IFaceposerModels::CFacePoserModel::RecreateAnimationBitmap( intp sequence, 
 	}
 
 	char filename[ 512 ];
-	Q_snprintf( filename, sizeof( filename ), "%s", GetBitmapFilename( sequence ) );
+	V_strcpy_safe( filename, GetBitmapFilename( sequence ) );
 
 	if ( filesystem->FileExists( filename ) )
 	{
@@ -725,7 +725,7 @@ intp IFaceposerModels::FindModelByFilename( char const *filename )
 		if ( !m )
 			continue;
 
-		if ( !stricmp( m->GetModelFileName(), filename ) )
+		if ( V_strieq( m->GetModelFileName(), filename ) )
 			return i;
 	}
 
@@ -840,7 +840,7 @@ intp IFaceposerModels::GetModelIndexForActor( char const *actorname )
 		if ( !m )
 			continue;
 
-		if ( !stricmp( m->GetActorName(), actorname ) )
+		if ( V_strieq( m->GetActorName(), actorname ) )
 			return i;
 	}
 
@@ -856,7 +856,7 @@ StudioModel *IFaceposerModels::GetModelForActor( char const *actorname )
 		if ( !m )
 			continue;
 
-		if ( !stricmp( m->GetActorName(), actorname ) )
+		if ( V_strieq( m->GetActorName(), actorname ) )
 			return m->GetModel();
 	}
 

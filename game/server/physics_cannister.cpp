@@ -290,7 +290,7 @@ void CPhysicsCannister::CannisterFire( CBaseEntity *pActivator )
 //-----------------------------------------------------------------------------
 void CPhysicsCannister::InputActivate( inputdata_t &data )
 {
-	CannisterActivate( data.pActivator, Vector(0,0.1,-0.25) );
+	CannisterActivate( data.pActivator, Vector(0,0.1f,-0.25f) );
 }
 
 //-----------------------------------------------------------------------------

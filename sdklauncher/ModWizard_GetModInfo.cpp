@@ -74,7 +74,7 @@ CModWizardSubPanel_GetModInfo::CModWizardSubPanel_GetModInfo( Panel *parent, con
 WizardSubPanel *CModWizardSubPanel_GetModInfo::GetNextSubPanel()
 {
 	// In scratch/template, go to the template options panel - orange box only!
-	if ( m_ModType == ModType_FromScratch && !V_strcmp( g_engineDir, "source2007" ) )
+	if ( m_ModType == ModType_FromScratch && V_streq( g_engineDir, "source2007" ) )
 		return dynamic_cast<WizardSubPanel *>(GetWizardPanel()->FindChildByName("CModWizardSubPanel_TemplateOptions"));
 	else
 		return dynamic_cast<WizardSubPanel *>(GetWizardPanel()->FindChildByName("CModWizardSubPanel_CopyFiles"));
@@ -132,7 +132,8 @@ bool CModWizardSubPanel_GetModInfo::OnNextButton()
 		int modNameLen = strlen( modName );
 		for ( int i=0; i < modNameLen; i++ )
 		{
-			if ( !isalnum( modName[i] ) && modName[i] != '-' && modName[i] != '_' && modName[i] != ' ' )
+			// dimhotepus: isalnum -> V_isalnum.
+			if ( !V_isalnum( modName[i] ) && modName[i] != '-' && modName[i] != '_' && modName[i] != ' ' )
 			{
 				VGUIMessageBox( this, "Error", "#ModNameInvalidCharacters" );
 				return false;
@@ -196,7 +197,7 @@ bool CModWizardSubPanel_GetModInfo::OnNextButton()
 
 void CModWizardSubPanel_GetModInfo::OnCommand( const char *command )
 {
-	if ( Q_stricmp( command, "SearchButton" ) == 0 )
+	if ( V_strieq( command, "SearchButton" ) )
 	{
 		CModalPreserveDirectorySelectDialog *pDlg = vgui::SETUP_PANEL( new CModalPreserveDirectorySelectDialog( this, "#SelectInstallDirectory" ) );
 		pDlg->SetStartDirectory( "C:\\" );

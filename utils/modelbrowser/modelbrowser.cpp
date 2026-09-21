@@ -86,7 +86,7 @@ SpewRetval_t ModelBrowserSpewFunc( SpewType_t spewType, const tchar *pMsg )
 	case SPEW_MESSAGE:
 		{
 			Color c = *GetSpewOutputColor();
-			if ( !Q_stricmp( GetSpewOutputGroup(), "developer" ) )
+			if ( V_strieq( GetSpewOutputGroup(), "developer" ) )
 				g_pCVar->ConsoleDPrintf( pMsg );
 			else
 				g_pCVar->ConsoleColorPrintf( c, pMsg );
@@ -213,7 +213,7 @@ bool CModelBrowserApp::Create()
 	if ( !AddSystems( appSystems ) )
 		return false;
 
-	if ( !CommandLine()->CheckParm( "-nop4" ))
+	if ( !CommandLine()->HasParm( "-nop4" ))
 	{
 		AppModule_t hModule = LoadModule( "p4lib" );
 		AddSystem( hModule, P4_INTERFACE_VERSION );

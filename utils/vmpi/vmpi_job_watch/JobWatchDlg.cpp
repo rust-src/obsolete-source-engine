@@ -318,7 +318,7 @@ CWorkerInfo* CJobWatchDlg::FindWorkerByMachineName( const char *pMachineName )
 	while ( ( nIndex = m_Workers.GetNextItem( nIndex, LVNI_ALL ) ) != -1 )
 	{
 		CWorkerInfo *pInfo = (CWorkerInfo*)m_Workers.GetItemData( nIndex );
-		if ( Q_stricmp( pInfo->m_ComputerName, pMachineName ) == 0 )
+		if ( V_strieq( pInfo->m_ComputerName, pMachineName ) )
 			return pInfo;
 	}
 
@@ -329,7 +329,7 @@ CWorkerInfo* CJobWatchDlg::FindWorkerByMachineName( const char *pMachineName )
 void CJobWatchDlg::SetWorkerListItemInt( int nIndex, int iColumn, int value )
 {
 	char str[512];
-	Q_snprintf( str, sizeof( str ), "%d", value );
+	V_to_chars( str, value );
 	m_Workers.SetItemText( nIndex, iColumn, str );
 }
 

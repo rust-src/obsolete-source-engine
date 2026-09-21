@@ -240,7 +240,7 @@ void CPropVehicle::Think()
 	}
 }
 
-#define SMOOTHING_FACTOR 0.9
+#define SMOOTHING_FACTOR 0.9f
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1274,23 +1274,23 @@ void CFourWheelServerVehicle::NPC_DriveVehicle( void )
 			GetFourWheelVehicle()->GetVectors( &vecForward, &vecRight, NULL );
 			if ( m_nNPCButtons & IN_FORWARD )
 			{
-				NDebugOverlay::Line( GetFourWheelVehicle()->GetAbsOrigin(), GetFourWheelVehicle()->GetAbsOrigin() + vecForward * 200, 0,255,0, true, 0.1 );
+				NDebugOverlay::Line( GetFourWheelVehicle()->GetAbsOrigin(), GetFourWheelVehicle()->GetAbsOrigin() + vecForward * 200, 0,255,0, true, 0.1f );
 			}
 			if ( m_nNPCButtons & IN_BACK )
 			{
-				NDebugOverlay::Line( GetFourWheelVehicle()->GetAbsOrigin(), GetFourWheelVehicle()->GetAbsOrigin() - vecForward * 200, 0,255,0, true, 0.1 );
+				NDebugOverlay::Line( GetFourWheelVehicle()->GetAbsOrigin(), GetFourWheelVehicle()->GetAbsOrigin() - vecForward * 200, 0,255,0, true, 0.1f );
 			}
 			if ( m_nNPCButtons & IN_MOVELEFT )
 			{
-				NDebugOverlay::Line( GetFourWheelVehicle()->GetAbsOrigin(), GetFourWheelVehicle()->GetAbsOrigin() - vecRight * 200 * -m_flTurnDegrees, 0,255,0, true, 0.1 );
+				NDebugOverlay::Line( GetFourWheelVehicle()->GetAbsOrigin(), GetFourWheelVehicle()->GetAbsOrigin() - vecRight * 200 * -m_flTurnDegrees, 0,255,0, true, 0.1f );
 			}
 			if ( m_nNPCButtons & IN_MOVERIGHT )
 			{
-				NDebugOverlay::Line( GetFourWheelVehicle()->GetAbsOrigin(), GetFourWheelVehicle()->GetAbsOrigin() + vecRight * 200 * m_flTurnDegrees, 0,255,0, true, 0.1 );
+				NDebugOverlay::Line( GetFourWheelVehicle()->GetAbsOrigin(), GetFourWheelVehicle()->GetAbsOrigin() + vecRight * 200 * m_flTurnDegrees, 0,255,0, true, 0.1f );
 			}
 			if ( m_nNPCButtons & IN_JUMP )
 			{
-				NDebugOverlay::Box( GetFourWheelVehicle()->GetAbsOrigin(), -Vector(20,20,20), Vector(20,20,20), 0,255,0, true, 0.1 );
+				NDebugOverlay::Box( GetFourWheelVehicle()->GetAbsOrigin(), -Vector(20,20,20), Vector(20,20,20), 0,255,0, true, 0.1f );
 			}
 		}
 	}

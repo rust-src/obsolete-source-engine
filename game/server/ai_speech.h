@@ -63,8 +63,8 @@ extern CAI_TimedSemaphore g_AIFoesTalkSemaphore;
 // Constants
 
 
-constexpr inline float AIS_DEF_MIN_DELAY 	= 2.8; // Minimum amount of time an NPCs will wait after someone has spoken before considering speaking again
-constexpr inline float AIS_DEF_MAX_DELAY 	= 3.2; // Maximum amount of time an NPCs will wait after someone has spoken before considering speaking again
+constexpr inline float AIS_DEF_MIN_DELAY 	= 2.8f; // Minimum amount of time an NPCs will wait after someone has spoken before considering speaking again
+constexpr inline float AIS_DEF_MAX_DELAY 	= 3.2f; // Maximum amount of time an NPCs will wait after someone has spoken before considering speaking again
 constexpr inline float AIS_NO_DELAY  		= 0;
 constexpr inline soundlevel_t AIS_DEF_SNDLVL 	 	= SNDLVL_TALKING;
 #define AI_NULL_CONCEPT NULL
@@ -96,7 +96,7 @@ typedef const char *AIConcept_t;
 
 inline bool CompareConcepts( AIConcept_t c1, AIConcept_t c2 ) 
 {
-	return ( (void *)c1 == (void *)c2 || ( c1 && c2 && Q_stricmp( c1, c2 ) == 0 ) );
+	return c1 == c2 || ( c1 && c2 && V_strieq( c1, c2 ) );
 }
 
 //-------------------------------------

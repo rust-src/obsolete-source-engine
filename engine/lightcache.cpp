@@ -1343,7 +1343,7 @@ static inline const byte* FastRejectLightSource(
 		{
  			int  bucketOriginLeaf = CM_PointLeafnum( bucketOrigin );
 			mleaf_t *pLeaf = &host_state.worldbrush->leafs[bucketOriginLeaf];
-			if ( pLeaf && !( pLeaf->flags & ( LEAF_FLAGS_SKY | LEAF_FLAGS_SKY2D ) ) )
+			if ( !( pLeaf->flags & ( LEAF_FLAGS_SKY | LEAF_FLAGS_SKY2D ) ) )
 			{
 				bReject = true;
 			}
@@ -2861,7 +2861,7 @@ void ComputeLighting( const Vector& pt, const Vector* pNormal, bool bClamp, Vect
 	int i;
 	if ( pNormal )
 	{
-		LightDesc_t* pLightDesc = (LightDesc_t*)stackalloc( lightingState.numlights * sizeof(LightDesc_t) );
+		LightDesc_t* pLightDesc = stackallocT( LightDesc_t, lightingState.numlights );
 		
 		for ( i=0; i < lightingState.numlights; ++i )
 		{

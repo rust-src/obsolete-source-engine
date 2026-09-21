@@ -633,42 +633,42 @@ void CActBusyTool::OnExit()
 //-----------------------------------------------------------------------------
 void CActBusyTool::OnCommand( const char *cmd )
 {
-	if ( !V_stricmp( cmd, "HideActionMenu" ) )
+	if ( V_strieq( cmd, "HideActionMenu" ) )
 	{
 		if ( GetActionMenu() )
 		{
 			GetActionMenu()->SetVisible( false );
 		}
 	}
-	else if ( !V_stricmp( cmd, "OnNewActBusy" ) )
+	else if ( V_strieq( cmd, "OnNewActBusy" ) )
 	{
 		OnNewActBusy();
 	}
-	else if ( !V_stricmp( cmd, "OnDeleteActBusy" ) )
+	else if ( V_strieq( cmd, "OnDeleteActBusy" ) )
 	{
 		OnDeleteActBusy();
 	}
-	else if ( !V_stricmp( cmd, "OnToggleProperties" ) )
+	else if ( V_strieq( cmd, "OnToggleProperties" ) )
 	{
 		OnToggleProperties();
 	}
-	else if ( !V_stricmp( cmd, "OnToggleSequencePicker" ) )
+	else if ( V_strieq( cmd, "OnToggleSequencePicker" ) )
 	{
 		OnToggleSequencePicker();
 	}
-	else if ( !V_stricmp( cmd, "OnDefaultLayout" ) )
+	else if ( V_strieq( cmd, "OnDefaultLayout" ) )
 	{
 		OnDefaultLayout();
 	}
-	else if ( !V_stricmp( cmd, "OnUndo" ) )
+	else if ( V_strieq( cmd, "OnUndo" ) )
 	{
 		OnUndo();
 	}
-	else if ( !V_stricmp( cmd, "OnRedo" ) )
+	else if ( V_strieq( cmd, "OnRedo" ) )
 	{
 		OnRedo();
 	}
-	else if ( !V_stricmp( cmd, "OnDescribeUndo" ) )
+	else if ( V_strieq( cmd, "OnDescribeUndo" ) )
 	{
 		OnDescribeUndo();
 	}
@@ -706,19 +706,19 @@ void CActBusyTool::OnFileOperationCompleted( [[maybe_unused]] const char *pFileT
 	if ( state != FileOpenStateMachine::SUCCESSFUL )
 		return;
 
-	if ( !Q_stricmp( pContextKeyValues->GetName(), "OnNew" ) )
+	if ( V_strieq( pContextKeyValues->GetName(), "OnNew" ) )
 	{
 		PerformNew();
 		return;
 	}
 
-	if ( !Q_stricmp( pContextKeyValues->GetName(), "OnClose" ) )
+	if ( V_strieq( pContextKeyValues->GetName(), "OnClose" ) )
 	{
 		OnCloseNoSave();
 		return;
 	}
 
-	if ( !Q_stricmp( pContextKeyValues->GetName(), "OnQuit" ) )
+	if ( V_strieq( pContextKeyValues->GetName(), "OnQuit" ) )
 	{
 		OnCloseNoSave();
 		vgui::ivgui()->PostMessage( GetVPanel(), new KeyValues( "OnExit" ), 0 );
@@ -880,7 +880,7 @@ void CActBusyTool::OpenSpecificFile( const char *pFileName )
 	if ( m_pDoc )
 	{
 		// File is already open
-		if ( !Q_stricmp( m_pDoc->GetFileName(), pFileName ) )
+		if ( V_strieq( m_pDoc->GetFileName(), pFileName ) )
 			return;
 
 		if ( m_pDoc->IsDirty() )

@@ -36,6 +36,11 @@ extern CNetworkStringTableContainer *networkStringTableContainerServer;
 CHLTVDemoRecorder::CHLTVDemoRecorder()
 {
 	m_bIsRecording = false;
+	m_nFrameCount = 0;
+	m_nStartTick = 0;
+	m_SequenceInfo = 0;
+	m_nDeltaTick = 0;
+	m_nSignonTick = 0;
 }
 
 CHLTVDemoRecorder::~CHLTVDemoRecorder()
@@ -158,8 +163,8 @@ int CHLTVDemoRecorder::GetRecordingTick( void )
 
 void CHLTVDemoRecorder::WriteServerInfo()
 {
-	ALIGN4 byte		buffer[ NET_MAX_PAYLOAD ] ALIGN4_POST;
-	bf_write	msg( "CHLTVDemoRecorder::WriteServerInfo", buffer, sizeof( buffer ) );
+	alignas(4) byte		buffer[ NET_MAX_PAYLOAD ];
+	bf_write	msg( "CHLTVDemoRecorder::WriteServerInfo", buffer );
 
 	SVC_ServerInfo serverinfo;	// create serverinfo message
 
@@ -219,12 +224,8 @@ void CHLTVDemoRecorder::RecordCommand( const char *cmdstring )
 
 void CHLTVDemoRecorder::RecordServerClasses( ServerClass *pClasses )
 {
-	CUtlBuffer bigBuff;
-
-	intp buffSize = 256*1024;
-	char *pBigBuffer = (char*)stackalloc( buffSize );
-
-	bf_write buf( pBigBuffer, buffSize );
+	char pBigBuffer[256*1024];
+	bf_write buf( pBigBuffer );
 
 	// Send SendTable info.
 	DataTable_WriteSendTablesBuffer( pClasses, &buf );
@@ -287,8 +288,8 @@ int CHLTVDemoRecorder::WriteSignonData()
 	RecordServerClasses( serverGameDLL->GetAllServerClasses() );
 	RecordStringTables();
 
-	ALIGN4 byte		buffer[ NET_MAX_PAYLOAD ] ALIGN4_POST;
-	bf_write	msg( "CHLTVDemo::WriteSignonData", buffer, sizeof( buffer ) );
+	alignas(4) byte buffer[ NET_MAX_PAYLOAD ];
+	bf_write	msg( "CHLTVDemo::WriteSignonData", buffer );
 
 	// use your class infos, CRC is correct
 	SVC_ClassInfo classmsg( true, pServer->serverclasses );
@@ -320,8 +321,8 @@ int CHLTVDemoRecorder::WriteSignonData()
 
 void CHLTVDemoRecorder::WriteFrame( CHLTVFrame *pFrame )
 {
-	ALIGN4 byte		buffer[ NET_MAX_PAYLOAD ] ALIGN4_POST;
-	bf_write	msg( "CHLTVDemo::RecordFrame", buffer, sizeof( buffer ) );
+	alignas(4) byte buffer[ NET_MAX_PAYLOAD ];
+	bf_write	msg( "CHLTVDemo::RecordFrame", buffer );
 
 	Assert( hltv->IsMasterProxy() ); // this works only on the master since we use sv.
 

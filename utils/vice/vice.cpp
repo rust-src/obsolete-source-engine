@@ -8,23 +8,25 @@
 // vice.cpp : Defines the entry point for the console application.
 //
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <malloc.h>
-#include <string.h>
-#include "tier1/strtools.h"
 #include <sys/stat.h>
-#include "conio.h"
+#include <conio.h>
 #include <direct.h>
 #include <io.h>
-#include "UtlBuffer.h"
-#include "tier0/dbg.h"
+#include <windows.h>
+
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
+
 #include "cmdlib.h"
+#include "tier0/dbg.h"
 #include "tier0/icommandline.h"
-#include "windows.h"
+#include "tier1/strtools.h"
+#include "tier1/utlbuffer.h"
 
 #include "mathlib/IceKey.h"
-#include <filesystem_tools.h>
+#include "filesystem_tools.h"
 
 #define FF_TRYAGAIN 1
 #define FF_DONTPROCESS 2
@@ -151,7 +153,7 @@ int main(int argc, char* argv[])
 	}
 	char *pInputBaseName = NULL;
 	int i = 1;
-	strcpy( g_Extension, ".dat" );
+	V_strcpy_safe( g_Extension, ".dat" );
 	while( i < argc )
 	{
 		if( stricmp( argv[i], "-quiet" ) == 0 )
@@ -240,30 +242,30 @@ int main(int argc, char* argv[])
 			_splitpath( pInputBaseName, NULL, NULL, fname, ext ); //find extension wanted
 			fname[strlen(fname)-1] = 0; // remove *
 
-			sprintf( search, "%s\\*%s", gamedir, ext );
+			V_sprintf_safe( search, "%s\\*%s", gamedir, ext );
 
 			Q_FixSlashes( search, '/' );
 
 			WIN32_FIND_DATA wfd;
-			HANDLE hResult;
 			memset(&wfd, 0, sizeof(WIN32_FIND_DATA));
 			
-			hResult = FindFirstFile( search, &wfd );
-
-			while ( hResult != INVALID_HANDLE_VALUE )
+			HANDLE hResult = FindFirstFile( search, &wfd );
+			if (hResult != INVALID_HANDLE_VALUE )
 			{
-				if ( !strnicmp( fname, wfd.cFileName, strlen(fname) ) )
+				RunCodeAtScopeExit( FindClose( hResult ) );
+
+				while ( hResult != INVALID_HANDLE_VALUE )
 				{
-					if ( !Process_File( wfd.cFileName, sizeof( wfd.cFileName ) ) )
+					if ( !strnicmp( fname, wfd.cFileName, strlen(fname) ) )
+					{
+						if ( !Process_File( wfd.cFileName, sizeof( wfd.cFileName ) ) )
+							break;
+					}
+
+					if ( !FindNextFile( hResult, &wfd) )
 						break;
 				}
-
-				if ( !FindNextFile( hResult, &wfd) )
-					break;
-							
 			}
-			
-			FindClose( hResult );
 		}
 		else
 		{

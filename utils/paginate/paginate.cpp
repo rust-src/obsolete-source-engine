@@ -143,18 +143,18 @@ void printusage( void )
 
 void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char const *extension )
 {
-	WIN32_FIND_DATA wfd;
-
 	char directory[ 256 ];
-	char filename[ 256 ];
+	V_sprintf_safe( directory, "%s\\*.*", dir );
+
 	HANDLE ff;
-
-	sprintf( directory, "%s\\*.*", dir );
-
+	WIN32_FIND_DATA wfd;
 	if ( ( ff = FindFirstFile( directory, &wfd ) ) == INVALID_HANDLE_VALUE )
 		return;
 
-	int extlen = extension ? strlen( extension ) : 0 ;
+	RunCodeAtScopeExit(FindClose( ff ));
+
+	int extlen = extension ? strlen( extension ) : 0;
+	char filename[ 256 ];
 
 	do
 	{
@@ -165,7 +165,7 @@ void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char con
 				continue;
 
 			// Recurse down directory
-			sprintf( filename, "%s\\%s", dir, wfd.cFileName );
+			V_sprintf_safe( filename, "%s\\%s", dir, wfd.cFileName );
 			BuildFileList_R( files, filename, extension );
 		}
 		else
@@ -173,7 +173,7 @@ void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char con
 			int len = strlen( wfd.cFileName );
 			if ( len > extlen )
 			{
-				if ( !extension || !stricmp( &wfd.cFileName[ len - extlen ], extension ) )
+				if ( !extension || V_strieq( &wfd.cFileName[ len - extlen ], extension ) )
 				{
 					char filename[ MAX_PATH ];
 					Q_snprintf( filename, sizeof( filename ), "%s\\%s", dir, wfd.cFileName );
@@ -492,7 +492,7 @@ int main( int argc, char* argv[] )
 
 	vprint( 0, "    Paginating and Bates numbering documents...\n" );
 
-	strcpy( rootdir, argv[ argc - 1 ] );
+	V_strcpy_safe( rootdir, argv[ argc - 1 ] );
 
 	Q_FixSlashes( rootdir );
 	Q_strlower( rootdir );

@@ -42,7 +42,7 @@ public:
 	C_BasePlayer*	GetPlayer( int idx );
 
 	// for shared code, use the same function name
-	virtual int		GetNumPlayers( void ) { return Get_Number_Players(); }
+	virtual intp	GetNumPlayers( void ) { return Get_Number_Players(); }
 
 	int		GetTeamNumber() const;
 

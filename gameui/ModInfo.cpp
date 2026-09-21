@@ -31,6 +31,7 @@ CModInfo::CModInfo()
 {
 	m_pModData = new KeyValues("ModData");
 	m_wcsGameTitle[0] = L'\0';
+	m_wcsGameTitle2[0] = L'\0';
 }
 
 //-----------------------------------------------------------------------------
@@ -90,7 +91,7 @@ const wchar_t *CModInfo::GetGameTitle()
 	if (!m_wcsGameTitle[0])
 	{
 		// for some reason, the standard ILocalize::ConvertANSIToUnicode() strips off
-		// the '²' character in 'HALF-LIFE²' - so just do a straight upconvert to unicode
+		// the 'Â²' character in 'HALF-LIFEÂ²' - so just do a straight upconvert to unicode
 		const char *title = m_pModData->GetString("title", "");
 		int i = 0;
 		for (; title[i] != 0; ++i)
@@ -111,7 +112,7 @@ const wchar_t *CModInfo::GetGameTitle2()
 	if (!m_wcsGameTitle2[0])
 	{
 		// for some reason, the standard ILocalize::ConvertANSIToUnicode() strips off
-		// the '²' character in 'HALF-LIFE²' - so just do a straight upconvert to unicode
+		// the 'Â²' character in 'HALF-LIFEÂ²' - so just do a straight upconvert to unicode
 		const char *title2 = m_pModData->GetString("title2", "");
 		int i = 0;
 		for (; title2[i] != 0; ++i)
@@ -236,7 +237,7 @@ void CModInfo::LoadGameInfoFromBuffer( const char *buffer )
 //-----------------------------------------------------------------------------
 bool CModInfo::UseGameLogo()
 {
-	return ( Q_stricmp( m_pModData->GetString( "gamelogo", "0" ), "1" ) == 0 );
+	return V_strieq( m_pModData->GetString( "gamelogo", "0" ), "1" );
 }
 
 //-----------------------------------------------------------------------------
@@ -244,7 +245,7 @@ bool CModInfo::UseGameLogo()
 //-----------------------------------------------------------------------------
 bool CModInfo::UseBots()
 {
-	return ( Q_stricmp( m_pModData->GetString( "bots", "0" ), "1" ) == 0 );
+	return V_strieq( m_pModData->GetString( "bots", "0" ), "1" );
 }
 
 

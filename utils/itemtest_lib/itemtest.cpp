@@ -398,14 +398,14 @@ CItemTestManifest::CItemTestManifest( const char *pszManifestFile, CItemLog *pIt
 	m_pZipOutputDirectory = m_pManifestKV->GetString("archive_output_path");
 
 	m_pQCTemplate = m_pManifestKV->GetString("qc_template");
-	if ( V_strlen( m_pQCTemplate ) == 0 )
+	if ( Q_isempty( m_pQCTemplate ) )
 	{
 		m_pItemLog->Warning( "ERROR: qc_template not defined in manifest file: %s\n", pszManifestFile );
 		return;
 	}
 
 	m_pQCITemplate = m_pManifestKV->GetString( "qci_template" );
-	if ( V_strlen( m_pQCITemplate ) == 0 )
+	if ( Q_isempty( m_pQCITemplate ) )
 	{
 		m_pItemLog->Warning( "ERROR: qci_template not defined in manifest file: %s\n", pszManifestFile );
 		return;
@@ -453,7 +453,7 @@ int	CItemTestManifest::GetMaterialType( const char *pszMaterialType )
 {
 	FOR_EACH_VEC( m_vecMaterialTypes, i )
 	{
-		if ( V_stricmp(m_vecMaterialTypes[i].pszMaterialType, pszMaterialType) == 0 )
+		if ( V_strieq(m_vecMaterialTypes[i].pszMaterialType, pszMaterialType) )
 			return i;
 	}
 
@@ -467,7 +467,7 @@ int	CItemTestManifest::GetMaterialSkin( const char *pszMaterialSkin )
 {
 	FOR_EACH_VEC( m_vecMaterialSkins, i )
 	{
-		if ( V_stricmp(m_vecMaterialSkins[i].pszMaterialSkin, pszMaterialSkin) == 0 )
+		if ( V_strieq(m_vecMaterialSkins[i].pszMaterialSkin, pszMaterialSkin) )
 			return i;
 	}
 
@@ -481,7 +481,7 @@ int	CItemTestManifest::GetTextureType( const char *pszTextureType )
 {
 	FOR_EACH_VEC( m_vecTextureTypes, i )
 	{
-		if ( V_stricmp(m_vecTextureTypes[i].pszTextureType, pszTextureType) == 0 )
+		if ( V_strieq(m_vecTextureTypes[i].pszTextureType, pszTextureType) )
 			return i;
 	}
 
@@ -507,7 +507,7 @@ int	CItemTestManifest::GetIconType( const char *pszIconType )
 {
 	FOR_EACH_VEC( m_vecIconTypes, i )
 	{
-		if ( V_stricmp(m_vecIconTypes[i].pszIconType, pszIconType) == 0 )
+		if ( V_strieq(m_vecIconTypes[i].pszIconType, pszIconType) )
 			return i;
 	}
 
@@ -566,14 +566,14 @@ const char *GetClassString( int i )
 //-----------------------------------------------------------------------------
 const char *GetClassString( const char *pszClassString )
 {
-	if ( !pszClassString || V_strlen( pszClassString ) <= 0 )
+	if ( Q_isempty( pszClassString ) )
 		return NULL;
 
 	// Make sure it exists in our manifest file
 	for ( int i = 0; i < CItemUpload::Manifest()->GetNumClasses(); i++ )
 	{
 		const char *pszHero = CItemUpload::Manifest()->GetClass(i);
-		if ( V_stricmp(pszHero, pszClassString) == 0 )
+		if ( V_strieq(pszHero, pszClassString) )
 			return pszHero;
 	}
 
@@ -594,7 +594,7 @@ int GetClassIndex( const char *pszClassString )
 
 	for ( int i = 0; i < GetClassCount(); ++i )
 	{
-		if ( !V_stricmp( pszCleanClassString, GetClassString( i ) ) )
+		if ( V_strieq( pszCleanClassString, GetClassString( i ) ) )
 		{
 			return i;
 		}
@@ -1068,9 +1068,7 @@ bool CItemUpload::FileExists( const char *pszFilename )
 //-----------------------------------------------------------------------------
 bool CItemUpload::CopyFiles( const char *pszSourceDir, const char *pszPattern, const char *pszDestDir )
 {
-	char szFindPattern[ k64KB ];
-	bool bAllSucceeded = true;
-
+	char szFindPattern[ MAX_PATH ];
 	V_snprintf( szFindPattern, sizeof( szFindPattern ), "%s%s", pszSourceDir, pszPattern );
 
 	WIN32_FIND_DATA findData;
@@ -1079,55 +1077,50 @@ bool CItemUpload::CopyFiles( const char *pszSourceDir, const char *pszPattern, c
 	{
 		return false;
 	}
-	else
+
+	RunCodeAtScopeExit(FindClose( hFind ));
+
+	bool bAllSucceeded = true;
+	
+	do
 	{
-		do
-		{
-			char szSrcPath[ k64KB ];
-			char szDestPath[ k64KB ];
+		char szSrcPath[ MAX_PATH ];
+		V_sprintf_safe( szSrcPath, "%s%s", pszSourceDir, findData.cFileName );
 
-			V_snprintf( szSrcPath, sizeof( szSrcPath ), "%s%s", pszSourceDir, findData.cFileName );
-			V_snprintf( szDestPath, sizeof( szDestPath ), "%s\\%s", pszDestDir, findData.cFileName );
+		char szDestPath[ MAX_PATH ];
+		V_sprintf_safe( szDestPath, "%s\\%s", pszDestDir, findData.cFileName );
 
-			DeleteFile( szDestPath );
-			::CopyFile( szSrcPath, szDestPath, false );
-			bAllSucceeded &= FileExists( szDestPath );
+		DeleteFile( szDestPath );
+		::CopyFile( szSrcPath, szDestPath, false );
 
-		} while ( FindNextFile( hFind, &findData ) );
-		FindClose( hFind );
+		bAllSucceeded &= FileExists( szDestPath );
+	} while ( FindNextFile( hFind, &findData ) );
 
-		return bAllSucceeded;
-	}
+	return bAllSucceeded;
 }
 
 
 static bool DoFileCopy( const char *pszSourceFile, const char *pszDestFile )
 {
 	int             remaining, count;
-	char			buf[4096];
-	FileHandle_t	in, out;
+	char			buf[65535];
 
-	in = g_pFullFileSystem->Open( pszSourceFile, "rb" );
-
+	FileHandle_t in = g_pFullFileSystem->Open( pszSourceFile, "rb" );
 	AssertMsg( in, "DoFileCopy: Input file failed to open" );
-
-	if ( in == FILESYSTEM_INVALID_HANDLE )
+	if ( !in )
 		return false;
+	RunCodeAtScopeExit(g_pFullFileSystem->Close(in));
 		
 	// create directories up to the cache file
 	char szDestPath[MAX_PATH];
-	V_ExtractFilePath( pszDestFile, szDestPath, sizeof( szDestPath ) );
+	V_ExtractFilePath( pszDestFile, szDestPath );
 	g_pFullFileSystem->CreateDirHierarchy( szDestPath );
 
-	out = g_pFullFileSystem->Open( pszDestFile, "wb" );
-
+	FileHandle_t out = g_pFullFileSystem->Open( pszDestFile, "wb" );
 	AssertMsg( out, "DoFileCopy: Output file failed to open" );
-	
-	if ( out == FILESYSTEM_INVALID_HANDLE )
-	{
-		g_pFullFileSystem->Close( in );
+	if ( !out )
 		return false;
-	}
+	RunCodeAtScopeExit(g_pFullFileSystem->Close(out));
 		
 	remaining = g_pFullFileSystem->Size( in );
 	while ( remaining > 0 )
@@ -1143,10 +1136,7 @@ static bool DoFileCopy( const char *pszSourceFile, const char *pszDestFile )
 		g_pFullFileSystem->Read( buf, count, in );
 		g_pFullFileSystem->Write( buf, count, out );
 		remaining -= count;
-	}
-
-	g_pFullFileSystem->Close( in );
-	g_pFullFileSystem->Close( out );   
+	}   
 	
 	return true;
 }
@@ -2160,7 +2150,7 @@ bool CTargetTGA::SetInputFile( const char *pszFilename )
 {
 	Clear();
 
-	if ( !pszFilename || V_strlen( pszFilename ) <= 0 )
+	if ( Q_isempty( pszFilename ) )
 	{
 		Warning( "ERROR: Empty filename specified for TGA file\n" );
 		return false;
@@ -3697,7 +3687,7 @@ bool CTargetDMX::IsInputObj() const
 {
 	// TODO: Perhaps look at magic in the start of the file
 
-	return !V_stricmp( "obj", m_sExtension.String() );
+	return V_strieq( "obj", m_sExtension.String() );
 }
 
 
@@ -3708,7 +3698,7 @@ bool CTargetDMX::IsInputSmd() const
 {
 	// TODO: Perhaps look at magic in the start of the file
 
-	return !V_stricmp( "smd", m_sExtension.String() );
+	return V_strieq( "smd", m_sExtension.String() );
 }
 
 
@@ -3719,7 +3709,7 @@ bool CTargetDMX::IsInputDmx() const
 {
 	// TODO: Perhaps look at magic in the start of the file
 
-	return !V_stricmp( "dmx", m_sExtension.String() );
+	return V_strieq( "dmx", m_sExtension.String() );
 }
 
 
@@ -3730,7 +3720,7 @@ bool CTargetDMX::IsInputFbx() const
 {
 	// TODO: Perhaps look at magic in the start of the file
 
-	return !V_stricmp( "fbx", m_sExtension.String() );
+	return V_strieq( "fbx", m_sExtension.String() );
 }
 
 
@@ -6191,9 +6181,9 @@ const char* CAsset::CheckRedundantOutputFilePath( const char* pszInputFilePath, 
 	for ( int i=0; i<m_CompileOutputFiles.Count(); ++i )
 	{
 		const CompileOutputFile_t& tga = m_CompileOutputFiles[i];
-		if ( !V_stricmp( tga.m_strInputFilePath.String(), pszInputFilePath ) )
+		if ( V_strieq( tga.m_strInputFilePath.String(), pszInputFilePath ) )
 		{
-			if ( !V_stricmp( tga.m_strVTEXConfig.String(), pszLocalVTEXConfig ) )
+			if ( V_strieq( tga.m_strVTEXConfig.String(), pszLocalVTEXConfig ) )
 			{
 				return tga.m_strOutputFilePath.String();
 			}

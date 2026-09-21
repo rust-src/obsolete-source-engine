@@ -387,8 +387,8 @@ void AddSolidToTree(leaf_t *leaf, int x, int y, int wide, int tall)
 			// create 2 new leaves
 			leaf_t *left = AllocLeaf();
 			leaf_t *right = AllocLeaf();
-			memset(left, 0, sizeof(leaf_t));
-			memset(right, 0, sizeof(leaf_t));
+			BitwiseClear(*left);
+			BitwiseClear(*right);
 			leaf->left = left;
 			leaf->right = right;
 
@@ -414,8 +414,8 @@ void AddSolidToTree(leaf_t *leaf, int x, int y, int wide, int tall)
 			// create 2 new leaves (facing to the east)
 			leaf_t *left = AllocLeaf();
 			leaf_t *right = AllocLeaf();
-			memset(left, 0, sizeof(leaf_t));
-			memset(right, 0, sizeof(leaf_t));
+			BitwiseClear(*left);
+			BitwiseClear(*right);
 			leaf->left = left;
 			leaf->right = right;
 
@@ -441,8 +441,8 @@ void AddSolidToTree(leaf_t *leaf, int x, int y, int wide, int tall)
 			// create 2 new leaves
 			leaf_t *left = AllocLeaf();
 			leaf_t *right = AllocLeaf();
-			memset(left, 0, sizeof(leaf_t));
-			memset(right, 0, sizeof(leaf_t));
+			BitwiseClear(*left);
+			BitwiseClear(*right);
 			leaf->left = left;
 			leaf->right = right;
 
@@ -468,8 +468,8 @@ void AddSolidToTree(leaf_t *leaf, int x, int y, int wide, int tall)
 			// create 2 new leaves (facing to the east)
 			leaf_t *left = AllocLeaf();
 			leaf_t *right = AllocLeaf();
-			memset(left, 0, sizeof(leaf_t));
-			memset(right, 0, sizeof(leaf_t));
+			BitwiseClear(*left);
+			BitwiseClear(*right);
 			leaf->left = left;
 			leaf->right = right;
 
@@ -501,54 +501,6 @@ void AddSolidToTree(leaf_t *leaf, int x, int y, int wide, int tall)
 void EditablePanel::PaintBackground()
 {
 	BaseClass::PaintBackground();
-	return;
-
-/*
-	test code, using a screenspace bsp tree to reduce overdraw in vgui
-	not yet fully functional
-
-//	test: fill background with obnoxious color to show holes
-//	surface()->DrawSetColor(Color(255, 0, 0, 255));
-//	surface()->DrawFilledRect(0, 0, GetWide(), GetTall());
-//	return;
-
-	// reset the leaf memory
-	g_iNextLeaf = 0;
-
-	leaf_t *headNode = AllocLeaf();
-	memset(headNode, 0, sizeof(leaf_t));
-
-	headNode->wide = (short)GetWide();
-	headNode->tall = (short)GetTall();
-
-	// split the leaf by the first child
-	for (int i = 0; i < GetChildCount(); i++)
-	{
-		Panel *child = GetChild(i);
-		if (child->IsOpaque())
-		{
-			int x, y, wide, tall;
-			child->GetBounds(x, y, wide, tall);
-
-			// ignore small children
-			if (wide + tall < 100)
-				continue;
-
-			AddSolidToTree(headNode, x, y, wide, tall);
-		}
-	}
-
-	// walk the built tree, painting the background
-	Color col = GetBgColor();
-	surface()->DrawSetColor(col);
-	for (i = 0; i < g_iNextLeaf; i++)
-	{
-		leaf_t *leaf = g_Leaves + i;
-		if (leaf->splitpos || leaf->filled)
-			continue;
-		surface()->DrawFilledRect(leaf->x, leaf->y, leaf->x + leaf->wide, leaf->y + leaf->tall);
-	}
-*/
 }
 
 //-----------------------------------------------------------------------------
@@ -681,14 +633,14 @@ void EditablePanel::OnClose()
 //-----------------------------------------------------------------------------
 bool EditablePanel::RequestInfo(KeyValues *data)
 {
-	if (!stricmp(data->GetName(), "BuildDialog"))
+	if (V_strieq(data->GetName(), "BuildDialog"))
 	{
 		// a build dialog is being requested, give it one
 		// a bit hacky, but this is a case where vgui.dll needs to reach out
 		data->SetPtr("PanelPtr", new BuildModeDialog( (BuildGroup *)data->GetPtr("BuildGroupPtr")));
 		return true;
 	}
-	else if (!stricmp(data->GetName(), "ControlFactory"))
+	else if (V_strieq(data->GetName(), "ControlFactory"))
 	{
 		Panel *newPanel = CreateControlByName(data->GetString("ControlName"));
 		if (newPanel)

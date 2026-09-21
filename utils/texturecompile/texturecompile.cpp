@@ -215,13 +215,13 @@ void MySystem( char *pCommand )
 		Error( "CreateProcess failed." );
 		Assert( 0 );
 	}
+
+	// Close process and thread handles.
+	RunCodeAtScopeExit(CloseHandle( pi.hThread )); 
+	RunCodeAtScopeExit(CloseHandle( pi.hProcess ));
 	
 	// Wait until child process exits.
 	WaitForSingleObject( pi.hProcess, INFINITE );
-	
-	// Close process and thread handles. 
-	CloseHandle( pi.hProcess );
-	CloseHandle( pi.hThread );
 }
 
 void VTFNameToTGAName( const char *pSrcName, char *pDstName )
@@ -255,14 +255,14 @@ void Worker_ProcessWorkUnitFn( int iThread, uint64 iWorkUnit, MessageBuffer *pBu
 		char cmdline[1024];
 		char tganame[1024];
 		VTFNameToTGAName( g_CompileCommands[i], tganame );
-		sprintf( cmdline, "vtex -allowdebug -vproject \"%s%s\" -mkdir -nopause \"%s%s\"", g_WorkerTempPath, g_pGameDir + 3, g_WorkerTempPath, tganame + 3 ); // hack hack
+		V_sprintf_safe( cmdline, "vtex -allowdebug -vproject \"%s%s\" -mkdir -nopause \"%s%s\"", g_WorkerTempPath, g_pGameDir + 3, g_WorkerTempPath, tganame + 3 ); // hack hack
 		DebugOut( cmdline );
 		DebugOut( "\n" );
 //		MySystem( cmdline );
 		system( cmdline );
 
 		char localVTFName[1024];
-		sprintf( localVTFName, "%s%s", g_WorkerTempPath, g_CompileCommands[i] + 3 );
+		V_sprintf_safe( localVTFName, "%s%s", g_WorkerTempPath, g_CompileCommands[i] + 3 );
 		DebugOut( "local: \"%s\"\n", localVTFName );
 		
 		FILE *fp = fopen( localVTFName, "rb" );
@@ -327,15 +327,16 @@ void Worker_ReadFilesToCopy( void )
 	// Create virtual files for all of the stuff that we need to compile the shader
 	// make sure and prefix the file name so that it doesn't find it locally.
 	char filename[1024];
-	sprintf( filename, "%s\\filestocopy.txt", g_pGameDir );
+	V_sprintf_safe( filename, "%s\\filestocopy.txt", g_pGameDir );
 	DebugOut( "using \"%s\" as filestocopy\n", filename );
 	char buf[1024];
 	FileHandle_t fp = g_pFileSystem->Open( filename, "r" );
-	if( fp == FILESYSTEM_INVALID_HANDLE )
+	if( !fp )
 	{
-		fprintf( stderr, "Can't open uniquefilestocopy.txt!\n" );
+		fprintf( stderr, "Can't open %s!\n", filename );
 		exit( -1 );
 	}
+	RunCodeAtScopeExit( g_pFileSystem->Close(fp) );
 
 	while( CmdLib_FGets( buf, sizeof( buf ), fp ) )
 	{
@@ -362,7 +363,6 @@ void Worker_ReadFilesToCopy( void )
 		pair.pSrcName = strdup( pSrcName );
 		pair.pTargetName = strdup( pVtfName );
 	}
-	g_pFileSystem->Close( fp );
 }
 
 void Worker_GetSourceFiles( int iWorkUnit )
@@ -383,7 +383,7 @@ void Worker_GetFileFromMaster( const char *pFileName )
 	DebugOut( "Worker_GetFileFromMaster: \"%s\"\n", pFileName );
 	FileHandle_t fp2 = g_pFileSystem->Open( pFileName, "rb" );
 	bool bZeroLength = false;
-	if( fp2 == FILESYSTEM_INVALID_HANDLE )
+	if( !fp2 )
 	{
 		bZeroLength = true;
 		Warning( "zero length file: \"%s\"\n", pFileName );
@@ -404,12 +404,12 @@ void Worker_GetFileFromMaster( const char *pFileName )
 	// create the dir that the file needs to go into.
 	char path[1024];
 	char filename[1024];
-	sprintf( path, "%s%s", g_WorkerTempPath, pFileName + 3 ); // dear lord . .skip the u:\ BUG BUG BUG
+	V_sprintf_safe( path, "%s%s", g_WorkerTempPath, pFileName + 3 ); // dear lord . .skip the u:\ BUG BUG BUG
 //		printf( "creating \"%s\"\n", path );
 	Q_StripFilename( path );
 	MakeDirHier( path );
 
-	sprintf( filename, "%s%s", g_WorkerTempPath, pFileName + 3 ); // dear lord . .skip the u:\ BUG BUG BUG
+	V_sprintf_safe( filename, "%s%s", g_WorkerTempPath, pFileName + 3 ); // dear lord . .skip the u:\ BUG BUG BUG
 //	printf( "creating \"%s\"\n", pFileName );
 	
 	FILE *fp3 = fopen( filename, "wb" );
@@ -442,7 +442,7 @@ void Worker_GetLocalCopyOfBinary( const char *pFilename )
 {
 	CUtlBuffer fileBuf;
 	char tmpFilename[MAX_PATH];
-	sprintf( tmpFilename, "%s\\%s", g_ExeDir, pFilename );
+	V_sprintf_safe( tmpFilename, "%s\\%s", g_ExeDir, pFilename );
 	printf( "trying to open: %s\n", tmpFilename );
 	
 	FILE *fp = fopen( tmpFilename, "rb" );
@@ -461,7 +461,7 @@ void Worker_GetLocalCopyOfBinary( const char *pFilename )
 	fileBuf.SeekPut( CUtlBuffer::SEEK_HEAD, nBytesRead );
 
 	char newFilename[MAX_PATH];
-	sprintf( newFilename, "%s%s", g_WorkerTempPath, pFilename );
+	V_sprintf_safe( newFilename, "%s%s", g_WorkerTempPath, pFilename );
 	
 	DebugOut( "this is fucked \"%s\"\n", newFilename );
 	FILE *fp2 = fopen( newFilename, "wb" );
@@ -488,41 +488,41 @@ void Shared_ParseListOfCompileCommands( void )
 	char buf[1024];
 
 	char fileListFileName[1024];
-	sprintf( fileListFileName, "%s\\texturelist.txt", g_pGameDir );
+	V_sprintf_safe( fileListFileName, "%s\\texturelist.txt", g_pGameDir );
 	FileHandle_t fp = g_pFileSystem->Open( fileListFileName, "r" );
-	if( fp == FILESYSTEM_INVALID_HANDLE )
+	if( !fp )
 	{
 		DebugOut( "Can't open %s!\n", fileListFileName );
 		fprintf( stderr, "Can't open %s!\n", fileListFileName );
 		exit( -1 );
 	}
+	RunCodeAtScopeExit( g_pFileSystem->Close(fp) );
+
 	while( CmdLib_FGets( buf, 1023, fp ) )
 	{
 		char *pNewString = new char[ strlen( buf ) + 1 ];
 		strcpy( pNewString, buf );
 		pNewString[strlen( pNewString ) - 2] = '\0';  // This is some hacky shit right here.
-		int newID = g_CompileCommands.AddToTail();
+		intp newID = g_CompileCommands.AddToTail();
 		g_CompileCommands[newID] = pNewString;
 	}
-	g_pFileSystem->Close( fp );
 
-//	printf( "%d compiles\n", g_CompileCommands.Count() );
-	DebugOut( "%d compiles\n", g_CompileCommands.Count() );
+	DebugOut( "%zd compiles\n", g_CompileCommands.Count() );
 }
 
 void SetupPaths( int argc, char **argv )
 {
 	GetTempPath( sizeof( g_WorkerTempPath ), g_WorkerTempPath );
-	strcat( g_WorkerTempPath, "texturecompiletemp\\" );
+	V_strcat_safe( g_WorkerTempPath, "texturecompiletemp\\" );
 	char tmp[MAX_PATH];
-	sprintf( tmp, "rd /s /q \"%s\"", g_WorkerTempPath );
+	V_sprintf_safe( tmp, "rd /s /q \"%s\"", g_WorkerTempPath );
 	system( tmp );
 	_mkdir( g_WorkerTempPath );
 //	printf( "g_WorkerTempPath: \"%s\"\n", g_WorkerTempPath );
 
 	CommandLine()->CreateCmdLine( argc, argv );
 	g_pGameDir = CommandLine()->ParmValue( "-gamedir", "" );
-	strcpy( g_ExeDir, argv[0] );
+	V_strcpy_safe( g_ExeDir, argv[0] );
 	Q_StripFilename( g_ExeDir );
 	Q_FixSlashes( g_ExeDir );
 //	printf( "exedir: \"%s\"\n", g_ExeDir );
@@ -530,7 +530,7 @@ void SetupPaths( int argc, char **argv )
 	g_pTextureOutputDir = CommandLine()->ParmValue( "-textureoutputdir", "" );
 //	printf( "shaderoutputdir: \"%s\"\n", g_pShaderOutputDir );
 
-	g_bVerbose = CommandLine()->FindParm("-verbose") != 0;
+	g_bVerbose = CommandLine()->HasParm("-verbose");
 }
 
 void SetupDebugFile( void )
@@ -538,7 +538,7 @@ void SetupDebugFile( void )
 #ifdef DEBUGFP
 	const char *pComputerName = getenv( "COMPUTERNAME" );
 	char filename[MAX_PATH];
-	sprintf( filename, "\\\\fileserver\\user\\gary\\debug\\%s.txt", pComputerName );
+	V_sprintf_safe( filename, "\\\\fileserver\\user\\gary\\debug\\%s.txt", pComputerName );
 	g_WorkerDebugFp = fopen( filename, "w" );
 	Assert( g_WorkerDebugFp );
 	DebugOut( "opened debug file\n" );
@@ -584,9 +584,9 @@ void WriteTexture( const char *pTextureName )
 
 	char filename[MAX_PATH];
 	char filename2[MAX_PATH];
-//	strcpy( filename2, g_pShaderOutputDir );
-	strcpy( filename2, g_pShaderPath );
-	strcat( filename2, "\\shaders\\fxc" );
+//	V_strcpy_safe( filename2, g_pShaderOutputDir );
+	V_strcpy_safe( filename2, g_pShaderPath );
+	V_strcat_safe( filename2, "\\shaders\\fxc" );
 
 	struct	_stat buf;
 	if( _stat( filename2, &buf ) == -1 )
@@ -596,15 +596,15 @@ void WriteTexture( const char *pTextureName )
 		_mkdir( filename2 );
 	}
 
-	strcat( filename2, "\\" );
-	strcpy( filename, pShaderName );
+	V_strcat_safe( filename2, "\\" );
+	V_strcpy_safe( filename, pShaderName );
 	char *dot = strstr( filename, "." );
 	if( dot )
 	{
 		*dot = '\0';
 	}
-	strcat( filename, ".vcs" );
-	strcat( filename2, filename );
+	V_strcat_safe( filename, ".vcs" );
+	V_strcat_safe( filename2, filename );
 	if( _stat( filename2, &buf ) != -1 )
 	{
 		// The file exists, let's see if it's writable.
@@ -618,7 +618,7 @@ void WriteTexture( const char *pTextureName )
 	FILE *fp = fopen( filename2, "wb" );
 	if( !fp )
 	{
-		printf( "Can't open %s\n", filename2 );
+		fprintf( stderr, "Can't open %s\n", filename2 );
 		return;
 	}
 	printf( "writing %s\n", filename );
@@ -714,10 +714,10 @@ int TextureCompile_Main( int argc, char* argv[] )
 		// DIE DIE KILL KILL AHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		char path[MAX_PATH];
 		// dimhotepus: x86-64 support.
-		sprintf( path, "%s%s\\" PLATFORM_BIN_DIR "\\server.dll", g_WorkerTempPath, g_pGameDir + 3 ); // hack hack
+		V_sprintf_safe( path, "%s%s\\" PLATFORM_BIN_DIR "\\server.dll", g_WorkerTempPath, g_pGameDir + 3 ); // hack hack
 		TouchFile( path );
 		// dimhotepus: x86-64 support.
-		sprintf( path, "%s%s\\" PLATFORM_BIN_DIR "\\client.dll", g_WorkerTempPath, g_pGameDir + 3 );// hack hack
+		V_sprintf_safe( path, "%s%s\\" PLATFORM_BIN_DIR "\\client.dll", g_WorkerTempPath, g_pGameDir + 3 );// hack hack
 		TouchFile( path );
 
 		Worker_GetLocalCopyOfBinaries();
@@ -745,7 +745,7 @@ int TextureCompile_Main( int argc, char* argv[] )
 		{
 			if( g_Master_TextureHadError.Defined( g_ByteCode.String( i ) ) )
 			{
-				printf( "FAILED: \"%s\"\n", g_ByteCode.String( i ) );
+				fprintf( stderr, "FAILED: \"%s\"\n", g_ByteCode.String( i ) );
 			}
 			else
 			{

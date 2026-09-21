@@ -187,7 +187,7 @@ int UpdateOrCreate( const char *pSourceName, char *pTargetName, int targetLen, [
 void GetSearchPath( CUtlVector< CUtlString > &path, const char *pPathID )
 {
 	int nMaxLen = g_pFullFileSystem->GetSearchPath( pPathID, false, nullptr, 0 );
-	char *pBuf = (char*)stackalloc( nMaxLen );
+	char *pBuf = stackallocT( char, nMaxLen );
 	g_pFullFileSystem->GetSearchPath( pPathID, false, pBuf, nMaxLen );
 
 	char *pSemi;
@@ -257,7 +257,7 @@ void AddFilesToList( CUtlVector< CUtlString > &list, const char *pDirectory, con
 
 		// Check the extension matches
 		const char *pExt = V_GetFileExtension( pFoundFile );
-		if ( !pExt || Q_stricmp( pExt, pExtension ) != 0 )
+		if ( !pExt || !V_strieq( pExt, pExtension ) )
 			continue;
 
 		char pFullPathBuf[MAX_PATH];

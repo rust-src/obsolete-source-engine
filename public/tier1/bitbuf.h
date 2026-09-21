@@ -142,7 +142,20 @@ public:
 	// nMaxBits can be used as the number of bits in the buffer. 
 	// It must be <= nBytes*8. If you leave it at -1, then it's set to nBytes * 8.
 	bf_write( void *pData, intp nBytes, intp nMaxBits = -1 );
+	// dimhotepus: Bounds-safe ctor.
+	template<typename T, intp size>
+	bf_write( T (&data)[size], intp nMaxBits = -1 )
+		: bf_write{&data, static_cast<intp>( sizeof(T) * size ), nMaxBits}
+	{
+	}
+
 	bf_write( const char *pDebugName, void *pData, intp nBytes, intp nMaxBits = -1 );
+	// dimhotepus: Bounds-safe ctor.
+	template<typename T, intp size>
+	bf_write( const char *debugName, T (&data)[size], intp nMaxBits = -1 )
+		: bf_write{debugName, &data, static_cast<intp>( sizeof(T) * size ), nMaxBits}
+	{
+	}
 
 	// Start writing to the specified buffer.
 	// nMaxBits can be used as the number of bits in the buffer. 
@@ -334,7 +347,7 @@ BITBUF_INLINE void bf_write::SetOverflowFlag()
 
 BITBUF_INLINE void bf_write::WriteOneBitNoCheck(int nValue)
 {
-#if __i386__
+#if defined(__i386__) && __i386__
 	if(nValue)
 		m_pData[m_iCurBit >> 5] |= 1u << (m_iCurBit & 31);
 	else
@@ -371,7 +384,7 @@ inline void	bf_write::WriteOneBitAt( int iBit, int nValue )
 		return;
 	}
 
-#if __i386__
+#if defined(__i386__) && __i386__
 	if(nValue)
 		m_pData[iBit >> 5] |= 1u << (iBit & 31);
 	else
@@ -497,7 +510,20 @@ public:
 	// nMaxBits can be used as the number of bits in the buffer. 
 	// It must be <= nBytes*8. If you leave it at -1, then it's set to nBytes * 8.
 	bf_read( const void *pData, intp nBytes, intp nBits = -1 );
+	// dimhotepus: Bounds-safe ctor.
+	template<typename T, intp size>
+	bf_read( T (&data)[size], intp nBits = -1 )
+		: bf_read{&data, static_cast<intp>( sizeof(T) * size ), nBits}
+	{
+	}
+
 	bf_read( const char *pDebugName, const void *pData, intp nBytes, intp nBits = -1 );
+	// dimhotepus: Bounds-safe ctor.
+	template<typename T, intp size>
+	bf_read( const char *debugName, T (&data)[size], intp nBits = -1 )
+		: bf_read{debugName, &data, static_cast<intp>( sizeof(T) * size ), nBits}
+	{
+	}
 
 	// Start reading from the specified buffer.
 	// pData's start address must be dword-aligned.
@@ -745,7 +771,7 @@ inline bool bf_read::CheckForOverflow(intp nBits)
 
 inline int bf_read::ReadOneBitNoCheck()
 {
-#if VALVE_LITTLE_ENDIAN
+#if defined(VALVE_LITTLE_ENDIAN) && VALVE_LITTLE_ENDIAN
 	const unsigned int value = ((const unsigned * RESTRICT)m_pData)[m_iCurBit >> 5] >> (m_iCurBit & 31);
 #else
 	const unsigned char value = m_pData[m_iCurBit >> 3] >> (m_iCurBit & 7);
@@ -804,7 +830,7 @@ BITBUF_INLINE uint32 bf_read::ReadUBitLong( int numbits )
 	size_t iWordOffset2 = iLastBit >> 5;
 	m_iCurBit += numbits;
 	
-#if __i386__
+#if defined(__i386__) && __i386__
 	unsigned int bitmask = (2 << (numbits-1)) - 1;
 #else
 	extern unsigned g_ExtraMasks[33];

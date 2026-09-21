@@ -121,7 +121,7 @@ public:
 	{
 		const char *eventName = event->GetName();
 
-		if ( !Q_strcmp( eventName, "dod_round_win" ) )
+		if ( V_streq( eventName, "dod_round_win" ) )
 		{
 			int team = event->GetInt( "team" );
 			if ( team == m_iPointTeam )
@@ -132,7 +132,7 @@ public:
 			// stop giving points, round is over
 			SetThink( NULL );	// think no more!
 		}
-		else if ( !Q_strcmp( eventName, "dod_round_active" ) )
+		else if ( V_streq( eventName, "dod_round_active" ) )
 		{
 			StartGivingPoints();
 		}
@@ -188,7 +188,7 @@ private:
 			else
 			{
 				char buf[8];
-				Q_snprintf( buf, sizeof(buf), "%d", points );
+				V_to_chars( buf, points );
 				UTIL_ClientPrintAll( HUD_PRINTTALK, "#game_score_allie_points", buf );
 			}
 

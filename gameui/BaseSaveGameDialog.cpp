@@ -212,37 +212,39 @@ void CBaseSaveGameDialog::ScanSavedGames()
 	m_pGameList->DeleteAllItems();
 	m_SaveGames.RemoveAll();
 	
-	// iterate the saved files
-	FileFindHandle_t handle = FILESYSTEM_INVALID_FIND_HANDLE;
-	const char *pFileName = g_pFullFileSystem->FindFirstEx( szDirectory, MOD_DIR, &handle );
-	while (pFileName)
 	{
-		if ( !Q_strnicmp(pFileName, "HLSave", std::size( "HLSave" ) - 1 ) )
-		{
-			pFileName = g_pFullFileSystem->FindNext( handle );
-			continue;
-		}
+		// iterate the saved files
+		FileFindHandle_t handle = FILESYSTEM_INVALID_FIND_HANDLE;
+		const char *pFileName = g_pFullFileSystem->FindFirstEx( szDirectory, MOD_DIR, &handle );
+		RunCodeAtScopeExit( g_pFullFileSystem->FindClose( handle ) );
 
-		char szFileName[MAX_PATH];
-		V_sprintf_safe(szFileName, "%s/%s", SAVE_DIR, pFileName);
+		while (pFileName)
+		{
+			if ( !Q_strnicmp(pFileName, "HLSave", std::size( "HLSave" ) - 1 ) )
+			{
+				pFileName = g_pFullFileSystem->FindNext( handle );
+				continue;
+			}
 
-		// Only load save games from the current mod's save dir
-		if( !g_pFullFileSystem->FileExists( szFileName, MOD_DIR ) )
-		{
+			char szFileName[MAX_PATH];
+			V_sprintf_safe(szFileName, "%s/%s", SAVE_DIR, pFileName);
+
+			// Only load save games from the current mod's save dir
+			if( !g_pFullFileSystem->FileExists( szFileName, MOD_DIR ) )
+			{
+				pFileName = g_pFullFileSystem->FindNext( handle );
+				continue;
+			}
+			
+			SaveGameDescription_t save;
+			if ( ParseSaveData( szFileName, pFileName, save ) )
+			{
+				m_SaveGames.AddToTail( save );
+			}
+			
 			pFileName = g_pFullFileSystem->FindNext( handle );
-			continue;
 		}
-		
-		SaveGameDescription_t save;
-		if ( ParseSaveData( szFileName, pFileName, save ) )
-		{
-			m_SaveGames.AddToTail( save );
-		}
-		
-		pFileName = g_pFullFileSystem->FindNext( handle );
 	}
-	
-	g_pFullFileSystem->FindClose( handle );
 
 	// notify derived classes that save games are being scanned (so they can insert their own)
 	OnScanningSaveGames();
@@ -529,22 +531,22 @@ int SaveReadNameAndComment( FileHandle_t f,	OUT_Z_CAP(nameSize) char *name,	int 
 	name[0] = '\0';
 	comment[0] = '\0';
 
-	g_pFullFileSystem->Read( &tag, sizeof(int), f );
+	g_pFullFileSystem->Read( tag, f );
 	if ( tag != MAKEID('J','S','A','V') )
 	{
 		return 0;
 	}
 		
-	g_pFullFileSystem->Read( &tag, sizeof(int), f );
+	g_pFullFileSystem->Read( tag, f );
 	if ( tag != SAVEGAME_VERSION )				// Enforce version for now
 	{
 		return 0;
 	}
 
-	g_pFullFileSystem->Read( &size, sizeof(int), f );
+	g_pFullFileSystem->Read( size, f );
 	
-	g_pFullFileSystem->Read( &tokenCount, sizeof(int), f );	// These two ints are the token list
-	g_pFullFileSystem->Read( &tokenSize, sizeof(int), f );
+	g_pFullFileSystem->Read( tokenCount, f );	// These two ints are the token list
+	g_pFullFileSystem->Read( tokenSize, f );
 	size += tokenSize;
 
 	// Sanity Check.
@@ -579,8 +581,6 @@ int SaveReadNameAndComment( FileHandle_t f,	OUT_Z_CAP(nameSize) char *name,	int 
 			while( *pData++ );				// Find next token (after next null)
 		}
 	}
-	else
-		pTokenList = NULL;
 
 	// short, short (size, index of field name)
 	nFieldSize = *(short *)pData;
@@ -611,12 +611,12 @@ int SaveReadNameAndComment( FileHandle_t f,	OUT_Z_CAP(nameSize) char *name,	int 
 		pFieldName = pTokenList[ *(short *)pData ];
 		pData += sizeof(short);
 
-		if (!stricmp(pFieldName, "comment"))
+		if (V_strieq(pFieldName, "comment"))
 		{
 			int copySize = MAX(commentSize, nFieldSize);
 			Q_strncpy(comment, pData, copySize);
 		}
-		else if (!stricmp(pFieldName, "mapName"))
+		else if (V_strieq(pFieldName, "mapName"))
 		{
 			int copySize = MAX(nameSize, nFieldSize);
 			Q_strncpy(name, pData, copySize);

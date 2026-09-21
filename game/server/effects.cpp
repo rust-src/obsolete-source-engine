@@ -488,7 +488,7 @@ void CGibShooter::InitPointGib( CGib *pGib, const Vector &vecShootDir, float flS
 
 		float thinkTime = ( pGib->GetNextThink() - gpGlobals->curtime );
 
-		pGib->m_lifeTime = (m_flGibLife * random->RandomFloat( 0.95, 1.05 ));	// +/- 5%
+		pGib->m_lifeTime = (m_flGibLife * random->RandomFloat( 0.95f, 1.05f ));	// +/- 5%
 
 		// HL1 gibs always die after a certain time, other games have to opt-in
 #ifndef HL1_DLL
@@ -548,7 +548,7 @@ CBaseEntity *CGibShooter::SpawnGib( const Vector &vecShootDir, float flSpeed )
 				pGib->SetAbsOrigin( GetAbsOrigin() );
 				pGib->SetAbsAngles( m_angGibRotation );
 
-				pGib->m_lifeTime = (m_flGibLife * random->RandomFloat( 0.95, 1.05 ));	// +/- 5%
+				pGib->m_lifeTime = (m_flGibLife * random->RandomFloat( 0.95f, 1.05f ));	// +/- 5%
 
 				pGib->SetCollisionGroup( COLLISION_GROUP_DEBRIS );
 				IPhysicsObject *pPhysicsObject = pGib->VPhysicsInitNormal( SOLID_VPHYSICS, pGib->GetSolidFlags(), false );

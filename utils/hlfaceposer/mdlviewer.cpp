@@ -276,14 +276,21 @@ void CreatePath( const char *relative )
 int LoadFile (const char *filename, void **bufferptr)
 {
 	FileHandle_t f = filesystem->Open( filename, "rb" );
+	if (!f)
+	{
+		Error ("File '%s' open failure.\n", filename);
+		*bufferptr = nullptr;
+		return 0;
+	}
+	RunCodeAtScopeExit(filesystem->Close (f));
+
 	int length = filesystem->Size( f );
 	void *buffer = malloc (length+1);
 	((char *)buffer)[length] = 0;
 	if ( filesystem->Read (buffer, length, f) != (int)length )
 	{
-		Error ("File read failure");
+		Error ("File '%s' read failure.\n", filename);
 	}
-	filesystem->Close (f);
 
 	*bufferptr = buffer;
 	return length;
@@ -777,7 +784,7 @@ public:
 					break;
 				case IDC_MODELTAB_LOAD:
 					{
-						if ( ! CommandLine()->FindParm( "-NoSteamDialog" ) )
+						if ( ! CommandLine()->HasParm( "-NoSteamDialog" ) )
 						{
 							g_MDLViewer->LoadModel_Steam();
 						}
@@ -853,7 +860,7 @@ public:
 									
 									V_strcpy_safe( text.choice, a->GetName() );
 
-									if ( !stricmp( a->GetFacePoserModelName(), modelname ) )
+									if ( V_strieq( a->GetFacePoserModelName(), modelname ) )
 									{
 										params.m_nSelected = i;
 										oldsel = -1;
@@ -1580,7 +1587,7 @@ void MDLViewer::OnFileLoaded( char const *pszFile )
 	int i;
 	for (i = 0; i < 8; i++)
 	{
-		if (!Q_stricmp( recentFiles[i], pszFile ))
+		if (V_strieq( recentFiles[i], pszFile ))
 			break;
 	}
 
@@ -1707,7 +1714,7 @@ int MDLViewer::handleEvent (mxEvent *event)
 			
 			case IDC_FILE_LOADMODEL:
 				{
-					if ( ! CommandLine()->FindParm( "-NoSteamDialog" ) )
+					if ( ! CommandLine()->HasParm( "-NoSteamDialog" ) )
 					{
 						g_MDLViewer->LoadModel_Steam();
 					}
@@ -1782,13 +1789,13 @@ int MDLViewer::handleEvent (mxEvent *event)
 						char ext[ 4 ];
 						V_ExtractFileExtension( recentFiles[ i ], ext );
 						bool valid = false;
-						if ( !Q_stricmp( ext, "mdl" ) )
+						if ( V_strieq( ext, "mdl" ) )
 						{
 							// Check extension
 							LoadModelFile( recentFiles[ i ] );
 							valid = true;
 						}
-						else if ( !Q_stricmp( ext, "vcd" ) )
+						else if ( V_strieq( ext, "vcd" ) )
 						{
 							g_pChoreoView->LoadSceneFromFile( recentFiles[ i ] );
 							valid = true;
@@ -2584,7 +2591,7 @@ bool CHLFacePoserApp::PreInit( )
 	}
 
 	int adapterFlags = MATERIAL_INIT_ALLOCATE_FULLSCREEN_TEXTURE;
-	if ( CommandLine()->CheckParm( "-ref" ) )
+	if ( CommandLine()->HasParm( "-ref" ) )
 	{
 		adapterFlags |= MATERIAL_INIT_REFERENCE_RASTERIZER;
 	}
@@ -2617,7 +2624,7 @@ int CHLFacePoserApp::Main()
 {
 	// Do Perforce Stuff
 	g_p4factory->SetDummyMode( false );
-	if ( CommandLine()->FindParm( "-nop4" ) || !p4 )
+	if ( CommandLine()->HasParm( "-nop4" ) || !p4 )
 	{
 		g_p4factory->SetDummyMode( true );
 	}

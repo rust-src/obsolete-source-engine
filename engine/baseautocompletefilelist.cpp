@@ -32,7 +32,7 @@ int CBaseAutoCompleteFileList::AutoCompletionFunc( char const *partial, char com
 
 	// Search the directory structure.
 	char searchpath[MAX_QPATH];
-	if ( m_pszSubDir && m_pszSubDir[0] && Q_strcasecmp( m_pszSubDir, "NULL" ) )
+	if ( m_pszSubDir && m_pszSubDir[0] && !V_strieq( m_pszSubDir, "NULL" ) )
 	{
 		Q_snprintf(searchpath,sizeof(searchpath),"%s/*.%s", m_pszSubDir, m_pszExtension );
 	}
@@ -52,7 +52,7 @@ int CBaseAutoCompleteFileList::AutoCompletionFunc( char const *partial, char com
 
 	while ( findfn )
 	{
-		Q_snprintf( sz, sizeof( sz ), "%s", findfn );
+		V_strcpy_safe( sz, findfn );
 
 		bool add = false;
 		// Insert into lookup
@@ -93,7 +93,7 @@ int CBaseAutoCompleteFileList::AutoCompletionFunc( char const *partial, char com
 
 		V_sprintf_safe( commands[ i ], "%s %s", cmdname, filename );
 
-		const size_t commandLen{ strlen( commands[i] ) };
+		const size_t commandLen{ strlen( commands[ i ] ) }; //-V814
 		if ( commandLen >= 4 )
 		{
 			// Remove .dem

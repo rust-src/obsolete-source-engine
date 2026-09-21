@@ -6,7 +6,8 @@
 //
 //=============================================================================//
 #include "cbase.h"
-#include <stdio.h>
+#include <wctype.h>  // for iswspace.
+#include <cstdio>
 #include "hlfaceposer.h"
 #include "CloseCaptionTool.h"
 #include "choreowidgetdrawhelper.h"
@@ -582,7 +583,7 @@ void CloseCaptionTool::Process( char const *tokenname, float duration, int langu
 	}
 
 	// Nothing to do...
-	if ( wcslen( stream ) == 0 )
+	if ( Q_isempty( stream ) )
 	{
 		return;
 	}
@@ -605,7 +606,7 @@ void CloseCaptionTool::Process( char const *tokenname, float duration, int langu
 				// End current phrase
 				*out = L'\0';
 
-				if ( wcslen( phrase ) > 0 )
+				if ( !Q_isempty( phrase ) )
 				{
 					CCloseCaptionItem *item = new CCloseCaptionItem( phrase, duration + CAPTION_LINGER_TIME, delay, valid );
 					m_Items.AddToTail( item );
@@ -626,7 +627,7 @@ void CloseCaptionTool::Process( char const *tokenname, float duration, int langu
 
 	// End final phrase, if any
 	*out = L'\0';
-	if ( wcslen( phrase ) > 0 )
+	if ( !Q_isempty( phrase ) )
 	{
 		CCloseCaptionItem *item = new CCloseCaptionItem( phrase, duration + CAPTION_LINGER_TIME, delay, valid );
 		m_Items.AddToTail( item );
@@ -696,7 +697,8 @@ bool CloseCaptionTool::SplitCommand( wchar_t const **ppIn, wchar_t *cmd, wchar_t
 	cmd[ 0 ]= 0;
 	wchar_t *out = cmd;
 	in++;
-	while ( *in != L'\0' && *in != L':' && *in != L'>' && !isspace( *in ) )
+	// dimhotepus: isspace -> iswspace for wchar_t.
+	while ( *in != L'\0' && *in != L':' && *in != L'>' && !iswspace( *in ) )
 	{
 		*out++ = *in++;
 	}
@@ -785,7 +787,7 @@ void CloseCaptionTool::AddWorkUnit( CCloseCaptionItem *item,
 {
 	params.Finalize();
 
-	if ( wcslen( params.stream ) > 0 )
+	if ( !Q_isempty( params.stream ) )
 	{
 		CCloseCaptionWorkUnit *wu = new CCloseCaptionWorkUnit();
 

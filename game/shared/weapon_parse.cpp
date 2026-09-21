@@ -44,7 +44,7 @@ int GetWeaponSoundFromString( const char *pszString )
 {
 	for ( int i = EMPTY; i < NUM_SHOOT_SOUND_TYPES; i++ )
 	{
-		if ( !Q_stricmp(pszString,pWeaponSoundCategories[i]) )
+		if ( V_strieq(pszString,pWeaponSoundCategories[i]) )
 			return (WeaponSound_t)i;
 	}
 	return -1;
@@ -160,7 +160,7 @@ void PrecacheFileWeaponInfoDatabase( IFileSystem *pFilesystem, const unsigned ch
 	{
 		for ( KeyValues *sub = manifest->GetFirstSubKey(); sub != NULL ; sub = sub->GetNextKey() )
 		{
-			if ( !Q_stricmp( sub->GetName(), "file" ) )
+			if ( V_strieq( sub->GetName(), "file" ) )
 			{
 				char fileBase[512];
 				V_FileBase( sub->GetString(), fileBase );
@@ -207,28 +207,27 @@ KeyValues* ReadEncryptedKVFile( IFileSystem *pFilesystem, const char *szFilename
 			V_sprintf_safe(szFullName, "%s.ctx", szFilenameWithoutExtension); // fall back to the .ctx file
 
 			FileHandle_t f = pFilesystem->Open( szFullName, "rb", pSearchPath );
-
 			if (!f)
 			{
 				pKV->deleteThis();
 				return NULL;
 			}
+
+			RunCodeAtScopeExit(pFilesystem->Close( f ));
+
 			// load file into a null-terminated buffer
 			int fileSize = pFilesystem->Size(f);
 			char *buffer = (char*)MemAllocScratch(fileSize + 1);
+			RunCodeAtScopeExit(MemFreeScratch());
 		
 			Assert(buffer);
 		
 			pFilesystem->Read(buffer, fileSize, f); // read into local buffer
 			buffer[fileSize] = 0; // null terminate file as EOF
-			pFilesystem->Close( f );	// close file after reading
 
 			UTIL_DecodeICE( (unsigned char*)buffer, fileSize, pICEKey );
 
 			bool retOK = pKV->LoadFromBuffer( szFullName, buffer, pFilesystem );
-
-			MemFreeScratch();
-
 			if ( !retOK )
 			{
 				pKV->deleteThis();

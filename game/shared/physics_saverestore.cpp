@@ -47,7 +47,8 @@ BEGIN_SIMPLE_DATADESC( PhysBlockHeader_t )
 	DEFINE_FIELD( pWorldObject, FIELD_INTEGER ),
 #else
 	// NOTE: We want to save the actual address here for remapping
-	DEFINE_FIELD( pWorldObject, FIELD_CLASSPTR ),
+	// darkx1us: x86-64 - correctly save address for physics world object.
+	DEFINE_ARRAY( pWorldObject, FIELD_INTEGER, 2 ),
 #endif
 END_DATADESC()
 
@@ -214,6 +215,7 @@ public:
 		if ( physenv )
 		{
 			physprerestoreparams_t params;
+			BitwiseClear(params);
 			params.recreatedObjectCount = 0;
 			physenv->PreRestore( params );
 		}
@@ -239,6 +241,7 @@ public:
 			if ( physenv )
 			{
 				physprerestoreparams_t params;
+				BitwiseClear(params);
 				params.recreatedObjectCount = 1;
 				params.recreatedObjectList[0].pNewObject = g_PhysWorldObject;
 				params.recreatedObjectList[0].pOldObject = m_blockHeader.pWorldObject;
@@ -800,8 +803,8 @@ public:
 	virtual bool IsEmpty( const SaveRestoreFieldInfo_t &fieldInfo )
 	{
 		void **ppPhysObj = (void **)fieldInfo.pField;
-		int nObjects = fieldInfo.pTypeDesc->fieldSize;
-		for ( int i = 0; i < nObjects; i++ )
+		const unsigned short nObjects{fieldInfo.pTypeDesc->fieldSize};
+		for ( unsigned short i = 0; i < nObjects; i++ )
 		{
 			if ( ppPhysObj[i] != NULL )
 				return false;

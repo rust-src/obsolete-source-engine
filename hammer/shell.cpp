@@ -135,7 +135,7 @@ bool CShell::DoVersionCheck(const char *pszArguments)
 
 			int nDocVersion = m_pDoc->GetDocVersion();
 
-			if (!stricmp(szDocName, szEngineMapName) && (nDocVersion == nEngineMapVersion))
+			if (V_strieq(szDocName, szEngineMapName) && (nDocVersion == nEngineMapVersion))
 			{
 				return(true);
 			}
@@ -310,7 +310,7 @@ bool CShell::EntitySetKeyValue(const char *pszCommand, const char *pszArguments)
 			CMapEntity *pEntity = m_pDoc->FindEntity(szArgs[0], x, y, z);
 			if (pEntity != NULL)
 			{
-				if ( !Q_stricmp( szArgs[4], "origin" ) )
+				if ( V_strieq( szArgs[4], "origin" ) )
 				{
 					Vector origin;
 					[[maybe_unused]] const int scanned =
@@ -321,7 +321,7 @@ bool CShell::EntitySetKeyValue(const char *pszCommand, const char *pszArguments)
 					pEntity->GetOrigin( oldOrigin );
 					pEntity->TransMove(origin - oldOrigin);
 				}
-				else if ( pEntity->IsSolidClass() && !Q_stricmp( szArgs[4], "angles" ) )
+				else if ( pEntity->IsSolidClass() && V_strieq( szArgs[4], "angles" ) )
 				{
 					QAngle angles;
 					[[maybe_unused]] const int scanned =
@@ -491,8 +491,8 @@ bool CShell::NodeLinkDelete(const char *pszCommand, const char *pszArguments)
 					const char *pszNode2 = pEntity->GetKeyValue("endnode");
 					if ((pszNode1 != NULL) && (pszNode2 != NULL))
 					{
-						if (((!stricmp(pszNode1, szIDStart)) && (!stricmp(pszNode2, szIDEnd))) ||
-							((!stricmp(pszNode1, szIDEnd)) && (!stricmp(pszNode2, szIDStart))))
+						if (((V_strieq(pszNode1, szIDStart)) && (V_strieq(pszNode2, szIDEnd))) ||
+							((V_strieq(pszNode1, szIDEnd)) && (V_strieq(pszNode2, szIDStart))))
 						{
 							m_pDoc->DeleteObject(pEntity);
 							bFound = true;

@@ -262,18 +262,6 @@ int CZipPackFile::ReadFromPack( int nEntryIndex, void* pBuffer, int nDestBytes, 
 		}
 	}
 
-#if defined ( _X360 )
-	// fell through as a direct request from within the pack
-	// intercept to possible embedded section
-	if ( m_pSection )
-	{
-		// a section is a special update zip that has no files, only preload
-		// it has to be in the section
-		V_memcpy( pBuffer, (byte*)m_pSection + nOffset, nBytes );
-		return nBytes;
-	}
-#endif
-
 	// Otherwise, do the read from the pack
 	AUTO_LOCK(m_mutex);
 
@@ -417,8 +405,8 @@ void CZipPackFile::GetFileAndDirLists( const char *pRawWildCard, CUtlStringList 
 	// there's no one point where we implement it, so rather than trying to match one of our broken implementations
 	// (windows stdio is the only one I could find that was actually right), I'm going with "you shouldn't use this API
 	// for that".
-	bool bBaseWildcard = ( V_strcmp( szWildCardBase, "*" ) == 0 );
-	bool bExtWildcard = ( V_strcmp( szWildCardExt, "*" ) == 0 );
+	bool bBaseWildcard = V_streq( szWildCardBase, "*" );
+	bool bExtWildcard = V_streq( szWildCardExt, "*" );
 
 	if ( !bWildcardHasExt && bBaseWildcard )
 	{
@@ -493,13 +481,13 @@ void CZipPackFile::GetFileAndDirLists( const char *pRawWildCard, CUtlStringList 
 			if ( bBaseWildcard )
 				bBaseMatch = true;  // The base is the wildCard ("*"), so whatever we have as the base matches
 			else
-				bBaseMatch = ( 0 == V_stricmp( szCandidateBaseName, szWildCardBase ) );
+				bBaseMatch = V_strieq( szCandidateBaseName, szWildCardBase );
 
 			// If we have an extension and we have a szWildCardExtension to mach against
 			if ( ( bExtWildcard && pExt ) || ( !pExt && !bWildcardHasExt ) )
 				bExtMatch = true;
 			else
-				bExtMatch = bWildcardHasExt && pExt && ( 0 == V_stricmp( pExt, szWildCardExt ) );
+				bExtMatch = bWildcardHasExt && pExt && V_strieq( pExt, szWildCardExt );
 
 			// If both parts match, then add it to the list
 			if ( bBaseMatch && bExtMatch )
@@ -514,10 +502,7 @@ void CZipPackFile::GetFileAndDirLists( const char *pRawWildCard, CUtlStringList 
 				}
 				else
 				{
-					size_t nMatchSize = V_strlen( szCandidateName ) + 1;
-					char *pszFullMatch = new char[ nMatchSize ];
-					V_strncpy( pszFullMatch, szCandidateName, nMatchSize );
-					outFilenames.AddToTail( pszFullMatch );
+					outFilenames.AddToTail( V_strdup( szCandidateName ) );
 				}
 			}
 		}
@@ -649,7 +634,7 @@ bool CZipPackFile::Prepare( int64 fileLen, int64 nFileOfs )
 	// Check for a preload section, expected to be the first file in the zip
 	zipDirBuff.GetObjects( &zipFileHeader );
 	zipDirBuff.Get( filename, Min( (size_t)zipFileHeader.fileNameLength, sizeof(filename) - 1 ) );
-	if ( !V_stricmp( filename, PRELOAD_SECTION_NAME ) )
+	if ( V_strieq( filename, PRELOAD_SECTION_NAME ) )
 	{
 		m_nPreloadSectionSize = zipFileHeader.uncompressedSize;
 		m_nPreloadSectionOffset = zipFileHeader.relativeOffsetOfLocalHeader +

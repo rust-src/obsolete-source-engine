@@ -1866,7 +1866,7 @@ void CWeaponMedigun::SecondaryAttack( void )
 	{
 		CUtlVector<CTFPlayer*> aChargingMedics;
 		aChargingMedics.AddToTail( pOwner );
-		for ( int i = 0; i < pTeam->GetNumPlayers(); i++ )
+		for ( intp i = 0; i < pTeam->GetNumPlayers(); i++ )
 		{
 			CTFPlayer *pTeamPlayer = ToTFPlayer( pTeam->GetPlayer(i) );
 			if ( pTeamPlayer && pTeamPlayer->IsPlayerClass( TF_CLASS_MEDIC ) && pTeamPlayer != pOwner )

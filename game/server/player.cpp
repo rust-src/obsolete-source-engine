@@ -87,10 +87,10 @@ ConVar autoaim_max_deflect( "autoaim_max_deflect", "0.99" );
 
 #ifdef CSTRIKE_DLL
 ConVar	spec_freeze_time( "spec_freeze_time", "5.0", FCVAR_CHEAT | FCVAR_REPLICATED, "Time spend frozen in observer freeze cam." );
-ConVar	spec_freeze_traveltime( "spec_freeze_traveltime", "0.7", FCVAR_CHEAT | FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam.", true, 0.01, false, 0 );
+ConVar	spec_freeze_traveltime( "spec_freeze_traveltime", "0.7", FCVAR_CHEAT | FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam.", true, 0.01f, false, 0 );
 #else
 ConVar	spec_freeze_time( "spec_freeze_time", "4.0", FCVAR_CHEAT | FCVAR_REPLICATED, "Time spend frozen in observer freeze cam." );
-ConVar	spec_freeze_traveltime( "spec_freeze_traveltime", "0.4", FCVAR_CHEAT | FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam.", true, 0.01, false, 0 );
+ConVar	spec_freeze_traveltime( "spec_freeze_traveltime", "0.4", FCVAR_CHEAT | FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam.", true, 0.01f, false, 0 );
 #endif
 
 ConVar sv_bonus_challenge( "sv_bonus_challenge", "0", FCVAR_REPLICATED, "Set to values other than 0 to select a bonus map challenge type." );
@@ -1001,7 +1001,7 @@ void CBasePlayer::DamageEffect(float flDamage, int fDamageType)
 	{
 		// Blue screen fade
 		color32 blue = {0,0,255,100};
-		UTIL_ScreenFade( this, blue, 0.2, 0.4, FFADE_MODULATE );
+		UTIL_ScreenFade( this, blue, 0.2f, 0.4f, FFADE_MODULATE );
 
 		// Very small screen shake
 		// dimhotepus: Restore original idea plasma shakes screen a bit.
@@ -1029,12 +1029,12 @@ void CBasePlayer::DamageEffect(float flDamage, int fDamageType)
 */
 
 // Old values
-#define OLD_ARMOR_RATIO	 0.2	// Armor Takes 80% of the damage
-#define OLD_ARMOR_BONUS  0.5	// Each Point of Armor is work 1/x points of health
+#define OLD_ARMOR_RATIO	 0.2f	// Armor Takes 80% of the damage
+#define OLD_ARMOR_BONUS  0.5f	// Each Point of Armor is work 1/x points of health
 
 // New values
-#define ARMOR_RATIO	0.2
-#define ARMOR_BONUS	1.0
+#define ARMOR_RATIO	0.2f
+#define ARMOR_BONUS	1.0f
 
 //---------------------------------------------------------
 //---------------------------------------------------------
@@ -4480,7 +4480,7 @@ void FixPlayerCrouchStuck( CBasePlayer *pPlayer )
 			return;
 	}
 }
-#define SMOOTHING_FACTOR 0.9
+#define SMOOTHING_FACTOR 0.9f
 extern CMoveData *g_pMoveData;
 
 // UNDONE: Look and see if the ground entity is in hierarchy with a MOVETYPE_VPHYSICS?
@@ -4868,7 +4868,7 @@ CBaseEntity *CBasePlayer::EntSelectSpawnPoint()
 	}
 
 	// If startspot is set, (re)spawn there.
-	if ( !gpGlobals->startspot || !strlen(STRING(gpGlobals->startspot)))
+	if ( !gpGlobals->startspot || Q_isempty(STRING(gpGlobals->startspot)))
 	{
 		pSpot = FindPlayerStart( "info_player_start" );
 		if ( pSpot )
@@ -5797,7 +5797,7 @@ CBaseEntity *FindPickerEntityClass( CBasePlayer *pPlayer, char *classname )
 		Vector origin;
 		pPlayer->EyeVectors( &forward );
 		origin = pPlayer->WorldSpaceCenter();		
-		pEntity = gEntList.FindEntityClassNearestFacing( origin, forward,0.95,classname);
+		pEntity = gEntList.FindEntityClassNearestFacing( origin, forward,0.95f,classname);
 	}
 	return pEntity;
 }
@@ -5823,7 +5823,7 @@ CBaseEntity *FindPickerEntity( CBasePlayer *pPlayer )
 		Vector origin;
 		pPlayer->EyeVectors( &forward );
 		origin = pPlayer->WorldSpaceCenter();		
-		pEntity = gEntList.FindEntityNearestFacing( origin, forward,0.95);
+		pEntity = gEntList.FindEntityNearestFacing( origin, forward,0.95f);
 	}
 	return pEntity;
 }
@@ -5840,7 +5840,7 @@ CAI_Node *FindPickerAINode( CBasePlayer *pPlayer, NodeType_e nNodeType )
 
 	pPlayer->EyeVectors( &forward );
 	origin = pPlayer->EyePosition();	
-	return g_pAINetworkManager->GetEditOps()->FindAINodeNearestFacing( origin, forward,0.90, nNodeType);
+	return g_pAINetworkManager->GetEditOps()->FindAINodeNearestFacing( origin, forward,0.90f, nNodeType);
 }
 
 //-----------------------------------------------------------------------------
@@ -5855,7 +5855,7 @@ CAI_Link *FindPickerAILink( CBasePlayer* pPlayer )
 
 	pPlayer->EyeVectors( &forward );
 	origin = pPlayer->EyePosition();	
-	return g_pAINetworkManager->GetEditOps()->FindAILinkNearestFacing( origin, forward,0.90);
+	return g_pAINetworkManager->GetEditOps()->FindAILinkNearestFacing( origin, forward,0.90f);
 }
 
 /*
@@ -6729,11 +6729,11 @@ Vector CBasePlayer::BodyTarget( const Vector &posSrc, bool bNoisy )
 	}
 	if (bNoisy)
 	{
-		return GetAbsOrigin() + (GetViewOffset() * random->RandomFloat( 0.7, 1.0 )); 
+		return GetAbsOrigin() + (GetViewOffset() * random->RandomFloat( 0.7f, 1.0f ));
 	}
 	else
 	{
-		return EyePosition(); 
+		return EyePosition();
 	}
 };		
 

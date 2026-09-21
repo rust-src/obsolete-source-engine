@@ -166,7 +166,7 @@ CSystem::CSystem()
 	PasteboardCreate( kPasteboardClipboard, &m_PasteBoardRef );
 #endif
 	
-	Q_snprintf( m_szRegistryPath, sizeof(m_szRegistryPath), "%s", REGISTRY_NAME );
+	V_strcpy_safe( m_szRegistryPath, REGISTRY_NAME );
 	
 	m_pRegistry = new KeyValues( "registry" );
 }
@@ -270,7 +270,7 @@ long CSystem::GetTimeMillis()
 //-----------------------------------------------------------------------------
 void CSystem::ShellExecute(const char *command, const char *file)
 {
-	if ( V_strcmp( command, "open" ) != 0 )
+	if ( !V_streq( command, "open" ) )
 	{
 		// Nope
 		AssertMsg( false, "This legacy command is only supported in the form of open <foo>" );

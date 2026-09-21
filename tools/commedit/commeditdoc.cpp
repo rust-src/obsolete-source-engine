@@ -120,7 +120,7 @@ bool CCommEditDoc::LoadFromFile( const char *pFileName )
 	// If we loaded an existing commentary file, keep the same filename.
 	// If we loaded a .bsp, change the name & the extension.
 	// dimhotepus: Check file extension exists.
-	if ( pszFileExt && !V_stricmp( pszFileExt, "bsp" ) ) //-V1051
+	if ( pszFileExt && V_strieq( pszFileExt, "bsp" ) ) //-V1051
 	{
 		const char *pCommentaryAppend = "_commentary.txt";
 		Q_StripExtension( pFileName, m_pTXTFileName, sizeof(m_pTXTFileName)- strlen(pCommentaryAppend) - 1 );
@@ -364,7 +364,7 @@ CDmeCommentaryNodeEntity *CCommEditDoc::GetCommentaryNodeForLocation( Vector &ve
 bool CCommEditDoc::GetStringChoiceList( const char *pChoiceListType, [[maybe_unused]] CDmElement *pElement, 
 									[[maybe_unused]] const char *pAttributeName, [[maybe_unused]] bool bArrayElement, StringChoiceList_t &list )
 {
-	if ( !Q_stricmp( pChoiceListType, "info_targets" ) )
+	if ( V_strieq( pChoiceListType, "info_targets" ) )
 	{
 		CDmrCommentaryNodeEntityList entities = GetEntityList();
 
@@ -380,7 +380,7 @@ bool CCommEditDoc::GetStringChoiceList( const char *pChoiceListType, [[maybe_unu
 			if ( !pNode )
 				continue;
 
-			if ( !V_stricmp( pNode->GetClassName(), "info_target" ) )
+			if ( V_strieq( pNode->GetClassName(), "info_target" ) )
 			{
 				sChoice.m_pValue = pNode->GetTargetName();
 				sChoice.m_pChoiceString = pNode->GetTargetName();
@@ -399,13 +399,13 @@ bool CCommEditDoc::GetStringChoiceList( const char *pChoiceListType, [[maybe_unu
 bool CCommEditDoc::GetElementChoiceList( const char *pChoiceListType, [[maybe_unused]] CDmElement *pElement, 
 									 [[maybe_unused]] const char *pAttributeName, [[maybe_unused]] bool bArrayElement, ElementChoiceList_t &list )
 {
-	if ( !Q_stricmp( pChoiceListType, "allelements" ) )
+	if ( V_strieq( pChoiceListType, "allelements" ) )
 	{
 		AddElementsRecursively( m_hRoot, list );
 		return true;
 	}
 
-	if ( !Q_stricmp( pChoiceListType, "info_targets" ) )
+	if ( V_strieq( pChoiceListType, "info_targets" ) )
 	{
 		CDmrCommentaryNodeEntityList entities = GetEntityList();
 
@@ -414,7 +414,7 @@ bool CCommEditDoc::GetElementChoiceList( const char *pChoiceListType, [[maybe_un
 		for ( intp i = 0; i < nCount; ++i )
 		{
 			CDmeCommentaryNodeEntity *pNode = entities[ i ];
-			if ( pNode && !V_stricmp( pNode->GetClassName(), "info_target" ) )
+			if ( pNode && V_strieq( pNode->GetClassName(), "info_target" ) )
 			{
 				bFound = true;
 				ElementChoice_t sChoice;

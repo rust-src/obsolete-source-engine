@@ -90,12 +90,6 @@ void CBaseBudgetPanel::OnConfigDataChanged( const CBudgetPanelConfigData &data )
 	if ( m_ConfigData.m_BudgetGroupInfo.Count() > m_BudgetGroupTimes.Count() )
 	{
 		m_BudgetGroupTimes.EnsureCount( m_ConfigData.m_BudgetGroupInfo.Count() );
-		// dimhotepus: Fix use-after-free as m_BudgetGroupTimes were deallocated and m_pBudgetHistoryPanel pointer must be updated.
-		m_pBudgetHistoryPanel->SetData(
-			m_BudgetGroupTimes.Count() ? &m_BudgetGroupTimes[0].m_Time[0] : nullptr,
-			GetNumCachedBudgetGroups(),
-			static_cast<int>(ARRAYSIZE(BudgetGroupTimeData_t::m_Time)),
-			m_BudgetHistoryOffset );
 		for ( intp i = oldNumGroups; i < m_ConfigData.m_BudgetGroupInfo.Count(); i++ )
 		{
 			ClearAllTimesForGroup( i );
@@ -104,12 +98,6 @@ void CBaseBudgetPanel::OnConfigDataChanged( const CBudgetPanelConfigData &data )
 	else
 	{
 		m_BudgetGroupTimes.SetSize( m_ConfigData.m_BudgetGroupInfo.Count() );
-		// dimhotepus: Fix use-after-free as m_BudgetGroupTimes were deallocated and m_pBudgetHistoryPanel pointer must be updated.
-		m_pBudgetHistoryPanel->SetData(
-			m_BudgetGroupTimes.Count() ? &m_BudgetGroupTimes[0].m_Time[0] : nullptr,
-			GetNumCachedBudgetGroups(),
-			static_cast<int>(ARRAYSIZE(BudgetGroupTimeData_t::m_Time)),
-			m_BudgetHistoryOffset );
 		for ( intp i = 0; i < m_BudgetGroupTimes.Count(); i++ )
 		{
 			ClearAllTimesForGroup( i );
@@ -221,18 +209,16 @@ void CBaseBudgetPanel::Rebuild( const CBudgetPanelConfigData &data )
 	
 	// Note: the time lines still use milliseconds for the computations about where to draw them,
 	// but each BudgetGroupDataType_t has its own scale.
-	int nTimeLabels = m_ConfigData.m_flBarGraphRange + data.m_flTimeLabelInterval;
-	if ( data.m_flTimeLabelInterval != 0.0f )
-	{
-		nTimeLabels /= data.m_flTimeLabelInterval;
-	}
+	const intp nTimeLabels = data.m_flTimeLabelInterval != 0.0f
+		? static_cast<intp>( ( m_ConfigData.m_flBarGraphRange + data.m_flTimeLabelInterval ) / data.m_flTimeLabelInterval )
+		: static_cast<intp>( ( m_ConfigData.m_flBarGraphRange + data.m_flTimeLabelInterval ) );
 
 	if ( nTimeLabels > m_TimeLabels.Count() )
 	{
 		m_TimeLabels.EnsureCount( nTimeLabels );
+		char name[32];
 		for( i = oldNumTimeLabels; i < m_TimeLabels.Count(); i++ )
 		{
-			char name[1024];
 			V_sprintf_safe( name, "time_label_%zd", i );
 			m_TimeLabels[i] = new vgui::Label( this, name, "TEXT NOT SET YET" );
 		}
@@ -299,9 +285,8 @@ void CBaseBudgetPanel::PerformLayout()
 	totalHeightMinusTimeLabels = totalHeight - maxTimeLabelHeight;
 	
 	m_pBudgetHistoryPanel->SetPos( 0, 0 );
-	int budgetHistoryHeight = totalHeightMinusTimeLabels * bottomOfHistoryPercentage;
-	m_pBudgetHistoryPanel->SetSize( totalWidth - maxFPSLabelWidth, 
-		budgetHistoryHeight );
+	int budgetHistoryHeight = static_cast<int>( totalHeightMinusTimeLabels * bottomOfHistoryPercentage );
+	m_pBudgetHistoryPanel->SetSize( totalWidth - maxFPSLabelWidth, budgetHistoryHeight );
 
 	int maxLabelWidth = 0;
 	for( auto *l : m_GraphLabels )
@@ -315,19 +300,19 @@ void CBaseBudgetPanel::PerformLayout()
 	}
 	
 	m_pBudgetBarGraphPanel->SetPos( maxLabelWidth, 
-		totalHeightMinusTimeLabels * bottomOfHistoryPercentage );
+		static_cast<int>( totalHeightMinusTimeLabels * bottomOfHistoryPercentage ) );
 	m_pBudgetBarGraphPanel->SetSize( totalWidth - maxLabelWidth, 
-		totalHeightMinusTimeLabels * ( 1 - bottomOfHistoryPercentage ) );
+		static_cast<int>( totalHeightMinusTimeLabels * ( 1 - bottomOfHistoryPercentage ) ) );
 
 	for( i = 0; i < m_GraphLabels.Count(); i++ )
 	{
 		m_GraphLabels[i]->SetPos( 0, 
-			( bottomOfHistoryPercentage * totalHeightMinusTimeLabels ) +
+			static_cast<int>( ( bottomOfHistoryPercentage * totalHeightMinusTimeLabels ) +
 			( i * totalHeightMinusTimeLabels * 
-			( 1 - bottomOfHistoryPercentage ) ) / m_ConfigData.m_BudgetGroupInfo.Count() );
+			( 1 - bottomOfHistoryPercentage ) ) / m_ConfigData.m_BudgetGroupInfo.Count() ) );
 		// fudge height by 1 for rounding 
-		m_GraphLabels[i]->SetSize( maxLabelWidth, 1 + ( totalHeightMinusTimeLabels * 
-			( 1 - bottomOfHistoryPercentage ) ) / m_ConfigData.m_BudgetGroupInfo.Count() );
+		m_GraphLabels[i]->SetSize( maxLabelWidth, static_cast<int>( 1 + ( totalHeightMinusTimeLabels * 
+			( 1 - bottomOfHistoryPercentage ) ) / m_ConfigData.m_BudgetGroupInfo.Count() ) );
 		m_GraphLabels[i]->SetContentAlignment( vgui::Label::a_east );
 	}
 
@@ -338,7 +323,7 @@ void CBaseBudgetPanel::PerformLayout()
 	{
 		int labelWidth, labelHeight;
 		m_TimeLabels[i]->GetContentSize( labelWidth, labelHeight );
-		x = maxLabelWidth + ( i * m_ConfigData.m_flTimeLabelInterval ) / fRange * ( totalWidth - maxLabelWidth );
+		x = static_cast<int>( maxLabelWidth + ( i * m_ConfigData.m_flTimeLabelInterval ) / fRange * ( totalWidth - maxLabelWidth ) );
 		
 		m_TimeLabels[i]->SetPos( x - labelWidth / 2, totalHeight - labelHeight );
 		m_TimeLabels[i]->SetSize( labelWidth, labelHeight );
@@ -352,7 +337,7 @@ void CBaseBudgetPanel::PerformLayout()
 	{
 		int labelWidth, labelHeight;
 		m_HistoryLabels[i]->GetContentSize( labelWidth, labelHeight );
-		y = (fRange != 0) ? budgetHistoryHeight * m_ConfigData.m_HistoryLabelValues[i] / fRange : 0;
+		y = static_cast<int>( (fRange != 0) ? budgetHistoryHeight * m_ConfigData.m_HistoryLabelValues[i] / fRange : 0 );
 		int top = budgetHistoryHeight - y - 1 - labelHeight / 2;
 		m_HistoryLabels[i]->SetPos( totalWidth - maxFPSLabelWidth, top );
 		m_HistoryLabels[i]->SetSize( labelWidth, labelHeight );
@@ -378,7 +363,7 @@ void CBaseBudgetPanel::ApplySchemeSettings( vgui::IScheme *pScheme )
 
 	for( auto *l : m_TimeLabels )
 	{
-		int red, green, blue, alpha;
+		byte red, green, blue, alpha;
 		red = green = blue = alpha = 255;
 		l->SetFgColor( Color( red, green, blue, alpha ) );
 		l->SetBgColor( Color( 0, 0, 0, 255 ) );
@@ -392,7 +377,7 @@ void CBaseBudgetPanel::ApplySchemeSettings( vgui::IScheme *pScheme )
 
 	for( auto *l : m_HistoryLabels )
 	{
-		int red, green, blue, alpha;
+		byte red, green, blue, alpha;
 		red = green = blue = alpha = 255;
 		l->SetFgColor( Color( red, green, blue, alpha ) );
 		l->SetBgColor( Color( 0, 0, 0, 255 ) );
@@ -422,7 +407,7 @@ void CBaseBudgetPanel::PaintBackground()
 	}
 	else
 	{
-		SetBgColor( Color( 0, 0, 0, m_ConfigData.m_flBackgroundAlpha ) );
+		SetBgColor( Color( 0, 0, 0, static_cast<uint8_t>( m_ConfigData.m_flBackgroundAlpha ) ) );
 	}
 	BaseClass::PaintBackground();
 }

@@ -120,7 +120,7 @@ bool CDataModel::Connect( CreateInterfaceFn factory )
 
 void *CDataModel::QueryInterface( const char *pInterfaceName )
 {
-	if ( !V_strcmp( pInterfaceName, VDATAMODEL_INTERFACE_VERSION ) )
+	if ( V_streq( pInterfaceName, VDATAMODEL_INTERFACE_VERSION ) )
 		return (IDataModel*)this;
 
 	return NULL;
@@ -294,15 +294,9 @@ struct DmMemorySortInfo_t
 	intp m_nTotalSize;
 };
 
-int DmMemorySortFunc( const void * lhs, const void * rhs )
+static bool DmMemorySortFunc( const DmMemorySortInfo_t &info1, const DmMemorySortInfo_t &info2 )
 {
-	DmMemorySortInfo_t &info1 = *(DmMemorySortInfo_t*)lhs;
-	DmMemorySortInfo_t &info2 = *(DmMemorySortInfo_t*)rhs;
-	return info1.m_nTotalSize > info2.m_nTotalSize
-		? 1
-		: info1.m_nTotalSize == info2.m_nTotalSize
-			? 0
-			: -1;
+	return info1.m_nTotalSize < info2.m_nTotalSize;
 }
 
 void CDataModel::DisplayMemoryStats( )
@@ -327,7 +321,7 @@ void CDataModel::DisplayMemoryStats( )
 			j = typeHistogram.Insert( pElement->GetType() );
 			typeHistogram[j].m_nCount = 0;
 			typeHistogram[j].m_nSize = 0;
-			memset( typeHistogram[j].m_pCategories, 0, sizeof(typeHistogram[j].m_pCategories) );
+			BitwiseClear( typeHistogram[j].m_pCategories );
 		}
 
 		intp nMemory = CDmeElementAccessor::EstimateMemoryUsage( pElement, visited, TD_NONE, typeHistogram[j].m_pCategories );
@@ -345,13 +339,13 @@ void CDataModel::DisplayMemoryStats( )
 		pSortInfo[nCount].m_nTotalSize = typeHistogram.Element( i ).m_nSize;
 		++nCount;
 	}
-	qsort( pSortInfo, nCount, sizeof(DmMemorySortInfo_t), DmMemorySortFunc );
+	std::sort( pSortInfo, pSortInfo + nCount, DmMemorySortFunc );
 	     
 	intp pTotals[ MEMORY_CATEGORY_COUNT ];
 	intp nTotalSize = 0;
 	intp nTotalCount = 0;
 	intp nTotalData = 0;
-	memset( pTotals, 0, sizeof(pTotals) );
+	BitwiseClear( pTotals );
 	ConMsg( "Dm Memory usage: type\t\t\t\tcount\ttotalsize\twastage %%\touter\t\tinner\t\tdatamodel\trefs\t\ttree\t\tatts\t\tdata\t(att count)\n" );
 	for ( decltype(nCount) i = 0; i < nCount; ++i )
 	{
@@ -359,7 +353,7 @@ void CDataModel::DisplayMemoryStats( )
 		float flPercentOverhead = 1.0f - ( ( info.m_nSize != 0 ) ? ( (float)info.m_pCategories[MEMORY_CATEGORY_ATTRIBUTE_DATA] / (float)info.m_nSize ) : 0.0f );
 		flPercentOverhead *= 100.0f;
 		 
-		ConMsg( "%-40s\t%6d\t%9d\t\t%5.2f", GetString( typeHistogram.Key( pSortInfo[i].m_nIndex ) ), 
+		ConMsg( "%-40s\t%6zd\t%9zd\t\t%5.2f", GetString( typeHistogram.Key( pSortInfo[i].m_nIndex ) ), 
 			info.m_nCount, info.m_nSize, flPercentOverhead );
 		intp nTotal = 0;
 		for ( int j = 0; j < MEMORY_CATEGORY_COUNT; ++j )
@@ -540,7 +534,7 @@ IDmSerializer* CDataModel::FindSerializer( const char *pEncodingName ) const
 		if ( !s )
 			continue;
 
-		if ( !V_strcmp( pEncodingName, s->GetName() ) )
+		if ( V_streq( pEncodingName, s->GetName() ) )
 			return s;
 	}
 
@@ -555,7 +549,7 @@ IDmLegacyUpdater* CDataModel::FindLegacyUpdater( const char *pLegacyFormatName )
 		if ( !u )
 			continue;
 
-		if ( !V_strcmp( pLegacyFormatName, u->GetName() ) )
+		if ( V_streq( pLegacyFormatName, u->GetName() ) )
 			return u;
 	}
 
@@ -570,7 +564,7 @@ IDmFormatUpdater* CDataModel::FindFormatUpdater( const char *pFormatName ) const
 		if ( !u )
 			continue;
 
-		if ( !V_strcmp( pFormatName, u->GetName() ) )
+		if ( V_streq( pFormatName, u->GetName() ) )
 			return u;
 	}
 
@@ -981,9 +975,9 @@ bool CDataModel::Unserialize( CUtlBuffer &inBuf, const char *pEncodingName, cons
 	// advance the buffer the the end of the header
 	if ( bStoresVersionInFile )
 	{
-		if ( V_strcmp( pEncodingName, header.encodingName ) != 0 )
+		if ( !V_streq( pEncodingName, header.encodingName ) )
 			return false;
-		if ( V_strcmp( pSourceFormatName, header.formatName ) != 0 )
+		if ( !V_streq( pSourceFormatName, header.formatName ) )
 			return false;
 
 		if ( pSerializer->IsBinaryFormat() )

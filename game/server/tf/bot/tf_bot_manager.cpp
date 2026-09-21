@@ -551,7 +551,7 @@ bool CTFBotManager::IsAllBotTeam( int iTeam )
 	}
 
 	// check to see if any players on the team are humans
-	for ( int i = 0, n = pTeam->GetNumPlayers(); i < n; ++i )
+	for ( intp i = 0, n = pTeam->GetNumPlayers(); i < n; ++i )
 	{
 		CTFPlayer *pPlayer = ToTFPlayer( pTeam->GetPlayer( i ) );
 		if ( pPlayer == NULL )
@@ -709,7 +709,7 @@ CON_COMMAND_F( tf_bot_debug_stuck_log, "Given a server logfile, visually display
 			if ( !first )
 				continue;
 
-			if ( !strcmp( first, "Loading" ) )
+			if ( V_streq( first, "Loading" ) )
 			{
 				// L 08/08/2012 - 15:10:47: Loading map "mvm_coaltown"
 				strtok( NULL, " " );
@@ -717,7 +717,7 @@ CON_COMMAND_F( tf_bot_debug_stuck_log, "Given a server logfile, visually display
 
 				if ( mapname )
 				{
-					strcpy( logMapName, mapname );
+					V_strcpy_safe( logMapName, mapname );
 					Warning( "*** Log file from map '%s'\n", mapname );
 				}
 			}
@@ -741,7 +741,7 @@ CON_COMMAND_F( tf_bot_debug_stuck_log, "Given a server logfile, visually display
 				int botID = atoi( botIDString );
 
 				char *second = strtok( NULL, " " );
-				if ( second && !strcmp( second, "stuck" ) )
+				if ( second && V_streq( second, "stuck" ) )
 				{
 					CStuckBot *stuckBot = TheTFBots().FindOrCreateStuckBot( botID, playerClassname );
 

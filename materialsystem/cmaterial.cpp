@@ -586,7 +586,7 @@ void CMaterial::SetShaderAndParams( KeyValues *pKeyValues )
 	if ( pLoadedKeyValues->LoadFromFile( g_pFullFileSystem, pFileName, pPathID ) )
 	{
 		// Load succeeded, check if it's a patch file
-		if ( V_stricmp( pLoadedKeyValues->GetName(), "patch" ) == 0 )
+		if ( V_strieq( pLoadedKeyValues->GetName(), "patch" ) )
 		{
 			// it's a patch file, recursively build up patch keyvalues
 			KeyValuesAD pPatchKeyValues( "vmt_patch" );
@@ -1283,7 +1283,7 @@ int CMaterial::ParseMaterialVars( IShader* pShader, KeyValues& keyValues,
 				for ( i = numParams; i < varCount; ++i)
 				{
 					Assert( ppVars[i] );
-					if (!stricmp( ppVars[i]->GetName(), pVar->GetName() ))
+					if (V_strieq( ppVars[i]->GetName(), pVar->GetName() ))
 						break;
 				}
 				if (i != varCount)
@@ -3405,7 +3405,7 @@ bool AccumulateRecursiveVmtPatches( KeyValues &patchKeyValuesOut, KeyValues **pp
 
 	patchKeyValuesOut.Clear();
 
-	if ( V_stricmp( keyValues.GetName(), "patch" ) != 0 )
+	if ( !V_strieq( keyValues.GetName(), "patch" ) )
 	{
 		// Not a patch file, nothing to do
 		if ( ppBaseKeyValuesOut )
@@ -3420,7 +3420,7 @@ bool AccumulateRecursiveVmtPatches( KeyValues &patchKeyValuesOut, KeyValues **pp
 
 	// Recurse down through all patch files:
 	int nCount = 0;
-	while( ( nCount < 10 ) && ( V_stricmp( pCurrentKeyValues->GetName(), "patch" ) == 0 ) )
+	while( ( nCount < 10 ) && ( V_strieq( pCurrentKeyValues->GetName(), "patch" ) ) )
 	{
 		// Accumulate the new patch keys from this file
 		AccumulatePatchKeyValues( *pCurrentKeyValues, patchKeyValuesOut );
@@ -3501,7 +3501,8 @@ void ExpandPatchFile( KeyValues& keyValues, KeyValues &patchKeyValues, const cha
 	{
 		// We're dealing with a patch file. Apply accumulated patches to final vmt
 		ApplyPatchKeyValues( *pNonPatchKeyValues, patchKeyValues );
-		keyValues = *pNonPatchKeyValues;
+		// dimhotepus: Use move to speedup.
+		keyValues = std::move( *pNonPatchKeyValues );
 		pNonPatchKeyValues->deleteThis();
 	}
 }

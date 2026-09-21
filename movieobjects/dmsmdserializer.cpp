@@ -107,7 +107,7 @@ void CDmSmdSerializer::SetUpAxis( CDmSmdSerializer::Axis_t nUpAxis )
 	switch ( m_nUpAxis )
 	{
 	case X_AXIS:	// X Up
-		AngleMatrix( RadianEuler( -M_PI / 2.0, M_PI / 2.0, 0.0 ), m_mAdj );
+		AngleMatrix( RadianEuler( -M_PI_F / 2.0f, M_PI_F / 2.0f, 0.0f ), m_mAdj );
 		MatrixInverseTranspose( m_mAdj, m_mAdjNormal );
 		break;
 	case Y_AXIS:	// Y Up
@@ -116,7 +116,7 @@ void CDmSmdSerializer::SetUpAxis( CDmSmdSerializer::Axis_t nUpAxis )
 		break;
 	case Z_AXIS:
 	default:
-		AngleMatrix( RadianEuler( -M_PI / 2.0, 0.0, 0.0 ), m_mAdj );
+		AngleMatrix( RadianEuler( -M_PI_F / 2.0f, 0.0f, 0.0f ), m_mAdj );
 		MatrixInverseTranspose( m_mAdj, m_mAdjNormal );
 		break;
 	}
@@ -287,7 +287,7 @@ static bool HandleQcHints(
 
 	if ( sscanf( pBuf, "// %511s=%511s", key, val ) == 2 )
 	{
-		if ( Q_stricmp( key, "UPAXIS" ) == 0 )
+		if ( V_strieq( key, "UPAXIS" ) )
 		{
 			if ( strpbrk( val, "xX" ) )
 			{
@@ -396,7 +396,7 @@ bool CQcData::ParseQc(
 			if ( tokens.Count() < 1 )
 				continue;
 
-			if ( !V_stricmp( tokens[0], "$upaxis" ) )
+			if ( V_strieq( tokens[0], "$upaxis" ) )
 			{
 				if ( strchr( tokens[1].Get(), 'y' ) || strchr( tokens[1].Get(), 'Y' ) )
 				{
@@ -411,12 +411,12 @@ bool CQcData::ParseQc(
 					m_nUpAxis = CDmSmdSerializer::Z_AXIS;
 				}
 			}
-			else if ( !V_stricmp( tokens[0], "$scale" ) )
+			else if ( V_strieq( tokens[0], "$scale" ) )
 			{
 				// dimhotepus: strtod -> V_atof
 				m_scale = V_atof( tokens[1].Get() );
 			}
-			else if ( !V_stricmp( tokens[0], "$cdmaterials" ) )
+			else if ( V_strieq( tokens[0], "$cdmaterials" ) )
 			{
 				m_cdmaterials.push_back( tokens[1].Get() );
 			}
@@ -442,7 +442,7 @@ bool CQcData::ParseQc(
 		bool bJoin = false;
 		for ( intp i = 0; i < sPathArray.Count(); ++i )
 		{
-			if ( !bJoin && !V_stricmp( sPathArray[i], "models" ) )
+			if ( !bJoin && V_strieq( sPathArray[i], "models" ) )
 			{
 				bJoin = true;
 			}
@@ -529,6 +529,8 @@ bool CQcData::GetQcData(
 
 			if ( intptr_t hFile = _findfirst( sQcGlob.Get(), &qcFile ); hFile != -1L )
 			{
+				RunCodeAtScopeExit(_findclose( hFile ));
+
 				/* Find the rest of the .qc files */
 				do {
 					CUtlString sQcFile = sFilePath;
@@ -541,13 +543,10 @@ bool CQcData::GetQcData(
 					{
 						if ( V_stristr( buf.c_str(), sFileBase0.Get() ) || V_stristr( buf.c_str(), sFileBase1.Get() ) )
 						{
-							_findclose( hFile );
 							return ParseQc( smdPath, sQcFile );
 						}
 					}
 				} while( _findnext( hFile, &qcFile ) == 0 );
-
-				_findclose( hFile );
 			}
 		}
 	}
@@ -835,7 +834,7 @@ static bool ParserCreateJoint(
 		pDmePosChannel->SetMode( CM_PLAY );
 		pDmePosChannel->SetOutput( pDmeTransform, "position" );
 		CDmeVector3Log *pDmePosLog = pDmePosChannel->CreateLog< Vector >();
-		pDmePosLog->SetValueThreshold( 1.0e-6 );
+		pDmePosLog->SetValueThreshold( 1.0e-6f );
 		pDmeChannelsClip->m_Channels.AddToTail( pDmePosChannel );
 
 		CDmAttribute *pPosLogAttr = pDmeJoint->AddAttribute( "__posLog", AT_ELEMENT );
@@ -846,7 +845,7 @@ static bool ParserCreateJoint(
 		pDmeRotChannel->SetMode( CM_PLAY );
 		pDmeRotChannel->SetOutput( pDmeTransform, "orientation" );
 		CDmeQuaternionLog *pDmeRotLog = pDmeRotChannel->CreateLog< Quaternion >();
-		pDmeRotLog->SetValueThreshold( 1.0e-6 );
+		pDmeRotLog->SetValueThreshold( 1.0e-6f );
 		pDmeChannelsClip->m_Channels.AddToTail( pDmeRotChannel );
 
 		CDmAttribute *pRotLogAttr = pDmeJoint->AddAttribute( "__rotLog", AT_ELEMENT );
@@ -1036,7 +1035,7 @@ static void HandleVertexWeights(
 	CUtlVector< CUtlString > tokens;
 	Tokenize( tokens, pszLine );
 
-	const float flEps = 1.0e-6;
+	const float flEps = 1.0e-6f;
 
 	intp nTokenEnd = tokens.Count();
 	if ( nTokenEnd > 10 )
@@ -1200,7 +1199,7 @@ static CDmeFaceSet *FindOrCreateFaceSet(
 		if ( !pDmeMaterial )
 			continue;
 
-		if ( !V_strcmp( pDmeMaterial->GetMaterialName(), sMaterial.Get() ) )
+		if ( V_streq( pDmeMaterial->GetMaterialName(), sMaterial.Get() ) )
 			return pDmeFaceSet;
 	}
 

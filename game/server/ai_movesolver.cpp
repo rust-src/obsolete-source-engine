@@ -15,9 +15,9 @@
 
 //-----------------------------------------------------------------------------
 
-inline float V_round( float f )
+constexpr inline float V_round( float f )
 {
-	return (float)( (int)( f + 0.5 ) );
+	return (float)( (int)( f + 0.5f ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -25,7 +25,7 @@ inline float V_round( float f )
 //-----------------------------------------------------------------------------
 
 // The epsilon used by the solver
-constexpr inline float AIMS_EPS = 0.01;
+constexpr inline float AIMS_EPS = 0.01f;
 
 
 //-----------------------------------------------------------------------------
@@ -145,12 +145,12 @@ bool CAI_MoveSolver::Solve( const AI_MoveSuggestion_t *pSuggestions, int nSugges
 
 		// Sweep from left to right, summing the bias. For positive suggestions,
 		// the bias is further weighted to favor the center of the arc.
-		constexpr float positiveDegradePer180 = 0.05; // i.e., lose 5% of weight by the time hit 180 degrees off center
-		constexpr float positiveDegrade       = ( positiveDegradePer180 / ( NUM_SOLUTIONS * 0.5 ) ); 
+		constexpr float positiveDegradePer180 = 0.05f; // i.e., lose 5% of weight by the time hit 180 degrees off center
+		constexpr float positiveDegrade       = ( positiveDegradePer180 / ( NUM_SOLUTIONS * 0.5f ) ); 
 
 		for ( int i = 0; i < left + 1; ++i )
 		{
-			float bias = 0.0;
+			float bias = 0.0f;
 
 			if ( current.weight > 0)
 			{
@@ -160,7 +160,7 @@ bool CAI_MoveSolver::Solve( const AI_MoveSuggestion_t *pSuggestions, int nSugges
 				if ( ( (current.flags & AIMS_FAVOR_LEFT ) && i > center ) || 
 					 ( (current.flags & AIMS_FAVOR_RIGHT) && i < center ) )
 				{
-					degrade *= 0.9;
+					degrade *= 0.9f;
 				}
 
 				bias = current.weight - ( current.weight * degrade );
@@ -227,14 +227,14 @@ struct AI_MoveSuggWeights
 
 static AI_MoveSuggWeights g_AI_MoveSuggWeights[] = // @TODO (toml 06-18-02): these numbers need tuning
 {
-	{  0.20,  1.00 },	// AIMST_MOVE
-	{ -0.00, -0.25 },	// AIMST_AVOID_DANGER
-	{ -0.00, -0.25 },	// AIMST_AVOID_OBJECT
-	{ -0.00, -0.25 },	// AIMST_AVOID_NPC
-	{ -0.00, -0.25 },	// AIMST_AVOID_WORLD
-	{ -1.00, -1.00 },	// AIMST_NO_KNOWLEDGE
-	{ -0.60, -0.60 },	// AIMST_OSCILLATION_DETERRANCE
-	{  0.00,  0.00 },	// AIMST_INVALID
+	{  0.20f,  1.00f },	// AIMST_MOVE
+	{ -0.00f, -0.25f },	// AIMST_AVOID_DANGER
+	{ -0.00f, -0.25f },	// AIMST_AVOID_OBJECT
+	{ -0.00f, -0.25f },	// AIMST_AVOID_NPC
+	{ -0.00f, -0.25f },	// AIMST_AVOID_WORLD
+	{ -1.00f, -1.00f },	// AIMST_NO_KNOWLEDGE
+	{ -0.60f, -0.60f },	// AIMST_OSCILLATION_DETERRANCE
+	{  0.00f,  0.00f },	// AIMST_INVALID
 };
 
 void CAI_MoveSolver::NormalizeSuggestions( AI_MoveSuggestion_t *pBegin, AI_MoveSuggestion_t *pEnd )
@@ -285,7 +285,7 @@ bool CAI_MoveSolver::HaveRegulationForObstacle( CBaseEntity *pEntity)
 CON_COMMAND(ai_test_move_solver, "Tests the AI move solver system")
 {
 #ifdef DEBUG
-	constexpr float EPS = 0.001;
+	constexpr float EPS = 0.001f;
 #endif
 	DevMsg( "Beginning move solver tests...\n" );
 

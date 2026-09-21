@@ -233,6 +233,7 @@ bool CEconItemSystem::DecryptItemFiles( KeyValues *pKV, const char *pName )
 
 	int fileSize = filesystem->Size(f);
 	char *buffer = (char*)MemAllocScratch(fileSize + 1);
+	RunCodeAtScopeExit( MemFreeScratch() );
 
 	Assert(buffer);
 
@@ -242,14 +243,7 @@ bool CEconItemSystem::DecryptItemFiles( KeyValues *pKV, const char *pName )
 
 	UTIL_DecodeICE( (unsigned char*)buffer, fileSize, GetEncryptionKey() );
 
-	bool retOK = pKV->LoadFromBuffer( szFullName, buffer, filesystem );
-
-	MemFreeScratch();
-
-	if ( !retOK )
-		return false;
-
-	return true;
+	return pKV->LoadFromBuffer( szFullName, buffer, filesystem );
 }
 
 
@@ -530,7 +524,8 @@ public:
 		m_sSignature = msg.Body().signature();
 
 		// !TEST!
-		//const char *szURL = "http://cdn.beta.steampowered.com/apps/440/scripts/items/items_game.b8b7a85b4dd98b139957004b86ec0bc070a59d18.txt";
+		// dimhotepus: http:// -> https://
+		//const char *szURL = "https://cdn.beta.steampowered.com/apps/440/scripts/items/items_game.b8b7a85b4dd98b139957004b86ec0bc070a59d18.txt";
 		if ( msg.Body().has_items_game() )
 		{
 			bool bDidInit = ItemSystem()->GetItemSchema()->MaybeInitFromBuffer( new DelayedSchemaData_GCDirectData( msg.Body().items_game() ) );

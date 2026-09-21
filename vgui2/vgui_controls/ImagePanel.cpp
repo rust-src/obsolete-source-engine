@@ -81,7 +81,7 @@ void ImagePanel::SetImage(IImage *image)
 //-----------------------------------------------------------------------------
 void ImagePanel::SetImage(const char *imageName)
 {
-	if ( imageName && m_pszImageName && V_stricmp( imageName, m_pszImageName ) == 0 )
+	if ( imageName && m_pszImageName && V_strieq( imageName, m_pszImageName ) )
 		return;
 
 	delete [] m_pszImageName;
@@ -266,8 +266,8 @@ void ImagePanel::GetSettings(KeyValues *outResourceData)
 		outResourceData->SetString("border", GetBorder()->GetName());
 	}
 
-	// dimhotepus: Set position image.
-	outResourceData->SetInt("positionImage", m_bPositionImage );
+	// dimhotepus: Set position image. See https://github.com/ValveSoftware/source-sdk-2013/pull/1695
+	outResourceData->SetInt("positionImage", m_bPositionImage);
 	outResourceData->SetInt("scaleImage", m_bScaleImage);
 	outResourceData->SetFloat("scaleAmount", m_fScaleAmount);
 	outResourceData->SetInt("tileImage", m_bTileImage);
@@ -314,9 +314,7 @@ void ImagePanel::ApplySettings(KeyValues *inResourceData)
 	if (*pszFillColor)
 	{
 		int r = 0, g = 0, b = 0, a = 255;
-		intp len = Q_strlen(pszFillColor) + 1;
-		m_pszFillColorName = new char[ len ];
-		Q_strncpy( m_pszFillColorName, pszFillColor, len );
+		m_pszFillColorName = V_strdup( pszFillColor );
 
 		if (sscanf(pszFillColor, "%d %d %d %d", &r, &g, &b, &a) >= 3)
 		{
@@ -338,9 +336,7 @@ void ImagePanel::ApplySettings(KeyValues *inResourceData)
 	if (*pszDrawColor)
 	{
 		int r = 255, g = 255, b = 255, a = 255;
-		intp len = Q_strlen(pszDrawColor) + 1;
-		m_pszDrawColorName = new char[ len ];
-		Q_strncpy( m_pszDrawColorName, pszDrawColor, len );
+		m_pszDrawColorName = V_strdup( pszDrawColor );
 
 		if (sscanf(pszDrawColor, "%d %d %d %d", &r, &g, &b, &a) >= 3)
 		{

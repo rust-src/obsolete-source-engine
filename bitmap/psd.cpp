@@ -111,7 +111,7 @@ bool IsPSDFile( CUtlBuffer &buf )
 bool IsPSDFile( const char *pFileName, const char *pPathID )
 {
 	CUtlBuffer buf;
-	if ( !g_pFullFileSystem->ReadFile( pFileName, pPathID, buf, sizeof(PSDHeader_t) ) )
+	if ( !g_pFullFileSystem->ReadFile<PSDHeader_t>( pFileName, pPathID, buf ) )
 	{
 		Warning( "Unable to read file %s\n", pFileName );
 		return false;
@@ -148,7 +148,7 @@ bool PSDGetInfo( CUtlBuffer &buf, int *pWidth, int *pHeight, ImageFormat *pImage
 bool PSDGetInfo( const char *pFileName, const char *pPathID, int *pWidth, int *pHeight, ImageFormat *pImageFormat, float *pSourceGamma )
 {
 	CUtlBuffer buf;
-	if ( !g_pFullFileSystem->ReadFile( pFileName, pPathID, buf, sizeof(PSDHeader_t) ) )
+	if ( !g_pFullFileSystem->ReadFile<PSDHeader_t>( pFileName, pPathID, buf ) )
 	{
 		Warning( "Unable to read file %s\n", pFileName );
 		return false;
@@ -301,7 +301,7 @@ static int s_pChannelIndex[MODE_COUNT+1][4] =
 
 static void PSDReadUncompressedChannels( CUtlBuffer &buf, int nChannelsCount, PSDMode_t mode, PSDPalette_t &palette, Bitmap_t &bitmap )
 {
-	auto *pChannelRow = (unsigned char*)_alloca( bitmap.Width() );
+	auto *pChannelRow = stackallocT( unsigned char, bitmap.Width() );
 	for ( int i=0; i<nChannelsCount; ++i )
 	{
 		int nIndex = s_pChannelIndex[mode][i];
@@ -329,7 +329,7 @@ static void PSDReadUncompressedChannels( CUtlBuffer &buf, int nChannelsCount, PS
 //-----------------------------------------------------------------------------
 static void PSDReadCompressedChannels( CUtlBuffer &buf, int nChannelsCount, PSDMode_t mode, PSDPalette_t &palette, Bitmap_t &bitmap )
 {
-	auto *pChannelRow = (unsigned char*)_alloca( bitmap.Width() );
+	auto *pChannelRow = stackallocT( unsigned char,  bitmap.Width() );
 	for ( int i=0; i<nChannelsCount; ++i )
 	{
 		int nIndex = s_pChannelIndex[mode][i];
@@ -424,7 +424,7 @@ bool PSDReadFileRGBA8888( CUtlBuffer &buf, Bitmap_t &bitmap )
 	// Skip parts of memory we don't care about
 	int nColorModeSize = BigLong( buf.GetUnsignedInt() );
 	Assert( nColorModeSize % 3 == 0 );
-	auto *pPaletteBits = (unsigned char*)_alloca( nColorModeSize );
+	auto *pPaletteBits = stackallocT( unsigned char, nColorModeSize );
 	PSDPalette_t palette{nullptr, nullptr, nullptr};
 	if ( nColorModeSize )
 	{
@@ -480,7 +480,7 @@ bool PSDReadFileRGBA8888( CUtlBuffer &buf, Bitmap_t &bitmap )
 bool PSDReadFileRGBA8888( const char *pFileName, const char *pPathID, Bitmap_t &bitmap )
 {
 	CUtlStreamBuffer buf( pFileName, pPathID, CUtlBuffer::READ_ONLY );
-	if ( !g_pFullFileSystem->ReadFile( pFileName, pPathID, buf, sizeof(PSDHeader_t) ) )
+	if ( !g_pFullFileSystem->ReadFile<PSDHeader_t>( pFileName, pPathID, buf ) )
 	{
 		Warning( "Unable to read file %s\n", pFileName );
 		return false;
@@ -539,7 +539,7 @@ PSDImageResources::ResElement PSDImageResources::FindElement( Resource eType ) c
 PSDResFileInfo::ResFileInfoElement PSDResFileInfo::FindElement( ResFileInfo eType ) const
 {
 	ResFileInfoElement res;
-	memset( &res, 0, sizeof( res ) );
+	BitwiseClear( res );
 
 	unsigned char const *pvBuffer = m_res.m_pvData, * const pvBufferEnd = pvBuffer + m_res.m_numBytes;
 	while ( pvBuffer < pvBufferEnd )

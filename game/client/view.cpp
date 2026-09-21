@@ -22,7 +22,7 @@
 #include "mathlib/vmatrix.h"
 #include "rendertexture.h"
 #include "c_world.h"
-#include <KeyValues.h>
+#include "tier1/KeyValues.h"
 #include "igameevents.h"
 #include "smoke_fog_overlay.h"
 #include "bitmap/tgawriter.h"
@@ -45,6 +45,8 @@
 #include "ScreenSpaceEffects.h"
 #include "sourcevr/isourcevirtualreality.h"
 #include "client_virtualreality.h"
+#include "tier1/fmtstr.h"
+#include "vgui/ISystem.h"
 
 #include "mapoverview.h"
 
@@ -104,9 +106,9 @@ static ConVar v_centerspeed( "v_centerspeed","500" );
 #ifdef TF_CLIENT_DLL
 // 54 degrees approximates a 35mm camera - we determined that this makes the viewmodels
 // and motions look the most natural.
-ConVar v_viewmodel_fov( "viewmodel_fov", "54", FCVAR_ARCHIVE, "Sets the field-of-view for the viewmodel.", true, 0.1, true, 179.9, true, 54, true, 70, NULL );
+ConVar v_viewmodel_fov( "viewmodel_fov", "54", FCVAR_ARCHIVE, "Sets the field-of-view for the viewmodel.", true, 0.1f, true, 179.9f, true, 54, true, 70, NULL );
 #else
-ConVar v_viewmodel_fov( "viewmodel_fov", "54", FCVAR_CHEAT, "Sets the field-of-view for the viewmodel.", true, 0.1, true, 179.9 );
+ConVar v_viewmodel_fov( "viewmodel_fov", "54", FCVAR_CHEAT, "Sets the field-of-view for the viewmodel.", true, 0.1f, true, 179.9f );
 #endif
 ConVar mat_viewportscale( "mat_viewportscale", "1.0", FCVAR_ARCHIVE, "Scale down the main viewport (to reduce GPU impact on CPU profiling)", true, (1.0f / BASE_WIDTH), true, 1.0f );
 ConVar mat_viewportupscale( "mat_viewportupscale", "1", FCVAR_ARCHIVE, "Scale the viewport back up" );
@@ -1266,32 +1268,48 @@ static void GetPos( const CCommand &args, Vector &vecOrigin, QAngle &angles )
 	}
 }
 
-CON_COMMAND( spec_pos, "dump position and angles to the console" )
+// dimhotepus: Support copy to clipboard (copperpixel).
+CON_COMMAND( spec_pos, "dump position and angles to the console ( 1 = to clipboard )" )
 {
 	Vector vecOrigin;
 	QAngle angles;
 	GetPos( args, vecOrigin, angles );
-	Warning( "spec_goto %.1f %.1f %.1f %.1f %.1f\n", vecOrigin.x, vecOrigin.y, 
-		vecOrigin.z, angles.x, angles.y );
+
+	bool bClip = ( args.ArgC() >= 2 && Q_atoi( args[ 1 ] ) == 1 );
+
+	CFmtStr fmtCommand(
+		"spec_goto %.1f %.1f %.1f %.1f %.1f",
+		vecOrigin.x, vecOrigin.y, vecOrigin.z, angles.x, angles.y
+	);
+
+	Warning( "%s\n", fmtCommand.String() );
+	if ( bClip )
+	{
+		vgui::system()->SetClipboardText( fmtCommand.String(), fmtCommand.Length() );
+	}
 }
 
-CON_COMMAND( getpos, "dump position and angles to the console" )
+// dimhotepus: Support copy to clipboard (copperpixel).
+CON_COMMAND( getpos, "dump position and angles to the console ( 1 = to clipboard, 2 = exact pos, 3 = all )" )
 {
 	Vector vecOrigin;
 	QAngle angles;
 	GetPos( args, vecOrigin, angles );
 
-	const char *pCommand1 = "setpos";
-	const char *pCommand2 = "setang";
-	if ( args.ArgC() == 2 && atoi( args[1] ) == 2 )
-	{
-		pCommand1 = "setpos_exact";
-		pCommand2 = "setang_exact";
-	}
+	int  nParm  = ( args.ArgC() >= 2 ) ? Q_atoi( args[ 1 ] ) : 0;
+	bool bClip  = ( nParm == 1 || nParm == 3 );
+	bool bExact = ( nParm == 2 || nParm == 3 );
 
-	// dimhotepus: Join two warnings into one as first missed \n and second dumps channel name.
-	Warning( "%s %f %f %f;%s %f %f %f\n",
-		pCommand1, vecOrigin.x, vecOrigin.y, vecOrigin.z,
-		pCommand2, angles.x, angles.y, angles.z );
+	CFmtStr fmtCommand(
+		"%s %f %f %f;%s %f %f %f",
+		bExact ? "setpos_exact" : "setpos", vecOrigin.x, vecOrigin.y, vecOrigin.z,
+		bExact ? "setang_exact" : "setang", angles.x, angles.y, angles.z
+	);
+
+	Warning( "%s\n", fmtCommand.String() );
+	if ( bClip )
+	{
+		vgui::system()->SetClipboardText( fmtCommand.String(), fmtCommand.Length() );
+	}
 }
 

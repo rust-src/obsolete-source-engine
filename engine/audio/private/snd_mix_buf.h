@@ -32,6 +32,17 @@ enum SoundBufferType_t
 	SOUND_BUFFER_SPECIAL_START = SOUND_BUFFER_BASETOTAL
 };
 
+// dimhotepus: Use enum for strong types.
+enum SoundBussType
+{
+	SOUND_BUSS_ROOM =		 1<<0,	// mix samples using channel dspmix value (based on distance from player)
+	SOUND_BUSS_FACING =		 1<<1,	// mix samples using channel dspface value (source facing)
+	SOUND_BUSS_FACINGAWAY =  1<<2,	// mix samples using 1-dspface
+	SOUND_BUSS_SPEAKER =	 1<<3,	// mix ch->bspeaker samples in mono to speaker buffer
+	SOUND_BUSS_DRY =		 1<<4,	// mix ch->bdry samples into dry buffer
+	SOUND_BUSS_SPECIAL_DSP = 1<<5	// mix ch->bspecialdsp samples into special dsp buffer
+};
+
 // !!! if this is changed, it much be changed in native assembly too !!!
 // dimhotepus: align as int as it is casted to usually.
 struct alignas(int) portable_samplepair_t
@@ -54,7 +65,8 @@ struct paintbuffer_t
 	int nPrevSpecialDSP;
 	int nSpecialDSP;
 
-	int flags;								// SOUND_BUSS_ROOM, SOUND_BUSS_FACING, SOUND_BUSS_FACINGAWAY, SOUND_BUSS_SPEAKER, SOUND_BUSS_SPECIAL_DSP, SOUND_BUSS_DRY
+	// dimhotepus: Use enum for strong types.
+	SoundBussType flags;					// SOUND_BUSS_ROOM, SOUND_BUSS_FACING, SOUND_BUSS_FACINGAWAY, SOUND_BUSS_SPEAKER, SOUND_BUSS_SPECIAL_DSP, SOUND_BUSS_DRY
 	
 	portable_samplepair_t *pbuf;			// front stereo mix buffer, for 2 or 4 channel mixing
 	portable_samplepair_t *pbufrear;		// rear mix buffer, for 4 channel mixing
@@ -107,5 +119,27 @@ template<typename T>
 constexpr inline short CLIP(T x) noexcept {
   return x > 32767 ? 32767 : (x < -32767 ? -32767 : static_cast<short>(x));
 }
+
+// dB = 20 log (amplitude/32768)		0 to -90.3dB
+// amplitude = 32768 * 10 ^ (dB/20)		0 to +/- 32768
+// gain = amplitude/32768				0 to 1.0
+[[nodiscard]] inline float Gain_To_dB(float gain) {
+	float dB = 20.0f * logf ( gain );
+	return dB;
+}
+
+[[nodiscard]] inline float dB_To_Gain(float dB) {
+	float gain = powf (10.0f, dB / 20.0f);
+	return gain;
+}
+
+[[nodiscard]] constexpr inline float Gain_To_Amplitude(float gain) {
+	return gain * 32768.0f;
+}
+
+[[nodiscard]] constexpr inline float Amplitude_To_Gain(float amplitude) {
+	return amplitude / 32768.0f;
+}
+
 
 #endif // SND_MIX_BUF_H

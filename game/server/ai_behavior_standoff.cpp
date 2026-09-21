@@ -64,7 +64,7 @@ static AI_StandoffParams_t AI_DEFAULT_STANDOFF_PARAMS = { AIHCR_MOVE_ON_COVER, t
 //
 //-----------------------------------------------------------------------------
 
-constexpr inline float AIBL_THINK_INTERVAL = 0.3;
+constexpr inline float AIBL_THINK_INTERVAL = 0.3f;
 
 class CAI_BattleLine : public CBaseEntity
 {
@@ -365,7 +365,7 @@ void CAI_StandoffBehavior::PrescheduleThink()
 
 				pLine->GetVectors( &normal, NULL, NULL );
 
-				NDebugOverlay::Line( pLine->GetAbsOrigin() - Vector( 0, 0, 64 ), pLine->GetAbsOrigin() + Vector(0,0,64), 0,255,0, false, 0.1 );
+				NDebugOverlay::Line( pLine->GetAbsOrigin() - Vector( 0, 0, 64 ), pLine->GetAbsOrigin() + Vector(0,0,64), 0,255,0, false, 0.1f );
 			}
 		}
 	}
@@ -461,11 +461,11 @@ void CAI_StandoffBehavior::GatherConditions()
 		{
 			if ( IsBehindBattleLines( GetAbsOrigin() ) )
 			{
-				NDebugOverlay::Box( GetOuter()->GetAbsOrigin(), -Vector(48,48,4), Vector(48,48,4), 255,0,0,8, 0.1 );
+				NDebugOverlay::Box( GetOuter()->GetAbsOrigin(), -Vector(48,48,4), Vector(48,48,4), 255,0,0,8, 0.1f );
 			}
 			else
 			{
-				NDebugOverlay::Box( GetOuter()->GetAbsOrigin(), -Vector(48,48,4), Vector(48,48,4), 0,255,0,8, 0.1 );
+				NDebugOverlay::Box( GetOuter()->GetAbsOrigin(), -Vector(48,48,4), Vector(48,48,4), 0,255,0,8, 0.1f );
 			}
 		}
 	}
@@ -1182,10 +1182,10 @@ AI_END_CUSTOM_SCHEDULE_PROVIDER()
 AI_StandoffParams_t g_StandoffParamsByAgression[] =
 {
 	//	hintChangeReaction,		fCoverOnReload, PlayerBtlLn,	minTimeShots,	maxTimeShots, 	minShots, 	maxShots, 	oddsCover			flAbandonTimeLimit
-	{ 	AIHCR_MOVE_ON_COVER,	true,			true, 			4.0, 			8.0, 			2, 			4, 			50,			false,	30 		},	// AGGR_VERY_LOW
-	{ 	AIHCR_MOVE_ON_COVER,	true,			true, 			2.0, 			5.0, 			3, 			5, 			25,			false, 	20		},	// AGGR_LOW
-	{ 	AIHCR_MOVE_ON_COVER,	true,			true, 			0.6, 			2.5, 			3, 			6, 			25,			false, 	10		},	// AGGR_MEDIUM
-	{ 	AIHCR_MOVE_ON_COVER,	true,			true, 			0.2, 			1.5, 			5, 			8, 			10,			false, 	10		},	// AGGR_HIGH
+	{ 	AIHCR_MOVE_ON_COVER,	true,			true, 			4.0f, 			8.0f, 			2, 			4, 			50,			false,	30 		},	// AGGR_VERY_LOW
+	{ 	AIHCR_MOVE_ON_COVER,	true,			true, 			2.0f, 			5.0f, 			3, 			5, 			25,			false, 	20		},	// AGGR_LOW
+	{ 	AIHCR_MOVE_ON_COVER,	true,			true, 			0.6f, 			2.5f, 			3, 			6, 			25,			false, 	10		},	// AGGR_MEDIUM
+	{ 	AIHCR_MOVE_ON_COVER,	true,			true, 			0.2f, 			1.5f, 			5, 			8, 			10,			false, 	10		},	// AGGR_HIGH
 	{ 	AIHCR_MOVE_ON_COVER,	false,			true, 			0, 				0, 				100,		100, 		0,			false, 	5		},	// AGGR_VERY_HIGH
 };
 

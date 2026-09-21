@@ -146,7 +146,7 @@ bool CUtlString::IsEqual_CaseSensitive( const char *src ) const
 	{
 		return (Length() == 0);
 	}
-	return ( V_strcmp( Get(), src ) == 0 );
+	return V_streq( Get(), src );
 }
 
 bool CUtlString::IsEqual_CaseInsensitive( const char *src ) const
@@ -155,7 +155,7 @@ bool CUtlString::IsEqual_CaseInsensitive( const char *src ) const
 	{
 		return (Length() == 0);
 	}
-	return ( V_stricmp( Get(), src ) == 0 );
+	return V_strieq( Get(), src );
 }
 
 
@@ -210,7 +210,7 @@ bool CUtlString::operator==( const CUtlString &src ) const
 		}
 
 		// dimhotepus: Speedup equality check by directly comparing pointers.
-		return m_pString == src.m_pString || Q_strcmp(m_pString, src.m_pString) == 0;
+		return m_pString == src.m_pString || V_streq(m_pString, src.m_pString);
 	}
 }
 
@@ -273,8 +273,7 @@ CUtlString &CUtlString::operator+=( int rhs )
 CUtlString &CUtlString::operator+=( double rhs )
 {
 	char tmpBuf[ 64 ];	// How big can doubles be???  Dunno.
-	V_snprintf( tmpBuf, sizeof( tmpBuf ), "%lg", rhs );
-	tmpBuf[ sizeof( tmpBuf ) - 1 ] = '\0';
+	V_sprintf_safe( tmpBuf, "%lg", rhs );
 
 	return operator+=( tmpBuf );
 }
@@ -374,7 +373,7 @@ int CUtlString::Format( PRINTF_FORMAT_STRING const char *pFormat, ... ) FMTFUNCT
 
 int CUtlString::FormatV( PRINTF_FORMAT_STRING const char *pFormat, va_list marker )
 {
-	char tmpBuf[ 4096 ];	//< Nice big 4k buffer, as much memory as my first computer had, a Radio Shack Color Computer
+	char tmpBuf[ 4096 ];	///< Nice big 4k buffer, as much memory as my first computer had, a Radio Shack Color Computer
 
 	//va_start( marker, pFormat );
 	int len = V_vsprintf_safe( tmpBuf, pFormat, marker );

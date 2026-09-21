@@ -1419,7 +1419,7 @@ bool UTIL_TeamsMatch( const char *pTeamName1, const char *pTeamName2 )
 	// Both on a team?
 	if ( *pTeamName1 != 0 && *pTeamName2 != 0 )
 	{
-		if ( !stricmp( pTeamName1, pTeamName2 ) )	// Same Team?
+		if ( V_strieq( pTeamName1, pTeamName2 ) )	// Same Team?
 			return true;
 	}
 
@@ -1990,7 +1990,7 @@ void UTIL_ValidateSoundName( string_t &name, const char *defaultStr )
 {
 	if ( ( !name || 
 		   strlen( (char*) STRING( name ) ) < 1 ) || 
-		   !Q_stricmp( (char *)STRING(name), "0" ) )
+		   V_strieq( (char *)STRING(name), "0" ) )
 	{
 		name = AllocPooledString( defaultStr );
 	}
@@ -2625,7 +2625,7 @@ void LoadAndSpawnEntities_ParseEntKVBlockHelper( CBaseEntity *pNode, KeyValues *
 	while ( pkvNodeData )
 	{
 		// Handle the connections block
-		if ( !Q_strcmp(pkvNodeData->GetName(), "connections") )
+		if ( V_streq(pkvNodeData->GetName(), "connections") )
 		{
 			LoadAndSpawnEntities_ParseEntKVBlockHelper( pNode, pkvNodeData );
 		}

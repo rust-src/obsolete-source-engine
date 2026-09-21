@@ -1277,14 +1277,14 @@ void CSceneEntity::DispatchPauseScene( CChoreoScene *scene, const char *paramete
 	// Check for auto resume/cancel
 	const char *buffer = parameters;
 	buffer = engine->ParseFile( buffer, token );
-	if ( !stricmp( token, "automate" ) )
+	if ( V_strieq( token, "automate" ) )
 	{
 		buffer = engine->ParseFile( buffer, token );
-		if ( !stricmp( token, "Cancel" ) )
+		if ( V_strieq( token, "Cancel" ) )
 		{
 			m_nAutomatedAction = SCENE_ACTION_CANCEL;
 		}
-		else if ( !stricmp( token, "Resume" ) )
+		else if ( V_strieq( token, "Resume" ) )
 		{
 			m_nAutomatedAction = SCENE_ACTION_RESUME;
 		}
@@ -1463,7 +1463,7 @@ void CSceneEntity::DispatchEndFlexAnimation( CChoreoScene *scene, CBaseFlex *act
 void CSceneEntity::DispatchStartGesture( CChoreoScene *scene, CBaseFlex *actor, CChoreoEvent *event )
 {
 	// Ingore null gestures
-	if ( !Q_stricmp( event->GetName(), "NULL" ) )
+	if ( V_strieq( event->GetName(), "NULL" ) )
 		return;
 
 	actor->AddSceneEvent( scene, event); 
@@ -1478,7 +1478,7 @@ void CSceneEntity::DispatchStartGesture( CChoreoScene *scene, CBaseFlex *actor, 
 void CSceneEntity::DispatchEndGesture( CChoreoScene *scene, CBaseFlex *actor, CChoreoEvent *event )
 {
 	// Ingore null gestures
-	if ( !Q_stricmp( event->GetName(), "NULL" ) )
+	if ( V_strieq( event->GetName(), "NULL" ) )
 		return;
 
 	actor->RemoveSceneEvent( scene, event, m_bRestoring );
@@ -2831,7 +2831,7 @@ void CSceneEntity::StartEvent( float currenttime, CChoreoScene *scene, CChoreoEv
 {
 	Assert( event );
 
-	if ( !Q_stricmp( event->GetName(), "NULL" ) )
+	if ( V_strieq( event->GetName(), "NULL" ) )
  	{
  		LocalScene_Printf( "%s : %8.2f:  ignored %s\n", STRING( m_iszSceneFile ), currenttime, event->GetDescription() );
  		return;
@@ -2978,7 +2978,7 @@ void CSceneEntity::StartEvent( float currenttime, CChoreoScene *scene, CChoreoEv
 
 				hudtextparms_s tTextParam;
 				tTextParam.x			= -1;
-				tTextParam.y			= 0.65;
+				tTextParam.y			= 0.65f;
 				tTextParam.effect		= 0;
 				tTextParam.r1			= 255;
 				tTextParam.g1			= 170;
@@ -2990,7 +2990,7 @@ void CSceneEntity::StartEvent( float currenttime, CChoreoScene *scene, CChoreoEv
 				tTextParam.a2			= 255;
 				tTextParam.fadeinTime	= 0;
 				tTextParam.fadeoutTime	= 0;
-				tTextParam.holdTime		= 3.1;
+				tTextParam.holdTime		= 3.1f;
 				tTextParam.fxTime		= 0;
 				tTextParam.channel		= 1;
 				UTIL_HudMessageAll( tTextParam, pszText );
@@ -3140,7 +3140,7 @@ void CSceneEntity::EndEvent( float currenttime, CChoreoScene *scene, CChoreoEven
 {
 	Assert( event );
 
-	if ( !Q_stricmp( event->GetName(), "NULL" ) )
+	if ( V_strieq( event->GetName(), "NULL" ) )
  	{
  		return;
  	}
@@ -3546,7 +3546,7 @@ CBaseFlex *CSceneEntity::FindNamedActor( const char *name )
 //-----------------------------------------------------------------------------
 CBaseEntity *CSceneEntity::FindNamedTarget( string_t iszTarget, bool bBaseFlexOnly )
 {
-	if ( !stricmp( STRING(iszTarget), "!activator" ) )
+	if ( V_strieq( STRING(iszTarget), "!activator" ) )
 		return m_hActivator;
 
 	// If we don't have a wildcard in the target, just return the first entity found
@@ -3720,11 +3720,11 @@ CBaseEntity *CSceneEntity::FindNamedEntity( const char *name, CBaseEntity *pActo
 {
 	CBaseEntity *entity = NULL;
 
-	if ( !stricmp( name, "Player" ) || !stricmp( name, "!player" ))
+	if ( V_strieq( name, "Player" ) || V_strieq( name, "!player" ))
 	{
 		entity = ( gpGlobals->maxClients == 1 ) ? ( CBaseEntity * )UTIL_GetLocalPlayer() : NULL;
 	}
-	else if ( !stricmp( name, "!target1" ) )
+	else if ( V_strieq( name, "!target1" ) )
 	{
 		if (m_hTarget1 == NULL)
 		{
@@ -3732,7 +3732,7 @@ CBaseEntity *CSceneEntity::FindNamedEntity( const char *name, CBaseEntity *pActo
 		}
 		return m_hTarget1;
 	}
-	else if ( !stricmp( name, "!target2" ) )
+	else if ( V_strieq( name, "!target2" ) )
 	{
 		if (m_hTarget2 == NULL)
 		{
@@ -3740,7 +3740,7 @@ CBaseEntity *CSceneEntity::FindNamedEntity( const char *name, CBaseEntity *pActo
 		}
 		return m_hTarget2;
 	}
-	else if ( !stricmp( name, "!target3" ) )
+	else if ( V_strieq( name, "!target3" ) )
 	{
 		if (m_hTarget3 == NULL)
 		{
@@ -3748,7 +3748,7 @@ CBaseEntity *CSceneEntity::FindNamedEntity( const char *name, CBaseEntity *pActo
 		}
 		return m_hTarget3;
 	}
-	else if ( !stricmp( name, "!target4" ) )
+	else if ( V_strieq( name, "!target4" ) )
 	{
 		if (m_hTarget4 == NULL)
 		{
@@ -3756,7 +3756,7 @@ CBaseEntity *CSceneEntity::FindNamedEntity( const char *name, CBaseEntity *pActo
 		}
 		return m_hTarget4;
 	}
-	else if ( !stricmp( name, "!target5" ) )
+	else if ( V_strieq( name, "!target5" ) )
 	{
 		if (m_hTarget5 == NULL)
 		{
@@ -3764,7 +3764,7 @@ CBaseEntity *CSceneEntity::FindNamedEntity( const char *name, CBaseEntity *pActo
 		}
 		return m_hTarget5;
 	}
-	else if ( !stricmp( name, "!target6" ) )
+	else if ( V_strieq( name, "!target6" ) )
 	{
 		if (m_hTarget6 == NULL)
 		{
@@ -3772,7 +3772,7 @@ CBaseEntity *CSceneEntity::FindNamedEntity( const char *name, CBaseEntity *pActo
 		}
 		return m_hTarget6;
 	}
-	else if ( !stricmp( name, "!target7" ) )
+	else if ( V_strieq( name, "!target7" ) )
 	{
 		if (m_hTarget7 == NULL)
 		{
@@ -3780,7 +3780,7 @@ CBaseEntity *CSceneEntity::FindNamedEntity( const char *name, CBaseEntity *pActo
 		}
 		return m_hTarget7;
 	}
-	else if ( !stricmp( name, "!target8" ) )
+	else if ( V_strieq( name, "!target8" ) )
 	{
 		if (m_hTarget8 == NULL)
 		{
@@ -3843,40 +3843,40 @@ CBaseEntity *CSceneEntity::FindNamedEntityClosest( const char *name, CBaseEntity
 {
 	CBaseEntity *entity = NULL;
 
-	if ( !stricmp( name, "!activator" ) )
+	if ( V_strieq( name, "!activator" ) )
 	{
 		return m_hActivator;
 	} 
-	else if ( !stricmp( name, "Player" ) || !stricmp( name, "!player" ))
+	else if ( V_strieq( name, "Player" ) || V_strieq( name, "!player" ))
 	{
 		entity = ( gpGlobals->maxClients == 1 ) ? ( CBaseEntity * )UTIL_GetLocalPlayer() : NULL;
 		return entity;
 	}
-	else if ( !stricmp( name, "!target1" ) )
+	else if ( V_strieq( name, "!target1" ) )
 	{
 		name = STRING( m_iszTarget1 );
 	}
-	else if ( !stricmp( name, "!target2" ) )
+	else if ( V_strieq( name, "!target2" ) )
 	{
 		name = STRING( m_iszTarget2 );
 	}
-	else if ( !stricmp( name, "!target3" ) )
+	else if ( V_strieq( name, "!target3" ) )
 	{
 		name = STRING( m_iszTarget3 );
 	}
-	else if ( !stricmp( name, "!target4" ) )
+	else if ( V_strieq( name, "!target4" ) )
 	{
 		name = STRING( m_iszTarget4 );
 	}
-	else if ( !stricmp( name, "!target5" ) )
+	else if ( V_strieq( name, "!target5" ) )
 	{
 		name = STRING( m_iszTarget5 );
 	}
-	else if ( !stricmp( name, "!target6" ) )
+	else if ( V_strieq( name, "!target6" ) )
 	{
 		name = STRING( m_iszTarget6 );
 	}
-	else if ( !stricmp( name, "!target7" ) )
+	else if ( V_strieq( name, "!target7" ) )
 	{
 		name = STRING( m_iszTarget7 );
 	}
@@ -4181,56 +4181,56 @@ void CSceneEntity::AddListManager( CSceneListManager *pManager )
 //-----------------------------------------------------------------------------
 void CSceneEntity::ClearActivatorTargets( void )
 {
-	if ( !stricmp( STRING(m_iszTarget1), "!activator" ) )
+	if ( V_strieq( STRING(m_iszTarget1), "!activator" ) )
 	{
 		// We need to clear out actors so they're re-evaluated
 		m_hActorList.Purge();
 		NetworkProp()->NetworkStateForceUpdate();
 		m_hTarget1 = NULL;
 	}
-	if ( !stricmp( STRING(m_iszTarget2), "!activator" ) )
+	if ( V_strieq( STRING(m_iszTarget2), "!activator" ) )
 	{
 		// We need to clear out actors so they're re-evaluated
 		m_hActorList.Purge();
 		NetworkProp()->NetworkStateForceUpdate();
 		m_hTarget2 = NULL;
 	}
-	if ( !stricmp( STRING(m_iszTarget3), "!activator" ) )
+	if ( V_strieq( STRING(m_iszTarget3), "!activator" ) )
 	{
 		// We need to clear out actors so they're re-evaluated
 		m_hActorList.Purge();
 		NetworkProp()->NetworkStateForceUpdate();
 		m_hTarget3 = NULL;
 	}
-	if ( !stricmp( STRING(m_iszTarget4), "!activator" ) )
+	if ( V_strieq( STRING(m_iszTarget4), "!activator" ) )
 	{
 		// We need to clear out actors so they're re-evaluated
 		m_hActorList.Purge();
 		NetworkProp()->NetworkStateForceUpdate();
 		m_hTarget4 = NULL;
 	}
-	if ( !stricmp( STRING(m_iszTarget5), "!activator" ) )
+	if ( V_strieq( STRING(m_iszTarget5), "!activator" ) )
 	{
 		// We need to clear out actors so they're re-evaluated
 		m_hActorList.Purge();
 		NetworkProp()->NetworkStateForceUpdate();
 		m_hTarget5 = NULL;
 	}
-	if ( !stricmp( STRING(m_iszTarget6), "!activator" ) )
+	if ( V_strieq( STRING(m_iszTarget6), "!activator" ) )
 	{
 		// We need to clear out actors so they're re-evaluated
 		m_hActorList.Purge();
 		NetworkProp()->NetworkStateForceUpdate();
 		m_hTarget6 = NULL;
 	}
-	if ( !stricmp( STRING(m_iszTarget7), "!activator" ) )
+	if ( V_strieq( STRING(m_iszTarget7), "!activator" ) )
 	{
 		// We need to clear out actors so they're re-evaluated
 		m_hActorList.Purge();
 		NetworkProp()->NetworkStateForceUpdate();
 		m_hTarget7 = NULL;
 	}
-	if ( !stricmp( STRING(m_iszTarget8), "!activator" ) )
+	if ( V_strieq( STRING(m_iszTarget8), "!activator" ) )
 	{
 		// We need to clear out actors so they're re-evaluated
 		m_hActorList.Purge();
@@ -4606,7 +4606,7 @@ void PrecacheInstancedScene( char const *pszScene )
 	
 	if ( nMakingReslists == -1 )
 	{
-		nMakingReslists = CommandLine()->FindParm( "-makereslists" ) > 0 ? 1 : 0;
+		nMakingReslists = CommandLine()->HasParm( "-makereslists" ) ? 1 : 0;
 	}
 
 	if ( nMakingReslists == 1 )

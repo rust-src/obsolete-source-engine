@@ -129,8 +129,8 @@ static void TakeCubemapSnapshot( const Vector &origin, const char *pFileNameBase
 	view.x = 0;
 	view.y = 0;
 
-	view.width = ( float )screenBufSize;
-	view.height = ( float )screenBufSize;
+	view.width = screenBufSize;
+	view.height = screenBufSize;
 
 	Shader_BeginRendering();
 
@@ -293,7 +293,7 @@ static void TakeCubemapSnapshot( const Vector &origin, const char *pFileNameBase
 //-----------------------------------------------------------------------------
 void* CubemapsFSFactory( const char *pName, int *pReturnCode )
 {
-	if ( Q_stricmp( pName, FILESYSTEM_INTERFACE_VERSION ) == 0 )
+	if ( V_strieq( pName, FILESYSTEM_INTERFACE_VERSION ) )
 		return g_pFileSystem;
 
 	return NULL;
@@ -461,6 +461,11 @@ static void WriteLightProbe( const char *pBasePath, const LightingState_t& state
 			pLight->SetValue( "name", "Directional" );
 			pLight->SetValue( "direction", wl.normal );
 			break;
+
+		// dimhotepus: Dump unexpected world light types.
+		default:
+			AssertMsg( false, "Unexpected world light type %d", wl.type );
+			DevWarning( "Unexpected world light type %d", wl.type );
 		}
 	}
 
@@ -680,7 +685,7 @@ void Cubemap_CreateDefaultCubemap( const char *pMapName, IBSPPack *iBSPPack )
 				// Copy the bits from the source images into the cube faces
 				// unsigned char *pSrcBits = pSrcVTFTextures[iFace]->ImageData( iFrame, 0, iMip + iMipLevelOffset );
 				unsigned char *pDstBits = pDstCubemap->ImageData( iFrame, iFace, iMip );
-				int iSize = pDstCubemap->ComputeMipSize( iMip );
+				intp iSize = pDstCubemap->ComputeMipSize( iMip );
 				// int iSrcMipSize = pSrcVTFTextures[iFace]->ComputeMipSize( iMip + iMipLevelOffset );
 
 				// !!! FIXME: Set this to black until the LDR/HDR issues are fixed on line ~563 in this file
@@ -707,7 +712,7 @@ void Cubemap_CreateDefaultCubemap( const char *pMapName, IBSPPack *iBSPPack )
 	{
 		// set alpha to zero since the source doesn't have any alpha in it
 		unsigned char *pImageData = pDstCubemap->ImageData();
-		int size = pDstCubemap->ComputeTotalSize(); // in bytes!
+		intp size = pDstCubemap->ComputeTotalSize(); // in bytes!
 		unsigned char *pEnd = pImageData + size;
 		for( ; pImageData < pEnd; pImageData += 4 )
 		{

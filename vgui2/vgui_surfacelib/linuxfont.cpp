@@ -131,7 +131,7 @@ void CLinuxFont::CreateFontList()
         m_FriendlyNameCache.Insert( entry );
 
 		// substitute Vera Sans for Tahoma on X
-		if ( !V_stricmp( name, "Bitstream Vera Sans" ) )
+		if ( V_strieq( name, "Bitstream Vera Sans" ) )
 		{
 			name = "Tahoma";
 			entry.m_pchFile = (char *)malloc( Q_strlen(file) + 1 );
@@ -295,7 +295,7 @@ bool CLinuxFont::CreateFromMemory(const char *windowsFontName, void *data, int d
 
 				FT_Size_RequestRec req;
 
-				Q_memset( &req, 0, sizeof( req ) );
+				BitwiseClear( req );
 				req.type           = FT_SIZE_REQUEST_TYPE_REAL_DIM;
 				req.width          = INT_2FIXED6( width );
 				req.height         = INT_2FIXED6( m_iHeightRequested );
@@ -407,9 +407,9 @@ char *CLinuxFont::GetFontFileName( const char *windowsFontName, int flags )
 	bool bBold = false;
 	const char *pchFontName = windowsFontName;
 
-	if ( !Q_stricmp( pchFontName, "Tahoma" ) )
+	if ( V_strieq( pchFontName, "Tahoma" ) )
 		pchFontName = "Bitstream Vera Sans";
-	else if ( !Q_stricmp( pchFontName, "Arial Black" ) || Q_stristr( pchFontName, "bold" ) )
+	else if ( V_strieq( pchFontName, "Arial Black" ) || Q_stristr( pchFontName, "bold" ) )
 		bBold = true;
 
     const int italic = ( flags & vgui::ISurface::FONTFLAG_ITALIC ) ? FC_SLANT_ITALIC : FC_SLANT_ROMAN;
@@ -658,7 +658,7 @@ void CLinuxFont::GetCharABCWidths(wchar_t ch, int &a, int &b, int &c)
 //-----------------------------------------------------------------------------
 bool CLinuxFont::IsEqualTo(const char *windowsFontName, int tall, int weight, int blur, int scanlines, int flags)
 {
-	if (!Q_stricmp(windowsFontName, m_szName.String() ) 
+	if (V_strieq(windowsFontName, m_szName.String() ) 
 		&& m_iTall == tall
 		&& m_iWeight == weight
 		&& m_iBlur == blur

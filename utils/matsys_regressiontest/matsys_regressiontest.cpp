@@ -57,7 +57,7 @@ int FindCommand( const char *pCommand )
 {
 	for ( int i = 0; i < g_ArgC; i++ )
 	{
-		if ( !stricmp( pCommand, g_ppArgV[i] ) )
+		if ( V_strieq( pCommand, g_ppArgV[i] ) )
 			return i;
 	}
 	return -1;
@@ -907,7 +907,7 @@ Versions with DETAIL aren't implemented yet in HLSL, but we'll go ahead and test
 																	DrawQuad( g_CheckerboardLightmapInfo );
 																	EndFrame();
 																	char filename[MAX_PATH];
-																	sprintf( filename, "%s\\lightmappedgeneric_dx80", CommandLine()->ParmValue( "-targetdir" ) );
+																	V_sprintf_safe( filename, "%s\\lightmappedgeneric_dx80", CommandLine()->ParmValue( "-targetdir" ) );
 																	
 																	if( BUMPMAP ) Q_strcat( filename, "_BUMPMAP", sizeof(filename) );
 																	if( NORMALMAPALPHAENVMAPMASK ) Q_strcat( filename, "_NORMALMAPALPHAENVMAPMASK", sizeof(filename) );

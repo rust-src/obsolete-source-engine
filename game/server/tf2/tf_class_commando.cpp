@@ -437,7 +437,7 @@ void CPlayerClassCommando::StartAdrenalinRush( void )
 	if ( m_bHasBattlecry )
 	{
 		// Find nearby teammates
-		for ( int i = 0; i < m_pPlayer->GetTFTeam()->GetNumPlayers(); i++ )
+		for ( intp i = 0; i < m_pPlayer->GetTFTeam()->GetNumPlayers(); i++ )
 		{
 			CBaseTFPlayer *pPlayer = (CBaseTFPlayer *)m_pPlayer->GetTFTeam()->GetPlayer(i);
 			assert(pPlayer);

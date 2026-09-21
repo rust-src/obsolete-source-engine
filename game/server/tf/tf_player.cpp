@@ -5483,7 +5483,7 @@ CBaseEntity* CTFPlayer::EntSelectSpawnPoint()
 					{
 						// spawn on the least recently damaged friend
 						CTeam *raidingTeam = GetGlobalTeam( TF_TEAM_BLUE );
-						for( int i=0; i<raidingTeam->GetNumPlayers(); ++i )
+						for( intp i=0; i<raidingTeam->GetNumPlayers(); ++i )
 						{
 							CTFPlayer *buddy = (CTFPlayer *)raidingTeam->GetPlayer(i);
 
@@ -5590,7 +5590,7 @@ bool CTFPlayer::SelectSpawnSpotByType( const char *pEntClassName, CBaseEntity* &
 	// don't collide with our team members, so we should be fine.
 	bool bIgnorePlayers = false;
 	// When dealing with a standard spawn ent, try to obey any class spawn flags
-	bool bRestrictByClass = !V_strcmp( pEntClassName, "info_player_teamspawn" );
+	bool bRestrictByClass = V_streq( pEntClassName, "info_player_teamspawn" );
 
 	CBaseEntity *pFirstSpot = pSpot;
 	do 
@@ -6048,8 +6048,8 @@ void CTFPlayer::HandleCommand_JoinTeam( const char *pTeamName )
 		{
 			// human raiders can only be on the blue team
 			CTeam *raidingTeam = GetGlobalTeam( TF_TEAM_BLUE );
-			int humanCount = 0;
-			for( int i=0; i<raidingTeam->GetNumPlayers(); ++i )
+			intp humanCount = 0;
+			for( intp i=0; i<raidingTeam->GetNumPlayers(); ++i )
 			{
 				if ( raidingTeam->GetPlayer(i)->IsBot() )
 					continue;
@@ -6113,9 +6113,9 @@ void CTFPlayer::HandleCommand_JoinTeam( const char *pTeamName )
 				CTeam *pBlueTeam = GetGlobalTeam( TF_TEAM_BLUE );
 				if ( pRedTeam && pBlueTeam )
 				{
-					int nRedCount = pRedTeam->GetNumPlayers();
-					int nBlueCount = pBlueTeam->GetNumPlayers();
-					int nGap = GetTeamNumber() == TF_TEAM_RED ? ( nBlueCount - nRedCount ) : ( nRedCount - nBlueCount );
+					intp nRedCount = pRedTeam->GetNumPlayers();
+					intp nBlueCount = pBlueTeam->GetNumPlayers();
+					intp nGap = GetTeamNumber() == TF_TEAM_RED ? ( nBlueCount - nRedCount ) : ( nRedCount - nBlueCount );
 					if ( nGap >= mp_teams_unbalance_limit.GetInt() )
 					{
 						ClientPrint( this, HUD_PRINTCENTER, "#Cannot_Be_Spectator_Unbalance" );
@@ -6536,7 +6536,7 @@ void CTFPlayer::HandleCommand_JoinClass( const char *pClassName, bool bAllowSpaw
 		if ( IsAlive() && !TFGameRules()->CanChangeClassInStalemate() )
 		{
 			char szTime[6];
-			Q_snprintf( szTime, sizeof( szTime ), "%d", tf_stalematechangeclasstime.GetInt() );
+			V_to_chars( szTime, tf_stalematechangeclasstime.GetInt() );
 	
 			ClientPrint( this, HUD_PRINTTALK, "#game_stalemate_cant_change_class", szTime );
 			return;
@@ -7530,7 +7530,7 @@ bool CTFPlayer::ClientCommand( const CCommand &args )
 			{
 				if ( args.ArgC() == 2 && GetTeam() )
 				{
-					for ( int i = 0; i < GetTeam()->GetNumPlayers(); i++ )
+					for ( intp i = 0; i < GetTeam()->GetNumPlayers(); i++ )
 					{
 						CTFPlayer *pTeamPlayer = ToTFPlayer( GetTeam()->GetPlayer(i) );
 						if ( pTeamPlayer )
@@ -7561,7 +7561,7 @@ bool CTFPlayer::ClientCommand( const CCommand &args )
 			{
 				if ( args.ArgC() == 2 && GetTeam() )
 				{
-					for ( int i = 0; i < GetTeam()->GetNumPlayers(); i++ )
+					for ( intp i = 0; i < GetTeam()->GetNumPlayers(); i++ )
 					{
 						CTFPlayer *pTeamPlayer = ToTFPlayer( GetTeam()->GetPlayer(i) );
 						if ( pTeamPlayer )
@@ -10593,7 +10593,7 @@ void CTFPlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &
 		// Don't play speech if this kill disguises the spy
 		if ( IsPlayerClass( TF_CLASS_SPY ) )
 		{
-			if ( !Q_stricmp( "customdeath:backstab", pszCustomDeath ) )
+			if ( V_strieq( "customdeath:backstab", pszCustomDeath ) )
 			{
 				CTFKnife *pKnife = dynamic_cast<CTFKnife *>( GetActiveTFWeapon() );
 				if ( pKnife && pKnife->GetKnifeType() == KNIFE_DISGUISE_ONKILL )
@@ -15725,7 +15725,7 @@ CBaseEntity *CTFPlayer::FindNearestObservableTarget( Vector vecOrigin, float flM
 	CBaseEntity *pReturnTarget = NULL;
 	bool bFoundClass = false;
 	float flCurDistSqr = (flMaxDist * flMaxDist);
-	int iNumPlayers = pTeam->GetNumPlayers();
+	intp iNumPlayers = pTeam->GetNumPlayers();
 
 	if ( pTeam->GetTeamNumber() == TEAM_SPECTATOR )
 	{
@@ -15733,7 +15733,7 @@ CBaseEntity *CTFPlayer::FindNearestObservableTarget( Vector vecOrigin, float flM
 	}
 
 
-	for ( int i = 0; i < iNumPlayers; i++ )
+	for ( intp i = 0; i < iNumPlayers; i++ )
 	{
 		CTFPlayer *pPlayer = NULL;
 
@@ -16110,7 +16110,7 @@ void CTFPlayer::Touch( CBaseEntity *pOther )
 
 				//Plague transmission event infects nearby eligible players on the same team. Only works for powerup carrier to host, not host to host.
 				const Vector& vecPos = pVictim->WorldSpaceCenter();
-				for ( int i = 0; i < pVictim->GetTeam()->GetNumPlayers(); i++ )
+				for ( intp i = 0; i < pVictim->GetTeam()->GetNumPlayers(); i++ )
 				{
 					CTFPlayer *pTeamMate = ToTFPlayer( pVictim->GetTeam()->GetPlayer( i ) );
 
@@ -16565,7 +16565,7 @@ int CTFPlayer::GetTauntConcept( CEconItemDefinition *pItemDef )
 	{
 		animation_on_wearable_t* pAnim = pItemDef->GetAnimationData( GetTeamNumber(), i );
 		if ( pAnim && pAnim->pszActivity &&
-			!Q_stricmp( pAnim->pszActivity, "taunt_concept" ) )
+			V_strieq( pAnim->pszActivity, "taunt_concept" ) )
 		{
 			const char* pszConcept = pAnim->pszReplacement;
 			if ( !pszConcept )
@@ -17128,7 +17128,7 @@ void CTFPlayer::Taunt( taunts_t iTauntIndex, int iTauntConcept )
 		if ( IsPlayerClass( TF_CLASS_ENGINEER ) )
 		{
 			// Wrenchmotron taunt teleport home effect
-			if ( !Q_stricmp( szResponse, "scenes/player/engineer/low/taunt_drg_melee.vcd" ) )
+			if ( V_strieq( szResponse, "scenes/player/engineer/low/taunt_drg_melee.vcd" ) )
 			{
 				m_bIsTeleportingUsingEurekaEffect = true;
 
@@ -17156,12 +17156,12 @@ void CTFPlayer::Taunt( taunts_t iTauntIndex, int iTauntConcept )
 	// Setup taunt attacks. Hacky, but a lot easier to do than getting server side anim events working.
 	if ( IsPlayerClass(TF_CLASS_PYRO) )
 	{
-		if ( !V_stricmp( szResponse, "scenes/player/pyro/low/taunt02.vcd" ) )
+		if ( V_strieq( szResponse, "scenes/player/pyro/low/taunt02.vcd" ) )
 		{
 			m_flTauntAttackTime = gpGlobals->curtime + 2.1f;
 			m_iTauntAttack = TAUNTATK_PYRO_HADOUKEN;
 		}
-		else if ( !V_stricmp( szResponse, "scenes/player/pyro/low/taunt_bubbles.vcd" ) )
+		else if ( V_strieq( szResponse, "scenes/player/pyro/low/taunt_bubbles.vcd" ) )
 		{
 			m_flTauntAttackTime = gpGlobals->curtime + 3.0f;
 			m_iTauntAttack = TAUNTATK_PYRO_ARMAGEDDON;
@@ -17186,7 +17186,7 @@ void CTFPlayer::Taunt( taunts_t iTauntIndex, int iTauntConcept )
 
 			DispatchParticleEffect( "pyrotaunt_rainbow_norainbow", PATTACH_ABSORIGIN_FOLLOW, pTarget );
 		}
-		else if ( !V_stricmp( szResponse, "scenes/player/pyro/low/taunt_scorch_shot.vcd" ) )
+		else if ( V_strieq( szResponse, "scenes/player/pyro/low/taunt_scorch_shot.vcd" ) )
 		{
 			m_flTauntAttackTime = gpGlobals->curtime + 1.9f;
 			m_iTauntAttack = TAUNTATK_PYRO_SCORCHSHOT;
@@ -17194,7 +17194,7 @@ void CTFPlayer::Taunt( taunts_t iTauntIndex, int iTauntConcept )
 	}
 	else if ( IsPlayerClass(TF_CLASS_HEAVYWEAPONS) )
 	{
-		if ( !V_stricmp( szResponse, "scenes/player/heavy/low/taunt03_v1.vcd" ) )
+		if ( V_strieq( szResponse, "scenes/player/heavy/low/taunt03_v1.vcd" ) )
 		{
 			m_flTauntAttackTime = gpGlobals->curtime + 1.8;
 			m_iTauntAttack = TAUNTATK_HEAVY_HIGH_NOON;
@@ -17211,7 +17211,7 @@ void CTFPlayer::Taunt( taunts_t iTauntIndex, int iTauntConcept )
 	}
 	else if ( IsPlayerClass( TF_CLASS_SCOUT ) )
 	{
-		if ( !V_stricmp( szResponse, "scenes/player/scout/low/taunt05_v1.vcd" ) )
+		if ( V_strieq( szResponse, "scenes/player/scout/low/taunt05_v1.vcd" ) )
 		{
 			m_flTauntAttackTime = gpGlobals->curtime + 4.03f;
 			m_iTauntAttack = TAUNTATK_SCOUT_GRAND_SLAM;
@@ -17219,7 +17219,7 @@ void CTFPlayer::Taunt( taunts_t iTauntIndex, int iTauntConcept )
 	}
 	else if ( IsPlayerClass( TF_CLASS_MEDIC ) )
 	{
-		if ( !V_stricmp( szResponse, "scenes/player/medic/low/taunt06.vcd" ) )
+		if ( V_strieq( szResponse, "scenes/player/medic/low/taunt06.vcd" ) )
 		{
 			m_flTauntAttackTime = gpGlobals->curtime + 0.8f;
 			m_flTauntInhaleTime = gpGlobals->curtime + 1.8f;
@@ -17230,7 +17230,7 @@ void CTFPlayer::Taunt( taunts_t iTauntIndex, int iTauntConcept )
 
 			m_iTauntAttack = TAUNTATK_MEDIC_INHALE;
 		}
-		else if ( !V_stricmp( szResponse, "scenes/player/medic/low/taunt08.vcd" ) )
+		else if ( V_strieq( szResponse, "scenes/player/medic/low/taunt08.vcd" ) )
 		{
 			m_flTauntAttackTime = gpGlobals->curtime + 2.2f;
 			m_iTauntAttack = TAUNTATK_MEDIC_UBERSLICE_IMPALE;
@@ -17246,7 +17246,7 @@ void CTFPlayer::Taunt( taunts_t iTauntIndex, int iTauntConcept )
 	}
 	else if ( IsPlayerClass( TF_CLASS_SNIPER ) )
 	{
-		if ( !V_stricmp( szResponse, "scenes/player/sniper/low/taunt04.vcd" ) )
+		if ( V_strieq( szResponse, "scenes/player/sniper/low/taunt04.vcd" ) )
 		{
 			m_flTauntAttackTime = gpGlobals->curtime + 0.85f;
 			m_iTauntAttack = TAUNTATK_SNIPER_ARROW_STAB_IMPALE;
@@ -17254,7 +17254,7 @@ void CTFPlayer::Taunt( taunts_t iTauntIndex, int iTauntConcept )
 	}
 	else if ( IsPlayerClass( TF_CLASS_SOLDIER ) )
 	{
-		if ( !V_stricmp( szResponse, "scenes/player/soldier/low/taunt05.vcd" ) )
+		if ( V_strieq( szResponse, "scenes/player/soldier/low/taunt05.vcd" ) )
 		{
 			if ( IsWormsGearEquipped() )
 			{
@@ -17269,7 +17269,7 @@ void CTFPlayer::Taunt( taunts_t iTauntIndex, int iTauntConcept )
 	}
 	else if ( IsPlayerClass( TF_CLASS_DEMOMAN ) )
 	{
-		if ( !V_stricmp( szResponse, "scenes/player/demoman/low/taunt09.vcd" ) )
+		if ( V_strieq( szResponse, "scenes/player/demoman/low/taunt09.vcd" ) )
 		{
 			m_flTauntAttackTime = gpGlobals->curtime + 2.55f;
 			m_iTauntAttack = TAUNTATK_DEMOMAN_BARBARIAN_SWING;
@@ -17277,12 +17277,12 @@ void CTFPlayer::Taunt( taunts_t iTauntIndex, int iTauntConcept )
 	}
 	else if ( IsPlayerClass( TF_CLASS_ENGINEER ) )
 	{
-		if ( !V_stricmp( szResponse, "scenes/player/engineer/low/taunt07.vcd" ) )
+		if ( V_strieq( szResponse, "scenes/player/engineer/low/taunt07.vcd" ) )
 		{
 			m_flTauntAttackTime = gpGlobals->curtime + 3.695f;
 			m_iTauntAttack = TAUNTATK_ENGINEER_GUITAR_SMASH;
 		}
-		else if ( !V_stricmp( szResponse, "scenes/player/engineer/low/taunt09.vcd" ) )
+		else if ( V_strieq( szResponse, "scenes/player/engineer/low/taunt09.vcd" ) )
 		{
 			m_flTauntAttackTime = gpGlobals->curtime + 3.2f;
 			m_iTauntAttack = TAUNTATK_ENGINEER_ARM_IMPALE;
@@ -17728,7 +17728,7 @@ void CTFPlayer::DoTauntAttack( void )
 		Vector vecOrg = GetAbsOrigin();
 
 		// Find nearby team mates and give them bonus health & crit chance
-		for ( int i = 0; i < GetTeam()->GetNumPlayers(); i++ )
+		for ( intp i = 0; i < GetTeam()->GetNumPlayers(); i++ )
 		{
 			CTFPlayer *pTeamPlayer = ToTFPlayer( GetTeam()->GetPlayer(i) );
 			if ( pTeamPlayer && pTeamPlayer->IsAlive() )
@@ -20363,7 +20363,7 @@ void CTFPlayer::ItemTesting_Start( KeyValues *pKV )
 		return;
 
 	// We also need to be on the item testing map.
-	if ( !Q_stricmp(STRING(gpGlobals->mapname), "item_test.bsp" ) )
+	if ( V_strieq(STRING(gpGlobals->mapname), "item_test.bsp" ) )
 		return;
 
 	FOR_EACH_VEC( m_ItemsToTest, i )

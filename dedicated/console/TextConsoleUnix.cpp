@@ -81,8 +81,12 @@ static bool init_tinfo_functions() {
     if (!s_ncurses_handle) {
       fprintf(
           stderr,
-          "\nWARNING: Failed to load 32-bit libtinfo.so.5 or libncurses.so.5.\n"
+          "\nWARNING: Failed to load libtinfo.so.5 or libncurses.so.5.\n"
+#ifdef PLATFORM_64BITS
+          "  Please install (libtinfo5 / ncurses-libs / equivalent) to "
+#else
           "  Please install (lib32tinfo5 / ncurses-libs.i686 / equivalent) to "
+#endif
           "enable readline.\n\n");
     }
   }
@@ -140,7 +144,8 @@ static bool add_command(const char *cmd, int cmd_len) {
     tmZone(TELEMETRY_LEVEL0, TMZF_NONE, "%s", __FUNCTION__);
 
     // Trim trailing whitespace.
-    while ((cmd_len > 0) && isspace(cmd[cmd_len - 1])) cmd_len--;
+    // dimhotepus: isspace -> V_isspace.
+    while ((cmd_len > 0) && V_isspace(cmd[cmd_len - 1])) cmd_len--;
 
     if (cmd_len > 0) {
       pthread_mutex_lock(&g_lock);
@@ -276,8 +281,8 @@ bool CTextConsoleUnix::Init() {
     if (!m_tty) m_tty = stdout;
   }
 
-  m_bConDebug = CommandLine()->FindParm("-condebug") != 0;
-  if (m_bConDebug && CommandLine()->FindParm("-conclearlog"))
+  m_bConDebug = CommandLine()->HasParm("-condebug");
+  if (m_bConDebug && CommandLine()->HasParm("-conclearlog"))
     g_pFullFileSystem->RemoveFile(CONSOLE_LOG_FILE, "GAME");
 
   return CTextConsole::Init();

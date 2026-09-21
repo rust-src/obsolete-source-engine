@@ -68,7 +68,7 @@ ActionResult< CTFBot >	CTFBotWander::Update( CTFBot *me, float interval )
 		CTFPlayer *threat = NULL;
 		float closeThreatRangeSq = tf_raid_wanderer_aggro_range.GetFloat() * tf_raid_wanderer_aggro_range.GetFloat();
 
-		for( int i=0; i<raidingTeam->GetNumPlayers(); ++i )
+		for( intp i=0; i<raidingTeam->GetNumPlayers(); ++i )
 		{
 			CTFPlayer *player = (CTFPlayer *)raidingTeam->GetPlayer(i);
 

@@ -1098,7 +1098,7 @@ private:
 
 		s_TextureManager.m_nAsyncLoadThread.store( ThreadGetCurrentId(), std::memory_order::memory_order_seq_cst );
 		( ( AsyncLoader* )_this )->ThreadLoader_Main();
-		s_TextureManager.m_nAsyncLoadThread.store( std::numeric_limits<ThreadId_t>::max(), std::memory_order::memory_order_release );
+		s_TextureManager.m_nAsyncLoadThread.store( INVALID_THREAD_ID, std::memory_order::memory_order_release );
 		return 0;
 	}
 
@@ -1399,7 +1399,7 @@ private:
 
 		s_TextureManager.m_nAsyncReadThread.store( ThreadGetCurrentId(), std::memory_order::memory_order_seq_cst );
 		( ( AsyncReader* ) _this )->ThreadReader_Main();
-		s_TextureManager.m_nAsyncReadThread.store( std::numeric_limits<ThreadId_t>::max(), std::memory_order::memory_order_release );
+		s_TextureManager.m_nAsyncReadThread.store( INVALID_THREAD_ID, std::memory_order::memory_order_release );
 		return 0;
 	}
 
@@ -1424,8 +1424,8 @@ CTextureManager::CTextureManager( void )
 , m_TextureExcludes( true )
 , m_PendingAsyncLoads( true ) 
 , m_textureStreamingRequests( DefLessFunc( ITextureInternal* ) )
-, m_nAsyncLoadThread( std::numeric_limits<ThreadId_t>::max() )
-, m_nAsyncReadThread( std::numeric_limits<ThreadId_t>::max() )
+, m_nAsyncLoadThread( INVALID_THREAD_ID )
+, m_nAsyncReadThread( INVALID_THREAD_ID )
 {
 	m_iNextTexID = 0;
 	m_nFlags = 0;
@@ -2025,7 +2025,7 @@ ITextureInternal *CTextureManager::LoadTexture( const char *pTextureName, const 
 
 ITextureInternal *CTextureManager::FindTexture( const char *pTextureName )
 {
-	if ( !pTextureName || pTextureName[0] == 0 )
+	if ( Q_isempty( pTextureName ) )
 		return NULL;
 	
 	char szCleanName[MAX_PATH];
@@ -2146,7 +2146,8 @@ void CTextureManager::SetExcludedTextures( const char *pScriptName )
 			while ( tokenLength > 0 )
 			{
 				tokenLength--;
-				if ( isgraph( szToken[tokenLength] ) )
+				// dimhotepus: isgraph -> V_isgraph.
+				if ( V_isgraph( szToken[tokenLength] ) )
 				{
 					break;
 				}
@@ -2156,7 +2157,8 @@ void CTextureManager::SetExcludedTextures( const char *pScriptName )
 			// first optional token may be a dimension limit hint
 			int nDimensionsLimit = 0;
 			char *pTextureName = szToken;
-			if ( pTextureName[0] != 0 && isdigit( pTextureName[0] ) )
+			// dimhotepus: isdigit -> V_isdigit.
+			if ( !Q_isempty( szToken ) && V_isdigit( szToken[0] ) )
 			{
 				nDimensionsLimit = atoi( pTextureName );
 				
@@ -2164,7 +2166,8 @@ void CTextureManager::SetExcludedTextures( const char *pScriptName )
 				for ( ;; )
 				{
 					char ch = *pTextureName;
-					if ( !ch || ( !isdigit( ch ) && !isspace( ch ) ) )
+					// dimhotepus: isdigit -> V_isdigit, isspace -> V_isspace.
+					if ( !ch || ( !V_isdigit( ch ) && !V_isspace( ch ) ) )
 					{
 						break;
 					}
@@ -2417,7 +2420,7 @@ void CTextureManager::DebugPrintUsedTextures( void )
 		{
 			char buff[256];
 			const char *pName = m_TextureExcludes.GetElementName( i );
-			V_snprintf( buff, sizeof( buff ), "Excluded: %d '%s' \n", m_TextureExcludes[i], pName );
+			V_sprintf_safe( buff, "Excluded: %d '%s' \n", m_TextureExcludes[i], pName );
 	
 			// an excluded texture is valid, but forced tiny
 			if ( IsTextureLoaded( pName ) )
@@ -2736,7 +2739,7 @@ void CTextureManager::ReleaseReadbackTexture( ITextureInternal* pTex )
 void CTextureManager::WarmTextureCache()
 {
 	// Disable cache for osx/linux for now.
-	if ( CommandLine()->CheckParm( "-no_texture_stream" ) )
+	if ( CommandLine()->HasParm( "-no_texture_stream" ) )
 		return;
 	MemoryInformation memInfo;
 	if ( GetMemoryInformation( &memInfo ) )

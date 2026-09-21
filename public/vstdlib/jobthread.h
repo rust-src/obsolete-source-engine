@@ -122,7 +122,7 @@ struct ThreadPoolStartParams_t
 		else
 		{
 			// dimhotepus: Ensure all affinities are used if smb breaks pool affinities logic.
-			memset(iAffinityTable, 0xFF, sizeof(iAffinityTable));
+			BitwiseSet(iAffinityTable, 0xFF);
 		}
 	}
 
@@ -185,8 +185,10 @@ public:
 	//-----------------------------------------------------
 	// Offer the current thread to the pool
 	//-----------------------------------------------------
-	virtual int YieldWait( CThreadEvent **pEvents, int nEvents, bool bWaitAll = true, unsigned timeout = TT_INFINITE ) = 0;
-	virtual int YieldWait( CJob **, int nJobs, bool bWaitAll = true, unsigned timeout = TT_INFINITE ) = 0;
+	// dimhotepus: int -> unsigned.
+	virtual unsigned YieldWait( CThreadEvent **pEvents, int nEvents, bool bWaitAll = true, unsigned timeout = TT_INFINITE ) = 0;
+	// dimhotepus: int -> unsigned.
+	virtual unsigned YieldWait( CJob **, int nJobs, bool bWaitAll = true, unsigned timeout = TT_INFINITE ) = 0;
 	virtual void Yield( unsigned timeout ) = 0;
 
 	bool YieldWait( CThreadEvent &event, unsigned timeout = TT_INFINITE );
@@ -729,7 +731,7 @@ public:
 
 	~CJobSet()
 	{
-		for ( auto j : m_jobs )
+		for ( auto *j : m_jobs )
 		{
 			j->Release();
 		}
@@ -747,7 +749,7 @@ public:
 
 	void Execute( bool bRelease = true )
 	{
-		for ( auto j : m_jobs )
+		for ( auto *j : m_jobs )
 		{
 			j->Execute();
 			if ( bRelease )
@@ -762,7 +764,7 @@ public:
 
 	void Abort( bool bRelease = true )
 	{
-		for ( auto j : m_jobs )
+		for ( auto *j : m_jobs )
 		{
 			j->Abort();
 			if ( bRelease )
@@ -777,7 +779,7 @@ public:
 
 	void WaitForFinish( bool bRelease = true )
 	{
-		for ( auto j : m_jobs )
+		for ( auto *j : m_jobs )
 		{
 			j->WaitForFinish();
 			if ( bRelease )
@@ -797,7 +799,7 @@ public:
 
 		if ( bRelease )
 		{
-			for ( auto j : m_jobs )
+			for ( auto *j : m_jobs )
 			{
 				j->Release();
 			}

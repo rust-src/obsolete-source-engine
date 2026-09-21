@@ -97,9 +97,9 @@ void CSHA1::Reset()
 }
 
 #ifdef	_MINIMUM_BUILD_
-void Minimum_CSHA1::Transform(unsigned long state[5], unsigned char buffer[64])
+void Minimum_CSHA1::Transform(unsigned long state[5], const unsigned char buffer[64])
 #else
-void CSHA1::Transform(unsigned long state[5], unsigned char buffer[64])
+void CSHA1::Transform(unsigned long state[5], const unsigned char buffer[64])
 #endif
 {
 	unsigned long a = 0, b = 0, c = 0, d = 0, e = 0;
@@ -149,9 +149,9 @@ void CSHA1::Transform(unsigned long state[5], unsigned char buffer[64])
 
 // Use this function to hash in binary data and strings
 #ifdef	_MINIMUM_BUILD_
-void Minimum_CSHA1::Update(unsigned char *data, unsigned int len)
+void Minimum_CSHA1::Update(const unsigned char *data, unsigned int len)
 #else
-void CSHA1::Update(unsigned char *data, unsigned int len)
+void CSHA1::Update(const unsigned char *data, unsigned int len)
 #endif
 {
 	unsigned long i = 0, j;
@@ -233,10 +233,10 @@ void CSHA1::Final()
 		finalcount[i] = (unsigned char)((m_count[(i >= 4 ? 0 : 1)]
 			>> ((3 - (i & 3)) * 8) ) & 255); // Endian independent
 
-	Update((unsigned char *)"\200", 1);
+	Update((const unsigned char *)"\200", 1);
 
 	while ((m_count[0] & 504) != 448)
-		Update((unsigned char *)"\0", 1);
+		Update((const unsigned char *)"\0", 1);
 
 	Update(finalcount, 8); // Cause a SHA1Transform()
 
@@ -246,8 +246,8 @@ void CSHA1::Final()
 	}
 
 	// Wipe variables for security reasons
-	memset(m_buffer, 0, sizeof(m_buffer) );
-	memset(m_state, 0, sizeof(m_state) );
+	BitwiseClear(m_buffer);
+	BitwiseClear(m_state);
 	// dimhotepus: Ensure compiler do not remove trailing memset.
 	SecureMemset(m_count, 0, sizeof(m_count) );
 	SecureMemset(finalcount, 0, sizeof(finalcount));

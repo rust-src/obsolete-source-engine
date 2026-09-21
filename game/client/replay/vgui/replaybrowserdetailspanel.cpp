@@ -257,7 +257,7 @@ CStatsPanel::CStatsPanel( Panel *pParent, ReplayHandle_t hReplay )
 
 		// Setup value
 		char szValue[256];
-		V_snprintf( szValue, sizeof( szValue ), "%i", nCurStat );
+		V_to_chars( szValue, nCurStat );
 
 		// Create labels for this stat
 		m_paStatLabels[ i ] = new CKeyValueLabelPanel( GetInset(), g_pReplayDisplayGameStats[i].m_pStatLocalizationToken, szValue );
@@ -401,7 +401,7 @@ CKillsPanel::CKillsPanel( Panel *pParent, ReplayHandle_t hReplay )
 		}
 
 		// Copy kill count
-		V_snprintf( szKillCount, sizeof( szKillCount ), "%i", pReplay->GetKillCount() );
+		V_to_chars( szKillCount, pReplay->GetKillCount() );
 	}
 
 	// Create labels
@@ -1086,11 +1086,11 @@ void CCutsPanel::OnCommand( const char *pCommand )
 		const int iButton = atoi( pCommand + 7 );
 		SelectButtonFromPerformance( ButtonToPerformance( iButton ) );
 	}
-	else if ( !V_stricmp( pCommand, "prevpage" ) )
+	else if ( V_strieq( pCommand, "prevpage" ) )
 	{
 		SetPage( m_iPage - 1 );
 	}
-	else if ( !V_stricmp( pCommand, "nextpage" ) )
+	else if ( V_strieq( pCommand, "nextpage" ) )
 	{
 		SetPage( m_iPage + 1 );
 	}

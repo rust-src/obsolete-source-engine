@@ -104,7 +104,7 @@ public:
 	{
 		// store number of entries in directory
 		IndexType count = (IndexType)m_directory.Count();
-		filesystem->Write( &count, sizeof(IndexType), file );
+		filesystem->Write( count, file );
 
 		// store entries		
 		for( int i=0; i<m_directory.Count(); ++i )
@@ -113,7 +113,7 @@ public:
 
 			// store string length followed by string itself
 			unsigned short len = (unsigned short)(strlen( placeName ) + 1);
-			filesystem->Write( &len, sizeof(unsigned short), file );
+			filesystem->Write( len, file );
 			filesystem->Write( placeName, len, file );
 		}
 	}
@@ -123,7 +123,7 @@ public:
 	{
 		// read number of entries
 		IndexType count;
-		filesystem->Read( &count, sizeof(IndexType), file );
+		filesystem->Read( count, file );
 
 		m_directory.RemoveAll();
 
@@ -132,7 +132,7 @@ public:
 		unsigned short len;
 		for( int i=0; i<count; ++i )
 		{
-			filesystem->Read( &len, sizeof(unsigned short), file );
+			filesystem->Read( len, file );
 			filesystem->Read( placeName, len, file );
 
 			AddPlace( TheNavMesh->NameToPlace( placeName ) );
@@ -212,7 +212,7 @@ void CNavArea::Save( FileHandle_t file, unsigned int version ) const
 	{
 		// save number of connections for this direction
 		unsigned int count = m_connect[d].Count();
-		filesystem->Write( &count, sizeof(unsigned int), file );
+		filesystem->Write( count, file );
 
 		FOR_EACH_LL( m_connect[d], it )
 		{
@@ -234,7 +234,7 @@ void CNavArea::Save( FileHandle_t file, unsigned int version ) const
 	{
 		count = (unsigned char)m_hidingSpotList.Count();
 	}
-	filesystem->Write( &count, sizeof(unsigned char), file );
+	filesystem->Write( count, file );
 
 	// store HidingSpot objects
 	unsigned int saveCount = 0;
@@ -264,21 +264,21 @@ void CNavArea::Save( FileHandle_t file, unsigned int version ) const
 		if (m_approach[a].here.area)
 			filesystem->Write( &m_approach[a].here.area->m_id, sizeof(unsigned int), file );
 		else
-			filesystem->Write( &zero, sizeof(unsigned int), file );
+			filesystem->Write( zero, file );
 
 		if (m_approach[a].prev.area)
 			filesystem->Write( &m_approach[a].prev.area->m_id, sizeof(unsigned int), file );
 		else
-			filesystem->Write( &zero, sizeof(unsigned int), file );
+			filesystem->Write( zero, file );
 		type = (unsigned char)m_approach[a].prevToHereHow;
-		filesystem->Write( &type, sizeof(unsigned char), file );
+		filesystem->Write( type, file );
 
 		if (m_approach[a].next.area)
 			filesystem->Write( &m_approach[a].next.area->m_id, sizeof(unsigned int), file );
 		else
-			filesystem->Write( &zero, sizeof(unsigned int), file );
+			filesystem->Write( zero, file );
 		type = (unsigned char)m_approach[a].hereToNextHow;
-		filesystem->Write( &type, sizeof(unsigned char), file );
+		filesystem->Write( type, file );
 	}
 
 	//
@@ -297,18 +297,18 @@ void CNavArea::Save( FileHandle_t file, unsigned int version ) const
 			if (e->from.area)
 				filesystem->Write( &e->from.area->m_id, sizeof(unsigned int), file );
 			else
-				filesystem->Write( &zero, sizeof(unsigned int), file );
+				filesystem->Write( zero, file );
 
 			unsigned char dir = (unsigned char)e->fromDir;
-			filesystem->Write( &dir, sizeof(unsigned char), file );
+			filesystem->Write( dir, file );
 
 			if (e->to.area)
 				filesystem->Write( &e->to.area->m_id, sizeof(unsigned int), file );
 			else
-				filesystem->Write( &zero, sizeof(unsigned int), file );
+				filesystem->Write( zero, file );
 
 			dir = (unsigned char)e->toDir;
-			filesystem->Write( &dir, sizeof(unsigned char), file );
+			filesystem->Write( dir, file );
 
 			// write list of spots along this path
 			unsigned char spotCount;
@@ -321,7 +321,7 @@ void CNavArea::Save( FileHandle_t file, unsigned int version ) const
 			{
 				spotCount = (unsigned char)e->spotList.Count();
 			}
-			filesystem->Write( &spotCount, sizeof(unsigned char), file );
+			filesystem->Write( spotCount, file );
 		
 			saveCount = 0;
 			FOR_EACH_LL( e->spotList, sit )
@@ -330,10 +330,10 @@ void CNavArea::Save( FileHandle_t file, unsigned int version ) const
 
 				// order->spot may be NULL if we've loaded a nav mesh that has been edited but not re-analyzed
 				unsigned int id = (order->spot) ? order->spot->GetID() : 0;
-				filesystem->Write( &id, sizeof(unsigned int), file );
+				filesystem->Write( id, file );
 
 				unsigned char t = (unsigned char)(255 * order->t);
-				filesystem->Write( &t, sizeof(unsigned char), file );
+				filesystem->Write( t, file );
 
 				// overflow check
 				if (++saveCount == spotCount)
@@ -344,7 +344,7 @@ void CNavArea::Save( FileHandle_t file, unsigned int version ) const
 
 	// store place dictionary entry
 	PlaceDirectory::IndexType entry = placeDirectory.GetIndex( GetPlace() );
-	filesystem->Write( &entry, sizeof(entry), file );
+	filesystem->Write( entry, file );
 
 	// write out ladder info
 	int i;
@@ -360,7 +360,7 @@ void CNavArea::Save( FileHandle_t file, unsigned int version ) const
 			ladder = m_ladder[i][it];
 
 			unsigned int id = ladder.ladder->GetID();
-			filesystem->Write( &id, sizeof( id ), file );
+			filesystem->Write( id, file );
 		}
 	}
 
@@ -389,7 +389,7 @@ void CNavArea::Load( FileHandle_t file, unsigned int version )
 	if ( version <= 8 )
 	{
 		unsigned char flags = 0;
-		filesystem->Read( &flags, sizeof(unsigned char), file );
+		filesystem->Read( flags, file );
 		m_attributeFlags = flags;
 	}
 	else
@@ -416,7 +416,7 @@ void CNavArea::Load( FileHandle_t file, unsigned int version )
 	{
 		// load number of connections for this direction
 		unsigned int count;
-		int result = filesystem->Read( &count, sizeof(unsigned int), file );
+		int result = filesystem->Read( count, file );
 		Assert( result == sizeof(unsigned int) );
 
 		for( unsigned int i=0; i<count; ++i )
@@ -439,7 +439,7 @@ void CNavArea::Load( FileHandle_t file, unsigned int version )
 
 	// load number of hiding spots
 	unsigned char hidingSpotCount;
-	filesystem->Read( &hidingSpotCount, sizeof(unsigned char), file );
+	filesystem->Read( hidingSpotCount, file );
 
 	if (version == 1)
 	{
@@ -482,11 +482,11 @@ void CNavArea::Load( FileHandle_t file, unsigned int version )
 		filesystem->Read( &m_approach[a].here.id, sizeof(unsigned int), file );
 
 		filesystem->Read( &m_approach[a].prev.id, sizeof(unsigned int), file );
-		filesystem->Read( &type, sizeof(unsigned char), file );
+		filesystem->Read( type, file );
 		m_approach[a].prevToHereHow = (NavTraverseType)type;
 
 		filesystem->Read( &m_approach[a].next.id, sizeof(unsigned int), file );
-		filesystem->Read( &type, sizeof(unsigned char), file );
+		filesystem->Read( type, file );
 		m_approach[a].hereToNextHow = (NavTraverseType)type;
 	}
 
@@ -495,7 +495,7 @@ void CNavArea::Load( FileHandle_t file, unsigned int version )
 	// Load encounter paths for this area
 	//
 	unsigned int count;
-	filesystem->Read( &count, sizeof(unsigned int), file );
+	filesystem->Read( count, file );
 
 	if (version < 3)
 	{
@@ -512,7 +512,7 @@ void CNavArea::Load( FileHandle_t file, unsigned int version )
 
 			// read list of spots along this path
 			unsigned char spotCount;
-			filesystem->Read( &spotCount, sizeof(unsigned char), file );
+			filesystem->Read( spotCount, file );
 		
 			for( int s=0; s<spotCount; ++s )
 			{
@@ -531,17 +531,17 @@ void CNavArea::Load( FileHandle_t file, unsigned int version )
 		filesystem->Read( &encounter->from.id, sizeof(unsigned int), file );
 
 		unsigned char dir;
-		filesystem->Read( &dir, sizeof(unsigned char), file );
+		filesystem->Read( dir, file );
 		encounter->fromDir = static_cast<NavDirType>( dir );
 
 		filesystem->Read( &encounter->to.id, sizeof(unsigned int), file );
 
-		filesystem->Read( &dir, sizeof(unsigned char), file );
+		filesystem->Read( dir, file );
 		encounter->toDir = static_cast<NavDirType>( dir );
 
 		// read list of spots along this path
 		unsigned char spotCount;
-		filesystem->Read( &spotCount, sizeof(unsigned char), file );
+		filesystem->Read( spotCount, file );
 	
 		SpotOrder order;
 		for( int s=0; s<spotCount; ++s )
@@ -549,7 +549,7 @@ void CNavArea::Load( FileHandle_t file, unsigned int version )
 			filesystem->Read( &order.id, sizeof(unsigned int), file );
 
 			unsigned char t;
-			filesystem->Read( &t, sizeof(unsigned char), file );
+			filesystem->Read( t, file );
 
 			order.t = (float)t/255.0f;
 
@@ -566,7 +566,7 @@ void CNavArea::Load( FileHandle_t file, unsigned int version )
 	// Load Place data
 	//
 	PlaceDirectory::IndexType entry;
-	filesystem->Read( &entry, sizeof(entry), file );
+	filesystem->Read( entry, file );
 
 	// convert entry to actual Place
 	SetPlace( placeDirectory.IndexToPlace( entry ) );
@@ -577,7 +577,7 @@ void CNavArea::Load( FileHandle_t file, unsigned int version )
 	// load ladder data
 	for ( int dir=0; dir<CSNavLadder::NUM_LADDER_DIRECTIONS; ++dir )
 	{
-		filesystem->Read( &count, sizeof(unsigned int), file );
+		filesystem->Read( count, file );
 		{
 			for( unsigned int i=0; i<count; ++i )
 			{
@@ -989,7 +989,7 @@ bool CNavMesh::Save( void ) const
 
 	// store "magic number" to help identify this kind of file
 	unsigned int magic = NAV_MAGIC_NUMBER;
-	filesystem->Write( &magic, sizeof(unsigned int), file );
+	filesystem->Write( magic, file );
 
 	// store version number of file
 	// 1 = hiding spots as plain vector array
@@ -1004,14 +1004,14 @@ bool CNavMesh::Save( void ) const
 	// 8 = Added earliest occupy times (2 floats) to each area
 	// 9 = Promoted CNavArea's attribute flags to a short
 	unsigned int version = NavCurrentVersion;
-	filesystem->Write( &version, sizeof(unsigned int), file );
+	filesystem->Write( version, file );
 
 	// store the size of source bsp file in the nav file
 	// so we can test if the bsp changed since the nav file was made
 	unsigned int bspSize = filesystem->Size( bspFilename );
 	DevMsg( "Size of bsp file '%s' is %u bytes.\n", bspFilename, bspSize );
 
-	filesystem->Write( &bspSize, sizeof(unsigned int), file );
+	filesystem->Write( bspSize, file );
 
 
 	//
@@ -1107,7 +1107,7 @@ static NavErrorType CheckNavFile( const char *bspFilename )
 	// check magic number
 	int result;
 	unsigned int magic;
-	result = filesystem->Read( &magic, sizeof(unsigned int), file );
+	result = filesystem->Read( magic, file );
 	if (!result || magic != NAV_MAGIC_NUMBER)
 	{
 		filesystem->Close( file );
@@ -1116,7 +1116,7 @@ static NavErrorType CheckNavFile( const char *bspFilename )
 
 	// read file version number
 	unsigned int version;
-	result = filesystem->Read( &version, sizeof(unsigned int), file );
+	result = filesystem->Read( version, file );
 	if (!result || version > NavCurrentVersion || version < 4)
 	{
 		filesystem->Close( file );
@@ -1125,7 +1125,7 @@ static NavErrorType CheckNavFile( const char *bspFilename )
 
 	// get size of source bsp file and verify that the bsp hasn't changed
 	unsigned int saveBspSize;
-	filesystem->Read( &saveBspSize, sizeof(unsigned int), file );
+	filesystem->Read( saveBspSize, file );
 
 	// verify size
 	unsigned int bspSize = filesystem->Size( bspPathname );
@@ -1147,6 +1147,7 @@ void CommandNavCheckFileConsistency( void )
 
 	FileFindHandle_t findHandle;
 	const char *bspFilename = filesystem->FindFirstEx( "maps/*.bsp", "MOD", &findHandle );
+	RunCodeAtScopeExit( filesystem->FindClose( findHandle ) );
 	while ( bspFilename )
 	{
 		switch ( CheckNavFile( bspFilename ) )
@@ -1170,7 +1171,6 @@ void CommandNavCheckFileConsistency( void )
 
 		bspFilename = filesystem->FindNext( findHandle );
 	}
-	filesystem->FindClose( findHandle );
 }
 static ConCommand nav_check_file_consistency( "nav_check_file_consistency", CommandNavCheckFileConsistency, "Scans the maps directory and reports any missing/out-of-date navigation files.", FCVAR_GAMEDLL | FCVAR_CHEAT );
 
@@ -1207,7 +1207,7 @@ NavErrorType CNavMesh::Load( void )
 	// check magic number
 	int result;
 	unsigned int magic;
-	result = filesystem->Read( &magic, sizeof(unsigned int), file );
+	result = filesystem->Read( magic, file );
 	if (!result || magic != NAV_MAGIC_NUMBER)
 	{
 		Msg( "Invalid navigation file '%s'.\n", filename );
@@ -1217,7 +1217,7 @@ NavErrorType CNavMesh::Load( void )
 
 	// read file version number
 	unsigned int version;
-	result = filesystem->Read( &version, sizeof(unsigned int), file );
+	result = filesystem->Read( version, file );
 	if (!result || version > NavCurrentVersion)
 	{
 		Msg( "Unknown navigation file version.\n" );
@@ -1229,7 +1229,7 @@ NavErrorType CNavMesh::Load( void )
 	{
 		// get size of source bsp file and verify that the bsp hasn't changed
 		unsigned int saveBspSize;
-		filesystem->Read( &saveBspSize, sizeof(unsigned int), file );
+		filesystem->Read( saveBspSize, file );
 
 		// verify size
 		char *bspFilename = GetBspFilename( filename );
@@ -1265,7 +1265,7 @@ NavErrorType CNavMesh::Load( void )
 	// get number of areas
 	unsigned int count;
 	unsigned int i;
-	result = filesystem->Read( &count, sizeof(unsigned int), file );
+	result = filesystem->Read( count, file );
 
 	Extent extent;
 	extent.lo.x = 9999999999.9f;
@@ -1312,7 +1312,7 @@ NavErrorType CNavMesh::Load( void )
 	//
 	if (version >= 6)
 	{
-		result = filesystem->Read( &count, sizeof(unsigned int), file );
+		result = filesystem->Read( count, file );
 
 		// load the ladders
 		for( i=0; i<count; ++i )

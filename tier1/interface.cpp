@@ -64,7 +64,7 @@ InterfaceReg::InterfaceReg( InstantiateInterfaceFn fn, const char *pName ) :
 // makes sure Sys_GetFactoryThis() has the dll specific symbol and GetProcAddress() returns the module specific
 // function for CreateInterface again getting the dll specific symbol we need.
 // ------------------------------------------------------------------------------------ //
-void* CreateInterfaceInternal( const char *pName, int *pReturnCode )
+static void* CreateInterfaceInternal( const char *pName, int *pReturnCode )
 {
 	for (auto *pCur=InterfaceReg::s_pInterfaceRegs; pCur; pCur=pCur->m_pNext)
 	{
@@ -173,7 +173,7 @@ static HMODULE InternalLoadLibrary( const char *pName, Sys_Flags flags )
 		return LoadLibraryExA( pName, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH );
 }
 
-unsigned ThreadedLoadLibraryFunc( void *pParam )
+static unsigned ThreadedLoadLibraryFunc( void *pParam )
 {
 	// dimhotepus: Add thread name to aid debugging.
 	ThreadSetDebugName("ModuleLoader");
@@ -184,7 +184,7 @@ unsigned ThreadedLoadLibraryFunc( void *pParam )
 
 #endif // _WIN32
 
-HMODULE Sys_LoadLibrary( const char *pLibraryName, Sys_Flags flags )
+static HMODULE Sys_LoadLibrary( const char *pLibraryName, Sys_Flags flags )
 {
 	char str[ 1024 ];
 	// Note: DLL_EXT_STRING can be "_srv.so" or "_360.dll". So be careful
@@ -311,7 +311,7 @@ CSysModule *Sys_LoadModule( const char *pModuleName, Sys_Flags flags /* = SYS_NO
 	if ( Sys_GetProcAddress( hDLL, "BuiltDebug" ) )
 	{
 		if ( !IsX360() && hDLL && 
-			 !CommandLine()->FindParm( "-allowdebug" ) && 
+			 !CommandLine()->HasParm( "-allowdebug" ) && 
 			 !Sys_IsDebuggerPresent() )
 		{
 			Error( "Module %s is a debug build\n", pModuleName );
@@ -328,29 +328,6 @@ CSysModule *Sys_LoadModule( const char *pModuleName, Sys_Flags flags /* = SYS_NO
 
 	return reinterpret_cast<CSysModule *>(hDLL);
 }
-
-//-----------------------------------------------------------------------------
-// Purpose: Determine if any debug modules were loaded
-//-----------------------------------------------------------------------------
-bool Sys_RunningWithDebugModules()
-{
-	if ( !s_bRunningWithDebugModules )
-	{
-#if 0 //def IS_WINDOWS_PC
-		char chMemoryName[ MAX_PATH ];
-		DebugKernelMemoryObjectName( chMemoryName );
-
-		HANDLE hObject = OpenFileMapping( FILE_MAP_READ, FALSE, chMemoryName );
-		if ( hObject && hObject != INVALID_HANDLE_VALUE )
-		{
-			CloseHandle( hObject );
-			s_bRunningWithDebugModules = true;
-		}
-#endif
-	}
-	return s_bRunningWithDebugModules;
-}
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Unloads a DLL/component from
@@ -386,6 +363,7 @@ CreateInterfaceFn Sys_GetFactory( CSysModule *pModule )
 #ifdef _WIN32
 	SE_GCC_BEGIN_WARNING_OVERRIDE_SCOPE()
 	SE_GCC_DISABLE_CAST_FUNCTION_TYPE_MISMATCH_WARNING()
+	SE_GCC_DISABLE_CAST_FUNCTION_TYPE_STRICT_WARNING()
 	return reinterpret_cast<CreateInterfaceFn>(GetProcAddress( hDLL, CREATEINTERFACE_PROCNAME ));
 	SE_GCC_END_WARNING_OVERRIDE_SCOPE()
 #elif defined(POSIX)

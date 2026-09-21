@@ -41,7 +41,7 @@ void ScratchPad_DrawWorldToScratchPad(
 				pPad, 
 				flags,
 				pCur, 
-				bPlayer ? Vector( 1.0, 0.5, 0 ) : Vector( 0.3, 0.3, 1.0 )
+				bPlayer ? Vector( 1.0f, 0.5f, 0 ) : Vector( 0.3f, 0.3f, 1.0f )
 				);
 
 			pCur = gEntList.NextEnt( pCur );

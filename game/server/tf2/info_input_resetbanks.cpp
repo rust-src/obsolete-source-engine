@@ -109,7 +109,7 @@ void CInfoInputResetBanks::InputSetResetAmount( inputdata_t &inputdata )
 void CInfoInputResetBanks::ResetTeamsBanks( CTFTeam *pTeam )
 {
 	pTeam->SetRecentBankSet( m_iResetAmount );
-	for ( int i = 0; i < pTeam->GetNumPlayers(); i++ )
+	for ( intp i = 0; i < pTeam->GetNumPlayers(); i++ )
 	{
 		ResetPlayersBank( (CBaseTFPlayer*)pTeam->GetPlayer(i) );
 	}

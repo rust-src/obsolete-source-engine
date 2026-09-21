@@ -505,7 +505,7 @@ GDclass *GameData::ClassForName(const char *pszName, intp *piIndex) const
 	for (intp i = 0; i < nCount; i++)
 	{
 		GDclass *mp = m_Classes.Element(i);
-		if(!strcmp(mp->GetName(), pszName))
+		if(V_streq(mp->GetName(), pszName))
 		{
 			if(piIndex)
 				piIndex[0] = i;
@@ -544,7 +544,7 @@ GDclass *GameData::BeginInstanceRemap( const char *pszClassName, const char *psz
 	delete m_InstanceClass;
 	m_InstanceClass = NULL;
 
-	if ( strcmpi( pszClassName, "info_overlay_accessor" ) == 0 )
+	if ( V_strieq( pszClassName, "info_overlay_accessor" ) )
 	{	// yucky hack for a made up entity in the bsp process
 		pszClassName = "info_overlay";
 	}
@@ -713,7 +713,7 @@ bool GameData::RemapKeyValue( const char *pszKey, const char *pszInValue, OUT_Z_
 			break;
 	}
 
-	return ( strcmpi( pszInValue, pszOutValue ) != 0 );
+	return !V_strieq( pszInValue, pszOutValue );
 }
 
 
@@ -747,7 +747,7 @@ bool GameData::RemapNameField( const char *pszInValue, OUT_Z_CAP(outLen) char *p
 		}
 	}
 
-	return ( strcmpi( pszInValue, pszOutValue ) != 0 );
+	return !V_strieq( pszInValue, pszOutValue );
 }
 
 
@@ -776,7 +776,7 @@ bool GameData::LoadFGDMaterialExclusions( TokenReader &tr )
 			// Make sure we haven't loaded this from another FGD
 			for ( int i = 0; i < m_FGDMaterialExclusions.Count(); i++ )
 			{
-				if ( !stricmp( szToken, m_FGDMaterialExclusions[i].szDirectory ) )
+				if ( V_strieq( szToken, m_FGDMaterialExclusions[i].szDirectory ) )
 				{			
 					bMatchFound = true;
 					break;

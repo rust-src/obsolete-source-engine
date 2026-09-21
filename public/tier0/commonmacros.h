@@ -113,11 +113,11 @@
 // This form of __declspec can be applied to any class declaration, but should
 // only be applied to pure interface classes, that is, classes that will never
 // be instantiated on their own.  The __declspec stops the compiler from
-// generating code to initialize the vfptr in the constructor(s) and destructor
-// of the class.  In many cases, this removes the only references to the vtable
-// that are associated with the class and, thus, the linker will remove it.
-// Using this form of __declspec can result in a significant reduction in code
-// size.
+// generating code to initialize the virtual ptr in the constructor(s) and
+// destructor of the class.  In many cases, this removes the only references to
+// the vtable that are associated with the class and, thus, the linker will
+// remove it. Using this form of __declspec can result in a significant
+// reduction in code size.
 //
 // If you attempt to instantiate a class marked with novtable and then access a
 // class member, you will receive an access violation(AV).
@@ -127,10 +127,10 @@
 
 /**
  * @brief Makes a signed 4-byte "packed ID" int out of 4 characters.
- * @param d
- * @param c
- * @param b
- * @param a
+ * @param d Byte.
+ * @param c Byte.
+ * @param b Byte.
+ * @param a Byte.
  * @return Packed ID.
  */
 constexpr inline int MAKEID(char d, char c, char b, char a) noexcept {
@@ -140,10 +140,10 @@ constexpr inline int MAKEID(char d, char c, char b, char a) noexcept {
 
 /**
  * @brief Makes a unsigned 4-byte "packed ID" int out of 4 characters.
- * @param d
- * @param c
- * @param b
- * @param a
+ * @param d Byte.
+ * @param c Byte.
+ * @param b Byte.
+ * @param a Byte.
  * @return Packed ID.
  */
 constexpr inline unsigned MAKEUID(char d, char c, char b, char a) noexcept {
@@ -192,8 +192,8 @@ template <typename T>
 
 /**
  * @brief Set bits in bit vector.
- * @tparam T
- * @tparam Y
+ * @tparam T Vector type.
+ * @tparam Y Bits type.
  * @param vector Vector.
  * @param bits Bits.
  * @return Bit vector with set bits.
@@ -205,8 +205,8 @@ constexpr inline auto& SETBITS(T& vector, Y bits) noexcept {
 
 /**
  * @brief Clear bits in vector.
- * @tparam T
- * @tparam Y
+ * @tparam T Vector type.
+ * @tparam Y Bits type.
  * @param vector Vector.
  * @param bits Bits.
  * @return Bit vector with cleared bits.
@@ -218,8 +218,8 @@ constexpr inline auto& CLEARBITS(T& vector, Y bits) noexcept {
 
 /**
  * @brief Check bits set in vector.
- * @tparam T
- * @tparam Y
+ * @tparam T Vector type.
+ * @tparam Y Bits type.
  * @param vector Vector.
  * @param bits Bits.
  * @return Bit mask with set bits.
@@ -231,7 +231,7 @@ constexpr inline auto FBitSet(T vector, Y bits) noexcept {
 
 /**
  * @brief Check value is power of two.
- * @tparam T
+ * @tparam T Value type.
  * @param value Value.
  * @return true if value is power of two.
  */
@@ -312,7 +312,7 @@ __forceinline
 #else
 inline
 #endif
-    void unreachable() noexcept {
+    void unreachable() noexcept {  //-V1082 It is UB by design
 #ifdef COMPILER_MSVC
   __assume(false);
 #else
@@ -330,10 +330,12 @@ inline
 
 //__LINE__ can only be converted to an actual number by going through
 // this, otherwise the output is literally "__LINE__".
-#define __HACK_LINE_AS_STRING__(x) CONST_INTEGER_AS_STRING(x)
+// dimhotepus: __HACK_LINE_AS_STRING__ -> HACK_LINE_AS_STRING
+#define HACK_LINE_AS_STRING(x) CONST_INTEGER_AS_STRING(x)
 
 // Gives you the line number in constant string form.
-#define __LINE__AS_STRING __HACK_LINE_AS_STRING__(__LINE__)
+// dimhotepus: __LINE__AS_STRING -> LINE__AS_STRING
+#define LINE__AS_STRING HACK_LINE_AS_STRING(__LINE__)
 
 // Using ARRAYSIZE implementation from winnt.h:
 #ifdef ARRAYSIZE
@@ -379,7 +381,7 @@ inline
 // pointer_to_array_of_char RtlpNumberOf(reference_to_array_of_T);
 //
 // We never even call RtlpNumberOf, we just take the size of dereferencing its
-// return type. We do not even implement RtlpNumberOf, we just decare it.
+// return type. We do not even implement RtlpNumberOf, we just declare it.
 //
 // Attempts to pass pointers instead of arrays to this macro result in compile
 // time errors. That is the point.
@@ -450,8 +452,8 @@ extern "C++"  // templates cannot be declared to have 'C' linkage
 
 /**
  * @brief Clamp array index to be in bounds.
- * @tparam IndexType
- * @tparam T
+ * @tparam IndexType Index type.
+ * @tparam T Array element type.
  * @tparam N Array size.
  * @param buffer Array.
  * @param index Index to clamp.
@@ -465,7 +467,7 @@ constexpr IndexType ClampedArrayIndex([[maybe_unused]] const T (&buffer)[N],
 
 /**
  * @brief Get array element by index. Clamp index if out of range.
- * @tparam T
+ * @tparam T Array element type.
  * @tparam N Array size.
  * @param buffer Array.
  * @param index Index to clamp.
@@ -477,6 +479,141 @@ constexpr T ClampedArrayElement(const T (&buffer)[N], size_t index) noexcept {
   if (index >= N) index = N - 1;
 
   return buffer[index];
+}
+
+/**
+ * @brief Type-safe copying for trivial types.  Note source and destination
+ * sizes in T's should be >= size.
+ * @tparam T Type to copy
+ * @param src Source.
+ * @param dest Destination.
+ * @param size Size in T's to copy from source to destination.
+ * @return void
+ */
+template <typename T>
+std::enable_if_t<std::is_trivially_copyable_v<T>> BitwiseCopy(
+    const T* src, T* dest, size_t size) noexcept {
+  static_assert(sizeof(*src) == sizeof(*dest));
+  std::memcpy(dest, src, sizeof(T) * size);
+}
+
+/**
+ * @brief Type-safe copying for arrays of trivial types.
+ * @tparam T Type of array element to copy
+ * @param src Source array.
+ * @param dest Destination array.
+ * @return void
+ */
+template <typename T, size_t size>
+std::enable_if_t<std::is_trivially_copyable_v<T>> BitwiseCopy(
+    const T (&src)[size], T (&dest)[size]) noexcept {
+  std::memcpy(dest, src, sizeof(T) * size);
+}
+
+/**
+ * @brief std::copy_n.
+ * @tparam InputIt Input iterator type.
+ * @tparam Size Count type.
+ * @tparam OutputIt Ouput iterator type.
+ * @param first Input iterator.
+ * @param count Size.
+ * @param result Output iterator.
+ * @return Output iterator after copying.
+ */
+template <class InputIt, class Size, class OutputIt>
+constexpr OutputIt copy_n(InputIt first, Size count, OutputIt result) {
+  if (count > 0) {
+    *result = *first;
+    ++result;
+    for (Size i = 1; i != count; ++i, (void)++result) *result = *++first;
+  }
+
+  return result;
+}
+
+/**
+ * @brief Type-safe copying for non-trivial types.  Note source and destination
+ * sizes in T's should be >= size.
+ * @tparam T Type to copy
+ * @param src Source.
+ * @param dest Destination.
+ * @return void
+ */
+template <typename T>
+std::enable_if_t<!std::is_trivially_copyable_v<T>> constexpr BitwiseCopy(
+    const T* src, T* dest, size_t size = 1) noexcept {
+  copy_n(src, size, dest);
+}
+
+/**
+ * @brief Type-safe memory set.
+ * @tparam T Type.
+ * @param src Source to clear.
+ * @param byte Byte to fill src.
+ * @return void.
+ */
+template <typename T>
+std::enable_if_t<std::is_trivially_copyable_v<T> &&
+                 std::is_trivially_constructible_v<T> && !std::is_pointer_v<T>>
+BitwiseSet(T& src, unsigned char byte) noexcept {
+  std::memset(&src, byte, sizeof(T));
+}
+
+/**
+ * @brief Type-safe memory clear.
+ * @tparam T Type.
+ * @param src Source to clear.
+ * @return void.
+ */
+template <typename T>
+std::enable_if_t<std::is_trivially_copyable_v<T> &&
+                 std::is_trivially_constructible_v<T> && !std::is_pointer_v<T>>
+BitwiseClear(T& src) noexcept {
+  BitwiseSet(src, 0);
+}
+
+/**
+ * @brief Type-safe memory set for array.
+ * @tparam T Type of array element.
+ * @tparam size Array size.
+ * @param src Source to set.
+ * @param byte Byte to fill src.
+ * @return void.
+ */
+template <typename T, size_t size>
+std::enable_if_t<std::is_trivially_copyable_v<T> &&
+                 std::is_trivially_constructible_v<T>>
+BitwiseSet(T (&src)[size], unsigned char byte) noexcept {
+  std::memset(src, byte, sizeof(src));
+}
+
+/**
+ * @brief Type-safe memory clear for array.
+ * @tparam T Type of array element.
+ * @tparam size Array size.
+ * @param src Source to clear.
+ * @return void.
+ */
+template <typename T, size_t size>
+std::enable_if_t<std::is_trivially_copyable_v<T> &&
+                 std::is_trivially_constructible_v<T>>
+BitwiseClear(T (&src)[size]) noexcept {
+  BitwiseSet(src, 0);
+}
+
+/**
+ * @brief Type-safe memory clear.  Note src size should be >= size.
+ * @tparam T Type.
+ * @param src Source.
+ * @param size Source size to clear.
+ * @return void.
+ */
+template <typename T>
+std::enable_if_t<std::is_trivially_copyable_v<T> &&
+                 std::is_trivially_constructible_v<T>>
+BitwiseClear(T* src, size_t size) noexcept {
+  assert(sizeof(*src) >= size);
+  std::memset(src, 0, size);
 }
 
 // MSVC specific.
@@ -519,6 +656,12 @@ constexpr T ClampedArrayElement(const T (&buffer)[N], size_t index) noexcept {
   _Pragma("GCC diagnostic ignored \"-Wcast-function-type-mismatch\"")
 
 /*
+ * @brief Disables GCC / Clang cast-function-type-mismatch.
+ */
+#define SE_GCC_DISABLE_CAST_FUNCTION_TYPE_STRICT_WARNING() \
+  _Pragma("GCC diagnostic ignored \"-Wcast-function-type-strict\"")
+
+/*
  * @brief Disables GCC / Clang overloaded-virtual.
  */
 #define SE_GCC_DISABLE_OVERLOADED_VIRTUAL_WARNING() \
@@ -544,6 +687,11 @@ constexpr T ClampedArrayElement(const T (&buffer)[N], size_t index) noexcept {
  * @brief Do nothing.
  */
 #define SE_GCC_DISABLE_CAST_FUNCTION_TYPE_MISMATCH_WARNING()
+
+/*
+ * @brief Do nothing.
+ */
+#define SE_GCC_DISABLE_CAST_FUNCTION_TYPE_STRICT_WARNING()
 
 /*
  * @brief Do nothing.

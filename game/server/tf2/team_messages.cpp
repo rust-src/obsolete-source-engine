@@ -100,7 +100,7 @@ void CTeamMessage_Sound::FireMessage( void )
 	Assert( m_SoundName.String() );
 	
 	// Play my sound to all the team's members
-	for ( int i = 0; i < m_pTeam->GetNumPlayers(); i++ )
+	for ( intp i = 0; i < m_pTeam->GetNumPlayers(); i++ )
 	{
 		CBasePlayer *pPlayer = m_pTeam->GetPlayer(i);
 

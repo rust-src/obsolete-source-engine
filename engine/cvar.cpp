@@ -51,7 +51,7 @@ static void ConVarNetworkChangeCallback( IConVar *pConVar, const char *pOldValue
 	}
 	else
 	{
-		if ( !Q_strcmp( var.GetString(), pOldValue ) )
+		if ( V_streq( var.GetString(), pOldValue ) )
 			return;
 	}
 
@@ -131,7 +131,7 @@ public:
 
 	virtual void *QueryInterface( const char *pInterfaceName )
 	{
-		if ( !Q_stricmp( pInterfaceName, CVAR_QUERY_INTERFACE_VERSION ) )
+		if ( V_strieq( pInterfaceName, CVAR_QUERY_INTERFACE_VERSION ) )
 			return (ICvarQuery*)this;
 		return NULL;
 
@@ -584,9 +584,9 @@ void CCvarUtilities::WriteVariables( CUtlBuffer &buff, bool bAllVars )
 		{
 			const ConVar *pConvar = assert_cast<const ConVar *>( var );
 			// Only write out values that differ from the defaults.
-			if ( bAllVars || Q_strcmp( pConvar->GetString(), pConvar->GetDefault() ) != 0 )
+			if ( bAllVars || !V_streq( pConvar->GetString(), pConvar->GetDefault() ) )
 			{
-				buff.Printf( "%s \"%s\"\n", var->GetName(), ((ConVar *)var)->GetString() );
+				buff.Printf( "%s \"%s\"\n", var->GetName(), pConvar->GetString() );
 			}
 		}
 	}
@@ -771,7 +771,7 @@ static void PrintCommand( const ConCommand *cmd, bool logging, FileHandle_t& f )
 
 		// Names staring with +/- need to be wrapped in single quotes
 		char name[ 256 ];
-		Q_snprintf( name, sizeof( name ), "%s", cmd->GetName() );
+		V_strcpy_safe( name, cmd->GetName() );
 		if ( name[ 0 ] == '+' || name[ 0 ] == '-' )
 		{
 			Q_snprintf( name, sizeof( name ), "'%s'", cmd->GetName() );
@@ -811,16 +811,16 @@ void CCvarUtilities::CvarList( const CCommand &args )
 	iArgs = args.ArgC();		// Get count
 
 	// Print usage?
-	if ( iArgs == 2 && !Q_strcasecmp( args[1],"?" ) )
+	if ( iArgs == 2 && V_streq( args[1],"?" ) )
 	{
 		ConMsg( "cvarlist:  [log logfile] [ partial ]\n" );
 		return;         
 	}
 
-	if ( !Q_strcasecmp( args[1],"log" ) && iArgs >= 3 )
+	if ( V_strieq( args[1],"log" ) && iArgs >= 3 )
 	{
 		char fn[256];
-		Q_snprintf( fn, sizeof( fn ), "%s", args[2] );
+		V_strcpy_safe( fn, args[2] );
 		f = g_pFileSystem->Open( fn,"wb" );
 		if ( f )
 		{
@@ -978,7 +978,7 @@ void CCvarUtilities::CvarDifferences( const CCommand &args )
 		if ( var->IsFlagSet(FCVAR_DEVELOPMENTONLY) || var->IsFlagSet(FCVAR_HIDDEN) )
 			continue;
 
-		if ( !Q_stricmp( ((const ConVar *)var)->GetDefault(), ((const ConVar *)var)->GetString() ) )
+		if ( V_strieq( ((const ConVar *)var)->GetDefault(), ((const ConVar *)var)->GetString() ) )
 			continue;
 
 		ConVar_PrintDescription( (const ConVar *)var );	
@@ -1018,7 +1018,7 @@ void CCvarUtilities::CvarToggle( const CCommand &args )
 		// look for the current value in the command arguments
 		for( i = 2; i < c; i++ )
 		{
-			if ( !Q_strcmp( var->GetString(), args[ i ] ) )
+			if ( V_streq( var->GetString(), args[ i ] ) )
 				break;
 		}
 

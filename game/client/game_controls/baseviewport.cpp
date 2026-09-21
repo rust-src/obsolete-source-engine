@@ -101,25 +101,6 @@ CON_COMMAND_F( hidepanel, "Hides a viewport panel <name>", FCVAR_CHEAT )
 	 gViewPortInterface->ShowPanel( args[ 1 ], false );
 }
 
-/* global helper functions
-
-bool Helper_LoadFile( IBaseFileSystem *pFileSystem, const char *pFilename, CUtlVector<char> &buf )
-{
-	FileHandle_t hFile = pFileSystem->Open( pFilename, "rt" );
-	if ( hFile == FILESYSTEM_INVALID_HANDLE )
-	{
-		Warning( "Helper_LoadFile: missing %s\n", pFilename );
-		return false;
-	}
-
-	unsigned len = pFileSystem->Size( hFile );
-	buf.SetSize( len );
-	pFileSystem->Read( buf.Base(), buf.Count(), hFile );
-	pFileSystem->Close( hFile );
-
-	return true;
-} */
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Output : Returns true on success, false on failure.
@@ -138,7 +119,7 @@ bool CBaseViewport::LoadHudAnimations( void )
 	// Load each file defined in the text
 	for ( KeyValues *sub = manifest->GetFirstSubKey(); sub != NULL; sub = sub->GetNextKey() )
 	{
-		if ( !Q_stricmp( sub->GetName(), "file" ) )
+		if ( V_strieq( sub->GetName(), "file" ) )
 		{
 			// Add it
 			if ( m_pAnimController->SetScriptFile( GetVPanel(), sub->GetString(), bClearScript ) == false )
@@ -286,7 +267,7 @@ bool CBaseViewport::IsPanelVisible( const char* panel )
 		if ( p->IsVisible() )
 		{
 			const char* panel_name = p->GetName();
-			if ( !Q_strcmp( panel, panel_name ) )
+			if ( V_streq( panel, panel_name ) )
 			{
 				return true;
 			}

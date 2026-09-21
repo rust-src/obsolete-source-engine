@@ -494,7 +494,7 @@ void CTFGenericConfirmOptOutDialog::OnButtonChecked( KeyValues *pData )
 //-----------------------------------------------------------------------------
 void CTFUpgradeBoxDialog::OnCommand( const char *command )
 {
-	if ( !Q_stricmp( command, "upgrade" ) )
+	if ( V_strieq( command, "upgrade" ) )
 	{
 		FinishUp();
 
@@ -757,7 +757,7 @@ void CTFMessageBoxDialogWithSound::OnTick()
 	{
 		m_bPlayedSound = true;
 
-		if ( Q_strlen( m_szSound ) > 0 )
+		if ( !Q_isempty( m_szSound ) )
 		{
 			C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
 			if ( pLocalPlayer )
@@ -886,7 +886,7 @@ void CEconRequirementDialog::ApplySchemeSettings( vgui::IScheme *pScheme )
 //-----------------------------------------------------------------------------
 void CEconRequirementDialog::OnCommand( const char *command )
 {
-	if ( m_hItemDef && !Q_stricmp( command, "show_in_store" ) )
+	if ( m_hItemDef && V_strieq( command, "show_in_store" ) )
 	{
 		FinishUp();
 

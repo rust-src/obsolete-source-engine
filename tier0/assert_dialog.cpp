@@ -6,7 +6,7 @@
 
 #if defined( _WIN32 )
 #include "winlite.h"
-#include "commctrl.h"
+#include <CommCtrl.h>
 #include "windows/dpi_wnd_behavior.h"
 #include "windows/com_error_category.h"
 
@@ -207,7 +207,7 @@ static CAssertDisable* IgnoreAssertsNearby( int nRange )
 }
 
 #if defined( _WIN32 )
-se::windows::ui::CDpiWindowBehavior g_dpi_window_behavior{false};
+static se::windows::ui::CDpiWindowBehavior g_dpi_window_behavior{false};
 
 static INT_PTR CALLBACK AssertDialogProc(
   HWND hDlg,                      // handle to dialog box
@@ -237,7 +237,7 @@ static INT_PTR CALLBACK AssertDialogProc(
 
 			// dimhotepus: Add launcher icon for Assert dialog.
 			HANDLE hExeIcon = LoadImageW( GetModuleHandleW( nullptr ), MAKEINTRESOURCEW( SE_IDI_APP_MAIN ), IMAGE_ICON, 0, 0, LR_SHARED );
-			SendMessage( hDlg, WM_SETICON, ICON_BIG, (LPARAM)hExeIcon );
+			SendMessage( hDlg, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>( hExeIcon ) );
 		
 			// Center the dialog.
 			RECT rcDlg, rcDesktop;
@@ -269,7 +269,7 @@ static INT_PTR CALLBACK AssertDialogProc(
 				case IDC_IGNORE_THIS:
 				{
 					BOOL bTranslated = false;
-					UINT value = GetDlgItemInt( hDlg, IDC_IGNORE_NUMTIMES, &bTranslated, false );
+					UINT value = GetDlgItemInt( hDlg, IDC_IGNORE_NUMTIMES, &bTranslated, FALSE );
 					if ( bTranslated && value > 1 )
 					{
 						CAssertDisable *pDisable = IgnoreAssertsNearby( 0 );
@@ -292,7 +292,7 @@ static INT_PTR CALLBACK AssertDialogProc(
 				case IDC_IGNORE_NEARBY:
 				{
 					BOOL bTranslated = false;
-					UINT value = GetDlgItemInt( hDlg, IDC_IGNORE_NUMLINES, &bTranslated, false );
+					UINT value = GetDlgItemInt( hDlg, IDC_IGNORE_NUMLINES, &bTranslated, FALSE );
 					if ( !bTranslated || value < 1 )
 						return TRUE;
 
@@ -362,6 +362,10 @@ static INT_PTR CALLBACK AssertDialogProc(
 			g_dpi_window_behavior.OnDestroyWindow();
 			return TRUE;
 		}
+
+		default:
+			// dimhotepus: Add default case.
+			return FALSE;
 	}
 
 	return FALSE;

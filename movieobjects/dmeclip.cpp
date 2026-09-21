@@ -49,7 +49,7 @@ DmeClipType_t ClipTypeFromString( const char *pName )
 {
 	for ( DmeClipType_t i = DMECLIP_FIRST; i <= DMECLIP_LAST; ++i )
 	{
-		if ( !Q_stricmp( pName, s_pClipTypeNames[i] ) )
+		if ( V_strieq( pName, s_pClipTypeNames[i] ) )
 			return i;
 	}
 	return DMECLIP_UNKNOWN;
@@ -362,7 +362,7 @@ void CDmeClip::RemoveTrackGroup( const char *pTrackGroupName )
 	intp c = m_TrackGroups.Count();
 	for ( intp i = c; --i >= 0; )
 	{
-		if ( !Q_strcmp( m_TrackGroups[i]->GetName(), pTrackGroupName ) )
+		if ( V_streq( m_TrackGroups[i]->GetName(), pTrackGroupName ) )
 		{
 			m_TrackGroups.Remove( i );
 			return;
@@ -418,7 +418,7 @@ CDmeTrackGroup *CDmeClip::FindTrackGroup( const char *pTrackGroupName ) const
 		if ( !pTrackGroup )
 			continue;
 
-		if ( !Q_strcmp( pTrackGroup->GetName(), pTrackGroupName ) )
+		if ( V_streq( pTrackGroup->GetName(), pTrackGroupName ) )
 			return pTrackGroup;
 	}
 	return NULL;
@@ -1635,7 +1635,7 @@ void CDmeFilmClip::UpdateAssociatedClips( CUtlVector< ClipAssociation_t > &assoc
 	for ( i = c; --i >= 0; )
 	{
 		CDmeClip *pClip = pFilmTrack->GetClip(i);
-		if ( !Q_strcmp( pClip->GetName(), "__tempSlug__" ) )
+		if ( V_streq( pClip->GetName(), "__tempSlug__" ) )
 		{
 			pFilmTrack->RemoveClip( i );
 		}
@@ -1692,7 +1692,7 @@ CDmeChannel *FindChannelTargetingElement( CDmeChannelsClip *pChannelsClip, CDmEl
 		if ( toElement != pElement )
 			continue;
 
-		if ( pAttributeName && ( Q_stricmp( pChannel->GetToAttribute()->GetName(), pAttributeName ) != 0 ) )
+		if ( pAttributeName && ( !V_strieq( pChannel->GetToAttribute()->GetName(), pAttributeName ) ) )
 			continue;
 
 		return pChannel;

@@ -84,7 +84,7 @@ void CObjectRallyFlag::RallyThink( void )
 	}
 
 	// Look for nearby players to rally
-	for ( int i = 0; i < GetTFTeam()->GetNumPlayers(); i++ )
+	for ( intp i = 0; i < GetTFTeam()->GetNumPlayers(); i++ )
 	{
 		CBaseTFPlayer *pPlayer = (CBaseTFPlayer *)GetTFTeam()->GetPlayer(i);
 		assert(pPlayer);

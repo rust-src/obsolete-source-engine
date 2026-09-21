@@ -111,7 +111,7 @@ void CProject::LoadFromFile()
 	{
 		for ( KeyValues *s = kv->GetFirstSubKey(); s; s = s->GetNextKey() )
 		{
-			if ( !Q_stricmp( s->GetName(), "comments" ) )
+			if ( V_strieq( s->GetName(), "comments" ) )
 			{
 				SetComments( s->GetString() );
 				continue;
@@ -122,19 +122,19 @@ void CProject::LoadFromFile()
 
 			for ( KeyValues *sub = s->GetFirstSubKey(); sub; sub = sub->GetNextKey() )
 			{
-				if ( !Q_stricmp( sub->GetName(), "comments" ) )
+				if ( V_strieq( sub->GetName(), "comments" ) )
 				{
 					scene->SetComments( sub->GetString() );
 					continue;
 				}
 
-				if ( !Q_stricmp( sub->GetName(), "expanded" ) )
+				if ( V_strieq( sub->GetName(), "expanded" ) )
 				{
 					scene->SetExpanded( sub->GetInt() ? true : false );
 					continue;
 				}
 
-				if ( !Q_stricmp( sub->GetName(), "vcd" ) )
+				if ( V_strieq( sub->GetName(), "vcd" ) )
 				{
 					char filename[ 256 ];
 					char comments[ 512 ];
@@ -145,17 +145,17 @@ void CProject::LoadFromFile()
 
 					for ( KeyValues *vcdKeys = sub->GetFirstSubKey(); vcdKeys; vcdKeys = vcdKeys->GetNextKey() )
 					{
-						if ( !Q_stricmp( vcdKeys->GetName(), "expanded" ) )
+						if ( V_strieq( vcdKeys->GetName(), "expanded" ) )
 						{
 							expanded = vcdKeys->GetInt() ? true : false;
 							continue;
 						}
-						else if ( !Q_stricmp( vcdKeys->GetName(), "file" ) )
+						else if ( V_strieq( vcdKeys->GetName(), "file" ) )
 						{
 							Q_strncpy( filename, vcdKeys->GetString(), sizeof( filename ) );
 							continue;
 						}
-						if ( !Q_stricmp( vcdKeys->GetName(), "comments" ) )
+						if ( V_strieq( vcdKeys->GetName(), "comments" ) )
 						{
 							Q_strncpy( comments, vcdKeys->GetString(), sizeof( comments ) );
 							continue;
@@ -255,8 +255,8 @@ void CProject::SaveToFile()
 	FileHandle_t fh = filesystem->Open( m_szFile, "wt" );
 	if (fh)
 	{
+		RunCodeAtScopeExit(g_pFullFileSystem->Close( fh ));
 		filesystem->Write( buf.Base(), buf.TellPut(), fh );
-		filesystem->Close(fh);
 	}
 	else
 	{
@@ -291,7 +291,7 @@ void CProject::ValidateTree( mxTreeView *tree, mxTreeViewItem* parent )
 		}
 		else
 		{
-			Q_snprintf( sz, sizeof( sz ) , "%s", scene->GetName() );
+			V_strcpy_safe( sz, scene->GetName() );
 		}
 		
 

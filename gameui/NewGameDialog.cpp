@@ -373,7 +373,7 @@ CNewGameDialog::CNewGameDialog(vgui::Panel *parent, bool bCommentaryMode) : Base
 		sscanf(fileName, "chapter%31s", chapterID);
 		chapterID[ssize(chapterID) - 1] = '\0';
 
-		V_sprintf_safe( szFullFileName, "%s", fileName );
+		V_strcpy_safe( szFullFileName, fileName );
 
 		// strip the extension
 		char *ext = V_stristr(chapterID, ".cfg");
@@ -608,7 +608,7 @@ void CNewGameDialog::UpdateBonusSelection( void )
 		for ( intp iBonus = 0; iBonus < BonusMapsDatabase()->BonusCount(); ++iBonus )
 		{
 			pAdvancedDescription = BonusMapsDatabase()->GetBonusData( iBonus );
-			if ( Q_stricmp( szMapAdvancedName, pAdvancedDescription->szMapFileName ) == 0 )
+			if ( V_strieq( szMapAdvancedName, pAdvancedDescription->szMapFileName ) )
 				break;
 		}
 
@@ -751,7 +751,7 @@ void CNewGameDialog::SetSelectedChapter( const char *chapter )
 	Assert( chapter );
 	for (intp i = 0; i < m_ChapterPanels.Count(); i++)
 	{
-		if ( chapter && !Q_stricmp(m_ChapterPanels[i]->GetChapter(), chapter) )
+		if ( chapter && V_strieq(m_ChapterPanels[i]->GetChapter(), chapter) )
 		{
 			m_iSelectedChapter = i;
 			m_ChapterPanels[m_iSelectedChapter]->SetSelected( true );
@@ -930,7 +930,8 @@ void CNewGameDialog::AnimateSelectionPanels( void )
 	{
 		if ( m_PanelIndex[i] != INVALID_INDEX )
 		{
-			int nextIdx = i + idxOffset;
+			// dimhotepus: Clamp next idx to bounds.
+			int nextIdx = clamp( i + idxOffset, 0, NUM_SLOTS - 1 );
 			CGameChapterPanel *panel = m_ChapterPanels[ m_PanelIndex[i] ];
 			GetAnimationController()->RunAnimationCommand( panel, "xpos",  m_PanelXPos[nextIdx],  0, m_ScrollSpeed, vgui::AnimationController::INTERPOLATOR_LINEAR );
 			GetAnimationController()->RunAnimationCommand( panel, "ypos",  m_PanelYPos[nextIdx],  0, m_ScrollSpeed, vgui::AnimationController::INTERPOLATOR_LINEAR );
@@ -1125,31 +1126,31 @@ void CNewGameDialog::OnCommand( const char *command )
 {
 	bool bReset = true;
 
-	if ( !stricmp( command, "Play" ) )
+	if ( V_strieq( command, "Play" ) )
 	{
 		StartGame();
 	}
-	else if ( !stricmp( command, "Next" ) )
+	else if ( V_strieq( command, "Next" ) )
 	{
 		ScrollSelectionPanels( SCROLL_LEFT );
 		bReset = false;
 	}
-	else if ( !stricmp( command, "Prev" ) )
+	else if ( V_strieq( command, "Prev" ) )
 	{
 		ScrollSelectionPanels( SCROLL_RIGHT );
 		bReset = false;
 	}
-	else if ( !stricmp( command, "Mode_Next" ) )
+	else if ( V_strieq( command, "Mode_Next" ) )
 	{
 		ScrollBonusSelection( SCROLL_LEFT );
 		bReset = false;
 	}
-	else if ( !stricmp( command, "Mode_Prev" ) )
+	else if ( V_strieq( command, "Mode_Prev" ) )
 	{
 		ScrollBonusSelection( SCROLL_RIGHT );
 		bReset = false;
 	}
-	else if ( !Q_stricmp( command, "ReleaseModalWindow" ) )
+	else if ( V_strieq( command, "ReleaseModalWindow" ) )
 	{
 		vgui::surface()->RestrictPaintToSinglePanel(NULL);
 	}

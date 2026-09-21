@@ -44,6 +44,8 @@ static bool s_bRegistered = false;
 class CDefaultAccessor : public IConCommandBaseAccessor
 {
 public:
+	virtual ~CDefaultAccessor() {}
+
 	bool RegisterConCommandBase( ConCommandBase *pVar ) override
 	{
 		// Link to engine's list instead
@@ -67,13 +69,11 @@ void ConVar_Register( int nCVarFlag, IConCommandBaseAccessor *pAccessor )
 	s_nCVarFlag = nCVarFlag;
 	s_nDLLIdentifier = g_pCVar->AllocateDLLIdentifier();
 
-	ConCommandBase *pCur, *pNext;
-
 	ConCommandBase::s_pAccessor = pAccessor ? pAccessor : &s_DefaultAccessor;
-	pCur = ConCommandBase::s_pConCommandBases;
+	ConCommandBase *pCur = ConCommandBase::s_pConCommandBases;
 	while ( pCur )
 	{
-		pNext = pCur->m_pNext;
+		ConCommandBase *pNext = pCur->m_pNext;
 		pCur->AddFlags( s_nCVarFlag );
 		pCur->Init();
 		pCur = pNext;
@@ -398,7 +398,7 @@ bool CCommand::Tokenize( const char *pCommand, const characterset_t *pBreakSet )
 		char *pArgvBuf = &m_pArgvBuffer[nArgvBufferSize];
 		intp nMaxLen = COMMAND_MAX_LENGTH - nArgvBufferSize;
 		intp nStartGet = bufParse.TellGet();
-		intp	nSize = bufParse.ParseToken( pBreakSet, pArgvBuf, nMaxLen );
+		intp nSize = bufParse.ParseToken( pBreakSet, pArgvBuf, nMaxLen );
 		if ( nSize < 0 )
 			break;
 
@@ -453,7 +453,7 @@ const char* CCommand::FindArg( const char *pName ) const
 	int nArgC = ArgC();
 	for ( int i = 1; i < nArgC; i++ )
 	{
-		if ( !Q_stricmp( Arg(i), pName ) )
+		if ( V_strieq( Arg(i), pName ) )
 			return (i+1) < nArgC ? Arg( i+1 ) : "";
 	}
 	return nullptr;
@@ -472,7 +472,7 @@ int CCommand::FindArgInt( const char *pName, int nDefaultVal ) const
 //-----------------------------------------------------------------------------
 // Default console command autocompletion function 
 //-----------------------------------------------------------------------------
-int DefaultCompletionFunc( [[maybe_unused]] const char *partial, [[maybe_unused]] char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
+static int DefaultCompletionFunc( [[maybe_unused]] const char *partial, [[maybe_unused]] char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
 {
 	return 0;
 }
@@ -597,8 +597,7 @@ int	ConCommand::AutoCompleteSuggest( const char *partial, CUtlVector< CUtlString
 	int iret = ( m_fnCompletionCallback )( partial, rgpchCommands );
 	for ( int i = 0 ; i < iret; ++i )
 	{
-		CUtlString str = rgpchCommands[ i ];
-		commands.AddToTail( str );
+		commands.AddToTail( rgpchCommands[ i ] );
 	}
 	return iret;
 }
@@ -640,12 +639,12 @@ ConVar::ConVar( const char *pName, const char *pDefaultValue, int flags, const c
 
 ConVar::ConVar( const char *pName, const char *pDefaultValue, int flags, const char *pHelpString, FnChangeCallback_t callback )
 {
-	Create( pName, pDefaultValue, flags, pHelpString, false, 0.0, false, 0.0, false, 0.0, false, 0.0, callback );
+	Create( pName, pDefaultValue, flags, pHelpString, false, 0.0f, false, 0.0f, false, 0.0f, false, 0.0f, callback );
 }
 
 ConVar::ConVar( const char *pName, const char *pDefaultValue, int flags, const char *pHelpString, bool bMin, float fMin, bool bMax, float fMax, FnChangeCallback_t callback )
 {
-	Create( pName, pDefaultValue, flags, pHelpString, bMin, fMin, bMax, fMax, false, 0.0, false, 0.0, callback );
+	Create( pName, pDefaultValue, flags, pHelpString, bMin, fMin, bMax, fMax, false, 0.0f, false, 0.0f, callback );
 }
 
 ConVar::ConVar( const char *pName, const char *pDefaultValue, int flags, const char *pHelpString, bool bMin, float fMin, bool bMax, float fMax, bool bCompMin, float fCompMin, bool bCompMax, float fCompMax, FnChangeCallback_t callback )
@@ -764,7 +763,7 @@ void ConVar::InternalSetValue( const char *value )
 
 	// Redetermine value
 	m_fValue		= fNewValue;
-	m_nValue		= ( int )( fNewValue );
+	m_nValue		= static_cast<int>( fNewValue );
 
 	if ( !( m_nFlags & FCVAR_NEVER_AS_STRING ) )
 	{
@@ -780,13 +779,12 @@ void ConVar::ChangeStringValue( const char *tempVal, float flOldValue )
 {
 	Assert( !( m_nFlags & FCVAR_NEVER_AS_STRING ) );
 
- 	char* pszOldValue = (char*)stackalloc( m_StringLength );
+ 	char* pszOldValue = stackallocT( char, m_StringLength );
 	memcpy( pszOldValue, m_pszString, m_StringLength );
 	
 	if ( tempVal )
 	{
 		intp len = Q_strlen(tempVal) + 1;
-
 		if ( len > m_StringLength)
 		{
 			delete[] m_pszString;
@@ -803,7 +801,7 @@ void ConVar::ChangeStringValue( const char *tempVal, float flOldValue )
 	}
 
 	// If nothing has changed, don't do the callbacks.
-	if (V_strcmp(pszOldValue, m_pszString) != 0)
+	if (!V_streq(pszOldValue, m_pszString))
 	{
 		// Invoke any necessary callback function
 		if ( m_fnChangeCallback )
@@ -891,7 +889,7 @@ void ConVar::InternalSetFloatValue( float fNewValue, bool bForce /*= false */ )
 	// Redetermine value
 	float flOldValue = m_fValue;
 	m_fValue		= fNewValue;
-	m_nValue		= ( int )m_fValue;
+	m_nValue		= static_cast<int>( m_fValue );
 
 	if ( !( m_nFlags & FCVAR_NEVER_AS_STRING ) )
 	{
@@ -926,10 +924,10 @@ void ConVar::InternalSetIntValue( int nValue )
 
 	Assert( m_pParent == this ); // Only valid for root convars.
 
-	auto fValue = (float)nValue;
+	auto fValue = static_cast<float>( nValue );
 	if ( ClampValue( fValue ) )
 	{
-		nValue = ( int )( fValue );
+		nValue = static_cast<int>( fValue );
 	}
 
 	// Redetermine value
@@ -1280,7 +1278,7 @@ void ConVar_PrintDescription( const ConCommandBase *pVar )
 
 	if ( !pVar->IsCommand() )
 	{
-		auto *var = ( ConVar * )pVar;
+		const auto *var = ( const ConVar * )pVar;
 		const auto *pBounded = dynamic_cast<const ConVar_ServerBounded*>( var );
 
 		bMin = var->GetMin( fMin );
@@ -1296,7 +1294,7 @@ void ConVar_PrintDescription( const ConCommandBase *pVar )
 			int intVal = pBounded ? pBounded->GetInt() : var->GetInt();
 			float floatVal = pBounded ? pBounded->GetFloat() : var->GetFloat();
 
-			if ( fabsf( (float)intVal - floatVal ) < 0.000001f )
+			if ( fabsf( static_cast<float>( intVal ) - floatVal ) < 0.000001f )
 			{
 				// dimhotepus: Speedup to chars conversion.
 				V_to_chars( tempVal, intVal );
@@ -1316,7 +1314,7 @@ void ConVar_PrintDescription( const ConCommandBase *pVar )
 		{
 			ConColorMsg( clr, R"("%s" = "%s")", var->GetName(), value );
 
-			if ( stricmp( value, var->GetDefault() ) != 0 )
+			if ( !V_strieq( value, var->GetDefault() ) )
 			{
 				ConMsg( " ( def. \"%s\" )", var->GetDefault() );
 			}
@@ -1344,7 +1342,7 @@ void ConVar_PrintDescription( const ConCommandBase *pVar )
 	}
 	else
 	{
-		auto *var = ( ConCommand * )pVar;
+		auto *var = ( const ConCommand * )pVar;
 
 		ConColorMsg( clr, "\"%s\"\n", var->GetName() );
 	}

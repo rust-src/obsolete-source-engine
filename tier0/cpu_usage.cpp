@@ -20,7 +20,10 @@
 #define SystemPerformanceInformation 2
 #define SystemTimeInformation 3
 
-#define Li2Double(x) ((double)((x).HighPart) * 4.294967296E9 + (double)((x).LowPart))
+[[nodiscard]] static constexpr inline double Li2Double(LARGE_INTEGER x)
+{
+	return static_cast<double>(x.HighPart) * 4.294967296E9 + static_cast<double>(x.LowPart);
+}
 
 using SYSTEM_BASIC_INFORMATION = struct 
 {
@@ -75,7 +78,10 @@ float GetCPUUsage()
 		if ( !ntdll )
 			return(0);
 
-		NtQuerySystemInformation = (PROCNTQSI)GetProcAddress( ntdll, "NtQuerySystemInformation" );
+SE_GCC_BEGIN_WARNING_OVERRIDE_SCOPE()
+SE_GCC_DISABLE_CAST_FUNCTION_TYPE_STRICT_WARNING()
+		NtQuerySystemInformation = reinterpret_cast<PROCNTQSI>(GetProcAddress( ntdll, "NtQuerySystemInformation" ));
+SE_GCC_END_WARNING_OVERRIDE_SCOPE()
 
 		if ( !NtQuerySystemInformation )
 			return(0);
@@ -104,21 +110,21 @@ float GetCPUUsage()
 		dbSystemTime = Li2Double(SysTimeInfo.liKeSystemTime) - Li2Double(liOldSystemTime);
 
 		// CurrentCpuIdle = IdleTime / SystemTime
-		dbIdleTime = dbIdleTime / dbSystemTime / (double)SysBaseInfo.bKeNumberProcessors;
+		dbIdleTime = dbIdleTime / dbSystemTime / static_cast<double>(SysBaseInfo.bKeNumberProcessors);
 
 		// CurrentCpuUsage% = 100 - (CurrentCpuIdle * 100) / NumberOfProcessors
 		// dbIdleTime = 100.0 - dbIdleTime * 100.0 / (double)SysBaseInfo.bKeNumberProcessors + 0.5;
 	}
 	else
 	{
-		dbIdleTime = 1.0f;
+		dbIdleTime = 1.0;
 	}
 
 	// store new CPU's idle and system time
 	liOldIdleTime = SysPerfInfo.liIdleTime;
 	liOldSystemTime = SysTimeInfo.liKeSystemTime;
 
-	return (float)(1.0f - dbIdleTime);
+	return static_cast<float>(1.0 - dbIdleTime);
 }
 
 #endif // WIN32

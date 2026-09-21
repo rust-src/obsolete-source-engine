@@ -94,7 +94,7 @@ void VCollideWireframe_ChangeCallback( IConVar *pConVar, char const *pOldString,
 
 ConVar vcollide_wireframe( "vcollide_wireframe", "0", FCVAR_CHEAT, "Render physics collision models in wireframe", VCollideWireframe_ChangeCallback );
 
-bool C_AnimationLayer::IsActive( void )
+bool C_AnimationLayer::IsActive( void ) const
 {
 	return (m_nOrder != C_BaseAnimatingOverlay::MAX_OVERLAYS);
 }
@@ -286,12 +286,18 @@ END_DATADESC()
 
 C_ClientRagdoll::C_ClientRagdoll( bool bRestoring )
 {
+	m_bFadeOut = false;
+	m_bImportant = false;
+	m_flEffectTime = 0.0f;
 	m_iCurrentFriction = 0;
+	m_iMinFriction = m_iMaxFriction = 0;
+	m_flFrictionModTime = m_flFrictionTime = 0.0f;
 	m_iFrictionAnimState = RAGDOLL_FRICTION_NONE;
 	m_bReleaseRagdoll = false;
-	m_bFadeOut = false;
 	m_bFadingOut = false;
-	m_bImportant = false;
+	BitwiseSet( m_flScaleEnd, 0 );
+	BitwiseSet( m_flScaleTimeStart, 0 );
+	BitwiseSet( m_flScaleTimeEnd, 0 );
 	m_bNoModelParticles = false;
 
 	SetClassname("client_ragdoll");
@@ -619,8 +625,7 @@ void C_ClientRagdoll::SetupWeights( const matrix3x4_t *pBoneToWorld, int nFlexWe
 		matrix3x4_t attToWorld;
 		if ( GetAttachment( m_iEyeAttachment, attToWorld ) )
 		{
-			Vector local, tmp;
-			local.Init( 1000.0f, 0.0f, 0.0f );
+			Vector local( 1000.0f, 0.0f, 0.0f ), tmp;
 			VectorTransform( local, attToWorld, tmp );
 			modelrender->SetViewTarget( GetModelPtr(), GetBody(), tmp );
 		}
@@ -667,7 +672,7 @@ class C_BaseAnimatingGameSystem : public CAutoGameSystem
 		g_iPreviousBoneCounter = (unsigned)-1;
 		if ( g_PreviousBoneSetups.Count() != 0 )
 		{
-			Msg( "%d entities in bone setup array. Should have been cleaned up by now\n", g_PreviousBoneSetups.Count() );
+			Msg( "%zd entities in bone setup array. Should have been cleaned up by now\n", g_PreviousBoneSetups.Count() );
 			g_PreviousBoneSetups.RemoveAll();
 		}
 	}
@@ -896,7 +901,8 @@ void C_BaseAnimating::AddBaseAnimatingInterpolatedVars()
 	AddVar( m_flEncodedController, &m_iv_flEncodedController, LATCH_ANIMATION_VAR, true );
 	AddVar( m_flPoseParameter, &m_iv_flPoseParameter, LATCH_ANIMATION_VAR, true );
 	
-	int flags = LATCH_ANIMATION_VAR;
+	// dimhotepus: Use byte for flags.
+	byte flags = LATCH_ANIMATION_VAR;
 	if ( m_bClientSideAnimation )
 		flags |= EXCLUDE_AUTO_INTERPOLATE;
 		
@@ -1331,7 +1337,7 @@ void C_BaseAnimating::DelayedInitModelEffects( void )
 					}
 #ifdef TF_CLIENT_DLL
 					// Halloween Hack for Sentry Rockets
-					if ( !V_strcmp( "sentry_rocket", pszParticleEffect ) )
+					if ( V_streq( "sentry_rocket", pszParticleEffect ) )
 					{
 						// Halloween Spell Effect Check
 						int iHalloweenSpell = 0;
@@ -1644,7 +1650,7 @@ void C_BaseAnimating::ApplyBoneMatrixTransform( matrix3x4_t& transform )
 			int axis = RandomInt(0,1);
 			if ( axis == 1 ) // Choose between x & z
 				axis = 2;
-			VectorScale( transform[axis], RandomFloat(1,1.484), transform[axis] );
+			VectorScale( transform[axis], RandomFloat(1,1.484f), transform[axis] );
 		}
 		else if ( RandomInt(0,49) == 0 )
 		{
@@ -1935,6 +1941,14 @@ void C_BaseAnimating::ChildLayerBlend( Vector pos[], Quaternion q[], float curre
 	// dimhotepus: Comment unreachable code. if enabled causes issues with combine holding SMG.
 	//Vector		childPos[MAXSTUDIOBONES];
 	//Quaternion	childQ[MAXSTUDIOBONES];
+	
+	// dimhotepus: Catch uninit vars.
+	// #if defined(FP_EXCEPTIONS_ENABLED) || defined(DBGFLAG_ASSERT)
+	// 	// Having these uninitialized means that some bugs are very hard
+	// 	// to reproduce. A memset of 0xFF is a simple way of getting NaNs.
+	// 	memset( childPos, 0xFF, sizeof(pos) );
+	// 	memset( childQ, 0xFF, sizeof(q) );
+	// #endif
 	//float		childPoseparam[MAXSTUDIOPOSEPARAM];
 
 	//// go through all children
@@ -2542,7 +2556,7 @@ void C_BaseAnimating::CalculateIKLocks( float currentTime )
 					if (trace.DidHitWorld())
 					{
 						// clamp normal to 33 degrees
-						constexpr float limit = 0.832;
+						constexpr float limit = 0.832f;
 						float dot = DotProduct(trace.plane.normal, up);
 						if (dot < limit)
 						{
@@ -2773,8 +2787,9 @@ static void PostThreadedBoneSetup()
 	mdlcache->EndLock();
 }
 
-static bool g_bInThreadedBoneSetup;
-static bool g_bDoThreadedBoneSetup;
+// dimhotepus: Mark atomic to fix UB due to data races.
+static std::atomic_bool g_bInThreadedBoneSetup;
+static std::atomic_bool g_bDoThreadedBoneSetup;
 
 void C_BaseAnimating::InitBoneSetupThreadPool()
 {
@@ -2786,17 +2801,17 @@ void C_BaseAnimating::ShutdownBoneSetupThreadPool()
 
 void C_BaseAnimating::ThreadedBoneSetup()
 {
-	g_bDoThreadedBoneSetup = cl_threaded_bone_setup.GetBool();
-	if ( g_bDoThreadedBoneSetup )
+	g_bDoThreadedBoneSetup.store( cl_threaded_bone_setup.GetBool() );
+	if ( g_bDoThreadedBoneSetup.load( std::memory_order_relaxed ) )
 	{
 		intp nCount = g_PreviousBoneSetups.Count();
 		if ( nCount > 1 )
 		{
-			g_bInThreadedBoneSetup = true;
+			g_bInThreadedBoneSetup.store( true, std::memory_order::memory_order_relaxed );
 
 			ParallelProcess( "C_BaseAnimating::ThreadedBoneSetup", g_PreviousBoneSetups.Base(), nCount, &SetupBonesOnBaseAnimating, &PreThreadedBoneSetup, &PostThreadedBoneSetup );
 
-			g_bInThreadedBoneSetup = false;
+			g_bInThreadedBoneSetup.store( false, std::memory_order::memory_order_relaxed );
 		}
 	}
 	g_iPreviousBoneCounter++;
@@ -2852,7 +2867,7 @@ bool C_BaseAnimating::SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, i
 		boneMask |= BONE_USED_BY_ANYTHING;
 	}
 
-	if ( g_bInThreadedBoneSetup )
+	if ( g_bInThreadedBoneSetup.load( std::memory_order::memory_order_relaxed ) )
 	{
 		if ( !m_BoneSetupLock.TryLock() )
 		{
@@ -2876,7 +2891,7 @@ bool C_BaseAnimating::SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, i
 
 	AUTO_LOCK( m_BoneSetupLock );
 
-	if ( g_bInThreadedBoneSetup )
+	if ( g_bInThreadedBoneSetup.load( std::memory_order::memory_order_relaxed ) )
 	{
 		m_BoneSetupLock.Unlock();
 	}
@@ -2904,7 +2919,11 @@ bool C_BaseAnimating::SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, i
 	}
 
 	intp nBoneCount = m_CachedBoneData.Count();
-	if ( g_bDoThreadedBoneSetup && !g_bInThreadedBoneSetup && ( nBoneCount >= 16 ) && !GetMoveParent() && m_iMostRecentBoneSetupRequest != g_iPreviousBoneCounter )
+	if ( g_bDoThreadedBoneSetup.load( std::memory_order::memory_order_relaxed ) &&
+		!g_bInThreadedBoneSetup.load( std::memory_order::memory_order_relaxed ) &&
+		( nBoneCount >= 16 ) &&
+		!GetMoveParent() &&
+		m_iMostRecentBoneSetupRequest != g_iPreviousBoneCounter )
 	{
 		m_iMostRecentBoneSetupRequest = g_iPreviousBoneCounter;
 		Assert( g_PreviousBoneSetups.Find( this ) == -1 );
@@ -3136,7 +3155,7 @@ void C_BaseAnimating::PopBoneAccess( char const *tagPop )
 	STAGING_ONLY_EXEC( ReentrancyVerifier rv( &dbg_bonestack_reentrant_count, dbg_bonestack_perturb.GetInt() ) );
 
 	// Validate that pop matches the push
-	Assert( ( g_BoneAcessBase.tag == tagPop ) || ( g_BoneAcessBase.tag && g_BoneAcessBase.tag != ( char const * ) 1 && tagPop && tagPop != ( char const * ) 1 && !strcmp( g_BoneAcessBase.tag, tagPop ) ) );
+	Assert( ( g_BoneAcessBase.tag == tagPop ) || ( g_BoneAcessBase.tag && g_BoneAcessBase.tag != ( char const * ) 1 && tagPop && tagPop != ( char const * ) 1 && V_streq( g_BoneAcessBase.tag, tagPop ) ) );
 	intp lastIndex = g_BoneAccessStack.Count() - 1;
 	if ( lastIndex < 0 )
 	{
@@ -3639,7 +3658,7 @@ void C_BaseAnimating::DoAnimationEvents( CStudioHdr *pStudioHdr )
 
 		m_nEventSequence = GetSequence();
 		flEventCycle = 0.0f;
-		m_flPrevEventCycle = -0.01; // back up to get 0'th frame animations
+		m_flPrevEventCycle = -0.01f; // back up to get 0'th frame animations
 	}
 
 	// stalled?
@@ -3761,32 +3780,32 @@ bool C_BaseAnimating::DispatchMuzzleEffect( const char *options, bool isFirstPer
 	if ( token[0] ) 
 	{
 		//TODO: Parse the type from a list instead
-		if ( Q_stricmp( token, "COMBINE" ) == 0 )
+		if ( V_strieq( token, "COMBINE" ) )
 		{
 			weaponType = MUZZLEFLASH_COMBINE;
 		}
-		else if ( Q_stricmp( token, "SMG1" ) == 0 )
+		else if ( V_strieq( token, "SMG1" ) )
 		{
 			weaponType = MUZZLEFLASH_SMG1;
 		}
 		// dimhotepus: Handle SMG2 muzzle flashes.
-		else if ( Q_stricmp( token, "SMG2" ) == 0 )
+		else if ( V_strieq( token, "SMG2" ) )
 		{
 			weaponType = MUZZLEFLASH_SMG2;
 		}
-		else if ( Q_stricmp( token, "PISTOL" ) == 0 )
+		else if ( V_strieq( token, "PISTOL" ) )
 		{
 			weaponType = MUZZLEFLASH_PISTOL;
 		}
-		else if ( Q_stricmp( token, "SHOTGUN" ) == 0 )
+		else if ( V_strieq( token, "SHOTGUN" ) )
 		{
 			weaponType = MUZZLEFLASH_SHOTGUN;
 		}
-		else if ( Q_stricmp( token, "357" ) == 0 )
+		else if ( V_strieq( token, "357" ) )
 		{
 			weaponType = MUZZLEFLASH_357;
 		}
-		else if ( Q_stricmp( token, "RPG" ) == 0 )
+		else if ( V_strieq( token, "RPG" ) )
 		{
 			weaponType = MUZZLEFLASH_RPG;
 		}
@@ -3820,7 +3839,7 @@ bool C_BaseAnimating::DispatchMuzzleEffect( const char *options, bool isFirstPer
 		{
 			// dimhotepus: Combine have MUZZLE attachment not present on model.
 			// Try to attach them to left hand instead.
-			if ( Q_stricmp( token, "MUZZLE" ) == 0 )
+			if ( V_strieq( token, "MUZZLE" ) )
 			{
 				Warning( "Missed %s attachment on %s, fall back to anim_attachment_LH.\n", token, GetModelName() );
 
@@ -3852,7 +3871,7 @@ bool C_BaseAnimating::DispatchMuzzleEffect( const char *options, bool isFirstPer
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void MaterialFootstepSound( C_BaseAnimating *pEnt, bool bLeftFoot, float flVolume )
+static void MaterialFootstepSound( C_BaseAnimating *pEnt, bool bLeftFoot, float flVolume )
 {
 	trace_t tr;
 	Vector traceStart;
@@ -4893,6 +4912,15 @@ C_BaseAnimating *C_BaseAnimating::BecomeRagdollOnClient()
 		matrix3x4_t boneDelta0[MAXSTUDIOBONES];
 		matrix3x4_t boneDelta1[MAXSTUDIOBONES];
 		matrix3x4_t currentBones[MAXSTUDIOBONES];
+
+// dimhotepus: Catch uninit vars.
+#if defined(FP_EXCEPTIONS_ENABLED) || defined(DBGFLAG_ASSERT)
+		// Having these uninitialized means that some bugs are very hard
+		// to reproduce. A memset of 0xFF is a simple way of getting NaNs.
+		memset( boneDelta0, 0xFF, sizeof(boneDelta0) );
+		memset( boneDelta1, 0xFF, sizeof(boneDelta1) );
+		memset( currentBones, 0xFF, sizeof(currentBones) );
+#endif
 		constexpr float boneDt = 0.1f;
 
 		bool bInitAsClient = false;
@@ -5290,7 +5318,7 @@ float C_BaseAnimating::GetSequenceCycleRate( CStudioHdr *pStudioHdr, int iSequen
 
 float C_BaseAnimating::GetAnimTimeInterval( void ) const
 {
-#define MAX_ANIMTIME_INTERVAL 0.2f
+	constexpr float MAX_ANIMTIME_INTERVAL{0.2f};
 
 	float flInterval = MIN( gpGlobals->curtime - m_flAnimTime, MAX_ANIMTIME_INTERVAL );
 	return flInterval;
@@ -5464,7 +5492,7 @@ void C_BaseAnimating::GetBlendedLinearVelocity( Vector *pVec )
 	VectorScale( vecDist, 1.0f / flDuration, *pVec );
 
 	Vector tmp;
-	for (int i = m_SequenceTransitioner.m_animationQueue.Count() - 2; i >= 0; i--)
+	for (intp i = m_SequenceTransitioner.m_animationQueue.Count() - 2; i >= 0; i--)
 	{
 		C_AnimationLayer *blend = &m_SequenceTransitioner.m_animationQueue[i];
 	
@@ -5620,13 +5648,13 @@ float C_BaseAnimating::SequenceDuration( CStudioHdr *pStudioHdr, int iSequence )
 
 	if ( !pStudioHdr->SequencesAvailable() )
 	{
-		return 0.1;
+		return 0.1f;
 	}
 
 	if (iSequence >= pStudioHdr->GetNumSeq() || iSequence < 0 )
 	{
 		DevWarning( 2, "C_BaseAnimating::SequenceDuration( %d ) out of range\n", iSequence );
-		return 0.1;
+		return 0.1f;
 	}
 
 	return Studio_Duration( pStudioHdr, iSequence, m_flPoseParameter );
@@ -6310,7 +6338,7 @@ void C_BaseAnimating::DoMuzzleFlash()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void DevMsgRT( char const* pMsg, ... )
+void DevMsgRT( PRINTF_FORMAT_STRING char const* pMsg, ... )
 {
 	if (gpGlobals->frametime != 0.0f)
 	{
@@ -6391,8 +6419,8 @@ void C_BaseAnimating::UpdateClientSideAnimations()
 {
 	VPROF_BUDGET( "UpdateClientSideAnimations", VPROF_BUDGETGROUP_CLIENT_ANIMATION );
 
-	int c = g_ClientSideAnimationList.Count();
-	for ( int i = 0; i < c ; ++i )
+	intp c = g_ClientSideAnimationList.Count();
+	for ( intp i = 0; i < c ; ++i )
 	{
 		clientanimating_t &anim = g_ClientSideAnimationList.Element(i);
 		if ( !(anim.flags & FCLIENTANIM_SEQUENCE_CYCLE) )

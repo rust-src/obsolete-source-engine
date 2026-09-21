@@ -26,7 +26,7 @@ class CAI_BaseNPC;
 //	>> CAI_Path
 //=============================================================================
 
-#define DEF_WAYPOINT_TOLERANCE (0.1)
+#define DEF_WAYPOINT_TOLERANCE (0.1f)
 
 class CAI_Path
 {

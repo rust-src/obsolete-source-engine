@@ -68,7 +68,7 @@ static const mstudiosrcbonetransform_t *GetSrcBoneTransform( const studiohdr_t *
 	for ( int i = 0; i < nSrcBoneTransformCount; ++i )
 	{
 		const mstudiosrcbonetransform_t *pSrcBoneTransform = pStudioHdr->SrcBoneTransform( i );
-		if ( pSrcBoneTransform && !Q_stricmp( pSrcBoneTransform->pszName(), pszBoneName ) )
+		if ( pSrcBoneTransform && V_strieq( pSrcBoneTransform->pszName(), pszBoneName ) )
 			return pSrcBoneTransform;
 	}
 
@@ -338,19 +338,16 @@ bool CMdlInfoApp::CommandLineHasOpt( const char *pszOpt )
 {
 	for ( int ii = 0; ii < ARRAYSIZE( s_binaryOptions ); ++ii )
 	{
-		if ( !V_stricmp( pszOpt, s_binaryOptions[ii].m_pszShortName ) || !V_stricmp( pszOpt, s_binaryOptions[ii].m_pszLongName ) )
+		if ( V_strieq( pszOpt, s_binaryOptions[ii].m_pszShortName ) || V_strieq( pszOpt, s_binaryOptions[ii].m_pszLongName ) )
 		{
-			if ( CommandLine()->FindParm( s_binaryOptions[ii].m_pszShortName ) > 0 || CommandLine()->FindParm( s_binaryOptions[ii].m_pszLongName ) > 0 )
+			if ( CommandLine()->HasParm( s_binaryOptions[ii].m_pszShortName ) || CommandLine()->HasParm( s_binaryOptions[ii].m_pszLongName ) )
 				return true;
 
 			return false;
 		}
 	}
 
-	if ( CommandLine()->FindParm( pszOpt ) > 0 )
-		return true;
-
-	return false;
+	return CommandLine()->HasParm( pszOpt );
 }
 
 
@@ -435,7 +432,7 @@ MDLHandle_t CMdlInfoApp::GetMDLHandle( const char *pszFilename )
 	{
 		studiohdr_t *pHdr = g_pMDLCache->GetStudioHdr( hMdl );
 
-		if ( !pHdr || !V_strcmp( "error.mdl", pHdr->pszName() ) )
+		if ( !pHdr || V_streq( "error.mdl", pHdr->pszName() ) )
 		{
 			Error( "Couldn't Load MDL %s via g_pMDLCache, got error model instead\n", pszFilename );
 			g_pMDLCache->Release( hMdl );

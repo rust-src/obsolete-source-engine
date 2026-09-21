@@ -180,7 +180,7 @@ bool CAI_BaseActor::IsServerSideFlexController( char const *szName )
 {
 	for ( const auto *c : g_ServerSideFlexControllers )
 	{
-		if ( !Q_stricmp( szName, c ) )
+		if ( V_strieq( szName, c ) )
 			return true;
 	}
 	return false;
@@ -448,7 +448,7 @@ bool CAI_BaseActor::ProcessSceneEvent( CSceneEventInfo *info, CChoreoScene *scen
 
 			if (developer.GetInt() > 0 && scene_showfaceto.GetBool())
 			{
-				NDebugOverlay::YawArrow( GetAbsOrigin() + Vector( 0, 0, 1 ), goalYaw, 8 + 32 * intensity, 8, 255, 255, 255, 0, true, 0.12 );
+				NDebugOverlay::YawArrow( GetAbsOrigin() + Vector( 0, 0, 1 ), goalYaw, 8 + 32 * intensity, 8, 255, 255, 255, 0, true, 0.12f );
 			}
 
 			diff = UTIL_AngleDiff( goalYaw, info->m_flInitialYaw ) * intensity;
@@ -1158,8 +1158,8 @@ float CAI_BaseActor::PickLookTarget( CAI_InterestTarget &queue, bool bExcludePla
 	
 	args.vTarget			= vec3_invalid;
 	args.flDuration			= random->RandomFloat( minTime, maxTime );
-	args.flInfluence		= random->RandomFloat( 0.3, 0.5 );
-	args.flRamp				= random->RandomFloat( 0.2, 0.4 );
+	args.flInfluence		= random->RandomFloat( 0.3f, 0.5f );
+	args.flRamp				= random->RandomFloat( 0.2f, 0.4f );
 	args.bExcludePlayers	= bExcludePlayers;
 	args.pQueue				= &queue;
 	

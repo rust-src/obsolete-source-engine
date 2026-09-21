@@ -311,7 +311,7 @@ void CTFFreezePanel::FireGameEvent( IGameEvent * event )
 
 		// Do we need to invalidate a new res file?
 		const char *pszNewResFile = GetResFilename( pTFPlayerKiller );
-		if ( V_stricmp( m_strCurrentFreezeCamResFile.String(), pszNewResFile ) != 0 )
+		if ( !V_strieq( m_strCurrentFreezeCamResFile.String(), pszNewResFile ) )
 		{
 			m_strCurrentFreezeCamResFile = pszNewResFile;
 			InvalidateLayout( true, true );
@@ -995,7 +995,7 @@ void CTFFreezePanel::ShowSnapshotPanel( bool bShow )
 	if ( bShow )
 	{
 		char szKey[16];
-		Q_snprintf( szKey, sizeof(szKey), "%s", key );
+		V_strcpy_safe( szKey, key );
 		wchar_t wKey[16];
 		wchar_t wLabel[256];
 

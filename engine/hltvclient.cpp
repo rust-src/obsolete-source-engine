@@ -66,7 +66,8 @@ bool CHLTVClient::SendSignonData( void )
 	// check class table CRCs
 	if ( m_nSendtableCRC != SendTable_GetCRC() )
 	{
-		Disconnect( "Server uses different class tables" );
+		// dimhotepus: Dump more meaningful message.
+		Disconnect( "Server and client versions differ" );
 		return false;
 	}
 	else
@@ -184,15 +185,15 @@ bool CHLTVClient::ExecuteStringCommand( const char *pCommandString )
 
 	const char *cmd = args[ 0 ];
 
-	if ( !Q_stricmp( cmd, "spec_next" ) || 
-		 !Q_stricmp( cmd, "spec_prev" ) ||
-		 !Q_stricmp( cmd, "spec_mode" ) )
+	if ( V_strieq( cmd, "spec_next" ) || 
+		 V_strieq( cmd, "spec_prev" ) ||
+		 V_strieq( cmd, "spec_mode" ) )
 	{
 		ClientPrintf("Camera settings can't be changed during a live broadcast.\n");
 		return true;
 	}
 	
-	if ( !Q_stricmp( cmd, "say" ) && args.ArgC() > 1 )
+	if ( V_strieq( cmd, "say" ) && args.ArgC() > 1 )
 	{
 		// if tv_chattimelimit = 0, chat is turned off
 		if ( tv_chattimelimit.GetFloat() <= 0 )
@@ -211,7 +212,7 @@ bool CHLTVClient::ExecuteStringCommand( const char *pCommandString )
 		
 		return true;
 	}
-	else if ( !Q_strcmp( cmd, "tv_chatgroup" )  )
+	else if ( V_streq( cmd, "tv_chatgroup" )  )
 	{
 		if (  args.ArgC() > 1 )
 		{
@@ -223,7 +224,7 @@ bool CHLTVClient::ExecuteStringCommand( const char *pCommandString )
 		}
 		return true;
 	}
-	else if ( !Q_strcmp( cmd, "status" ) )
+	else if ( V_streq( cmd, "status" ) )
 	{
 		int		slots, proxies,	clients;
 		char	gd[MAX_OSPATH];
@@ -247,13 +248,25 @@ bool CHLTVClient::ExecuteStringCommand( const char *pCommandString )
 			}
 		}
 
+		char buffer[32];
 		ClientPrintf("IP %s:%i, Online %s, Version %i (%s)\n",
-			net_local_adr.ToString( true ), m_pHLTV->GetUDPPort(),
+			net_local_adr.ToString( buffer, true ), m_pHLTV->GetUDPPort(),
 			COM_FormatSeconds( m_pHLTV->GetOnlineTime() ), build_number(),
-#ifdef _WIN32
-			"Win32" );
+// dimhotepus: More OSes in status string.
+#if defined(_WIN32)
+#if defined(_WIN64)
+			"Win64" );
+#elif defined(__ARM_ARCH)
+			"ARM " CONST_INTEGER_AS_STRING(__ARM_ARCH) );
 #else
+			"Win32" );
+#endif
+#elif defined(_LINUX)
 			"Linux" );
+#elif defined(OSX)
+			"OSX" );
+#else
+#error Please set OS string.
 #endif
 
 		ClientPrintf("Game Time %s, Mod \"%s\", Map \"%s\", Players %i\n", COM_FormatSeconds( m_pHLTV->GetTime() ),
@@ -371,7 +384,7 @@ bool CHLTVClient::ProcessSetConVar(NET_SetConVar *msg)
 			// if the connecting client is a TV relay, check the password
 			checkpwd = tv_relaypassword.GetString();
 
-			if ( checkpwd && checkpwd[0] && Q_stricmp( checkpwd, "none") )
+			if ( !Q_isempty( checkpwd ) && Q_stricmp( checkpwd, "none") )
 			{
 				if ( Q_stricmp( m_szPassword, checkpwd ) )
 				{
@@ -426,8 +439,8 @@ void CHLTVClient::SendSnapshot( CClientFrame * pFrame )
 {
 	VPROF_BUDGET( "CHLTVClient::SendSnapshot", "HLTV" );
 
-	ALIGN4 byte		buf[NET_MAX_PAYLOAD] ALIGN4_POST;
-	bf_write	msg( "CHLTVClient::SendSnapshot", buf, sizeof(buf) );
+	alignas(4) byte buf[NET_MAX_PAYLOAD];
+	bf_write	msg( "CHLTVClient::SendSnapshot", buf );
 
 	// if we send a full snapshot (no delta-compression) before, wait until client
 	// received and acknowledge that update. don't spam client with full updates

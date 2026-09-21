@@ -207,11 +207,9 @@ CNetworkStringTable::CNetworkStringTable( TABLEID id, const char *tableName, int
 	m_pItemsClientSide( NULL )
 {
 	m_id = id;
-	intp len = strlen( tableName ) + 1;
-	m_pszTableName = new char[ len ];
-	Assert( m_pszTableName );
 	Assert( tableName );
-	Q_strncpy( m_pszTableName, tableName, len );
+	m_pszTableName = V_strdup( tableName );
+	Assert( m_pszTableName );
 
 	m_changeFunc = NULL;
 	m_pObject = NULL;
@@ -698,7 +696,7 @@ void CNetworkStringTable::ParseUpdate( bf_read &buf, int entries )
 #ifdef _DEBUG
 			if ( pEntry )
 			{
-				Assert( !Q_strcmp( pEntry, GetString( entryIndex ) ) ); // make sure string didn't change
+				Assert( V_streq( pEntry, GetString( entryIndex ) ) ); // make sure string didn't change
 			}
 #endif
 			pEntry = GetString( entryIndex ); // string didn't change
@@ -1362,7 +1360,7 @@ INetworkStringTable *CNetworkStringTableContainer::FindTable( const char *tableN
 {
 	for ( auto *t : m_Tables )
 	{
-		if ( !Q_stricmp( tableName, t->GetTableName() ) )
+		if ( V_strieq( tableName, t->GetTableName() ) )
 			return t;
 	}
 

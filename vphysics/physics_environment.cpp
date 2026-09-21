@@ -690,7 +690,7 @@ private:
 	
 	struct corepair_t
 	{
-		corepair_t() = default;
+		corepair_t() : core0{nullptr}, core1{nullptr} {}
 		corepair_t( IVP_Friction_Core_Pair *pair )
 		{
 			int index = ( pair->objs[0] < pair->objs[1] ) ? 0 : 1;
@@ -737,6 +737,8 @@ private:
 	IPhysicsCollisionEvent			*m_pCallback;
 	vcollisionevent_t				m_event;
 
+	// dimhotepus: Allow to configure max event friction pairs.
+	constexpr static inline	int		kMaxEventFrictionPairs = 16;
 };
 
 
@@ -769,7 +771,8 @@ void CPhysicsListenerCollision::event_friction_pair_created( IVP_Friction_Core_P
 	}
 	else
 	{
-		if ( m_pairList.Count() < 16 )
+		// dimhotepus: Inclusive max.
+		if ( m_pairList.Count() <= kMaxEventFrictionPairs )
 		{
 			m_pairList.Insert( test );
 		}
@@ -792,7 +795,8 @@ void CPhysicsListenerCollision::event_friction_pair_deleted( IVP_Friction_Core_P
 	}
 	else
 	{
-		if ( m_pairList.Count() < 16 )
+		// dimhotepus: Inclusive max.
+		if ( m_pairList.Count() <= kMaxEventFrictionPairs )
 		{
 			m_pairList.Insert( test );
 		}
@@ -927,7 +931,7 @@ public:
 		return IVP_TRUE;
 	}
 	// return number of additional checks to do this psi
-    virtual int max_collision_checks_exceeded( int totalChecks )
+    int max_collision_checks_exceeded( int totalChecks )
 	{
 		if ( m_pSolver )
 		{
@@ -1007,7 +1011,7 @@ public:
 	{
 		m_pCallback = nullptr;
 	}
-	virtual ~CPhysicsListenerConstraint() = default;
+	~CPhysicsListenerConstraint() = default;
 
 	void SetHandler( IPhysicsConstraintEvent *pHandler )
 	{
@@ -1054,8 +1058,7 @@ public:
 
     void do_simulation_controller(IVP_Event_Sim *event,IVP_U_Vector<IVP_Core> *core_list) override
 	{
-		int i;
-		for( i = core_list->len()-1; i >=0; i--) 
+		for( int i = core_list->len()-1; i >=0; i--) 
 		{
 			IVP_Core *pCore = core_list->element_at(i);
 
@@ -1388,7 +1391,7 @@ bool CPhysicsEnvironment::TransferObject( IPhysicsObject *pObject, IPhysicsEnvir
 
 	//templatize the object
 	vphysics_save_cphysicsobject_t objectTemplate;
-	memset( &objectTemplate, 0, sizeof( vphysics_save_cphysicsobject_t ) );	
+	BitwiseClear( objectTemplate );	
 	pPhysics->WriteToTemplate( objectTemplate );
 
 	//these should be detached already

@@ -263,13 +263,13 @@ CBaseAnimSetAttributeSliderPanel::CBaseAnimSetAttributeSliderPanel( vgui::Panel 
 
 void CBaseAnimSetAttributeSliderPanel::OnCommand( const char *pCommand )
 {
-	if ( !Q_stricmp( pCommand, "OnLeftOnly" ) )
+	if ( V_strieq( pCommand, "OnLeftOnly" ) )
 	{
 		m_pPresetSideFilter->SetPos( 0.0f );
 		return;
 	}
 
-	if ( !Q_stricmp( pCommand, "OnRightOnly" ) )
+	if ( V_strieq( pCommand, "OnRightOnly" ) )
 	{
 		m_pPresetSideFilter->SetPos( 1.0f );
 		return;
@@ -741,7 +741,7 @@ void CBaseAnimSetAttributeSliderPanel::UpdatePreviewSliderTimes()
 	const CDmaElementArray< CDmElement > &controls = m_AnimSet->GetControls();
 
 	double curtime = system()->GetFrameTime();
-	float dt = clamp( curtime - m_flPrevTime, 0.0, 0.1 );
+	float dt = clamp( static_cast<float>( curtime - m_flPrevTime ), 0.0f, 0.1f );
 	m_flPrevTime = curtime;
 
 	dt *= ifm_fader_timescale;

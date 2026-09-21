@@ -209,10 +209,12 @@ void CPublishedFiles::ViewPublishedFile( uint64 nPublishedFileID )
 	switch ( universe )
 	{
 	case k_EUniversePublic:
-		steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "http://steamcommunity.com/sharedfiles/filedetails/?id=%llu", nPublishedFileID ) );
+		// dimhotepus: http:// -> https://
+		steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "https://steamcommunity.com/sharedfiles/filedetails/?id=%llu", nPublishedFileID ) );
 		break;
 	case k_EUniverseBeta:
-		steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "http://beta.steamcommunity.com/sharedfiles/filedetails/?id=%llu", nPublishedFileID ) );
+		// dimhotepus: http:// -> https://
+		steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "https://beta.steamcommunity.com/sharedfiles/filedetails/?id=%llu", nPublishedFileID ) );
 		break;
 	case k_EUniverseDev:
 		steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( COMMUNITY_DEV_HOST "sharedfiles/filedetails/?id=%llu", nPublishedFileID ) );
@@ -396,12 +398,12 @@ public:
 	virtual bool BForceSquarePreviewImage( void ) { return true; }
 	virtual EWorkshopFileType WorkshipFileTypeForFile( const char *pszFileName ) {
 		const char *pExt = V_GetFileExtension( pszFileName );
-		if ( pExt && V_strcmp( pExt, "bsp" ) == 0 )
+		if ( pExt && V_streq( pExt, "bsp" ) )
 		{
 			return k_EWorkshopFileTypeCommunity;
 		}
 
-		AssertMsg( pExt && V_strcmp( pExt, "zip" ) == 0, "Unrecognized file type, defaulting to microtransaction\n" );
+		AssertMsg( pExt && V_streq( pExt, "zip" ), "Unrecognized file type, defaulting to microtransaction\n" );
 		return k_EWorkshopFileTypeMicrotransaction;
 	}
 	virtual const char *GetPreviewFileTypes( void )	{ return "*.tga,*.jpg,*.png"; }
@@ -762,7 +764,7 @@ protected:
 
 	virtual void OnCommand( const char *command )
 	{	
-		if ( V_stricmp( command, "MainFileCosmetics" ) == 0 )
+		if ( V_strieq( command, "MainFileCosmetics" ) )
 		{
 #ifdef WORKSHOP_IMPORT_ENABLED
 			if ( CItemUpload::InitManifest() )
@@ -778,7 +780,7 @@ protected:
 			}
 #endif
 		}
-		else if ( V_stricmp( command, "Publish" ) == 0 || V_stricmp( command, "Update" ) == 0 )
+		else if ( V_strieq( command, "Publish" ) || V_strieq( command, "Update" ) )
 		{
 			if ( m_bImported )
 			{
@@ -1156,7 +1158,8 @@ public:
 		}
 		else if ( FStrEq( pCommand, "learn_more" ) )
 		{
-			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( "http://www.teamfortress.com/contribute/" );
+			// dimhotepus: http:// -> https://
+			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( "https://www.teamfortress.com/contribute/" );
 		}
 		else if ( FStrEq( pCommand, "view_files" ) )
 		{
@@ -1165,10 +1168,12 @@ public:
 			switch ( universe )
 			{
 			case k_EUniversePublic:
-				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "http://steamcommunity.com/profiles/%llu/mysharedfiles/", ulSteamID ) );
+				// dimhotepus: http:// -> https://
+				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "https://steamcommunity.com/profiles/%llu/mysharedfiles/", ulSteamID ) );
 				break;
 			case k_EUniverseBeta:
-				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "http://beta.steamcommunity.com/profiles/%llu/mysharedfiles/", ulSteamID ) );
+				// dimhotepus: http:// -> https://
+				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "https://beta.steamcommunity.com/profiles/%llu/mysharedfiles/", ulSteamID ) );
 				break;
 			case k_EUniverseDev:
 				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( COMMUNITY_DEV_HOST "profiles/%llu/mysharedfiles/", ulSteamID ) );
@@ -1181,10 +1186,12 @@ public:
 			switch ( universe )
 			{
 			case k_EUniversePublic:
-				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "http://steamcommunity.com/workshop/workshoplegalagreement/?appid=%d", engine->GetAppID() ) );
+				// dimhotepus: http:// -> https://
+				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "https://steamcommunity.com/workshop/workshoplegalagreement/?appid=%d", engine->GetAppID() ) );
 				break;
 			case k_EUniverseBeta:
-				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "http://beta.steamcommunity.com/workshop/workshoplegalagreement/?appid=%d", engine->GetAppID() ) );
+				// dimhotepus: http:// -> https://
+				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "https://beta.steamcommunity.com/workshop/workshoplegalagreement/?appid=%d", engine->GetAppID() ) );
 				break;
 			case k_EUniverseDev:
 				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( COMMUNITY_DEV_HOST "workshop/workshoplegalagreement/?appid=%d", engine->GetAppID() ) );
@@ -1197,10 +1204,12 @@ public:
 			switch ( universe )
 			{
 			case k_EUniversePublic:
-				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "http://steamcommunity.com/workshop/browse?appid=%d", engine->GetAppID() ) );
+				// dimhotepus: http:// -> https://
+				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "https://steamcommunity.com/workshop/browse?appid=%d", engine->GetAppID() ) );
 				break;
 			case k_EUniverseBeta:
-				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "http://beta.steamcommunity.com/workshop/browse?appid=%d", engine->GetAppID() ) );
+				// dimhotepus: http:// -> https://
+				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "https://beta.steamcommunity.com/workshop/browse?appid=%d", engine->GetAppID() ) );
 				break;
 			case k_EUniverseDev:
 				steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( COMMUNITY_DEV_HOST "workshop/browse?appid=%d", engine->GetAppID() ) );
@@ -1417,10 +1426,12 @@ protected:
 		switch ( universe )
 		{
 		case k_EUniversePublic:
-			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "http://steamcommunity.com/sharedfiles/filedetails/?id=%llu", nPublishedFileID ) );
+			// dimhotepus: http:// -> https://
+			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "https://steamcommunity.com/sharedfiles/filedetails/?id=%llu", nPublishedFileID ) );
 			break;
 		case k_EUniverseBeta:
-			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "http://beta.steamcommunity.com/sharedfiles/filedetails/?id=%llu", nPublishedFileID ) );
+			// dimhotepus: http:// -> https://
+			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( "https://beta.steamcommunity.com/sharedfiles/filedetails/?id=%llu", nPublishedFileID ) );
 			break;
 		case k_EUniverseDev:
 			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( CFmtStrMax( COMMUNITY_DEV_HOST "sharedfiles/filedetails/?id=%llu", nPublishedFileID ) );

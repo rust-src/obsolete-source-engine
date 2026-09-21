@@ -1038,8 +1038,8 @@ ConVar cl_autohelp(
 
 		// [tj] used to determine which achievement to award for sufficient kills
 		CBaseEntity* pInflictor = info.GetInflictor();
-		bool isGrenade = pInflictor && V_strcmp(pInflictor->GetClassname(), "hegrenade_projectile") == 0;
-		bool isBomb = pInflictor && V_strcmp(pInflictor->GetClassname(), "planted_c4") == 0;
+		bool isGrenade = pInflictor && V_streq(pInflictor->GetClassname(), "hegrenade_projectile");
+		bool isBomb = pInflictor && V_streq(pInflictor->GetClassname(), "planted_c4");
          
         //=============================================================================
         // HPE_END
@@ -1430,7 +1430,7 @@ ConVar cl_autohelp(
 			if ( mp_autokick.GetBool() )
 			{
 				char strTeamKills[64];
-				Q_snprintf( strTeamKills, sizeof( strTeamKills ), "%d", pCSScorer->m_iTeamKills );
+				V_to_chars( strTeamKills, pCSScorer->m_iTeamKills );
 				ClientPrint( pCSScorer, HUD_PRINTCONSOLE, "#Game_teammate_kills", strTeamKills ); // this includes a " of 3" in it
 
 				if ( pCSScorer->m_iTeamKills >= 3 )
@@ -1793,7 +1793,7 @@ ConVar cl_autohelp(
 		{
 			CTeam *pTeam = GetGlobalTeam( iTeam );
 
-			for ( int iPlayer=0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
+			for ( intp iPlayer=0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
 			{
 				CCSPlayer *pPlayer = ToCSPlayer( pTeam->GetPlayer( iPlayer ) );
 				Assert( pPlayer );
@@ -3661,7 +3661,7 @@ ConVar cl_autohelp(
 
 			// let the players know
 			char strRestartDelay[64];
-			Q_snprintf( strRestartDelay, sizeof( strRestartDelay ), "%d", iRestartDelay );
+			V_to_chars( strRestartDelay, iRestartDelay );
 			UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Game_will_restart_in", strRestartDelay, iRestartDelay == 1 ? "SECOND" : "SECONDS" );
 			UTIL_ClientPrintAll( HUD_PRINTCONSOLE, "#Game_will_restart_in", strRestartDelay, iRestartDelay == 1 ? "SECOND" : "SECONDS" );
 
@@ -4281,7 +4281,7 @@ ConVar cl_autohelp(
 	static bool IsClanTeam( CTeam *pTeam )
 	{
 		uint32 iTeamClan = 0;
-		for ( int iPlayer = 0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
+		for ( intp iPlayer = 0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
 		{
 			CBasePlayer *pPlayer = pTeam->GetPlayer( iPlayer );
 			if ( !pPlayer )
@@ -4338,7 +4338,7 @@ ConVar cl_autohelp(
 			{
 				CTeam *pTeam = GetGlobalTeam( iWinnerTeam );
 
-				for ( int iPlayer=0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
+				for ( intp iPlayer=0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
 				{
 					CCSPlayer *pPlayer = ToCSPlayer( pTeam->GetPlayer( iPlayer ) );
 					Assert( pPlayer );
@@ -4355,7 +4355,7 @@ ConVar cl_autohelp(
 			{
 				CTeam *pTeam = GetGlobalTeam( iWinnerTeam );
 
-				for ( int iPlayer=0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
+				for ( intp iPlayer=0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
 				{
 					CCSPlayer *pPlayer = ToCSPlayer( pTeam->GetPlayer( iPlayer ) );
 					Assert( pPlayer );
@@ -4372,7 +4372,7 @@ ConVar cl_autohelp(
 			{
 				CTeam *pTeam = GetGlobalTeam( iWinnerTeam );
 
-				for ( int iPlayer=0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
+				for ( intp iPlayer=0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
 				{
 					CCSPlayer *pPlayer = ToCSPlayer( pTeam->GetPlayer( iPlayer ) );
 					Assert( pPlayer );
@@ -4389,7 +4389,7 @@ ConVar cl_autohelp(
 				 losingTeam && losingTeam->GetNumPlayers() - ignoreCount >= AchievementConsts::DefaultMinOpponentsForAchievement &&
 				 IsClanTeam( pWinningTeam ) && IsClanTeam( losingTeam ) )
 			{
-				for ( int iPlayer=0; iPlayer < pWinningTeam->GetNumPlayers(); iPlayer++ )
+				for ( intp iPlayer=0; iPlayer < pWinningTeam->GetNumPlayers(); iPlayer++ )
 				{
 					CCSPlayer *pPlayer = ToCSPlayer( pWinningTeam->GetPlayer( iPlayer ) );
 					if ( !pPlayer )

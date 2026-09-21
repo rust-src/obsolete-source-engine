@@ -118,7 +118,7 @@ public:
 			{
 				pBuffer[strlen( pBuffer )-1] = '\0';
 			}
-			V_snprintf( tempFileName, sizeof( tempFileName ), "_%s.tmp", pBuffer );
+			V_sprintf_safe( tempFileName, "_%s.tmp", pBuffer );
 		}
 		else
 		{
@@ -192,7 +192,7 @@ public:
 			{
 				pBuffer[strlen( pBuffer )-1] = '\0';
 			}
-			V_snprintf( tempFileName, sizeof( tempFileName ), "_%s.tmp", pBuffer );
+			V_sprintf_safe( tempFileName, "_%s.tmp", pBuffer );
 		}
 		else
 		{
@@ -578,7 +578,7 @@ bool CZipFile::CZipEntry::ZipFileLessFunc( CZipEntry const& src1, CZipEntry cons
 
 bool CZipFile::CZipEntry::ZipFileLessFunc_CaselessSort( CZipEntry const& src1, CZipEntry const& src2 )
 {
-	return ( V_stricmp( src1.m_Name.String(), src2.m_Name.String() ) < 0 );
+	return V_stricmp( src1.m_Name.String(), src2.m_Name.String() ) < 0;
 }
 
 void CZipFile::ForceAlignment( bool bAligned, bool bCompatibleFormat, unsigned int alignment )
@@ -1313,8 +1313,8 @@ unsigned short CZipFile::MakeXZipCommentString( char *pCommentString )
 {
 	char tempString[XZIP_COMMENT_LENGTH];
 
-	memset( tempString, 0, sizeof( tempString ) );
-	V_snprintf( tempString, sizeof( tempString ), "XZP%c %d", m_bCompatibleFormat ? '1' : '2', m_AlignmentSize );
+	BitwiseClear( tempString );
+	V_sprintf_safe( tempString, "XZP%c %d", m_bCompatibleFormat ? '1' : '2', m_AlignmentSize );
 	if ( pCommentString )
 	{
 		memcpy( pCommentString, tempString, sizeof( tempString ) );

@@ -60,8 +60,11 @@ bool WriteMiniDumpUsingExceptionInfo(
 
 	bool bReturnValue = false;
 
+SE_GCC_BEGIN_WARNING_OVERRIDE_SCOPE()
+SE_GCC_DISABLE_CAST_FUNCTION_TYPE_STRICT_WARNING()
 	auto pfnMiniDumpWrite =
 		reinterpret_cast<MINIDUMPWRITEDUMP>( ::GetProcAddress( hDbgHelpDll, V_STRINGIFY(MiniDumpWriteDump) ) );
+SE_GCC_END_WARNING_OVERRIDE_SCOPE()
 	if ( pfnMiniDumpWrite )
 	{
 		// create a unique filename for the minidump based on the current time and module name
@@ -136,8 +139,10 @@ bool WriteMiniDumpUsingExceptionInfo(
 #else
 		HANDLE hFile = ::CreateFile( rgchFileName, GENERIC_WRITE, FILE_SHARE_WRITE, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr );
 #endif
-		if ( hFile )
+		if ( hFile != INVALID_HANDLE_VALUE )
 		{
+			RunCodeAtScopeExit(::CloseHandle( hFile ));
+
 			// dump the exception information into the file
 			_MINIDUMP_EXCEPTION_INFORMATION	ExInfo = {};
 			ExInfo.ThreadId	= ::GetCurrentThreadId();
@@ -147,7 +152,7 @@ bool WriteMiniDumpUsingExceptionInfo(
 			// Do we have a comment?
 			MINIDUMP_USER_STREAM_INFORMATION StreamInformationHeader;
 			MINIDUMP_USER_STREAM UserStreams[1] = {};
-			memset( &StreamInformationHeader, 0, sizeof(StreamInformationHeader) );
+			BitwiseClear( StreamInformationHeader );
 			StreamInformationHeader.UserStreamArray = UserStreams;
 
 			if ( g_rgchMinidumpComment[0] != '\0' )
@@ -155,11 +160,10 @@ bool WriteMiniDumpUsingExceptionInfo(
 				MINIDUMP_USER_STREAM *pCommentStream = &UserStreams[StreamInformationHeader.UserStreamCount++];
 				pCommentStream->Type = CommentStreamA;
 				pCommentStream->Buffer = g_rgchMinidumpComment;
-				pCommentStream->BufferSize = (ULONG)strlen(g_rgchMinidumpComment)+1;
+				pCommentStream->BufferSize = static_cast<ULONG>( strlen(g_rgchMinidumpComment) + 1 );
 			}
 
-			bMinidumpResult = (*pfnMiniDumpWrite)( ::GetCurrentProcess(), ::GetCurrentProcessId(), hFile, (MINIDUMP_TYPE)minidumpType, &ExInfo, &StreamInformationHeader, nullptr );
-			::CloseHandle( hFile );
+			bMinidumpResult = (*pfnMiniDumpWrite)( ::GetCurrentProcess(), ::GetCurrentProcessId(), hFile, static_cast<MINIDUMP_TYPE>( minidumpType ), &ExInfo, &StreamInformationHeader, nullptr );
 
 			// Clear comment for next time
 			g_rgchMinidumpComment[0] = '\0';
@@ -200,7 +204,7 @@ bool WriteMiniDumpUsingExceptionInfo(
 }
 
 
-void InternalWriteMiniDumpUsingExceptionInfo( unsigned int uStructuredExceptionCode, _EXCEPTION_POINTERS * pExceptionInfo, const char *pszFilenameSuffix )
+static void InternalWriteMiniDumpUsingExceptionInfo( unsigned int uStructuredExceptionCode, _EXCEPTION_POINTERS * pExceptionInfo, const char *pszFilenameSuffix )
 {
 	// If this is is a real crash (not an assert or one we purposefully triggered), then try to write a full dump
 	// only do this on our GC (currently GC is 64-bit, so we can use a #define rather than some run-time switch
@@ -371,14 +375,14 @@ struct CatchAndWriteContext_t
 			break;
 		case k_eSCatchAndWriteFunctionTypeWMain:
 			ErrorIfNot( m_pargc && m_pargv, ( "CatchAndWriteContext_t::Invoke with bogus argc/argv" ) )
-			((FnWMain)m_pfn)( *m_pargc, *m_pargv );
+			reinterpret_cast<FnWMain>(m_pfn)( *m_pargc, *m_pargv );
 			break;
 		case k_eSCatchAndWriteFunctionTypeWMainIntReg:
 			ErrorIfNot( m_pargc && m_pargv, ( "CatchAndWriteContext_t::Invoke with bogus argc/argv" ) )
-			return ((FnWMainIntRet)m_pfn)( *m_pargc, *m_pargv );
+			return reinterpret_cast<FnWMainIntRet>(m_pfn)( *m_pargc, *m_pargv );
 		case k_eSCatchAndWriteFunctionTypeVoidPtr:
 			ErrorIfNot( m_ppv, ( "CatchAndWriteContext_t::Invoke with bogus void *ptr" ) )
-			((FnVoidPtrFn)m_pfn)( *m_ppv );
+			reinterpret_cast<FnVoidPtrFn>(m_pfn)( *m_ppv );
 			break;
 		default:
 			break;
@@ -424,13 +428,12 @@ static const char *GetExceptionCodeName( unsigned long code )
 		case EXCEPTION_NONCONTINUABLE_EXCEPTION: return "noncontinuableexception";
 		case EXCEPTION_PRIV_INSTRUCTION: return "privinstruction";
 		case EXCEPTION_SINGLE_STEP: return "singlestep";
+		// Unknown exception
+		default: return "crash";
 	}
-
-	// Unknown exception
-	return "crash";
 }
 
-int CatchAndWriteMiniDump_Impl( CatchAndWriteContext_t &ctx )
+static int CatchAndWriteMiniDump_Impl( CatchAndWriteContext_t &ctx )
 {
 	// Sorry, this is the only action currently implemented!
 	Assert( ctx.m_eAction == k_ECatchAndWriteMiniDumpAbort );
@@ -482,7 +485,7 @@ int CatchAndWriteMiniDump_Impl( CatchAndWriteContext_t &ctx )
 void CatchAndWriteMiniDumpEx( FnWMain pfn, int argc, tchar *argv[], ECatchAndWriteMinidumpAction eAction )
 {
 	CatchAndWriteContext_t ctx = {};
-	ctx.Set( k_eSCatchAndWriteFunctionTypeWMain, eAction, (void *)pfn, &argc, &argv, nullptr );
+	ctx.Set( k_eSCatchAndWriteFunctionTypeWMain, eAction, reinterpret_cast<void *>( pfn ), &argc, &argv, nullptr );
 	CatchAndWriteMiniDump_Impl( ctx );
 }
 
@@ -495,7 +498,7 @@ void CatchAndWriteMiniDumpEx( FnWMain pfn, int argc, tchar *argv[], ECatchAndWri
 int CatchAndWriteMiniDumpExReturnsInt( FnWMainIntRet pfn, int argc, tchar *argv[], ECatchAndWriteMinidumpAction eAction )
 {
 	CatchAndWriteContext_t ctx = {};
-	ctx.Set( k_eSCatchAndWriteFunctionTypeWMainIntReg, eAction, (void *)pfn, &argc, &argv, nullptr );
+	ctx.Set( k_eSCatchAndWriteFunctionTypeWMainIntReg, eAction, reinterpret_cast<void *>( pfn ), &argc, &argv, nullptr );
 	return CatchAndWriteMiniDump_Impl( ctx );
 }
 
@@ -510,7 +513,7 @@ int CatchAndWriteMiniDumpExReturnsInt( FnWMainIntRet pfn, int argc, tchar *argv[
 void CatchAndWriteMiniDumpExForVoidPtrFn( FnVoidPtrFn pfn, void *pv, ECatchAndWriteMinidumpAction eAction )
 {
 	CatchAndWriteContext_t ctx = {};
-	ctx.Set( k_eSCatchAndWriteFunctionTypeVoidPtr, eAction, (void *)pfn, nullptr, nullptr, &pv );
+	ctx.Set( k_eSCatchAndWriteFunctionTypeVoidPtr, eAction, reinterpret_cast<void *>( pfn ), nullptr, nullptr, &pv );
 	CatchAndWriteMiniDump_Impl( ctx );
 }
 
@@ -610,7 +613,7 @@ static char g_UserStreamInfo[ 64 ][ 128 ];
 static int g_UserStreamInfoIndex = 0;
 
 // Set the single g_UserStreamInfoHeader string.
-void MinidumpUserStreamInfoSetHeader( const char *pFormat, ... )
+void MinidumpUserStreamInfoSetHeader( PRINTF_FORMAT_STRING const char *pFormat, ... )
 {
 	va_list marker;
 
@@ -620,7 +623,7 @@ void MinidumpUserStreamInfoSetHeader( const char *pFormat, ... )
 }
 
 // Set the next comment in the g_UserStreamInfo array.
-void MinidumpUserStreamInfoAppend( const char *pFormat, ... )
+void MinidumpUserStreamInfoAppend( PRINTF_FORMAT_STRING const char *pFormat, ... )
 {
 	va_list marker;
 	char *pData = g_UserStreamInfo[ g_UserStreamInfoIndex ];

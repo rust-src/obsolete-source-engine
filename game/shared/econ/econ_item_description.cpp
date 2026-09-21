@@ -982,7 +982,7 @@ static void GenerateLocalizedFullItemName
 #ifdef PROJECT_TF
 	static CSchemaAttributeDefHandle pAttrDef_SupplyCrateSeries( "set supply crate series" );
 	// do not display series number for crates that have a collection reference
-	if ( pAttrDef_SupplyCrateSeries && pEconItemDefinition->GetItemClass() && !Q_stricmp( pEconItemDefinition->GetItemClass(), "supply_crate" ) && !pEconItemDefinition->GetCollectionReference() )
+	if ( pAttrDef_SupplyCrateSeries && pEconItemDefinition->GetItemClass() && V_strieq( pEconItemDefinition->GetItemClass(), "supply_crate" ) && !pEconItemDefinition->GetCollectionReference() )
 	{
 		// It's a crate, find a series #
 		uint32 unSupplyCrateSeries;
@@ -1043,7 +1043,7 @@ static void GenerateLocalizedFullItemName
 	locchar_t szDynamicRecipeOutputName[ kToolApplicationNameLength ] = LOCCHAR("");
 
 	static CSchemaAttributeDefHandle pAttribDef_ToolTarget( "tool target item" );
-	if( pAttribDef_ToolTarget && pEconItem->GetItemDefinition()->GetItemClass() && !Q_stricmp( pEconItem->GetItemDefinition()->GetItemClass(), "tool" ) )
+	if( pAttribDef_ToolTarget && pEconItem->GetItemDefinition()->GetItemClass() && V_strieq( pEconItem->GetItemDefinition()->GetItemClass(), "tool" ) )
 	{
 		// It's a tool, see if it has a tool target item attribute
 		float flItemDef;
@@ -1420,7 +1420,7 @@ void CEconItemDescription::Generate_ItemLevelDesc_Default( const CLocalizationPr
 				bLimitedQuantity = pEconItem->FindAttribute( pAttrDef_LimitedQuantityItem );
 
 #if defined( TF_CLIENT_DLL )
-				if ( pEconItem->GetItemDefinition()->GetItemClass() && V_strcmp( pEconItem->GetItemDefinition()->GetItemClass(), "map_token" ) == 0 )
+				if ( pEconItem->GetItemDefinition()->GetItemClass() && V_streq( pEconItem->GetItemDefinition()->GetItemClass(), "map_token" ) )
 				{
 					// For map stamps on the client we can show how many hours they've played each map
 					// And how many times they've donated to it instead of the generic "level"
@@ -2560,7 +2560,7 @@ const CEconItemDefinition *GetPaintItemDefinitionForPaintedItem( const IEconItem
 
 		// ignore everything that is not a paint can tool
 		const IEconTool *pEconTool = pItemDef->GetEconTool();
-		if ( pEconTool && !V_strcmp( pEconTool->GetTypeName(), "paint_can" ) ) 
+		if ( pEconTool && V_streq( pEconTool->GetTypeName(), "paint_can" ) ) 
 		{
 			attrib_value_t unPaintRGBAttrCompareBits;
 			if ( FindAttribute( pItemDef, pAttribDef_Paint, &unPaintRGBAttrCompareBits ) && unPaintRGBAttrCompareBits == unPaintRGBAttrBits )
@@ -2681,7 +2681,7 @@ void CEconItemDescription::Generate_Uses( const CLocalizationProvider *pLocaliza
 		return;
 
 	int iQuantity = pEconItem->GetQuantity();
-	bool bIsTool = pItemDef->GetItemClass() && !Q_strcmp( pItemDef->GetItemClass(), "tool" );
+	bool bIsTool = pItemDef->GetItemClass() && V_streq( pItemDef->GetItemClass(), "tool" );
 	bool bIsConsumable = ( pItemDef->GetCapabilities() & ITEM_CAP_USABLE_GC ) != 0 && iQuantity != 0;	
 
 	if ( bIsTool || bIsConsumable )
@@ -2712,7 +2712,7 @@ void CEconItemDescription::Generate_LootListDesc( const CLocalizationProvider *p
 	// Don't add this description if the item is a special crate type.
 	const IEconTool *pEconTool = pItemDef->GetEconTool();
 	const bool bIsRestrictedCrate = pEconTool && pEconTool->GetUsageRestriction()
-								  ? !V_stricmp( pEconTool->GetUsageRestriction(), "winter" ) || !V_stricmp( pEconTool->GetUsageRestriction(), "summer" )
+								  ? V_strieq( pEconTool->GetUsageRestriction(), "winter" ) || V_strieq( pEconTool->GetUsageRestriction(), "summer" )
 								  : false;
 
 	if ( bIsRestrictedCrate )
@@ -3579,7 +3579,7 @@ void CEconItemDescription::Generate_DirectX8Warning( const CLocalizationProvider
 #ifdef CLIENT_DLL
 	static ConVarRef mat_dxlevel( "mat_dxlevel" );
 	const CEconItemDefinition *pEconItemDefinition = pEconItem->GetItemDefinition();
-	// If less than 90, we’re in DX8 mode. 
+	// If less than 90, we're in DX8 mode. 
 	// Display warning if you are looking at a painthit item or case
 	if ( mat_dxlevel.GetInt() < 90 && pEconItemDefinition && ( pEconItemDefinition->GetItemCollectionDefinition() || pEconItemDefinition->GetCollectionReference() ) )
 	{

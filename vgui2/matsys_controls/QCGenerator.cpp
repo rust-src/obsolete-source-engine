@@ -198,7 +198,7 @@ void QCInfo::SyncToControls()
 	for( int i = 0; i < numItems; i++ )
 	{
 		((ComboBox *)pTargetField)->GetItemText( i, tempText );
-		if ( !Q_strcmp( tempText, pszSurfaceProperty ) )
+		if ( V_streq( tempText, pszSurfaceProperty ) )
 		{
 			((ComboBox *)pTargetField)->SetItemEnabled( i, true );
 			((ComboBox *)pTargetField)->SetText( tempText );
@@ -221,7 +221,7 @@ CBrowseButton::~CBrowseButton()
 
 void CBrowseButton::SetCharVar( char **pVar, const char *pszNewText )
 {
-	if ( *pVar && pszNewText && !Q_strcmp( *pVar, pszNewText ) )
+	if ( *pVar && pszNewText && V_streq( *pVar, pszNewText ) )
 	{
 		return;
 	}
@@ -266,7 +266,7 @@ static const char *ParseKeyvalue( const char *pBuffer, char (&key)[size], char (
 	Q_strlower( key );
 
 	// no value on a close brace
-	if ( !Q_strcmp( key, "}" ) )
+	if ( V_streq( key, "}" ) )
 	{
 		value[0] = 0;
 		return pBuffer;
@@ -365,7 +365,7 @@ CQCGenerator::CQCGenerator( vgui::Panel *pParent, const char *pszPath, const cha
 				{
 					szSurfacePropContents = ParseKeyvalue( szSurfacePropContents, key, value );
 
-					if (!stricmp( key, "}" ) )
+					if (V_streq( key, "}" ) )
 					{
 						break;
 					}
@@ -397,17 +397,17 @@ CQCGenerator::~CQCGenerator()
 
 void CQCGenerator::OnCommand( const char *command )
 {	
-	if ( Q_stricmp( command, "createQC" ) == 0 )
+	if ( V_strieq( command, "createQC" ) )
 	{
 		m_QCInfo_t.SyncFromControls();
 		GenerateQCFile();
 	}
-	if ( Q_stricmp( command, "deleteSeq" ) == 0 )
+	if ( V_strieq( command, "deleteSeq" ) )
 	{
 		//delete it
 		DeleteLOD();
 	}
-	if ( Q_stricmp( command, "editSeq" ) == 0 )
+	if ( V_strieq( command, "editSeq" ) )
 	{
 		//edit
 		EditLOD();
@@ -563,7 +563,7 @@ bool CQCGenerator::GenerateQCFile()
 		}
 		else 
 		{
-			if( Q_strcmp( m_QCInfo_t.pszCollisionPath, "" ) )
+			if( !Q_isempty( m_QCInfo_t.pszCollisionPath ) )
 			{
 				g_pFullFileSystem->FPrintf( pSaveFile, "$collisionmodel \"%s\"", strrchr( m_QCInfo_t.pszCollisionPath, '\\' ) + 1 );
 			}
@@ -617,8 +617,8 @@ bool CQCGenerator::GenerateQCFile()
 	}
 	else
 	{
-		CloseHandle( process.hThread );
-		CloseHandle( process.hProcess );
+		RunCodeAtScopeExit( CloseHandle( process.hThread ) );
+		RunCodeAtScopeExit( CloseHandle( process.hProcess ) );
 	}
 #else
 	AssertMsg( false, "Implement me, why aren't we using a thread tool abstraction?" );

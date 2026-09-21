@@ -187,14 +187,14 @@ void CInputSystem::InitializeJoysticks( void )
 
 	// assume no joystick
 	m_nJoystickCount = 0;
-	memset( m_pJoystickInfo, 0, sizeof( m_pJoystickInfo ) );
+	BitwiseClear( m_pJoystickInfo );
 	for ( auto &joy : m_pJoystickInfo )
 	{
 		joy.m_nDeviceId = std::numeric_limits<unsigned>::max();
 	}
 
 	// abort startup if user requests no joystick
-	if ( CommandLine()->FindParm("-nojoy") ) return;
+	if ( CommandLine()->HasParm("-nojoy") ) return;
 
 	const char *controllerConfig = joy_gamecontroller_config.GetString();
 	if ( !Q_isempty(controllerConfig) )

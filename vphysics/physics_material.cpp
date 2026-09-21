@@ -114,7 +114,7 @@ private:
 //-----------------------------------------------------------------------------
 // Purpose: This is the main database of materials
 //-----------------------------------------------------------------------------
-class CPhysicsSurfaceProps : public IPhysicsSurfacePropsInternal
+class CPhysicsSurfaceProps final : public IPhysicsSurfacePropsInternal
 {
 public:
 	CPhysicsSurfaceProps( void );
@@ -186,7 +186,7 @@ CPhysicsSurfaceProps::CPhysicsSurfaceProps() : m_strings( 0, 32, true ), m_fileL
 	m_ivpManager.Init( this );
 	// Force index 0 to be the empty string.  Allows game code to check for zero, but
 	// still resolve to a string
-	m_strings.AddString("");
+	(void)m_strings.AddString("");
 	m_init = false;
 	m_shadowFallback = 0;
 }
@@ -349,7 +349,7 @@ const char *CPhysicsSurfaceProps::GetReservedMaterialName( int materialIndex ) c
 
 intp CPhysicsSurfaceProps::GetReservedSurfaceIndex( const char *pPropertyName ) const
 {
-	if ( !Q_stricmp( pPropertyName, "$MATERIAL_INDEX_SHADOW" ) )
+	if ( V_strieq( pPropertyName, "$MATERIAL_INDEX_SHADOW" ) )
 	{
 		return MATERIAL_INDEX_SHADOW;
 	}
@@ -403,7 +403,8 @@ intp CPhysicsSurfaceProps::ParseSurfaceData( const char *pFileName, const char *
 {
 	if ( !AddFileToDatabase( pFileName ) )
 	{
-		return 0;
+		// dimhotepus: Breaking change. Return actual existing props count if file already parsed.
+		return m_props.Count();
 	}
 
 	const char *pText = pTextfile;
@@ -413,10 +414,10 @@ intp CPhysicsSurfaceProps::ParseSurfaceData( const char *pFileName, const char *
 		char key[MAX_KEYVALUE], value[MAX_KEYVALUE];
 
 		pText = ParseKeyvalue( pText, key, value );
-		if ( !strcmp(value, "{") )
+		if ( V_streq(value, "{") )
 		{
 			CSurface prop;
-			memset( &prop.data, 0, sizeof(prop.data) );
+			BitwiseClear( prop.data );
 			prop.m_name = m_strings.AddString( key );
 			intp baseMaterial = GetSurfaceIndex( key );
 			if ( baseMaterial < 0 )
@@ -429,7 +430,7 @@ intp CPhysicsSurfaceProps::ParseSurfaceData( const char *pFileName, const char *
 			do
 			{
 				pText = ParseKeyvalue( pText, key, value );
-				if ( !strcmpi( key, "}" ) )
+				if ( V_streq( key, "}" ) )
 				{
 					// already in the database, don't add again, override values instead
 					const char *pOverride = m_strings.String(prop.m_name);
@@ -444,117 +445,124 @@ intp CPhysicsSurfaceProps::ParseSurfaceData( const char *pFileName, const char *
 					m_props.AddToTail( prop );
 					break;
 				}
-				else if ( !strcmpi( key, "base" ) )
+				else if ( V_strieq( key, "base" ) )
 				{
 					baseMaterial = GetSurfaceIndex( value );
 					CopyPhysicsProperties( &prop, baseMaterial );
 				}
-				else if ( !strcmpi( key, "thickness" ) )
+				else if ( V_strieq( key, "thickness" ) )
 				{
 					prop.data.physics.thickness = strtof(value, nullptr);
 				}
-				else if ( !strcmpi( key, "density" ) )
+				else if ( V_strieq( key, "density" ) )
 				{
 					prop.data.physics.density = strtof(value, nullptr);
 				}
-				else if ( !strcmpi( key, "elasticity" ) )
+				else if ( V_strieq( key, "elasticity" ) )
 				{
 					prop.data.physics.elasticity = strtof(value, nullptr);
 				}
-				else if ( !strcmpi( key, "friction" ) )
+				else if ( V_strieq( key, "friction" ) )
 				{
 					prop.data.physics.friction = strtof(value, nullptr);
 				}
-				else if ( !strcmpi( key, "maxspeedfactor" ) )
+				else if ( V_strieq( key, "maxspeedfactor" ) )
 				{
 					prop.data.game.maxSpeedFactor = strtof(value, nullptr);
 				}
-				else if ( !strcmpi( key, "jumpfactor" ) )
+				else if ( V_strieq( key, "jumpfactor" ) )
 				{
 					prop.data.game.jumpFactor = strtof(value, nullptr);
 				}
-				else if ( !strcmpi( key, "climbable" ) )
+				else if ( V_strieq( key, "climbable" ) )
 				{
-					prop.data.game.climbable = atoi(value);
+					const int climbable = atoi(value);
+					Assert(climbable >= 0 && climbable <= std::numeric_limits<byte>::max());
+					prop.data.game.climbable = static_cast<byte>( climbable );
 				}
 				// audio parameters
-				else if ( !strcmpi( key, "audioReflectivity" ) )
+				else if ( V_strieq( key, "audioReflectivity" ) )
 				{
 					prop.data.audio.reflectivity = strtof(value, nullptr);
 				}
-				else if ( !strcmpi( key, "audioHardnessFactor" ) )
+				else if ( V_strieq( key, "audioHardnessFactor" ) )
 				{
 					prop.data.audio.hardnessFactor = strtof(value, nullptr);
 				}
-				else if ( !strcmpi( key, "audioHardMinVelocity" ) )
+				else if ( V_strieq( key, "audioHardMinVelocity" ) )
 				{
 					prop.data.audio.hardVelocityThreshold = strtof(value, nullptr);
 				}
-				else if ( !strcmpi( key, "audioRoughnessFactor" ) )
+				else if ( V_strieq( key, "audioRoughnessFactor" ) )
 				{
 					prop.data.audio.roughnessFactor = strtof(value, nullptr);
 				}
-				else if ( !strcmpi( key, "scrapeRoughThreshold" ) )
+				else if ( V_strieq( key, "scrapeRoughThreshold" ) )
 				{
 					prop.data.audio.roughThreshold = strtof(value, nullptr);
 				}
-				else if ( !strcmpi( key, "impactHardThreshold" ) )
+				else if ( V_strieq( key, "impactHardThreshold" ) )
 				{
 					prop.data.audio.hardThreshold = strtof(value, nullptr);
 				}
 				// sound names
-				else if ( !strcmpi( key, "stepleft" ) )
+				else if ( V_strieq( key, "stepleft" ) )
 				{
 					prop.data.sounds.stepleft = m_strings.AddString( value );
 				}
-				else if ( !strcmpi( key, "stepright" ) )
+				else if ( V_strieq( key, "stepright" ) )
 				{
 					prop.data.sounds.stepright = m_strings.AddString( value );
 				}
-				else if ( !strcmpi( key, "impactsoft" ) )
+				else if ( V_strieq( key, "impactsoft" ) )
 				{
 					prop.data.sounds.impactSoft = m_strings.AddString( value );
 				}
-				else if ( !strcmpi( key, "impacthard" ) )
+				else if ( V_strieq( key, "impacthard" ) )
 				{
 					prop.data.sounds.impactHard = m_strings.AddString( value );
 				}
-				else if ( !strcmpi( key, "scrapesmooth" ) )
+				else if ( V_strieq( key, "scrapesmooth" ) )
 				{
 					prop.data.sounds.scrapeSmooth = m_strings.AddString( value );
 				}
-				else if ( !strcmpi( key, "scraperough" ) )
+				else if ( V_strieq( key, "scraperough" ) )
 				{
 					prop.data.sounds.scrapeRough = m_strings.AddString( value );
 				}
-				else if ( !strcmpi( key, "bulletimpact" ) )
+				else if ( V_strieq( key, "bulletimpact" ) )
 				{
 					prop.data.sounds.bulletImpact = m_strings.AddString( value );
 				}
-				else if ( !strcmpi( key, "break" ) )
+				else if ( V_strieq( key, "break" ) )
 				{
 					prop.data.sounds.breakSound = m_strings.AddString( value );
 				}
-				else if ( !strcmpi( key, "strain" ) )
+				else if ( V_strieq( key, "strain" ) )
 				{
 					prop.data.sounds.strainSound = m_strings.AddString( value );
 				}
-				else if ( !strcmpi( key, "rolling" ) )
+				else if ( V_strieq( key, "rolling" ) )
 				{
 					prop.data.sounds.rolling = m_strings.AddString( value );
 				}
-				else if ( !strcmpi( key, "gamematerial" ) )
+				else if ( V_strieq( key, "gamematerial" ) )
 				{
-					if ( strlen(value) == 1 && !V_isdigit( value[0]) )
+					// dimhotepus: Speedup single char check.
+					const bool isSingleChar = !Q_isempty(value) && value[1] == '\0';
+					if ( isSingleChar && !V_isdigit( value[0]) )
 					{
-						prop.data.game.material = toupper(value[0]);
+						// dimhotepus: toupper -> V_toupper.
+						prop.data.game.material = V_toupper(value[0]);
 					}
 					else
 					{
-						prop.data.game.material = atoi(value);
+						const int material = atoi(value);
+						Assert(material >= 0 && material <= std::numeric_limits<unsigned short>::max());
+						prop.data.game.material = static_cast<unsigned short>( material );
 					}
 				}
-				else if ( !strcmpi( key, "dampening" ) )
+				else if ( V_strieq( key, "dampening" ) )
 				{
 					prop.data.physics.dampening = strtof(value, nullptr);
 				}
@@ -573,8 +581,8 @@ intp CPhysicsSurfaceProps::ParseSurfaceData( const char *pFileName, const char *
 		//AddReservedMaterials
 		CSurface prop;
 		
-		int baseMaterial = GetSurfaceIndex( "default" );
-		memset( &prop.data, 0, sizeof(prop.data) );
+		intp baseMaterial = GetSurfaceIndex( "default" );
+		BitwiseClear( prop.data );
 		prop.m_name = m_strings.AddString( GetReservedMaterialName(MATERIAL_INDEX_SHADOW) );
 		CopyPhysicsProperties( &prop, baseMaterial );
 		prop.data.physics.elasticity = 1e-3f;

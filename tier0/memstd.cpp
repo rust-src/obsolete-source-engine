@@ -24,7 +24,7 @@
 // at catching memory stomps.
 #if defined( _WIN64 )
 
-	#define FORCE_PROCESS_HEAP
+#define FORCE_PROCESS_HEAP
 
 #elif defined( _WIN32 )
 // Define this to force using the OS Heap* functions for allocations. This is useful
@@ -1398,7 +1398,7 @@ void ReserveBottomMemory()
 	// heap (and dlmalloc and the small block heap) from grabbing address space
 	// from the bottom 4 GiB, while still allowing Steam to allocate a few pages
 	// for setting up detours.
-	const size_t LOW_MEM_LINE = 0x100000000LL;
+	constexpr size_t LOW_MEM_LINE = 0x100000000LL;
 	size_t totalReservation = 0;
 	size_t numVAllocs = 0;
 	size_t numHeapAllocs = 0;
@@ -1410,7 +1410,7 @@ void ReserveBottomMemory()
 			if ( !p )
 				break;
 
-			if ( (size_t)p >= LOW_MEM_LINE )
+			if ( reinterpret_cast<size_t>( p ) >= LOW_MEM_LINE )
 			{
 				// We don't need this memory, so release it completely.
 				VirtualFree( p, 0, MEM_RELEASE );
@@ -1434,7 +1434,7 @@ void ReserveBottomMemory()
 			if ( !p )
 				break;
 
-			if ( (size_t)p >= LOW_MEM_LINE )
+			if ( reinterpret_cast<size_t>( p ) >= LOW_MEM_LINE )
 			{
 				// We don't need this memory, so release it completely.
 				HeapFree( heap, 0, p );
@@ -1451,11 +1451,16 @@ void ReserveBottomMemory()
 	// 85 heap allocs. Note that since the process may have multiple heaps (each
 	// CRT seems to have its own) there is likely to be a few MiB of address space
 	// that was previously reserved and is available to be handed out by some allocators.
-	//char buffer[1000];
-	//sprintf_s( buffer, "Reserved %1.3f MiB (%d vallocs, %d heap allocs) to keep allocations out of low-memory.\n",
-	//			totalReservation / (1024 * 1024.0), (int)numVAllocs, (int)numHeapAllocs );
+	char buffer[1000];
+	snprintf(
+		buffer,
+		std::size(buffer),
+		"[tier0] Reserved %1.3f MiB (%zu vallocs, %zu heap allocs) to keep allocations out of low-memory in x64.\n",
+		totalReservation / (1024 * 1024.0),
+		numVAllocs,
+		numHeapAllocs );
 	// Can't use Msg here because it isn't necessarily initialized yet.
-	//OutputDebugString( buffer );
+	Plat_DebugString( buffer );
 #endif
 }
 

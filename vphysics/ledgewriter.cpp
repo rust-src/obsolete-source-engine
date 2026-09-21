@@ -106,7 +106,8 @@ static void PackLedgeIntoBuffer( packedhull_t *pHull, CUtlBuffer &buf, const IVP
 	CUtlVector<intp> edgeList, edgeMap;
 	vertmap_t vertMap;
 	BuildVertMap( vertMap, list.pVerts, list.vertexCount, pLedge );
-	pHull->baseVert = vertMap.minRef;
+	Assert(vertMap.minRef <= std::numeric_limits<byte>::max());
+	pHull->baseVert = static_cast<byte>( vertMap.minRef );
 	// clear the maps
 	triangleMap.EnsureCount(pLedge->get_n_triangles());
 	for ( auto& t : triangleMap )
@@ -136,7 +137,8 @@ static void PackLedgeIntoBuffer( packedhull_t *pHull, CUtlBuffer &buf, const IVP
 			triangleMap[i] = triangleList.AddToTail(i);
 		}
 	}
-	pHull->vtriCount = triangleList.Count();
+	Assert(triangleList.Count() <= std::numeric_limits<byte>::max());
+	pHull->vtriCount = static_cast<byte>( triangleList.Count() );
 	for ( int i = 0; i < pLedge->get_n_triangles(); i++ )
 	{
 		const IVP_Compact_Triangle *pTri = pLedge->get_first_triangle() + i;
@@ -158,7 +160,9 @@ static void PackLedgeIntoBuffer( packedhull_t *pHull, CUtlBuffer &buf, const IVP
 			}
 		}
 	}
-	pHull->vedgeCount = edgeList.Count();
+	
+	Assert(edgeList.Count() <= std::numeric_limits<byte>::max());
+	pHull->vedgeCount = static_cast<byte>( edgeList.Count() );
 
 	for ( int i = 0; i < pLedge->get_n_triangles(); i++ )
 	{
@@ -184,20 +188,32 @@ static void PackLedgeIntoBuffer( packedhull_t *pHull, CUtlBuffer &buf, const IVP
 	// now write the packed triangles
 	for ( int i = 0; i < pHull->triangleCount; i++ )
 	{
-		packedtriangle_t tri;
 		const IVP_Compact_Triangle *pTri = pLedge->get_first_triangle() + triangleList[i];
-		const IVP_Compact_Edge *pEdge;
-		pEdge = pTri->get_edge(0);
-		tri.opposite = triangleMap[pTri->get_pierce_index()];
-		Assert(tri.opposite<pHull->triangleCount);
-		tri.e0 = edgeMap[EdgeIndex(pLedge, pEdge)];
+		
+		packedtriangle_t tri;
+		const intp opposite = triangleMap[pTri->get_pierce_index()];
+		Assert(opposite < (intp)pHull->triangleCount);
+		tri.opposite = static_cast<byte>(opposite);
+		
+		const IVP_Compact_Edge *pEdge = pTri->get_edge(0);
+		const intp e0 = edgeMap[EdgeIndex(pLedge, pEdge)];
+		Assert(e0 <= std::numeric_limits<byte>::max());
+		tri.e0 = static_cast<byte>( e0 );
+
 		pEdge = pTri->get_edge(1);
-		tri.e1 = edgeMap[EdgeIndex(pLedge, pEdge)];
+		const intp e1 = edgeMap[EdgeIndex(pLedge, pEdge)];
+		Assert(e1 <= std::numeric_limits<byte>::max());
+		tri.e1 = static_cast<byte>( e1 );
+
 		pEdge = pTri->get_edge(2);
-		tri.e2 = edgeMap[EdgeIndex(pLedge, pEdge)];
+		const intp e2 = edgeMap[EdgeIndex(pLedge, pEdge)];
+		Assert(e2 <= std::numeric_limits<byte>::max());
+		tri.e2 = static_cast<byte>( e2 );
+
 		Assert(tri.e0<pHull->edgeCount);
 		Assert(tri.e1<pHull->edgeCount);
 		Assert(tri.e2<pHull->edgeCount);
+
 		buf.Put(&tri, sizeof(tri));
 	}
 	// now write the packed edges
@@ -211,8 +227,8 @@ static void PackLedgeIntoBuffer( packedhull_t *pHull, CUtlBuffer &buf, const IVP
 		int v1 = vertMap.map[pEdge->get_next()->get_start_point_index()] - pHull->baseVert;
 		Assert(v0>=0 && v0<256);
 		Assert(v1>=0 && v1<256);
-		edge.v0 = v0;
-		edge.v1 = v1;
+		edge.v0 = static_cast<byte>(v0);
+		edge.v1 = static_cast<byte>(v1);
 		buf.Put(&edge, sizeof(edge));
 	}
 }
@@ -342,8 +358,9 @@ virtualmeshhull_t *CVPhysicsVirtualMeshWriter::CreatePackedHullFromLedges( const
 	if ( 1 )
 	{
 		virtualmeshhull_t tmp;
-		Q_memset( &tmp, 0, sizeof(tmp) );
-		tmp.hullCount = ledgeCount;
+		BitwiseClear( tmp );
+		Assert(ledgeCount <= std::numeric_limits<byte>::max());
+		tmp.hullCount = static_cast<byte>( ledgeCount );
 		buf.Put(&tmp, sizeof(tmp));
 	}
 
@@ -353,8 +370,10 @@ virtualmeshhull_t *CVPhysicsVirtualMeshWriter::CreatePackedHullFromLedges( const
 	for ( int i = 0; i < ledgeCount; i++ )
 	{
 		pHulls[i] = (packedhull_t *)buf.PeekPut();
+		const short triangleCount{pLedges[i]->get_n_triangles()};
 		packedhull_t hull;
-		hull.triangleCount = pLedges[i]->get_n_triangles();
+		Assert(triangleCount <= std::numeric_limits<byte>::max());
+		hull.triangleCount = static_cast<byte>( triangleCount );
 		hull.edgeCount = (hull.triangleCount * 3) / 2;
 		buf.Put(&hull, sizeof(hull));
 	}

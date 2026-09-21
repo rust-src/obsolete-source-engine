@@ -370,7 +370,7 @@ public:
 		FOR_EACH_VEC( m_vecLadderLeaderboards, i )
 		{
 			CLeaderboardInfo *pInfo = m_vecLadderLeaderboards[i];
-			if ( pszName && pInfo && !V_strcmp( pszName, pInfo->GetLeaderboardName() ) )
+			if ( pszName && pInfo && V_streq( pszName, pInfo->GetLeaderboardName() ) )
 			{
 				return pInfo;
 			}
@@ -492,7 +492,7 @@ public:
 
 	virtual void FireGameEvent( IGameEvent *event )
 	{
-		if ( Q_strcmp( event->GetName(), "item_schema_initialized" ) != 0 )
+		if ( !V_streq( event->GetName(), "item_schema_initialized" ) )
 			return;
 
 		for ( int i = 0; i < GetItemSchema()->GetMapCount(); i++ )

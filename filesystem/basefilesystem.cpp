@@ -79,7 +79,7 @@ static void LogFileOpen( const char *vpk, const char *pFilename, const char *pAb
 	// Figure out if we should be doing this at all, the first time we are acalled
 	if ( mode == nullptr )
 	{
-		if ( CommandLine()->FindParm( "-log_opened_files" ) )
+		if ( CommandLine()->HasParm( "-log_opened_files" ) )
 			mode = "wt";
 		else
 			mode = "";
@@ -374,7 +374,7 @@ void CBaseFileSystem::Shutdown()
 
 	if( m_pLogFile )
 	{
-		if( CommandLine()->FindParm( "-fs_logbins" ) >= 0 )
+		if( CommandLine()->HasParm( "-fs_logbins" ) )
 		{
 			char cwd[MAX_FILEPATH];
 			if( !getcwd( cwd, MAX_FILEPATH-1 ) ) 
@@ -719,7 +719,7 @@ void CBaseFileSystem::AddVPKFile( char const *pPath, const char *pPathID, Search
 	for ( auto &s : m_SearchPaths )
 	{
 		CPackedStoreRefCount *p = s.GetPackedStore();
-		if ( p && V_stricmp( p->FullPathName(), nameBuf ) == 0 )
+		if ( p && V_strieq( p->FullPathName(), nameBuf ) )
 		{
 			// Already present
 			if ( s.GetPath() == pathIDSym )
@@ -776,7 +776,7 @@ bool CBaseFileSystem::RemoveVPKFile( const char *pPath, const char *pPathID )
 	for ( intp i = 0; i < m_SearchPaths.Count(); i++ )
 	{
 		CPackedStoreRefCount *p = m_SearchPaths[i].GetPackedStore();
-		if ( p && V_stricmp( p->FullPathName(), nameBuf ) == 0 )
+		if ( p && V_strieq( p->FullPathName(), nameBuf ) )
 		{
 			// remove if we find one
 			if ( m_SearchPaths[i].GetPath() == pathIDSym )
@@ -879,7 +879,7 @@ void CBaseFileSystem::AddPackFiles( const char *pPath, const CUtlSymbol &pathID,
 	{
 		char pakfile[MAX_PATH];
 		char fullpath[MAX_PATH];
-		V_snprintf( pakfile, sizeof( pakfile ), PACK_NAME_FORMAT, i );
+		V_sprintf_safe( pakfile, PACK_NAME_FORMAT, i );
 		V_ComposeFileName( pPath, pakfile, fullpath );
 
 		struct _stat buf;
@@ -889,34 +889,9 @@ void CBaseFileSystem::AddPackFiles( const char *pPath, const CUtlSymbol &pathID,
 		MEM_ALLOC_CREDIT();
 
 		pakNames.AddToTail( pakfile );
-		pakSizes.AddToTail( (int64)((unsigned int)buf.st_size) );
+		// dimhotepus: Correctly compute pak size.
+		pakSizes.AddToTail( (int64)buf.st_size );
 	}
-
-#if defined( _X360 )
-	// localized zips are added last to ensure they appear first in the search path construction
-	// localized zips can only appear in the game or mod directories
-	bool bUseEnglishAudio = XboxLaunch()->GetForceEnglish();
-
-	if ( XBX_IsLocalized() && ( bUseEnglishAudio == false ) && 
-		 ( V_stricmp( g_PathIDTable.String( pathID ), "game" ) == 0 || V_stricmp( g_PathIDTable.String( pathID ), "mod" ) == 0 ) )
-	{
-		// determine localized pak files, [zip0_language..zipN_language]
-		for ( int i = 0; ; i++ )
-		{
-			char pakfile[MAX_PATH];
-			char fullpath[MAX_PATH];
-			V_snprintf( pakfile, sizeof( pakfile ), PACK_LOCALIZED_NAME_FORMAT, i, XBX_GetLanguageString() );
-			V_ComposeFileName( pPath, pakfile, fullpath );
-
-			struct _stat buf;
-			if ( FS_stat( fullpath, &buf ) == -1 )
-				break;
-
-			pakNames.AddToTail( pakfile );
-			pakSizes.AddToTail( (int64)((unsigned int)buf.st_size) );
-		}
-	}
-#endif
 
 	// Add any zip files in the format zip1.zip ... zip0.zip
 	// Add them backwards so zip(N) is higher priority than zip(N-1), etc.
@@ -947,7 +922,7 @@ void CBaseFileSystem::AddPackFiles( const char *pPath, const CUtlSymbol &pathID,
 		CPackFile *pf = nullptr;
 		for ( auto *p : m_ZipFiles )
 		{
-			if ( !Q_stricmp( p->m_ZipName.Get(), fullpath ) )
+			if ( V_strieq( p->m_ZipName.Get(), fullpath ) )
 			{
 				pf = p;
 				sp->SetPackFile( pf );
@@ -1031,7 +1006,7 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 
 	// Security nightmares already, should not let things explicitly loading from e.g. "MOD" get surprise untrusted
 	// files unless you really really know what you're doing.
-	AssertMsg( V_strcasecmp( pPathID, "GAME" ) == 0,
+	AssertMsg( V_strieq( pPathID, "GAME" ),
 	           "Mounting map files anywhere besides GAME is asking for pain" );
 
 	char newPath[ MAX_FILEPATH ];
@@ -1062,7 +1037,7 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 		if ( !( sp.GetPackFile() && sp.GetPackFile()->m_bIsMapPath ) )
 			continue;
 		
-		if ( V_stricmp( sp.GetPackFile()->m_ZipName.Get(), fullpath ) == 0 )
+		if ( V_strieq( sp.GetPackFile()->m_ZipName.Get(), fullpath ) )
 		{
 			// Already set as map path
 			return;
@@ -1079,7 +1054,7 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 	// preserved this ZIP across a map reload via refcount holding
 	for ( auto *pf : m_ZipFiles )
 	{
-		if ( pf && pf->m_bIsMapPath && pf->GetPath() == pathSymbol && V_stricmp( pf->m_ZipName.Get(), fullpath ) == 0 )
+		if ( pf && pf->m_bIsMapPath && pf->GetPath() == pathSymbol && V_strieq( pf->m_ZipName.Get(), fullpath ) )
 		{
 			CSearchPath *sp = &m_SearchPaths[ ( addType == PATH_ADD_TO_TAIL ) ? m_SearchPaths.AddToTail() : m_SearchPaths.AddToHead() ];
 			pf->AddRef();
@@ -1103,7 +1078,7 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 	
 		// Get the .bsp file header
 		dheader_t header;
-		memset( &header, 0, sizeof(dheader_t) );
+		BitwiseClear( header );
 		m_Stats.nBytesRead += FS_fread( &header, sizeof( header ), fp );
 		++m_Stats.nReads;
 	
@@ -1313,7 +1288,7 @@ void CBaseFileSystem::AddSearchPathInternal( const char *pPath, const char *path
 	}
 
 	// dimhotepus: As Raphael suggested, cache base path here.
-	if ( V_strcmp( pathID, "BASE_PATH" ) == 0 )
+	if ( V_streq( pathID, "BASE_PATH" ) )
 	{
 		V_strcpy_safe( m_pBaseDir, newPath );
 		m_iBaseLength = V_strlen( m_pBaseDir );
@@ -1527,7 +1502,7 @@ void CBaseFileSystem::RemoveSearchPaths( const char *pathID )
 	intp nCount = m_SearchPaths.Count();
 	for (intp i = nCount - 1; i >= 0; i--)
 	{
-		if (!Q_stricmp(m_SearchPaths.Element(i).GetPathIDString(), pathID))
+		if (V_strieq(m_SearchPaths.Element(i).GetPathIDString(), pathID))
 		{
 			m_SearchPaths.FastRemove(i);
 		}
@@ -1575,9 +1550,9 @@ const char *CBaseFileSystem::GetWritePath( const char *pFilename, const char *pa
 	{
 
 		// Check for "game_write" and "mod_write"
-		if ( V_stricmp( pathID, "game" ) == 0 )
+		if ( V_strieq( pathID, "game" ) )
 			pSearchPath = FindWritePath( pFilename, "game_write" );
-		else if ( V_stricmp( pathID, "mod" ) == 0 )
+		else if ( V_strieq( pathID, "mod" ) )
 			pSearchPath = FindWritePath( pFilename, "mod_write" );
 
 		if ( pSearchPath == nullptr )
@@ -1991,9 +1966,7 @@ public:
 		m_AbsolutePath[0] = '\0';
 	}
 	
-	~CFileOpenInfo()
-	{
-	}
+	~CFileOpenInfo() = default;
 	
 	void SetAbsolutePath( const char *pFormat, ... )
 	{
@@ -2085,13 +2058,10 @@ void CBaseFileSystem::HandleOpenRegularFile( CFileOpenInfo &openInfo, bool bIsAb
 
 		if ( m_bOutputDebugString )
 		{
-#ifdef _WIN32
+			// dimhotepus: Use Plat_DebugString everywhere.
 			Plat_DebugString( "fs_debug: " );
 			Plat_DebugString( openInfo.m_AbsolutePath );
 			Plat_DebugString( "\n" );
-#elif POSIX
-			fprintf(stderr, "fs_debug: %s\n", openInfo.m_AbsolutePath );
-#endif
 		}
 
 		openInfo.m_pFileHandle = new CFileHandle(this);
@@ -2187,7 +2157,7 @@ FileHandle_t CBaseFileSystem::OpenForRead( const char *pFileNameT, const char *p
 	FixUpPath ( pFileNameT, pFileNameBuff );
 
 	// Try the memory cache for un-restricted searches or "GAME" items.
-	if ( !pathID || Q_stricmp( pathID, "GAME" ) == 0 )
+	if ( !pathID || V_strieq( pathID, "GAME" ) )
 	{
 		CMemoryFileBacking* pBacking = nullptr;
 		{
@@ -2259,7 +2229,7 @@ FileHandle_t CBaseFileSystem::OpenForRead( const char *pFileNameT, const char *p
 					CPackedStore *pVPK = m_SearchPaths[i].GetPackedStore();
 					if ( pVPK )
 					{
-						if ( V_stricmp( pVPK->FullPathName(), openInfo.m_AbsolutePath ) == 0 )
+						if ( V_strieq( pVPK->FullPathName(), openInfo.m_AbsolutePath ) )
 						{
 							CPackedStoreFileHandle fHandle = pVPK->OpenFile( pRelativeFileName );
 							if ( fHandle )
@@ -2277,7 +2247,7 @@ FileHandle_t CBaseFileSystem::OpenForRead( const char *pFileNameT, const char *p
 				CPackFile *pPackFile = m_SearchPaths[i].GetPackFile();
 				if ( pPackFile )
 				{
-					if ( Q_stricmp( pPackFile->m_ZipName.Get(), openInfo.m_AbsolutePath ) == 0 )
+					if ( V_strieq( pPackFile->m_ZipName.Get(), openInfo.m_AbsolutePath ) )
 					{
 						openInfo.m_pSearchPath = &m_SearchPaths[i];
 						openInfo.m_pFileHandle = pPackFile->OpenFile( pRelativeFileName, openInfo.m_pOptions );
@@ -2392,7 +2362,7 @@ void CBaseFileSystem::ParsePathID( const char* &pFilename, const char* &pPathID,
 {
 	tempPathID[0] = 0;
 	
-	if ( !pFilename || pFilename[0] == 0 )
+	if ( Q_isempty( pFilename ) )
 		return;
 
 	// FIXME: Pain! Backslashes are used to denote network drives, forward to denote path ids
@@ -2624,14 +2594,14 @@ time_t CBaseFileSystem::FastFileTime( const CSearchPath *path, const char *pFile
 
 		V_FixSlashes( pTmpFileName );
 
-		if( FS_stat( pTmpFileName, &buf ) != -1 )
+		if ( FS_stat( pTmpFileName, &buf ) != -1 )
 		{
 			return buf.st_mtime;
 		}
 #ifdef LINUX
 		char caseFixedName[ MAX_PATH ];
-		bool found = findFileInDirCaseInsensitive_safe( pTmpFileName, caseFixedName );
-		if ( found && FS_stat( caseFixedName, &buf ) != -1 )
+		if ( findFileInDirCaseInsensitive_safe( pTmpFileName, caseFixedName ) &&
+		     FS_stat( caseFixedName, &buf ) != -1 )
 		{
 			return buf.st_mtime;
 		}
@@ -2890,7 +2860,7 @@ void CBaseFileSystem::SetupPreloadData()
 	}
 
 #ifndef DEDICATED
-	if ( !CommandLine()->FindParm( "-fs_nopreloaddata" ) )
+	if ( !CommandLine()->HasParm( "-fs_nopreloaddata" ) )
 	{
 		char fn[MAX_PATH];
 		// Loads in the precompiled keyvalues data for each type
@@ -3325,11 +3295,11 @@ bool CBaseFileSystem::CheckVPKFileHash( int PackFileID, int nPackFileNumber, int
 			pVPK->GetPackFileName( fhandle, szFileName );
 
 			char hex[ 34 ];
-			Q_memset( hex, 0, sizeof( hex ) );
+			BitwiseClear( hex );
 			V_binarytohex( md5Value.bits, hex );
 
 			char hex2[ 34 ];
-			Q_memset( hex2, 0, sizeof( hex2 ) );
+			BitwiseClear( hex2 );
 			V_binarytohex( fileHashFraction.m_md5contents.bits, hex2 );
 
 			if ( Q_memcmp( fileHashFraction.m_md5contents.bits, md5Value.bits, sizeof(md5Value.bits) ) != 0 )
@@ -3478,8 +3448,11 @@ void CBaseFileSystem::FileTimeToString( OUT_Z_CAP(maxChars) char *pString, intp 
 	{
 		pString[ len - 1 ] = '\0';
 	}
-
-	pString[maxChars - 1] = '\0';
+	else
+	{
+		// dimhotepus: zero terminate if not already zero-terminated.
+		pString[ maxChars - 1 ] = '\0';
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -3629,7 +3602,7 @@ bool CBaseFileSystem::IsDirectory( const char *pFileName, const char *pathID )
 
 			for ( auto *dir : outDir )
 			{
-				if ( !V_stricmp( dir, pFileName ) )
+				if ( V_strieq( dir, pFileName ) )
 					return true;
 			}
 		}
@@ -3788,7 +3761,7 @@ const char *CBaseFileSystem::FindFirstHelper( const char *pWildCardT, const char
 				//            looking for misc files suddenly finding them in the (untrusted) BSP and causing security
 				//            nightmares. For now, restricting FindFirst() support to BSPs only when the BSP search path
 				//            is explicitly requested, but this would otherwise work fine.
-				if ( !pPathID || V_strcmp( pPathID, "BSP" ) != 0 )
+				if ( !pPathID || !V_streq( pPathID, "BSP" ) )
 				{
 					continue;
 				}
@@ -3906,7 +3879,7 @@ bool CBaseFileSystem::FindNextFileHelper( FindData_t *pFindData, int *pFoundStor
 			//            looking for misc files suddenly finding them in the (untrusted) BSP and causing security
 			//            nightmares. For now, restricting FindFirst() support to BSPs only when the BSP search path
 			//            is explicitly requested, but this would otherwise work fine.
-			if ( !pFindData->m_FilterPathID || V_strcmp( g_PathIDTable.String( pFindData->m_FilterPathID ), "BSP" ) != 0 )
+			if ( !pFindData->m_FilterPathID || !V_streq( g_PathIDTable.String( pFindData->m_FilterPathID ), "BSP" ) )
 			{
 				continue;
 			}
@@ -4018,7 +3991,7 @@ bool CBaseFileSystem::FindIsDirectory( FileFindHandle_t handle )
 //-----------------------------------------------------------------------------
 void CBaseFileSystem::FindClose( FileFindHandle_t handle )
 {
-	if ( ( handle < 0 ) || ( !m_FindData.IsInList( handle ) ) )
+	if ( !m_FindData.IsInList( handle ) )
 		return;
 
 	FindData_t *pFindData = &m_FindData[handle];
@@ -4328,18 +4301,21 @@ bool CBaseFileSystem::GetCaseCorrectFullPath_Ptr( const char *pFullPath, OUT_Z_C
 	strSearchPath += "*";
 
 	CUtlString strFoundCaseCorrectName;
-	FileFindHandle_t findHandle = FILESYSTEM_INVALID_FIND_HANDLE;
-	const char *pszCaseCorrectName = FindFirst( strSearchPath.Get(), &findHandle );
-	while ( pszCaseCorrectName )
 	{
-		if ( V_stricmp( strSearchName.String(), pszCaseCorrectName ) == 0 )
+		FileFindHandle_t findHandle = FILESYSTEM_INVALID_FIND_HANDLE;
+		const char *pszCaseCorrectName = FindFirst( strSearchPath.Get(), &findHandle );
+		RunCodeAtScopeExit(FindClose( findHandle ));
+
+		while ( pszCaseCorrectName )
 		{
-			strFoundCaseCorrectName = pszCaseCorrectName;
-			break;
+			if ( V_strieq( strSearchName.String(), pszCaseCorrectName ) )
+			{
+				strFoundCaseCorrectName = pszCaseCorrectName;
+				break;
+			}
+			pszCaseCorrectName = FindNext( findHandle );
 		}
-		pszCaseCorrectName = FindNext( findHandle );
 	}
-	FindClose( findHandle );
 
 	// Not found
 	if ( strFoundCaseCorrectName.IsEmpty() )
@@ -4538,17 +4514,22 @@ void CBaseFileSystem::Warning( FileWarningLevel_t level, PRINTF_FORMAT_STRING co
 	V_vsprintf_safe( warningtext, fmt, argptr );
 	va_end( argptr );
 
-	// Dump to stdio
-	fprintf( stderr, "%s", warningtext );
 	if ( m_pfnWarning )
 	{
 		(*m_pfnWarning)( warningtext );
 	}
 	else
 	{
+		// dimhotepus: Only fallback to this if no warning function.
+		// Dump to stdio
 #ifdef _WIN32
-		Plat_DebugString( warningtext );
+		// dimhotepus: On Windows Plat_DebugString dumps to debug output only,
+		// so need explicit.
+		fprintf(stderr, "%s", warningtext);
 #endif
+		// dimhotepus: On *nix it dumps to stderr.
+		Plat_DebugString("[fs] ");
+		Plat_DebugString(warningtext);
 	}
 }
 
@@ -4576,11 +4557,33 @@ CBaseFileSystem::COpenedFile::COpenedFile( const COpenedFile& src ) : m_pName{nu
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : src - 
+//-----------------------------------------------------------------------------
+CBaseFileSystem::COpenedFile& CBaseFileSystem::COpenedFile::operator=( COpenedFile src ) {
+	using std::swap;
+
+	swap( *this, src );
+
+	return *this;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : src - 
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
 bool CBaseFileSystem::COpenedFile::operator==( const CBaseFileSystem::COpenedFile& src ) const
 {
 	return src.m_pFile == m_pFile;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : src - 
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool CBaseFileSystem::COpenedFile::operator!=( const CBaseFileSystem::COpenedFile& src ) const
+{
+	return !(src == *this);
 }
 
 //-----------------------------------------------------------------------------
@@ -4974,7 +4977,7 @@ FileCacheHandle_t CBaseFileSystem::CreateFileCache( )
 void CBaseFileSystem::AddFilesToFileCache( FileCacheHandle_t cacheId, const char **ppFileNames, int nFileNames, const char *pPathID )
 {
 	// For now, assuming that we're only used with GAME.
-	Assert( pPathID && V_strcasecmp( pPathID, "GAME" ) == 0 );
+	Assert( pPathID && V_strieq( pPathID, "GAME" ) );
 	return static_cast< CFileCacheObject * >( cacheId )->AddFiles( ppFileNames, nFileNames );
 }
 

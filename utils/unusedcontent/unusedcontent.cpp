@@ -690,19 +690,21 @@ void BuildFileList_R( int depth, CUtlVector< FileEntry >& files, CUtlVector< Fil
 	HANDLE ff;
 
 	bool canrecurse = true;
-	if ( !Q_stricmp( wild, "..." ) )
+	if ( V_streq( wild, "..." ) )
 	{
 		canrecurse = true;
-		sprintf( directory, "%s%s%s", dir[0] == '\\' ? dir + 1 : dir, dir[0] != 0 ? "\\" : "", "*.*" );
+		V_sprintf_safe( directory, "%s%s%s", dir[0] == '\\' ? dir + 1 : dir, dir[0] != 0 ? "\\" : "", "*.*" );
 	}
 	else
 	{
-		sprintf( directory, "%s%s%s", dir, dir[0] != 0 ? "\\" : "", wild );
+		V_sprintf_safe( directory, "%s%s%s", dir, dir[0] != 0 ? "\\" : "", wild );
 	}
 	int dirlen = Q_strlen( dir );
 
 	if ( ( ff = FindFirstFile( directory, &wfd ) ) == INVALID_HANDLE_VALUE )
 		return;
+
+	RunCodeAtScopeExit(FindClose( ff ));
 
 	do
 	{
@@ -727,23 +729,23 @@ void BuildFileList_R( int depth, CUtlVector< FileEntry >& files, CUtlVector< Fil
 			// Recurse down directory
 			if ( dir[0] )
 			{
-				sprintf( filename, "%s\\%s", dir, wfd.cFileName );
+				V_sprintf_safe( filename, "%s\\%s", dir, wfd.cFileName );
 			}
 			else
 			{
-				sprintf( filename, "%s", wfd.cFileName );
+				V_sprintf_safe( filename, "%s", wfd.cFileName );
 			}
 			BuildFileList_R( depth + 1, useOtherFiles ? *otherfiles: files, NULL, filename, wild, skipchars );
 		}
 		else
 		{
-			if (!stricmp(wfd.cFileName, "vssver.scc"))
+			if (V_strieq(wfd.cFileName, "vssver.scc"))
 				continue;
 
 			char filename[ MAX_PATH ];
 			if ( dirlen <= skipchars )
 			{
-				Q_snprintf( filename, sizeof( filename ), "%s", wfd.cFileName );
+				V_strcpy_safe( filename, wfd.cFileName );
 			}
 			else
 			{
@@ -795,7 +797,7 @@ bool ShouldCheckDir( char const *dirname )
 	{
 		char const *check = g_Analysis.symbols.String( g_DirList[ i ] );
 
-		if ( !Q_stricmp( dirname, check ) )
+		if ( V_strieq( dirname, check ) )
 			return true;
 	}
 
@@ -816,7 +818,7 @@ bool ShouldIgnoreDir( const char *dirname )
 			return true;
 		}
 
-		if ( !Q_stricmp( dirname, check ) )
+		if ( V_strieq( dirname, check ) )
 		{
 			vprint( 1, "Ignoring dir %s\n", dirname );
 			return true;
@@ -858,11 +860,11 @@ void BuildCheckdirList()
 			{
 				for ( KeyValues *sub = kv->GetFirstSubKey(); sub; sub = sub->GetNextKey() )
 				{
-					if ( !Q_stricmp( sub->GetName(), "dir" ) )
+					if ( V_strieq( sub->GetName(), "dir" ) )
 					{
 						AddCheckdir( sub->GetString() );
 					}
-					else if ( !Q_stricmp( sub->GetName(), "ignore" ) )
+					else if ( V_strieq( sub->GetName(), "ignore" ) )
 					{
 						AddIgnoredir( sub->GetString() );
 					}
@@ -996,11 +998,11 @@ void BuildWhiteList()
 		{
 			for ( KeyValues *sub = kv->GetFirstSubKey(); sub; sub = sub->GetNextKey() )
 			{
-				if ( !Q_stricmp( sub->GetName(), "add" ) )
+				if ( V_strieq( sub->GetName(), "add" ) )
 				{
 					AddToWhiteList( sub->GetString() );
 				}
-				else if ( !Q_stricmp( sub->GetName(), "remove" ) )
+				else if ( V_strieq( sub->GetName(), "remove" ) )
 				{
 					RemoveFromWhiteList( sub->GetString() );
 				}
@@ -1084,10 +1086,11 @@ void ParseFilesFromResList( UnusedContent::CUtlSymbol & resfilesymbol, CUtlRBTre
 	if ( !Q_StripLastDir( basedir, sizeof( basedir ) ) )
 		Error( "Can't get basedir from %s.", gamedir );
 
-	FileHandle_t resfilehandle;
-	resfilehandle = g_pFileSystem->Open( resfile, "rb" );
-	if ( FILESYSTEM_INVALID_HANDLE != resfilehandle )
+	FileHandle_t resfilehandle = g_pFileSystem->Open( resfile, "rb" );
+	if ( resfilehandle )
 	{
+		RunCodeAtScopeExit( g_pFileSystem->Close(resfilehandle) );
+
 		// Read in the entire file
 		int length = g_pFileSystem->Size(resfilehandle);
 		if ( length > 0 )
@@ -1107,7 +1110,7 @@ void ParseFilesFromResList( UnusedContent::CUtlSymbol & resfilesymbol, CUtlRBTre
 					if ( !pFileList )
 						break;
 
-					if ( strlen( token ) > 0 )
+					if ( !Q_isempty( token ) )
 					{
 						char szFileName[ 256 ];
 						Q_snprintf( szFileName, sizeof( szFileName ), "%s%s", basedir, token );
@@ -1151,8 +1154,6 @@ void ParseFilesFromResList( UnusedContent::CUtlSymbol & resfilesymbol, CUtlRBTre
 			}
 			delete[] pStart;
 		}
-
-		g_pFileSystem->Close(resfilehandle);
 	}
 
 	int filesFound = addedStrings;
@@ -1165,9 +1166,14 @@ bool BuildReferencedFileList( CUtlVector< UnusedContent::CUtlSymbol >& resfiles,
 	char token[COM_TOKEN_MAX_LENGTH];
 
 	// Load the reslist file
-	FileHandle_t resfilehandle;
-	resfilehandle = g_pFileSystem->Open( resfile, "rb" );
-	if ( FILESYSTEM_INVALID_HANDLE != resfilehandle )
+	FileHandle_t resfilehandle = g_pFileSystem->Open( resfile, "rb" );
+	if ( !resfilehandle )
+	{
+		Error( "Unable to open reslist file '%s'.\n", resfile );
+		exit( -1 );
+	}
+	RunCodeAtScopeExit( g_pFileSystem->Close(resfilehandle) );
+
 	{
 		// Read in and parse mapcycle.txt
 		int length = g_pFileSystem->Size(resfilehandle);
@@ -1180,18 +1186,17 @@ bool BuildReferencedFileList( CUtlVector< UnusedContent::CUtlSymbol >& resfiles,
 				pStart[ length ] = 0;
 
 				char *pFileList = pStart;
+				char szResList[ 256 ];
 
 				while ( 1 )
 				{
-					char szResList[ 256 ];
-
 					pFileList = COM_Parse( pFileList, token );
 					if ( Q_isempty( token ) )
 						break;
 
-					Q_snprintf(szResList, sizeof( szResList ), "%s%s.lst", g_szReslistDir, token );
-					_strlwr( szResList );
-					Q_FixSlashes( szResList );
+					V_sprintf_safe(szResList, "%s%s.lst", g_szReslistDir, token );
+					V_strlower( szResList );
+					V_FixSlashes( szResList );
 
 					if ( !g_pFileSystem->FileExists( szResList ) )
 					{
@@ -1199,20 +1204,11 @@ bool BuildReferencedFileList( CUtlVector< UnusedContent::CUtlSymbol >& resfiles,
 						continue;
 					}
 
-					UnusedContent::CUtlSymbol sym = g_Analysis.symbols.AddString( szResList );
-					resfiles.AddToTail( sym );
-
+					resfiles.AddToTail( g_Analysis.symbols.AddString( szResList ) );
 				}
 			}
 			delete[] pStart;
 		}
-
-		g_pFileSystem->Close(resfilehandle);
-	}
-	else
-	{
-		Error( "Unable to open reslist file %s\n", resfile );
-		exit( -1 );
 	}
 
 	if ( g_pFileSystem->FileExists( CFmtStr( "%sall.lst", g_szReslistDir ) ) )
@@ -1237,17 +1233,13 @@ bool BuildReferencedFileList( CUtlVector< UnusedContent::CUtlSymbol >& resfiles,
 
 	vprint( 0, "Parsed %i reslist files\n", resfiles.Count() );
 
+	char fn[ MAX_PATH ];
 	// Now load in each res file
-	int c = resfiles.Count();
-	for ( int i = 0; i < c; ++i )
+	for ( auto &filename : resfiles )
 	{
-		UnusedContent::CUtlSymbol& filename = resfiles[ i ];
-		char fn[ 256 ];
-		Q_strncpy( fn, g_Analysis.symbols.String( filename ), sizeof( fn ) );
-
+		V_strcpy_safe( fn, g_Analysis.symbols.String( filename ) );
 		ParseFilesFromResList( filename, files, fn );
 	}
-
 
 	return true;
 }
@@ -1641,7 +1633,7 @@ int main( int argc, char* argv[] )
 				break;
 			case 'g':
 				// Just skip -game
-				Assert( !Q_stricmp( argv[ i ], "-game" ) );
+				Assert( V_strieq( argv[ i ], "-game" ) );
 				++i;
 				break;
 			case 'f':
@@ -1678,7 +1670,7 @@ int main( int argc, char* argv[] )
 	vprint( 0, "    Looking for extraneous content...\n" );
 
 	char resfile[ 256 ];
-	strcpy( resfile, argv[ i - 1 ] );
+	V_strcpy_safe( resfile, argv[ i - 1 ] );
 
 	vprint( 0, "    Comparing results of resfile (%s) with files under current directory...\n",	resfile );
 

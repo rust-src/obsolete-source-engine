@@ -29,7 +29,7 @@ int main( int argc, char *argv[] )
 {
 	if ( argc < 2 )
 	{
-		printf( g_UsageString );
+		fprintf( stderr, g_UsageString );
 		return 0;
 	}
 
@@ -41,11 +41,11 @@ int main( int argc, char *argv[] )
 	// parse the arguments
 	for ( int count = 1; count < argc; count++ )
 	{
-		if ( !stricmp( argv[count], "-permap" ) )
+		if ( V_strieq( argv[count], "-permap" ) )
 		{
 			printPerMap = true;
 		}
-		else if ( !stricmp( argv[count], "-onlyent" ) )
+		else if ( V_strieq( argv[count], "-onlyent" ) )
 		{
 			count++;
 			if ( count < argc )
@@ -53,7 +53,7 @@ int main( int argc, char *argv[] )
 				filterEnt = argv[count];
 			}
 		}
-		else if ( !stricmp( argv[count], "-fgd" ) )
+		else if ( V_strieq( argv[count], "-fgd" ) )
 		{
 			count++;
 			if ( count < argc )
@@ -61,7 +61,7 @@ int main( int argc, char *argv[] )
 				fgdFile = argv[count];
 			}
 		}
-		else if ( !stricmp( argv[count], "-files" ) )
+		else if ( V_strieq( argv[count], "-files" ) )
 		{
 			count++;
 			if ( count < argc )
@@ -69,13 +69,13 @@ int main( int argc, char *argv[] )
 				fileMask = argv[count];
 			}
 		}
-		else if ( !stricmp( argv[count], "-nofgd" ) )
+		else if ( V_strieq( argv[count], "-nofgd" ) )
 		{
 		}
 		else
 		{
-			printf( "error: unknown parameter \"%s\"\n", argv[count] );
-			printf( g_UsageString );
+			fprintf( stderr, "error: unknown parameter \"%s\"\n", argv[count] );
+			fprintf( stderr, g_UsageString );
 			return 1;
 		}
 	}
@@ -89,7 +89,7 @@ int main( int argc, char *argv[] )
 		FILE *f = fopen( fgdFile, "rb" );
 		if ( !f )
 		{
-			printf( "error: could not open file %s\n", fgdFile );
+			fprintf( stderr, "error: could not open file %s\n", fgdFile );
 			return 2;
 		}
 
@@ -116,13 +116,13 @@ int main( int argc, char *argv[] )
 
 	// parse through all the bsp files
 	_finddata_t fileinfo;
-	int FHandle = _findfirst( fileMask, &fileinfo );
-	
+	intptr_t FHandle = _findfirst( fileMask, &fileinfo );
 	if ( FHandle == -1 )
 	{
-		printf( "error: no files found in current directory\n" );
+		fprintf( stderr, "error: no files found in current directory\n" );
 		return 1;
 	}
+	RunCodeAtScopeExit(_findclose( FHandle ));
 
 	SetSearchWord( "\"classname\"" );
 
@@ -131,7 +131,7 @@ int main( int argc, char *argv[] )
 		FILE *f = fopen( fileinfo.name, "rb" );
 		if ( !f )
 		{
-			printf( "error: couldn't open file %s\n", fileinfo.name );
+			fprintf( stderr, "error: couldn't open file %s\n", fileinfo.name );
 			return 2;
 		}
 
@@ -161,7 +161,7 @@ int main( int argc, char *argv[] )
 			ParseToken( bufpos, Token );
 
 			// add the word to the list, filtering if necessary
-			if ( !filterEnt || !stricmp(filterEnt, Token) )
+			if ( !filterEnt || V_strieq(filterEnt, Token) )
 			{
 				AddToTable( Token );
 				entFound = true;
@@ -238,7 +238,7 @@ void AddToTable( const char *name )
 	// search for it in the table
 	for ( int i = 0; i < NumEnts;  i++ )
 	{
-		if ( EntNames[i] && !strcmp(EntNames[i], name) )
+		if ( EntNames[i] && V_streq(EntNames[i], name) )
 		{
 			// it's already in the table
 			// increment the usage count

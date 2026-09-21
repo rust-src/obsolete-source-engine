@@ -845,7 +845,7 @@ CHudCloseCaption::CHudCloseCaption( const char *pElementName )
 	uilanguage[0] = 0;
 	engine->GetUILanguage( uilanguage, sizeof( uilanguage ) );
 
-	if ( !Q_stricmp( uilanguage, "english" ) )
+	if ( V_strieq( uilanguage, "english" ) )
 	{
 		english.SetValue( 1 );
 	}
@@ -2094,10 +2094,10 @@ public:
 	void AddRandomToken( CUtlVector< AsyncCaption_t >& directories )
 	{
 		intp dc = directories.Count();
-		int fileindex = RandomInt( 0, dc - 1 );
+		intp fileindex = RandomIntp( 0, dc - 1 );
 
 		intp c = directories[ fileindex ].m_CaptionDirectory.Count();
-		int idx = RandomInt( 0, c - 1 );
+		intp idx = RandomIntp( 0, c - 1 );
 
 		caption_t *caption = new caption_t;
 		char foo[ 16 ];
@@ -2539,7 +2539,7 @@ void CHudCloseCaption::Flush()
 
 void CHudCloseCaption::InitCaptionDictionary( const char *dbfile )
 {
-	if ( m_CurrentLanguage.IsValid() && !Q_stricmp( m_CurrentLanguage.String(), dbfile ) )
+	if ( m_CurrentLanguage.IsValid() && V_strieq( m_CurrentLanguage.String(), dbfile ) )
 		return;
 
 	m_CurrentLanguage = dbfile;
@@ -2570,9 +2570,11 @@ void CHudCloseCaption::InitCaptionDictionary( const char *dbfile )
 			Q_strncpy( fullpath, fullpath360, sizeof( fullpath ) );
 		}
 
-        FileHandle_t fh = filesystem->Open( fullpath, "rb" );
-		if ( FILESYSTEM_INVALID_HANDLE != fh )
+		FileHandle_t fh = filesystem->Open( fullpath, "rb" );
+		if ( fh )
 		{
+			RunCodeAtScopeExit(filesystem->Close( fh ));
+
 			MEM_ALLOC_CREDIT();
 
 			CUtlBuffer dirbuffer;
@@ -2580,7 +2582,7 @@ void CHudCloseCaption::InitCaptionDictionary( const char *dbfile )
 			AsyncCaption_t& entry = m_AsyncCaptions[ m_AsyncCaptions.AddToTail() ];
 
 			// Read the header
-			filesystem->Read( &entry.m_Header, sizeof( entry.m_Header ), fh );
+			filesystem->Read( entry.m_Header, fh );
 			if ( entry.m_Header.magic != COMPILED_CAPTION_FILEID )
 				Error( "Invalid file id for %s\n", fullpath );
 			if ( entry.m_Header.version != COMPILED_CAPTION_VERSION )
@@ -2595,7 +2597,6 @@ void CHudCloseCaption::InitCaptionDictionary( const char *dbfile )
 			dirbuffer.EnsureCapacity( directoryBytes );
 			
 			filesystem->Read( dirbuffer.Base(), directoryBytes, fh );
-			filesystem->Close( fh );
 
 			entry.m_CaptionDirectory.CopyArray( (const CaptionLookup_t *)dirbuffer.PeekGet(), entry.m_Header.directorysize );
 			entry.m_CaptionDirectory.RedoSort( true );
@@ -2840,9 +2841,10 @@ void CHudCloseCaption::FindSound( char const *pchANSI )
 				nLoadedBlock = blockNum;
 
 				FileHandle_t fh = filesystem->Open( fn, "rb" );
+				RunCodeAtScopeExit(filesystem->Close( fh ));
+
 				filesystem->Seek( fh, params.blockoffset, FILESYSTEM_SEEK_CURRENT );
 				filesystem->Read( block, data.m_Header.blocksize, fh );
-				filesystem->Close( fh );
 			}
 
 			// Now we have the data

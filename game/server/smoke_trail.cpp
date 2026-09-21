@@ -24,7 +24,7 @@ IMPLEMENT_SERVERCLASS_ST(SmokeTrail, DT_SmokeTrail)
 	SendPropFloat(SENDINFO(m_SpawnRate), 8, 0, 1, 1024),
 	SendPropVector(SENDINFO(m_StartColor), 8, 0, 0, 1),
 	SendPropVector(SENDINFO(m_EndColor), 8, 0, 0, 1),
-	SendPropFloat(SENDINFO(m_ParticleLifetime), 16, SPROP_ROUNDUP, 0.1, 100),
+	SendPropFloat(SENDINFO(m_ParticleLifetime), 16, SPROP_ROUNDUP, 0.1f, 100),
 	SendPropFloat(SENDINFO(m_StopEmitTime), 0, SPROP_NOSCALE),
 	SendPropFloat(SENDINFO(m_MinSpeed), -1, SPROP_NOSCALE),
 	SendPropFloat(SENDINFO(m_MaxSpeed), -1, SPROP_NOSCALE),
@@ -180,7 +180,7 @@ IMPLEMENT_SERVERCLASS_ST(RocketTrail, DT_RocketTrail)
 	SendPropFloat(SENDINFO(m_SpawnRate), 8, 0, 1, 1024),
 	SendPropVector(SENDINFO(m_StartColor), 8, 0, 0, 1),
 	SendPropVector(SENDINFO(m_EndColor), 8, 0, 0, 1),
-	SendPropFloat(SENDINFO(m_ParticleLifetime), 16, SPROP_ROUNDUP, 0.1, 100),
+	SendPropFloat(SENDINFO(m_ParticleLifetime), 16, SPROP_ROUNDUP, 0.1f, 100),
 	SendPropFloat(SENDINFO(m_StopEmitTime), 0, SPROP_NOSCALE),
 	SendPropFloat(SENDINFO(m_MinSpeed), -1, SPROP_NOSCALE),
 	SendPropFloat(SENDINFO(m_MaxSpeed), -1, SPROP_NOSCALE),
@@ -301,7 +301,7 @@ void RocketTrail::FollowEntity( CBaseEntity *pEntity, const char *pAttachmentNam
 IMPLEMENT_SERVERCLASS_ST( SporeTrail, DT_SporeTrail )
 	SendPropFloat	(SENDINFO(m_flSpawnRate), 8, 0, 1, 1024),
 	SendPropVector	(SENDINFO(m_vecEndColor), 8, 0, 0, 1),
-	SendPropFloat	(SENDINFO(m_flParticleLifetime), 16, SPROP_ROUNDUP, 0.1, 100),
+	SendPropFloat	(SENDINFO(m_flParticleLifetime), 16, SPROP_ROUNDUP, 0.1f, 100),
 	SendPropFloat	(SENDINFO(m_flStartSize), -1, SPROP_NOSCALE),
 	SendPropFloat	(SENDINFO(m_flEndSize), -1, SPROP_NOSCALE),
 	SendPropFloat	(SENDINFO(m_flSpawnRadius), -1, SPROP_NOSCALE),
@@ -366,7 +366,7 @@ SporeTrail* SporeTrail::CreateSporeTrail()
 
 IMPLEMENT_SERVERCLASS_ST( SporeExplosion, DT_SporeExplosion )
 	SendPropFloat	(SENDINFO(m_flSpawnRate), 8, 0, 1, 1024),
-	SendPropFloat	(SENDINFO(m_flParticleLifetime), 16, SPROP_ROUNDUP, 0.1, 100),
+	SendPropFloat	(SENDINFO(m_flParticleLifetime), 16, SPROP_ROUNDUP, 0.1f, 100),
 	SendPropFloat	(SENDINFO(m_flStartSize), -1, SPROP_NOSCALE),
 	SendPropFloat	(SENDINFO(m_flEndSize), -1, SPROP_NOSCALE),
 	SendPropFloat	(SENDINFO(m_flSpawnRadius), -1, SPROP_NOSCALE),
@@ -530,7 +530,7 @@ CFireTrail *CFireTrail::CreateFireTrail( void )
 IMPLEMENT_SERVERCLASS_ST(DustTrail, DT_DustTrail)
 	SendPropFloat(SENDINFO(m_SpawnRate), 8, 0, 1, 1024),
 	SendPropVector(SENDINFO(m_Color), 8, 0, 0, 1),
-	SendPropFloat(SENDINFO(m_ParticleLifetime), 16, SPROP_ROUNDUP, 0.1, 100),
+	SendPropFloat(SENDINFO(m_ParticleLifetime), 16, SPROP_ROUNDUP, 0.1f, 100),
 	SendPropFloat(SENDINFO(m_StopEmitTime), 0, SPROP_NOSCALE),
 	SendPropFloat(SENDINFO(m_MinSpeed), -1, SPROP_NOSCALE),
 	SendPropFloat(SENDINFO(m_MaxSpeed), -1, SPROP_NOSCALE),

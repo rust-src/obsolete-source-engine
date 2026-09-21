@@ -535,7 +535,7 @@ public:
 		else if ( eCanGameDLLProvide == IServerGameDLL::eCanProvideLevel_CanProvide )
 		{
 			// See if the game dll fixed up the map name
-			return ( V_strcmp( szOriginalName, pMapName ) == 0 ) ? eFindMap_Found : eFindMap_NonCanonical;
+			return V_streq( szOriginalName, pMapName ) ? eFindMap_Found : eFindMap_NonCanonical;
 		}
 
 		AssertMsg( eCanGameDLLProvide == IServerGameDLL::eCanProvideLevel_CannotProvide,
@@ -543,7 +543,7 @@ public:
 
 		char szDiskName[MAX_PATH] = { 0 };
 		// Check if we can directly use this as a map
-		Host_DefaultMapFileName( pMapName, szDiskName, sizeof( szDiskName ) );
+		Host_DefaultMapFileName( pMapName, szDiskName );
 		if ( *szDiskName && modelloader->Map_IsValid( szDiskName, true ) )
 		{
 			return eFindMap_Found;
@@ -553,7 +553,7 @@ public:
 		char match[1][64] = { {0} };
 		if ( MapList_ListMaps( pMapName, false, false, 1, sizeof( match[0] ), match ) && *(match[0]) )
 		{
-			Host_DefaultMapFileName( match[0], szDiskName, sizeof( szDiskName ) );
+			Host_DefaultMapFileName( match[0], szDiskName );
 			if ( modelloader->Map_IsValid( szDiskName, true ) )
 			{
 				V_strncpy( pMapName, match[0], nMapNameMax );
@@ -920,7 +920,7 @@ public:
 		V_vsprintf_safe(szOut, szFmt, argptr);
 		va_end(argptr);
 
-		if ( szOut[0] == 0 )
+		if ( Q_isempty( szOut ) )
 		{
 			Warning( "ClientCommand, 0 length string supplied.\n" );
 			return;
@@ -1671,7 +1671,7 @@ class CVEngineServer22 : public CVEngineServer
 		// For users of the older interface, preserve here the old modelloader behavior of wrapping maps/%.bsp around
 		// the filename. This went away in newer interfaces since maps can now live in other places.
 		char szWrappedName[MAX_PATH] = { 0 };
-		V_snprintf( szWrappedName, sizeof( szWrappedName ), "maps/%s.bsp", filename );
+		V_sprintf_safe( szWrappedName, "maps/%s.bsp", filename );
 
 		return modelloader->Map_IsValid( szWrappedName );
 	}
@@ -1728,8 +1728,8 @@ void CVEngineServer::PlaybackTempEntity( IRecipientFilter& filter, float delay, 
 	classID = classID + 1;
 
 	// Encode now!
-	ALIGN4 unsigned char data[ CEventInfo::MAX_EVENT_DATA ] ALIGN4_POST;
-	bf_write buffer( "PlaybackTempEntity", data, sizeof(data) );
+	alignas(4) unsigned char data[ CEventInfo::MAX_EVENT_DATA ];
+	bf_write buffer( "PlaybackTempEntity", data );
 
 	// write all properties, if init or reliable message delta against zero values
 	if( !SendTable_Encode( pST, pSender, &buffer, classID, NULL, false ) )

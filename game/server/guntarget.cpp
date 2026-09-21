@@ -110,7 +110,7 @@ void CGunTarget::Spawn( void )
 	if ( HasSpawnFlags(FGUNTARGET_START_ON) )
 	{
 		SetMoveDone( &CGunTarget::Start );
-		SetMoveDoneTime( 0.3 );
+		SetMoveDoneTime( 0.3f );
 	}
 	CreateVPhysics();
 }

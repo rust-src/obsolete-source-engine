@@ -932,7 +932,7 @@ void CShadowMgr::ComputeSurfaceBounds( SurfaceBounds_t* pBounds, SurfaceHandle_t
 		pBounds->m_vecMaxs = MaxSIMD( pos4, pBounds->m_vecMaxs );
 	}
 
-	fltx4 eps = ReplicateX4( 1e-3 );
+	fltx4 eps = ReplicateX4( 1e-3f );
 	pBounds->m_vecMins = SetWToZeroSIMD( SubSIMD( pBounds->m_vecMins, eps ) );
 	pBounds->m_vecMaxs = SetWToZeroSIMD( AddSIMD( pBounds->m_vecMaxs, eps ) );
 	pBounds->m_vecCenter /= nCount;
@@ -1162,7 +1162,7 @@ void CShadowMgr::RemoveSurfaceFromShadow( ShadowHandle_t handle, SurfaceHandle_t
 	// Luckily the search is probably over only a couple items at most
 	// Linear searching over the shadow surfaces so we can remove the entry
 	// in the shadow surface list if we find a match
-	ASSERT_SURF_VALID( surfID );
+	(void)ASSERT_SURF_VALID( surfID );
 	ShadowSurfaceIndex_t i = m_Shadows[handle].m_FirstDecal;
 	while ( i != m_ShadowSurfaces.InvalidIndex() )
 	{
@@ -2314,7 +2314,7 @@ bool CShadowMgr::ComputeShadowVertices( ShadowDecal_t& decal,
 {
 	VPROF( "CShadowMgr::ComputeShadowVertices" );
 	// Prepare for the clipping
-	Vector **ppVec = (Vector**)stackalloc( MSurf_VertCount( decal.m_SurfID ) * sizeof(Vector*) );
+	Vector **ppVec = stackallocT( Vector*, MSurf_VertCount( decal.m_SurfID ) );
 	for (int i = 0; i < MSurf_VertCount( decal.m_SurfID ); ++i )
 	{
 		int vertIndex = host_state.worldbrush->vertindices[MSurf_FirstVertIndex( decal.m_SurfID )+i];

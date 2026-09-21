@@ -4,11 +4,14 @@
 //
 // $NoKeywords: $
 //=============================================================================//
-#include <assert.h>
-#include <time.h>
 #include "stdafx.h"
-#include <stdio.h>
+#include <cassert>
+#include <ctime>
+#include <cstdio>
 #include <windows.h>
+
+#include "tier0/platform.h"
+#include "tier1/strtools.h"
 #include "depcheck_util.h"
 #include "codeprocessor.h"
 
@@ -46,7 +49,7 @@ void CCodeProcessor::AddHeader( int depth, const char *filename, const char *roo
 	// Check header list
 	for ( int i = 0; i < m_nHeaderCount; i++ )
 	{
-		if ( !stricmp( m_Headers[ i ].name, filename ) )
+		if ( V_strieq( m_Headers[ i ].name, filename ) )
 		{
 			vprint( 0, "%s included twice in module %s\n", filename, rootmodule );
 			return;
@@ -54,7 +57,7 @@ void CCodeProcessor::AddHeader( int depth, const char *filename, const char *roo
 	}
 	
 	// Add to list
-	strcpy( m_Headers[ m_nHeaderCount++ ].name, filename );
+	V_strcpy_safe( m_Headers[ m_nHeaderCount++ ].name, filename );
 }
 
 void CCodeProcessor::CreateBackup( const char *filename, bool& wasreadonly )
@@ -74,7 +77,7 @@ void CCodeProcessor::CreateBackup( const char *filename, bool& wasreadonly )
 	}
 
 	char backupname[ 256 ];
-	strcpy( backupname, filename );
+	V_strcpy_safe( backupname, filename );
 	strcpy( (char *)&backupname[ strlen( filename ) - 4 ], ".bak" );
 
 	unlink( backupname );
@@ -87,7 +90,7 @@ void CCodeProcessor::RestoreBackup( const char *filename, bool makereadonly )
 	assert( strstr( filename, ".cpp" ) );
 
 	char backupname[ 256 ];
-	strcpy( backupname, filename );
+	V_strcpy_safe( backupname, filename );
 	strcpy( (char *)&backupname[ strlen( filename ) - 4 ], ".bak" );
 
 	SetFileAttributes( filename, FILE_ATTRIBUTE_NORMAL );
@@ -107,8 +110,7 @@ bool CCodeProcessor::TryBuild( const char *rootdir, const char *filename, unsign
 {
 //	vprintf( "trying build\n" );
 
-	FILE *fp;
-	fp = fopen( filename, "wb" );
+	FILE *fp = fopen( filename, "wb" );
 	if ( !fp )
 	{
 		assert( 0 );
@@ -124,61 +126,54 @@ bool CCodeProcessor::TryBuild( const char *rootdir, const char *filename, unsign
 	char commandline[ 512 ];
 	char directory[ 512 ];
 
-	sprintf( directory, rootdir );
+	V_sprintf_safe( directory, rootdir );
 
-	//	sprintf( commandline, "msdev engdll.dsw /MAKE \"quiver - Win32 GL Debug\" /OUT log.txt" );
+	//	V_sprintf_safe( commandline, "msdev engdll.dsw /MAKE \"quiver - Win32 GL Debug\" /OUT log.txt" );
 
 	// Builds the default configuration
-	sprintf( commandline, "\"C:\\Program Files\\Microsoft Visual Studio\\Common\\MSDev98\\Bin\\msdev.exe\" %s /MAKE \"%s\" /OUT log.txt", m_szDSP, m_szConfig );
+	V_sprintf_safe( commandline, "\"C:\\Program Files\\Microsoft Visual Studio\\Common\\MSDev98\\Bin\\msdev.exe\" %s /MAKE \"%s\" /OUT log.txt", m_szDSP, m_szConfig );
 
 	PROCESS_INFORMATION pi;
 	memset( &pi, 0, sizeof( pi ) );
 
-	STARTUPINFO si;
-	memset( &si, 0, sizeof( si ) );
-	si.cb = sizeof( si );
+	STARTUPINFO si = {static_cast<DWORD>(sizeof(si))};
 
 	if ( !CreateProcess( NULL, commandline, NULL, NULL, TRUE, 0, NULL, directory, &si, &pi ) )
 	{
-LPVOID lpMsgBuf;
-FormatMessage( 
-    FORMAT_MESSAGE_ALLOCATE_BUFFER | 
-    FORMAT_MESSAGE_FROM_SYSTEM | 
-    FORMAT_MESSAGE_IGNORE_INSERTS,
-    NULL,
-    GetLastError(),
-    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
-    (LPTSTR) &lpMsgBuf,
-    0,
-    NULL 
-);
-// Process any inserts in lpMsgBuf.
-// ...
-// Display the string.
-MessageBox( NULL, (LPCTSTR)lpMsgBuf, "Error", MB_OK | MB_ICONINFORMATION );
-// Free the buffer.
-LocalFree( lpMsgBuf );
+		LPVOID lpMsgBuf;
+		FormatMessage( 
+			FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+			FORMAT_MESSAGE_FROM_SYSTEM | 
+			FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL,
+			GetLastError(),
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
+			(LPTSTR) &lpMsgBuf,
+			0,
+			NULL 
+		);
+		// Process any inserts in lpMsgBuf.
+		// ...
+		// Display the string.
+		MessageBox( NULL, (LPCTSTR)lpMsgBuf, "Error", MB_OK | MB_ICONINFORMATION );
+		// Free the buffer.
+		LocalFree( lpMsgBuf );
 		return false;
 	}
+
+	RunCodeAtScopeExit(CloseHandle( pi.hThread ));
+	RunCodeAtScopeExit(CloseHandle( pi.hProcess ));
 
 	// Wait until child process exits.
     WaitForSingleObject( pi.hProcess, INFINITE );
 
-	bool retval = false;
-	DWORD exitCode = -1;
-	if ( GetExitCodeProcess( pi.hProcess, &exitCode ) )
+	// dimhotepus: Correctly process exit code for processes.
+	if ( DWORD rc; ::GetExitCodeProcess( pi.hProcess, &rc ) && rc != STILL_ACTIVE )
 	{
-		if ( !exitCode )
-		{
-			retval = true;
-		}
+		return rc == 0;
 	}
-	
-    // Close process and thread handles. 
-    CloseHandle( pi.hProcess );
-    CloseHandle( pi.hThread );
 
-	return retval;
+	return false;
 }
 
 void CCodeProcessor::ProcessModule( bool forcequiet, int depth, int& maxdepth, int& numheaders, int& skippedfiles, const char *baseroot, const char *root, const char *module )
@@ -193,8 +188,8 @@ void CCodeProcessor::ProcessModule( bool forcequiet, int depth, int& maxdepth, i
 	}
 
 	// Load the base module
-	sprintf( filename, "%s\\%s", root, module );
-	strlwr( filename );
+	V_sprintf_safe( filename, "%s\\%s", root, module );
+	V_strlower( filename );
 
 	bool firstheader = true;
 retry:
@@ -202,7 +197,7 @@ retry:
 	// Check module list
 	for ( int i = 0; i < m_nModuleCount; i++ )
 	{
-		if ( !stricmp( m_Modules[ i ].name, filename ) )
+		if ( V_strieq( m_Modules[ i ].name, filename ) )
 		{
 			if ( forcequiet )
 			{
@@ -229,11 +224,11 @@ retry:
 		{
 			checkroot = true;
 			// Load the base module
-			sprintf( filename, "%s\\%s", baseroot, module );
+			V_sprintf_safe( filename, "%s\\%s", baseroot, module );
 			goto retry;
 		}
 		m_Modules[ m_nModuleCount ].skipped = true;
-		strcpy( m_Modules[ m_nModuleCount++ ].name, filename );
+		V_strcpy_safe( m_Modules[ m_nModuleCount++ ].name, filename );
 		
 		skippedfiles++;
 		return;
@@ -242,7 +237,7 @@ retry:
 	m_nBytesProcessed += filelength;
 
 	m_Modules[ m_nModuleCount ].skipped = false;
-	strcpy( m_Modules[ m_nModuleCount++ ].name, filename );
+	V_strcpy_safe( m_Modules[ m_nModuleCount++ ].name, filename );
 
 	bool readonly = false;
 	bool madechanges = false;
@@ -250,7 +245,7 @@ retry:
 
 	if ( !forcequiet )
 	{
-		strcpy( m_szCurrentCPP, filename );
+		V_strcpy_safe( m_szCurrentCPP, filename );
 		
 		vprint( 0, "- %s\n", (char *)&filename[ m_nOffset ] );
 	}
@@ -263,16 +258,16 @@ retry:
 	while ( current )
 	{
 		// No more tokens
-		if ( strlen( com_token ) <= 0 )
+		if ( Q_isempty( com_token ) )
 			break;
 
-		if ( !stricmp( com_token, "#include" ) )
+		if ( V_strieq( com_token, "#include" ) )
 		{
 			startofline = current - strlen( "#include" );
 
 			current = CC_ParseToken( current );
 
-			if ( strlen( com_token ) > 0)
+			if ( !Q_isempty( com_token ) )
 			{
 				vprint( 1, "#include %s", com_token );
 				m_nHeadersProcessed++;
@@ -283,7 +278,7 @@ retry:
 				bool dobuild = true;
 				if ( firstheader )
 				{
-					if ( !stricmp( com_token, "cbase.h" ) )
+					if ( V_strieq( com_token, "cbase.h" ) )
 					{
 						dobuild = false;
 					}
@@ -432,11 +427,11 @@ char const *stristr( char const *src, char const *search )
 	char buf1[ 512 ];
 	char buf2[ 512 ];
 
-	strcpy( buf1, src );
-	_strlwr( buf1 );
+	V_strcpy_safe( buf1, src );
+	V_strlower( buf1 );
 
-	strcpy( buf2, search );
-	_strlwr( buf2 );
+	V_strcpy_safe( buf2, search );
+	V_strlower( buf2 );
 
 	char *p =  strstr( buf1, buf2 );
 	if ( p )
@@ -449,21 +444,22 @@ char const *stristr( char const *src, char const *search )
 
 void CCodeProcessor::ConstructModuleList_R( int level, const char *gamespecific, const char *root )
 {
-	char directory[ 256 ];
-	char filename[ 256 ];
-	WIN32_FIND_DATA wfd;
+	char filename[ MAX_PATH ];
+	
+	char directory[ MAX_PATH ];
+	V_sprintf_safe( directory, "%s\\*.*", root );
+
 	HANDLE ff;
-
-	sprintf( directory, "%s\\*.*", root );
-
+	WIN32_FIND_DATA wfd;
 	if ( ( ff = FindFirstFile( directory, &wfd ) ) == INVALID_HANDLE_VALUE )
 		return;
+
+	RunCodeAtScopeExit(FindClose( ff ));
 
 	do
 	{
 		if ( wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
 		{
-
 			if ( wfd.cFileName[ 0 ] == '.' )
 				continue;
 
@@ -472,7 +468,7 @@ void CCodeProcessor::ConstructModuleList_R( int level, const char *gamespecific,
 				continue;
 
 			// Recurse down directory
-			sprintf( filename, "%s\\%s", root, wfd.cFileName );
+			V_sprintf_safe( filename, "%s\\%s", root, wfd.cFileName );
 			ConstructModuleList_R( level+1, gamespecific, filename );
 		}
 		else
@@ -487,8 +483,8 @@ void CCodeProcessor::ConstructModuleList_R( int level, const char *gamespecific,
 
 void CCodeProcessor::Process( const char *gamespecific, const char *root, const char *dsp, const char *config )
 {
-	strcpy( m_szDSP, dsp );
-	strcpy( m_szConfig, config );
+	V_strcpy_safe( m_szDSP, dsp );
+	V_strcpy_safe( m_szConfig, config );
 
 	m_nBytesProcessed	= 0;
 	m_nFilesProcessed	= 0;

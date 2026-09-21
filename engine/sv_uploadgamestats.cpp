@@ -344,7 +344,7 @@ public:
 	// If user has disabled stats tracking, do nothing
 	virtual bool IsGameStatsLoggingEnabled()
 	{
-		if ( CommandLine()->FindParm( "-nogamestats" ) )
+		if ( CommandLine()->HasParm( "-nogamestats" ) )
 			return false;
 
 #ifdef SWDS
@@ -438,7 +438,7 @@ public:
 		}
 #endif
 
-		if ( ( buf[0] == 0 ) && sv.IsDedicated() )
+		if ( Q_isempty( buf ) && sv.IsDedicated() )
 		{
 			// For Linux dedicated servers, where we won't get a unique ID: set the ID to "unknown" so we have something.  (If there's no ID,
 			// stats don't get sent.)  This will later get altered to be a hash of IP&port, but this gets called early before IP is determined
@@ -973,7 +973,8 @@ EGameStatsUploadStatus Win32UploadGameStatsBlocking
 	struct sockaddr_in sa;
 	rGameStatsParameters.m_ipCSERServer.ToSockadr( (struct sockaddr *)&sa );
 
-	UpdateProgress( rGameStatsParameters, "Sending game stats to server %s.", rGameStatsParameters.m_ipCSERServer.ToString() );
+	char buffer[32];
+	UpdateProgress( rGameStatsParameters, "Sending game stats to server %s.", rGameStatsParameters.m_ipCSERServer.ToString_safe(buffer) );
 
 	bcs.SendSocketMessage( sa, buf.Base<const u8>(), buf.TellPut() ); //lint !e534
 
@@ -1039,7 +1040,8 @@ EGameStatsUploadStatus Win32UploadGameStatsBlocking
 				return eGameStatsUploadFailed;
 			}
 
-			UpdateProgress( rGameStatsParameters, "Server requested game stats upload to %s.", GameStatsHarvesterFSMIPAddress.ToString() );
+			char buffer[32];
+			UpdateProgress( rGameStatsParameters, "Server requested game stats upload to %s.", GameStatsHarvesterFSMIPAddress.ToString_safe(buffer) );
 
 			// Keep using the same scratch buffer for messaging
 			CWin32UploadGameStats uploader( GameStatsHarvesterFSMIPAddress, rGameStatsParameters, dumpcontext );

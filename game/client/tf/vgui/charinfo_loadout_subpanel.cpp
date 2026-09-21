@@ -111,12 +111,12 @@ void CImageButton::ApplySchemeSettings( vgui::IScheme *pScheme )
 {
 	BaseClass::ApplySchemeSettings( pScheme );
 
-	if ( m_pszActiveImageName && strlen( m_pszActiveImageName ) > 0 )
+	if ( !Q_isempty( m_pszActiveImageName ) )
 	{
 		SetActiveImage(vgui::scheme()->GetImage( m_pszActiveImageName, m_bScaleImage ) );
 	}
 
-	if ( m_pszInactiveImageName && strlen( m_pszInactiveImageName ) > 0 )
+	if ( !Q_isempty( m_pszInactiveImageName ) )
 	{
 		SetInactiveImage(vgui::scheme()->GetImage( m_pszInactiveImageName, m_bScaleImage ) );
 	}
@@ -536,7 +536,7 @@ void CCharInfoLoadoutSubPanel::OnCommand( const char *command )
 	{
 		OpenTradingStartDialog( this );
 	}
-	else if ( !Q_stricmp( command, "show_explanations" ) )
+	else if ( V_strieq( command, "show_explanations" ) )
 	{
 		if ( !m_flStartExplanationsAt )
 		{

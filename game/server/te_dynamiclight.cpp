@@ -103,9 +103,9 @@ IMPLEMENT_SERVERCLASS_ST(CTEDynamicLight, DT_TEDynamicLight)
 	SendPropInt( SENDINFO(g), 8, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO(b), 8, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO(exponent), 8, 0 ),
-	SendPropFloat( SENDINFO(m_fRadius), 8, SPROP_ROUNDUP, 0, 2560.0 ),
-	SendPropFloat( SENDINFO(m_fTime), 8, SPROP_ROUNDDOWN, 0, 25.6 ),
-	SendPropFloat( SENDINFO(m_fDecay), 8, SPROP_ROUNDDOWN, 0, 2560.0 ),
+	SendPropFloat( SENDINFO(m_fRadius), 8, SPROP_ROUNDUP, 0, 2560.0f ),
+	SendPropFloat( SENDINFO(m_fTime), 8, SPROP_ROUNDDOWN, 0, 25.6f ),
+	SendPropFloat( SENDINFO(m_fDecay), 8, SPROP_ROUNDDOWN, 0, 2560.0f ),
 END_SEND_TABLE()
 
 

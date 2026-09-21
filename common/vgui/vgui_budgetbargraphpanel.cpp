@@ -14,7 +14,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-ConVar budget_bargraph_background_alpha( "budget_bargraph_background_alpha", "128", FCVAR_ARCHIVE, "how translucent the budget panel is" );
+// dimhotepus: Add color bounds [0..255].
+ConVar budget_bargraph_background_alpha( "budget_bargraph_background_alpha", "128", FCVAR_ARCHIVE, "how translucent the budget panel is", true, 0, true, std::numeric_limits<uint8_t>::max() );
 
 ConVar budget_peaks_window( "budget_peaks_window", "30", FCVAR_ARCHIVE, "number of frames to look at when figuring out peak frametimes" );
 ConVar budget_averages_window( "budget_averages_window", "30", FCVAR_ARCHIVE, "number of frames to look at when figuring out average frametimes" );
@@ -34,7 +35,7 @@ CBudgetBarGraphPanel::CBudgetBarGraphPanel( CBaseBudgetPanel *pParent, const cha
 	SetVisible( true );
 
 	SetPaintBackgroundEnabled( true );
-	SetBgColor( Color( 255, 0, 0, budget_bargraph_background_alpha.GetInt() ) );
+	SetBgColor( Color( 255, 0, 0, size_cast<uint8_t>( budget_bargraph_background_alpha.GetInt() ) ) );
 }
 
 CBudgetBarGraphPanel::~CBudgetBarGraphPanel() = default;
@@ -60,7 +61,7 @@ void CBudgetBarGraphPanel::DrawBarAtIndex( intp id, float percent )
 	GetBudgetGroupTopAndBottom( id, top, bottom );
 
 	int left = 0;
-	int right = panelWidth * percent;
+	int right = static_cast<int>( panelWidth * percent );
 
 	int red, green, blue, alpha;
 	m_pBudgetPanel->GetConfigData().m_BudgetGroupInfo[id].m_Color.GetColor( red, green, blue, alpha );
@@ -119,11 +120,9 @@ void CBudgetBarGraphPanel::DrawTimeLines()
 		flValueInterval = config.m_flTimeLabelInterval / config.m_nLinesPerTimeLabel;
 	}
 	
-	int nTotalLines = config.m_flBarGraphRange;
-	if ( flValueInterval != 0.0f )
-	{
-		nTotalLines /= flValueInterval;
-	}
+	int nTotalLines = flValueInterval != 0.0f
+		? static_cast<int>( config.m_flBarGraphRange / flValueInterval )
+		: static_cast<int>( config.m_flBarGraphRange );
 	nTotalLines += 2;
 	
 	for( i = 0; i < nTotalLines; i++ )
@@ -143,7 +142,7 @@ void CBudgetBarGraphPanel::DrawTimeLines()
 		}
 		
 		float flTemp = ( config.m_flBarGraphRange != 0.0f ) ? ( flValueInterval / config.m_flBarGraphRange ) : flValueInterval;
-		left = -0.5f + panelWidth * ( i * flTemp );
+		left = static_cast<int>( -0.5f + panelWidth * ( i * flTemp ) );
 		right = left + 1;
 
 		vgui::surface()->DrawSetColor( 0, 0, 0, alpha );
@@ -167,7 +166,7 @@ void CBudgetBarGraphPanel::DrawInstantaneous()
 	intp i;
 	for( i = 0; i < nGroups; i++ )
 	{
-		float percent = m_pBudgetPanel->GetBudgetGroupPercent( pBudgetGroupTimes[nSamplesPerGroup * i + nSampleOffset] );
+		float percent = m_pBudgetPanel->GetBudgetGroupPercent( static_cast<float>( pBudgetGroupTimes[nSamplesPerGroup * i + nSampleOffset] ) );
 		DrawBarAtIndex( i, percent );
 	}
 }
@@ -181,23 +180,20 @@ void CBudgetBarGraphPanel::DrawPeaks()
 	{
 		return;
 	}
-	int numSamples = budget_peaks_window.GetInt();
-	intp i;
-	for( i = 0; i < nGroups; i++ )
+	const int numSamples = budget_peaks_window.GetInt();
+	for( intp i = 0; i < nGroups; i++ )
 	{
-		double max = 0;
-		int j;
-		for( j = 0; j < numSamples; j++ )
+		double max = 0.0;
+		for( int j = 0; j < numSamples; j++ )
 		{
-			double tmp;
-			int offset = ( nSampleOffset - j + BUDGET_HISTORY_COUNT ) % BUDGET_HISTORY_COUNT;
-			tmp = pBudgetGroupTimes[i * nSamplesPerGroup + offset];
+			const int offset = ( nSampleOffset - j + BUDGET_HISTORY_COUNT ) % BUDGET_HISTORY_COUNT;
+			double tmp = pBudgetGroupTimes[i * nSamplesPerGroup + offset];
 			if( tmp > max )
 			{
 				max = tmp;
 			}
 		}
-		float percent = m_pBudgetPanel->GetBudgetGroupPercent( max );
+		const float percent = m_pBudgetPanel->GetBudgetGroupPercent( static_cast<float>( max ) );
 		DrawTickAtIndex( i, percent, 255, 0, 0, 255 );
 	}
 }
@@ -211,22 +207,20 @@ void CBudgetBarGraphPanel::DrawAverages()
 	{
 		return;
 	}
-	int numSamples = budget_averages_window.GetInt();
-	intp i;
-	for( i = 0; i < nGroups; i++ )
+	const int numSamples = budget_averages_window.GetInt();
+	for( intp i = 0; i < nGroups; i++ )
 	{
 		int red, green, blue, alpha;
 		m_pBudgetPanel->GetConfigData().m_BudgetGroupInfo[i].m_Color.GetColor( red, green, blue, alpha );
 
-		double sum = 0;
-		int j;
-		for( j = 0; j < numSamples; j++ )
+		double sum = 0.0;
+		for( int j = 0; j < numSamples; j++ )
 		{
-			int offset = ( nSampleOffset - j + BUDGET_HISTORY_COUNT ) % BUDGET_HISTORY_COUNT;
+			const int offset = ( nSampleOffset - j + BUDGET_HISTORY_COUNT ) % BUDGET_HISTORY_COUNT;
 			sum += pBudgetGroupTimes[i * nSamplesPerGroup + offset];
 		}
-		sum *= ( 1.0 / numSamples );
-		float percent = m_pBudgetPanel->GetBudgetGroupPercent( sum );
+		sum *= 1.0 / numSamples;
+		const float percent = m_pBudgetPanel->GetBudgetGroupPercent( static_cast<float>( sum ) );
 		DrawTickAtIndex( i, percent, red, green, blue, alpha );
 	}
 }
@@ -238,7 +232,7 @@ void CBudgetBarGraphPanel::Paint()
 
 	if ( !m_pBudgetPanel->IsDedicated() )
 	{
-		SetBgColor( Color( 255, 0, 0, budget_bargraph_background_alpha.GetInt() ) );
+		SetBgColor( Color( 255, 0, 0, static_cast<uint8_t>( budget_bargraph_background_alpha.GetInt() ) ) );
 	}
 
 	DrawTimeLines();

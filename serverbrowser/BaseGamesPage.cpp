@@ -50,7 +50,7 @@ bool IsReplayServer( gameserveritem_t &server )
 			V_SplitString( server.m_szGameTags, ",", TagList );
 			for ( const auto *tag : TagList )
 			{
-				if ( Q_stricmp( tag, "replays" ) == 0 )
+				if ( V_strieq( tag, "replays" ) )
 				{
 					bReplay = true;
 				}
@@ -460,7 +460,7 @@ static int ServerMapnameSortFunc( const servermaps_t *p1,  const servermaps_t *p
 void CBaseGamesPage::PrepareQuickListMap( const char *pMapName, int iListID )
 {
 	char szMapName[ 512 ];
-	V_sprintf_safe( szMapName, "%s",  pMapName );
+	V_strcpy_safe( szMapName, pMapName );
 
 	V_strlower( szMapName );
 
@@ -600,7 +600,7 @@ void CBaseGamesPage::CreateFilters()
 	m_pFilter = new ToggleButton(this, "Filter", "#ServerBrowser_Filters");
 	m_pFilterString = new Label(this, "FilterString", "");
 	
-	if ( Q_stricmp( COM_GetModDirectory(), "cstrike" ) == 0 )
+	if ( V_strieq( COM_GetModDirectory(), "cstrike" ) )
 	{
 		m_pFilter->SetSelected( false );
 		m_bFiltersVisible = false;
@@ -1059,7 +1059,7 @@ void CBaseGamesPage::UpdateDerivedLayouts( void )
 	char rgchControlSettings[MAX_PATH];
 	if ( m_pCustomResFilename )
 	{
-		Q_snprintf( rgchControlSettings, sizeof( rgchControlSettings ), "%s", m_pCustomResFilename );
+		V_strcpy_safe( rgchControlSettings, m_pCustomResFilename );
 	}
 	else
 	{
@@ -1095,7 +1095,7 @@ void CBaseGamesPage::UpdateDerivedLayouts( void )
 //-----------------------------------------------------------------------------
 void CBaseGamesPage::OnTextChanged(Panel *panel, const char *text)
 {
-	if (!Q_stricmp(text, m_szComboAllText))
+	if (V_strieq(text, m_szComboAllText))
 	{
 		ComboBox *box = dynamic_cast<ComboBox *>(panel);
 		if (box)
@@ -1324,7 +1324,7 @@ void CBaseGamesPage::UpdateFilterSettings()
 	{
 		const char *pszVersion = g_pRunGameEngine->GetProductVersionString();
 		const char k_VersionFromP4[] = "2000"; // magic version string we use when we're running from P4
-		if ( pszVersion && *pszVersion && ( V_strcmp( pszVersion, k_VersionFromP4 ) != 0 ) )
+		if ( !Q_isempty( pszVersion ) && !V_streq( pszVersion, k_VersionFromP4 ) )
 		{
 			m_vecServerFilters.AddToTail( MatchMakingKeyValuePair_t( "version_match", pszVersion ) );
 		}
@@ -1655,16 +1655,16 @@ void CBaseGamesPage::SetRefreshing(bool state)
 //-----------------------------------------------------------------------------
 void CBaseGamesPage::OnCommand(const char *command)
 {
-	if (!Q_stricmp(command, "Connect"))
+	if (V_strieq(command, "Connect"))
 	{
 		OnBeginConnect();
 	}
-	else if (!Q_stricmp(command, "stoprefresh"))
+	else if (V_strieq(command, "stoprefresh"))
 	{
 		// cancel the existing refresh
 		StopRefresh();
 	}
-	else if ( !Q_stricmp(command, "refresh") )
+	else if ( V_strieq(command, "refresh") )
 	{
 		if ( steamapicontext->SteamMatchmakingServers() )
 			steamapicontext->SteamMatchmakingServers()->RefreshQuery( m_hRequest );
@@ -1672,7 +1672,7 @@ void CBaseGamesPage::OnCommand(const char *command)
 		m_iServerRefreshCount = 0;
 		ClearQuickList();
 	}
-	else if (!Q_stricmp(command, "GetNewList"))
+	else if (V_strieq(command, "GetNewList"))
 	{
 		GetNewServerList();
 	}
@@ -2087,7 +2087,7 @@ void CDialogServerWarning::ApplySchemeSettings( IScheme *pScheme )
 //-----------------------------------------------------------------------------
 void CDialogServerWarning::OnCommand(const char *command)
 {
-	if ( Q_stricmp(command, "OK") == 0 )
+	if ( V_strieq(command, "OK") )
 	{
 		// mark ourselves to be closed
 		PostMessage(this, new KeyValues("Close"));

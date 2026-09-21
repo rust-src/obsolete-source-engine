@@ -241,7 +241,7 @@ static int CompressAndCrosscheckClusterVis( int clusternum )
 			}
 		}
 	}
-	int numbytes = CompressVis( uncompressed, compressed );
+	intp numbytes = CompressVis( uncompressed, compressed );
 
 	byte *dest = vismap_p;
 	vismap_p += numbytes;
@@ -638,7 +638,7 @@ void CalcPAS (void)
 	//
 	// compress the bit string
 	//
-		int j = CompressVis (uncompressed, compressed);
+		intp j = CompressVis (uncompressed, compressed);
 
 		dest = (intp *)vismap_p;
 		vismap_p += j;
@@ -911,7 +911,7 @@ float DetermineVisRadius( )
 	for (int i = 0; i < num_entities; ++i)
 	{
 		const char* pEntity = ValueForKey(&entities[i], "classname");
-		if (!stricmp(pEntity, "env_fog_controller"))
+		if (V_strieq(pEntity, "env_fog_controller"))
 		{
 			flRadius = FloatForKey (&entities[i], "farz");
 			if (flRadius == 0.0f)
@@ -937,7 +937,7 @@ int ParseCommandLine( int argc, char **argv )
 	int i;
 	for (i=1 ; i<argc ; i++)
 	{
-		if (!Q_stricmp(argv[i],"-threads"))
+		if (V_strieq(argv[i],"-threads"))
 		{
 			if ( ++i < argc )
 			{
@@ -956,17 +956,17 @@ int ParseCommandLine( int argc, char **argv )
 				return -1;
 			}
 		}
-		else if (!Q_stricmp(argv[i], "-fast"))
+		else if (V_strieq(argv[i], "-fast"))
 		{
 			Msg ("--fast-vis: true\n");
 			fastvis = true;
 		}
-		else if (!Q_stricmp(argv[i], "-v") || !Q_stricmp(argv[i], "-verbose"))
+		else if (V_strieq(argv[i], "-v") || V_strieq(argv[i], "-verbose"))
 		{
 			Msg ("--verbose: true\n");
 			verbose = true;
 		}
-		else if( !Q_stricmp( argv[i], "-radius_override" ) )
+		else if( V_strieq( argv[i], "-radius_override" ) )
 		{
 			g_bUseRadius = true;
 			// dimhotepus: atof -> V_atof
@@ -975,7 +975,7 @@ int ParseCommandLine( int argc, char **argv )
 			Msg( "--radius-override: %4.2f\n", g_VisRadius );
 			g_VisRadius = g_VisRadius * g_VisRadius;   // so distance check can be squared
 		}
-		else if( !Q_stricmp( argv[i], "-trace" ) )
+		else if( V_strieq( argv[i], "-trace" ) )
 		{
 			g_TraceClusterStart = atoi( argv[i+1] );
 			i++;
@@ -983,35 +983,35 @@ int ParseCommandLine( int argc, char **argv )
 			i++;
 			Msg( "--trace: Tracing vis from cluster %d to %d\n", g_TraceClusterStart, g_TraceClusterStop );
 		}
-		else if (!Q_stricmp (argv[i],"-nosort"))
+		else if (V_strieq (argv[i],"-nosort"))
 		{
 			Msg ("--no-sort: true\n");
 			nosort = true;
 		}
-		else if (!Q_stricmp (argv[i],"-tmpin"))
+		else if (V_strieq (argv[i],"-tmpin"))
 		{
 			Msg ("--tmpin: Read from /tmp\n");
 			V_strcpy_safe (inbase, "/tmp");
 		}
-		else if( !Q_stricmp( argv[i], "-low" ) )
+		else if( V_strieq( argv[i], "-low" ) )
 		{
 			Msg( "--low: Run worker threads with low priority\n" );
 			g_bLowPriority = true;
 		}
-		else if ( !Q_stricmp( argv[i], "-FullMinidumps" ) )
+		else if ( V_strieq( argv[i], "-FullMinidumps" ) )
 		{
 			Msg( "--full-minidumps: true\n" );
 			se::utils::common::EnableFullMinidumps( true );
 		}
-		else if ( !Q_stricmp( argv[i], CMDLINEOPTION_NOVCONFIG ) )
+		else if ( V_strieq( argv[i], CMDLINEOPTION_NOVCONFIG ) )
 		{
 			Msg( "--no-vconfig: true\n" );
 		}
-		else if ( !Q_stricmp( argv[i], "-vproject" ) || !Q_stricmp( argv[i], "-game" ) )
+		else if ( V_strieq( argv[i], "-vproject" ) || V_strieq( argv[i], "-game" ) )
 		{
 			++i;
 		}
-		else if ( !Q_stricmp( argv[i], "-allowdebug" ) || !Q_stricmp( argv[i], "-steam" ) )
+		else if ( V_strieq( argv[i], "-allowdebug" ) || V_strieq( argv[i], "-steam" ) )
 		{
 			Msg( "--allow-debug or --steam: true\n" );
 			// nothing to do here, but don't bail on this option
@@ -1101,7 +1101,7 @@ void PrintUsage( int argc, char **argv )
 	// Show VMPI parameters?
 	for ( int i=1; i < argc; i++ )
 	{
-		if ( V_stricmp( argv[i], "-mpi_ListParams" ) == 0 )
+		if ( V_strieq( argv[i], "-mpi_ListParams" ) )
 		{
 			Warning( "--mpi-list-params: VMPI-specific options:\n\n" );
 
@@ -1288,7 +1288,7 @@ int main (int argc, char **argv)
 	constexpr char kEnUsUtf8Locale[]{"en_US.UTF-8"};
 
 	const se::ScopedAppLocale scoped_app_locale{kEnUsUtf8Locale};
-	if (V_stricmp(se::ScopedAppLocale::GetCurrentLocale(), kEnUsUtf8Locale)) {
+	if (!V_strieq(se::ScopedAppLocale::GetCurrentLocale(), kEnUsUtf8Locale)) {
 		Warning("setlocale('%s') failed, current locale is '%s'.\n",
 				kEnUsUtf8Locale, se::ScopedAppLocale::GetCurrentLocale());
 	}

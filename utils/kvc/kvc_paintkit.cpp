@@ -221,7 +221,7 @@ static void SaveToFile_R( KeyValues *pkv, IBaseFileSystem *pFileSystem, FileHand
 		case KeyValues::TYPE_INT:
 		{
 			char szTmpBuf[32] = {};
-			V_snprintf( szTmpBuf, sizeof( szTmpBuf ), "%d", pkv->GetInt() );
+			V_to_chars( szTmpBuf, pkv->GetInt() );
 			pFileSystem->Write( szTmpBuf, V_strlen( szTmpBuf ), hFile );
 			break;
 		}
@@ -239,8 +239,8 @@ static void SaveToFile_R( KeyValues *pkv, IBaseFileSystem *pFileSystem, FileHand
 		}
 		case KeyValues::TYPE_FLOAT:
 		{
-			char szTmpBuf[32] = {};
-			V_snprintf( szTmpBuf, sizeof( szTmpBuf ), "%f", pkv->GetFloat() );
+			char szTmpBuf[32];
+			V_to_chars( szTmpBuf, pkv->GetFloat() );
 			int nStrLen = V_strlen( szTmpBuf );
 			nStrLen = CleanFloatString( szTmpBuf );
 			pFileSystem->Write( szTmpBuf, nStrLen, hFile );
@@ -250,13 +250,29 @@ static void SaveToFile_R( KeyValues *pkv, IBaseFileSystem *pFileSystem, FileHand
 		{
 			char szTmpBuf[32] = {};
 			const Color c = pkv->GetColor();
-			V_snprintf( szTmpBuf, sizeof( szTmpBuf ), "%d", c.r() );
+
+			V_to_chars( szTmpBuf, c.r() );
+			// dimhotepus: Fix writing color components.
+			nStrLen = V_strlen( szTmpBuf );
+			pFileSystem->Write( szTmpBuf, nStrLen, hFile );
 			pFileSystem->Write( " ", 1, hFile );
-			V_snprintf( szTmpBuf, sizeof( szTmpBuf ), "%d", c.g() );
+
+			V_to_chars( szTmpBuf, c.g() );
+			// dimhotepus: Fix writing color components.
+			nStrLen = V_strlen( szTmpBuf );
+			pFileSystem->Write( szTmpBuf, nStrLen, hFile );
 			pFileSystem->Write( " ", 1, hFile );
-			V_snprintf( szTmpBuf, sizeof( szTmpBuf ), "%d", c.b() );
+
+			V_to_chars( szTmpBuf, c.b() );
+			// dimhotepus: Fix writing color components.
+			nStrLen = V_strlen( szTmpBuf );
+			pFileSystem->Write( szTmpBuf, nStrLen, hFile );
 			pFileSystem->Write( " ", 1, hFile );
-			V_snprintf( szTmpBuf, sizeof( szTmpBuf ), "%d", c.a() );
+
+			V_to_chars( szTmpBuf, c.a() );
+			// dimhotepus: Fix writing color components.
+			nStrLen = V_strlen( szTmpBuf );
+			pFileSystem->Write( szTmpBuf, nStrLen, hFile );
 			break;
 		}
 		default:
@@ -275,20 +291,18 @@ static bool SaveCleanKeyValuesToFile( KeyValues *pkv, IBaseFileSystem *pFileSyst
 	// Write out KeyValues to the specified file but cleaner than KeyValues::SaveToFile
 	// create a write file
 	FileHandle_t hFile = pFileSystem->Open( pszFileName, "wb", pszPathID );
-
-	if ( hFile == FILESYSTEM_INVALID_HANDLE )
+	if ( !hFile )
 	{
-		Msg( "CleanSaveKeyValuesToFile: Couldn't open file \"%s\" for writing in path \"%s\".\n",
+		Warning( "CleanSaveKeyValuesToFile: Couldn't open file \"%s\" for writing in path \"%s\".\n",
 			pszFileName ? pszFileName : "NULL", pszPathID ? pszPathID : "NULL" );
 		return false;
 	}
+	RunCodeAtScopeExit(pFileSystem->Close( hFile ));
 
 	for ( KeyValues *pkvTmp = pkv; pkvTmp; pkvTmp = pkvTmp->GetNextKey() )
 	{
 		SaveToFile_R( pkvTmp, pFileSystem, hFile, bOptTabs, nOptSpaceIndent, 0 );
 	}
-
-	pFileSystem->Close( hFile );
 
 	return true;
 }
@@ -411,8 +425,8 @@ void ProcessPaintKitKeyValuesFiles( const CUtlVector< CUtlSymbol > &workList )
 	// This bit of hackery allows us to access files on the harddrive
 	g_pFullFileSystem->AddSearchPath( "", "LOCAL", PATH_ADD_TO_HEAD );
 
-	const bool bOptFix = CommandLine()->CheckParm( "-f" ) != nullptr;
-	const bool bOptVerbose = CommandLine()->CheckParm( "-v" ) != nullptr;
+	const bool bOptFix = CommandLine()->HasParm( "-f" );
+	const bool bOptVerbose = CommandLine()->HasParm( "-v" );
 
 	for ( int i = 0; i < workList.Count(); ++i )
 	{

@@ -597,9 +597,9 @@ bool Voice_Init( const char *pCodecName, int nSampleRate )
 		return false;
 	}
 
-	bool bSpeex = Q_stricmp( pCodecName, "vaudio_speex" ) == 0;
-	bool bCelt  = Q_stricmp( pCodecName, "vaudio_celt" )  == 0;
-	bool bSteam = Q_stricmp( pCodecName, "steam" )        == 0;
+	bool bSpeex = V_strieq( pCodecName, "vaudio_speex" );
+	bool bCelt  = !bSpeex && V_strieq( pCodecName, "vaudio_celt" );
+	bool bSteam = !bCelt && V_strieq( pCodecName, "steam" );
 	// Miles has not been in use for voice in a long long time.  Not worth the surface to support ancient demos that may
 	// use it (and probably do not work for other reasons)
 	// "vaudio_miles"
@@ -680,7 +680,8 @@ bool Voice_Init( const char *pCodecName, int nSampleRate )
 
 	if( !g_pVoiceRecord )
 	{
-		Msg( "Unable to initialize sound capture. You won't be able to speak to other players." );
+		// dimhotepus: Add missed \n. 
+		Msg( "Unable to initialize sound capture. You won't be able to speak to other players.\n" );
 	}
 
 	// Init codec DLL for non-steam
@@ -997,7 +998,8 @@ bool Voice_RecordStart(
 	
 	if(pMicInputFile)
 	{
-		int a, b, c;
+		int c;
+		std::uint16_t a, b;
 		if (!ReadWaveFile(pMicInputFile, g_pMicInputFileData, g_nMicInputFileBytes, a, b, c))
 		{
 			Warning("Voice recording unable to read input file '%s'.\n", pMicInputFile);
@@ -1382,11 +1384,9 @@ int Voice_AddIncomingData(int nChannel, const char *pchData, int nCount, int iSe
 	alignas(short) char decompressed[22528];
 
 #ifdef VOICE_SEND_RAW_TEST
-
-		int nDecompressed = nCount;
-		for ( int i=0; i < nDecompressed; i++ )
-			((short*)decompressed)[i] = pchData[i] << 8;
-
+	int nDecompressed = nCount;
+	for ( int i=0; i < nDecompressed; i++ )
+		((short*)decompressed)[i] = pchData[i] << 8;
 #else
 
 	int nDecompressed = 0;
@@ -1396,8 +1396,8 @@ int Voice_AddIncomingData(int nChannel, const char *pchData, int nCount, int iSe
 #ifndef NO_STEAM
 		uint32 nBytesWritten = 0;
 		EVoiceResult result = steamapicontext->SteamUser()->DecompressVoice( pchData, nCount,
-		                                                                     decompressed, sizeof( decompressed ),
-		                                                                     &nBytesWritten, Voice_SamplesPerSec() );
+			decompressed, sizeof( decompressed ),
+			&nBytesWritten, Voice_SamplesPerSec() );
 		if ( result == k_EVoiceResultOK )
 		{
 			nDecompressed = nBytesWritten / BYTES_PER_SAMPLE;
@@ -1430,10 +1430,10 @@ int Voice_AddIncomingData(int nChannel, const char *pchData, int nCount, int iSe
 
 	// Upsample into the dest buffer. We could do this in a mixer but it complicates the mixer.
 	pChannel->m_LastFraction = UpsampleIntoBuffer( (short*)decompressed,
-	                                               nDecompressed,
-	                                               &pChannel->m_Buffer,
-	                                               pChannel->m_LastFraction,
-	                                               (double)Voice_SamplesPerSec()/g_VoiceSampleFormat.nSamplesPerSec );
+		nDecompressed,
+		&pChannel->m_Buffer,
+		pChannel->m_LastFraction,
+		(double)Voice_SamplesPerSec()/g_VoiceSampleFormat.nSamplesPerSec );
 	pChannel->m_LastSample = decompressed[nDecompressed];
 
 	// Write to our file buffer..

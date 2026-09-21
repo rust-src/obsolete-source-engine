@@ -89,14 +89,14 @@ DBG_INTERFACE SpewRetval_t DefaultSpewFunc( SpewType_t type, const tchar *pMsg )
 	{
 #ifndef WIN32
 		// Non-win32
-		bool bRaiseOnAssert = getenv( "RAISE_ON_ASSERT" ) || !!CommandLine()->FindParm( "-raiseonassert" );
+		bool bRaiseOnAssert = getenv( "RAISE_ON_ASSERT" ) || CommandLine()->HasParm( "-raiseonassert" );
 		return bRaiseOnAssert ? SPEW_DEBUGGER : SPEW_CONTINUE;
 #elif defined( _DEBUG )
 		// Win32 debug
 		return SPEW_DEBUGGER;
 #else
 		// Win32 release
-		bool bRaiseOnAssert = !!CommandLine()->FindParm( "-raiseonassert" );
+		bool bRaiseOnAssert = CommandLine()->HasParm( "-raiseonassert" );
 		return bRaiseOnAssert ? SPEW_DEBUGGER : SPEW_CONTINUE;
 #endif
 	}
@@ -362,6 +362,10 @@ static SpewRetval_t _SpewMessage( SpewType_t spewType, const char *pGroupName, i
 	// dimhotepus: Do nothing.
 	case SPEW_CONTINUE:
 		break;
+
+	default:
+		// dimhotepus: Catch missed spew types.
+		assert(false);
 	}
 
 	return ret;
@@ -411,7 +415,7 @@ static bool FindSpewGroup( const tchar* pGroupName, size_t* pInd )
 bool HushAsserts()
 {
 #ifdef DBGFLAG_ASSERT
-	static bool s_bHushAsserts = !!CommandLine()->FindParm( "-hushasserts" );
+	static bool s_bHushAsserts = CommandLine()->HasParm( "-hushasserts" );
 	return s_bHushAsserts;
 #else
 	return true;
@@ -857,8 +861,8 @@ void SpewActivate( const tchar* pGroupName, int level )
 		++s_GroupCount;
 		if ( s_pSpewGroups )
 		{
-			s_pSpewGroups = (SpewGroup_t*)PvRealloc( s_pSpewGroups, 
-				s_GroupCount * sizeof(SpewGroup_t) );
+			s_pSpewGroups = static_cast<SpewGroup_t*>( PvRealloc( s_pSpewGroups, 
+				s_GroupCount * sizeof(SpewGroup_t) ) );
 			
 			// shift elements down to preserve order
 			size_t numToMove = s_GroupCount - ind - 1;
@@ -876,7 +880,7 @@ void SpewActivate( const tchar* pGroupName, int level )
 		}
 		else
 		{
-			s_pSpewGroups = (SpewGroup_t*)PvAlloc( s_GroupCount * sizeof(SpewGroup_t) ); 
+			s_pSpewGroups = static_cast<SpewGroup_t*>( PvAlloc( s_GroupCount * sizeof(SpewGroup_t) ) ); 
 		}
 		
 		Assert( _tcslen( pGroupName ) < MAX_GROUP_NAME_LENGTH );
@@ -915,7 +919,7 @@ void SpewDeactivate()
 // functions in and printfs with %f cause runtime errors in the C libraries.
 DBG_INTERFACE float CrackSmokingCompiler( float a )
 {
-	return (float)fabs( a );
+	return static_cast<float>( fabs( a ) );
 }
 
 void* Plat_SimpleLog( const tchar* file, int line )
@@ -972,8 +976,8 @@ void COM_TimestampedLog( PRINTF_FORMAT_STRING char const *fmt, ... )
 
 	if ( !is_log_checked )
 	{
-		should_log_2_etw = !!CommandLine()->CheckParm( "-etwprofile" );
-		should_log = should_log_2_etw || !!CommandLine()->CheckParm( "-profile" );
+		should_log_2_etw = CommandLine()->HasParm( "-etwprofile" );
+		should_log = should_log_2_etw || CommandLine()->HasParm( "-profile" );
 		is_log_checked = true;
 	}
 

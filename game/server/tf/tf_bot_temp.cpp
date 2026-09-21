@@ -464,7 +464,7 @@ CON_COMMAND_F( bot, "Add a bot.", FCVAR_NONE )
 		{
 			for ( int i=1; i < TF_CLASS_COUNT_ALL; i++ )
 			{
-				if ( !Q_stricmp(pVal, g_aPlayerClassNames_NonLocalized[i] ) )
+				if ( V_strieq(pVal, g_aPlayerClassNames_NonLocalized[i] ) )
 				{
 					iClass = i;
 					break;
@@ -2013,7 +2013,7 @@ bool botdata_t::FindEnemyTarget( void )
 
 	// Try to target players first, then objects.  However, if the enemy held was an object it will continue
 	// to try and attack it first.
-	int nTeamCount = pTeam->GetNumPlayers();
+	intp nTeamCount = pTeam->GetNumPlayers();
 	for ( int iPlayer = 0; iPlayer < nTeamCount; ++iPlayer )
 	{
 		CTFPlayer *pTargetPlayer = static_cast<CTFPlayer*>( pTeam->GetPlayer( iPlayer ) );

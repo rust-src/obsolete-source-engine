@@ -113,7 +113,7 @@ void askconnect_accept_f()
 	if ( IsAskConnectPanelActive( szHostName, sizeof( szHostName ) ) )
 	{
 		char szCommand[512];
-		V_snprintf( szCommand, sizeof( szCommand ), "connect %s redirect", szHostName );
+		V_sprintf_safe( szCommand, "connect %s redirect", szHostName );
 		Cbuf_AddText( szCommand );
 		HideAskConnectPanel();
 	}
@@ -517,8 +517,8 @@ void CBaseClientState::SendConnectPacket (int challengeNr, int authProtocol, uin
 		adr.SetPort( PORT_SERVER );
 	}
 
-	ALIGN4 char		msg_buffer[MAX_ROUTABLE_PAYLOAD] ALIGN4_POST;
-	bf_write	msg( msg_buffer, sizeof(msg_buffer) );
+	alignas(4) char msg_buffer[MAX_ROUTABLE_PAYLOAD];
+	bf_write	msg( msg_buffer );
 
 	msg.WriteLong( CONNECTIONLESS_HEADER );
 	msg.WriteByte( C2S_CONNECT );
@@ -614,11 +614,11 @@ static ConVar cl_connectmethod( "cl_connectmethod", "", FCVAR_USERINFO | FCVAR_H
 	// now, however, we just blacklist server browser / matchmaking connect methods from allowing
 	// redirects and allow it for other types.
 	const char *pConnectMethod = cl_connectmethod.GetString();
-	if ( V_strcmp( pConnectMethod, "serverbrowser_internet" ) == 0 ||
+	if ( V_streq( pConnectMethod, "serverbrowser_internet" ) ||
 		 V_strncmp( pConnectMethod, "quickpick", 9 ) == 0 ||
 		 V_strncmp( pConnectMethod, "quickplay", 9 ) == 0 ||
-		 V_strcmp( pConnectMethod, "matchmaking" ) == 0 ||
-		 V_strcmp( pConnectMethod, "coaching" ) == 0 )
+		 V_streq( pConnectMethod, "matchmaking" ) ||
+		 V_streq( pConnectMethod, "coaching" ) )
 	 {
 		 return false;
 	 }
@@ -706,7 +706,8 @@ void CBaseClientState::FullConnect( netadr_t &adr )
 	IGameEvent *event = g_GameEventManager.CreateEvent( "client_connected" );
 	if ( event )
 	{
-		event->SetString( "address", m_NetChannel->GetRemoteAddress().ToString( true )	);
+		char buffer[32];
+		event->SetString( "address", m_NetChannel->GetRemoteAddress().ToString_safe( buffer, true )	);
 		event->SetInt(    "ip", m_NetChannel->GetRemoteAddress().GetIPNetworkByteOrder() ); // <<< Network byte order?
 		event->SetInt(    "port", m_NetChannel->GetRemoteAddress().GetPort() );
 		g_GameEventManager.FireEventClientSide( event );
@@ -854,8 +855,8 @@ void CBaseClientState::CheckForResend (void)
 
 	// Request another challenge value.
 	{
-		ALIGN4 char		msg_buffer[MAX_ROUTABLE_PAYLOAD] ALIGN4_POST;
-		bf_write	msg( msg_buffer, sizeof(msg_buffer) );
+		alignas(4) char msg_buffer[MAX_ROUTABLE_PAYLOAD];
+		bf_write	msg( msg_buffer );
 
 		msg.WriteLong( CONNECTIONLESS_HEADER );
 		msg.WriteByte( A2S_GETCHALLENGE );
@@ -887,7 +888,8 @@ bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 	{
 		if ( cl_show_connectionless_packet_warnings.GetBool() )
 		{
-			ConDMsg ( "Discarding connectionless packet ( CL '%c' ) from %s.\n", c, packet->from.ToString() );
+			char buffer[32];
+			ConDMsg ( "Discarding connectionless packet ( CL '%c' ) from %s.\n", c, packet->from.ToString_safe(buffer) );
 		}
 		return false;
 	}
@@ -985,7 +987,8 @@ bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 							// Otherwise, don't do anything.
 							if ( cl_show_connectionless_packet_warnings.GetBool() )
 							{
-								ConDMsg ( "Bad connectionless packet ( CL '%c' ) from %s.\n", c, packet->from.ToString() );
+								char buffer[32];
+								ConDMsg ( "Bad connectionless packet ( CL '%c' ) from %s.\n", c, packet->from.ToString_safe(buffer) );
 							}
 							return false;
 	}
@@ -1221,15 +1224,17 @@ bool CBaseClientState::ProcessServerInfo( SVC_ServerInfo *msg )
 
 	if ( event )
 	{
+		char buffer[32];
 		event->SetString( "hostname", msg->m_szHostName );
-		event->SetString( "address", m_NetChannel->GetRemoteAddress().ToString( true )	);
+		event->SetString( "address", m_NetChannel->GetRemoteAddress().ToString_safe( buffer, true )	);
 		event->SetInt(    "ip", m_NetChannel->GetRemoteAddress().GetIPNetworkByteOrder() ); // <<< Network byte order?
 		event->SetInt(    "port", m_NetChannel->GetRemoteAddress().GetPort() );
 		event->SetString( "game", msg->m_szGameDir );
 		event->SetString( "mapname", msg->m_szMapName );
 		event->SetInt(    "maxplayers", msg->m_nMaxClients );
 		event->SetInt(	  "password", 0 );				// TODO
-		event->SetString( "os", va("%c", toupper( msg->m_cOS ) ) );
+		// dimhotepus: toupper -> V_toupper.
+		event->SetString( "os", va("%c", V_toupper( msg->m_cOS )) );
 		event->SetInt(    "dedicated", msg->m_bIsDedicated ? 1 : 0 );
 		if ( m_ulGameServerSteamID != 0 )
 		{
@@ -1240,7 +1245,7 @@ bool CBaseClientState::ProcessServerInfo( SVC_ServerInfo *msg )
 	}
 
 	// Set default filename, but this is finalized by ClientState later, so it should not be depended on yet. See PrepareLevelResources call
-	Host_DefaultMapFileName( msg->m_szMapName, m_szLevelFileName, sizeof( m_szLevelFileName ) );
+	Host_DefaultMapFileName( msg->m_szMapName, m_szLevelFileName );
 
 	COM_TimestampedLog( " CBaseClient::ProcessServerInfo(done)" );
 
@@ -1287,22 +1292,16 @@ bool CBaseClientState::ProcessClassInfo( SVC_ClassInfo *msg )
 	// copy class names and class IDs from message to CClientState
 	for (int i=0; i<m_nServerClasses; i++)
 	{
-		SVC_ClassInfo::class_t * svclass = &msg->m_Classes[ i ];
-
-		if( svclass->classID >= m_nServerClasses )
+		const SVC_ClassInfo::class_t * svclass = &msg->m_Classes[ i ];
+		if ( svclass->classID >= m_nServerClasses )
 		{
 			Host_EndGame(true, "ProcessClassInfo: invalid class index (%d).\n", svclass->classID);
 			return false;
 		}
 
 		C_ServerClassInfo * svclassinfo = &m_pServerClasses[svclass->classID];
-
-		intp len = Q_strlen(svclass->classname) + 1;
-		svclassinfo->m_ClassName = new char[ len ];
-		Q_strncpy( svclassinfo->m_ClassName, svclass->classname, len );
-		len = Q_strlen(svclass->datatablename) + 1;
-		svclassinfo->m_DatatableName = new char[ len ];
-		Q_strncpy( svclassinfo->m_DatatableName,svclass->datatablename, len );
+		svclassinfo->m_ClassName = V_strdup( svclass->classname );
+		svclassinfo->m_DatatableName = V_strdup( svclass->datatablename );
 	}
 
 	COM_TimestampedLog( " CBaseClient::ProcessClassInfo(done)" );
@@ -1562,7 +1561,7 @@ ClientClass* CBaseClientState::FindClientClass(const char *pClassName)
 
 	for(ClientClass *pCur=ClientDLL_GetAllClasses(); pCur; pCur=pCur->m_pNext)
 	{
-		if( Q_stricmp(pCur->m_pNetworkName, pClassName) == 0)
+		if( V_strieq(pCur->m_pNetworkName, pClassName) )
 			return pCur;
 	}
 
@@ -1600,7 +1599,7 @@ bool CBaseClientState::LinkClasses()
 			const char *pServerName = pServerClass->m_DatatableName;
 			const char *pClientName = pServerClass->m_pClientClass->m_pRecvTable->GetName();
 
-			if ( Q_stricmp( pServerName, pClientName ) != 0 )
+			if ( !V_strieq( pServerName, pClientName ) )
 			{
 				Host_EndGame( true, "CL_ParseClassInfo_EndClasses: server and client classes for '%s' use different datatables (server: %s, client: %s)",
 					pServerClass->m_ClassName, pServerName, pClientName );

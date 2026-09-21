@@ -225,11 +225,11 @@ static void __MsgFunc_VGUIMenu( bf_read &msg )
 
 		// !KLUDGE! Whitelist of URL protocols formats for MOTD
 		if (
-			!V_stricmp( panelname, PANEL_INFO ) // MOTD
+			V_strieq( panelname, PANEL_INFO ) // MOTD
 			&& keys->GetInt( "type", 0 ) == 2 // URL message type
 		) {
 			const char *pszURL = keys->GetString( "msg", "" );
-			if ( Q_strncmp( pszURL, "http://", 7 ) != 0 && Q_strncmp( pszURL, "https://", 8 ) != 0 && Q_stricmp( pszURL, "about:blank" ) != 0 )
+			if ( Q_strncmp( pszURL, "http://", 7 ) != 0 && Q_strncmp( pszURL, "https://", 8 ) != 0 && !V_strieq( pszURL, "about:blank" ) )
 			{
 				Warning( "Blocking MOTD URL '%s'; must begin with 'http://' or 'https://' or be about:blank\n", pszURL );
 				return;
@@ -240,7 +240,7 @@ static void __MsgFunc_VGUIMenu( bf_read &msg )
 	}
 
 	// is the server telling us to show the scoreboard (at the end of a map)?
-	if ( Q_stricmp( panelname, "scores" ) == 0 )
+	if ( V_strieq( panelname, "scores" ) )
 	{
 		if ( hud_takesshots.GetBool() == true )
 		{
@@ -257,7 +257,7 @@ static void __MsgFunc_VGUIMenu( bf_read &msg )
 
 	// is the server trying to show an MOTD panel? Check that it's allowed right now.
 	ClientModeShared *mode = ( ClientModeShared * )GetClientModeNormal();
-	if ( Q_stricmp( panelname, PANEL_INFO ) == 0 && mode )
+	if ( V_strieq( panelname, PANEL_INFO ) && mode )
 	{
 		if ( !mode->IsInfoPanelAllowed() )
 		{
@@ -295,7 +295,6 @@ ClientModeShared::ClientModeShared()
 //-----------------------------------------------------------------------------
 ClientModeShared::~ClientModeShared()
 {
-	delete m_pViewport; 
 }
 
 void ClientModeShared::ReloadScheme( bool flushLowLevel )
@@ -389,8 +388,7 @@ void ClientModeShared::InitViewport()
 
 void ClientModeShared::VGui_Shutdown()
 {
-	delete m_pViewport;
-	m_pViewport = NULL;
+	// dimhotepus: Drop view port deletion, owner must do it.
 }
 
 
@@ -618,7 +616,7 @@ void ClientModeShared::Update()
 	{
 		int nCount = 0;
 
-		for ( int i = 0; i < g_pParticleSystemMgr->GetParticleSystemCount(); i++ )
+		for ( UtlSymId_t i = 0; i < g_pParticleSystemMgr->GetParticleSystemCount(); i++ )
 		{
 			const char *pParticleSystemName = g_pParticleSystemMgr->GetParticleSystemNameFromIndex(i);
 			CParticleSystemDefinition *pParticleSystem = g_pParticleSystemMgr->FindParticleSystem( pParticleSystemName );
@@ -656,8 +654,8 @@ int	ClientModeShared::KeyInput( int down, ButtonCode_t keynum, const char *pszCu
 	
 	// Should we start typing a message?
 	if ( pszCurrentBinding &&
-		( Q_strcmp( pszCurrentBinding, "messagemode" ) == 0 ||
-		  Q_strcmp( pszCurrentBinding, "say" ) == 0 ) )
+		( V_streq( pszCurrentBinding, "messagemode" ) ||
+		  V_streq( pszCurrentBinding, "say" ) ) )
 	{
 		if ( down )
 		{
@@ -666,8 +664,8 @@ int	ClientModeShared::KeyInput( int down, ButtonCode_t keynum, const char *pszCu
 		return 0;
 	}
 	else if ( pszCurrentBinding &&
-				( Q_strcmp( pszCurrentBinding, "messagemode2" ) == 0 ||
-				  Q_strcmp( pszCurrentBinding, "say_team" ) == 0 ) )
+				( V_streq( pszCurrentBinding, "messagemode2" ) ||
+				  V_streq( pszCurrentBinding, "say_team" ) ) )
 	{
 		if ( down )
 		{
@@ -719,27 +717,27 @@ int	ClientModeShared::KeyInput( int down, ButtonCode_t keynum, const char *pszCu
 int ClientModeShared::HandleSpectatorKeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBinding )
 {
 	// we are in spectator mode, open spectator menu
-	if ( down && pszCurrentBinding && Q_strcmp( pszCurrentBinding, "+duck" ) == 0 )
+	if ( down && pszCurrentBinding && V_streq( pszCurrentBinding, "+duck" ) )
 	{
 		m_pViewport->ShowPanel( PANEL_SPECMENU, true );
 		return 0; // we handled it, don't handle twice or send to server
 	}
-	else if ( down && pszCurrentBinding && Q_strcmp( pszCurrentBinding, "+attack" ) == 0 )
+	else if ( down && pszCurrentBinding && V_streq( pszCurrentBinding, "+attack" ) )
 	{
 		engine->ClientCmd( "spec_next" );
 		return 0;
 	}
-	else if ( down && pszCurrentBinding && Q_strcmp( pszCurrentBinding, "+attack2" ) == 0 )
+	else if ( down && pszCurrentBinding && V_streq( pszCurrentBinding, "+attack2" ) )
 	{
 		engine->ClientCmd( "spec_prev" );
 		return 0;
 	}
-	else if ( down && pszCurrentBinding && Q_strcmp( pszCurrentBinding, "+jump" ) == 0 )
+	else if ( down && pszCurrentBinding && V_streq( pszCurrentBinding, "+jump" ) )
 	{
 		engine->ClientCmd( "spec_mode" );
 		return 0;
 	}
-	else if ( down && pszCurrentBinding && Q_strcmp( pszCurrentBinding, "+strafe" ) == 0 )
+	else if ( down && pszCurrentBinding && V_streq( pszCurrentBinding, "+strafe" ) )
 	{
 		HLTVCamera()->SetAutoDirector( true );
 #if defined( REPLAY_ENABLED )
@@ -968,7 +966,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 
 	const char *eventname = event->GetName();
 
-	if ( Q_strcmp( "player_connect_client", eventname ) == 0 )
+	if ( V_streq( "player_connect_client", eventname ) )
 	{
 		if ( !hudChat )
 			return;
@@ -988,7 +986,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			hudChat->Printf( CHAT_FILTER_JOINLEAVE, "%s", szLocalized );
 		}
 	}
-	else if ( Q_strcmp( "player_disconnect", eventname ) == 0 )
+	else if ( V_streq( "player_disconnect", eventname ) )
 	{
 		C_BasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
 
@@ -1029,7 +1027,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			hudChat->Printf( CHAT_FILTER_JOINLEAVE, "%s", szLocalized );
 		}
 	}
-	else if ( Q_strcmp( "player_team", eventname ) == 0 )
+	else if ( V_streq( "player_team", eventname ) )
 	{
 		C_BasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
 		if ( !hudChat )
@@ -1096,7 +1094,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			pPlayer->TeamChange( team );
 		}
 	}
-	else if ( Q_strcmp( "player_changename", eventname ) == 0 )
+	else if ( V_streq( "player_changename", eventname ) )
 	{
 		if ( !hudChat )
 			return;
@@ -1119,7 +1117,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 
 		hudChat->Printf( CHAT_FILTER_NAMECHANGE, "%s", szLocalized );
 	}
-	else if (Q_strcmp( "teamplay_broadcast_audio", eventname ) == 0 )
+	else if (V_streq( "teamplay_broadcast_audio", eventname ) )
 	{
 		int team = event->GetInt( "team" );
 
@@ -1164,7 +1162,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, et );
 		}
 	}
-	else if ( Q_strcmp( "server_cvar", eventname ) == 0 )
+	else if ( V_streq( "server_cvar", eventname ) )
 	{
 		if ( !IsInCommentaryMode() )
 		{
@@ -1183,7 +1181,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			hudChat->Printf( CHAT_FILTER_SERVERMSG, "%s", szLocalized );
 		}
 	}
-	else if ( Q_strcmp( "achievement_earned", eventname ) == 0 )
+	else if ( V_streq( "achievement_earned", eventname ) )
 	{
 		int iPlayerIndex = event->GetInt( "player" );
 		C_BasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
@@ -1236,7 +1234,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		}
 	}
 #if defined( TF_CLIENT_DLL )
-	else if ( Q_strcmp( "item_found", eventname ) == 0 )
+	else if ( V_streq( "item_found", eventname ) )
 	{
 		int iPlayerIndex = event->GetInt( "player" );
 		entityquality_t iItemQuality = event->GetInt( "quality" );
@@ -1358,24 +1356,24 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 	}
 #endif
 #if defined( REPLAY_ENABLED )
-	else if ( !V_strcmp( "replay_servererror", eventname ) )
+	else if ( V_streq( "replay_servererror", eventname ) )
 	{
 		DisplayReplayMessage( event->GetString( "error", "#Replay_DefaultServerError" ), replay_msgduration_error.GetFloat(), true, NULL, false );
 	}
-	else if ( !V_strcmp( "replay_startrecord", eventname ) )
+	else if ( V_streq( "replay_startrecord", eventname ) )
 	{
 		m_flReplayStartRecordTime = gpGlobals->curtime;
 	}
-	else if ( !V_strcmp( "replay_endrecord", eventname ) )
+	else if ( V_streq( "replay_endrecord", eventname ) )
 	{
 		m_flReplayStopRecordTime = gpGlobals->curtime;
 	}
-	else if ( !V_strcmp( "replay_replaysavailable", eventname ) )
+	else if ( V_streq( "replay_replaysavailable", eventname ) )
 	{
 		DisplayReplayMessage( "#Replay_ReplaysAvailable", replay_msgduration_replaysavailable.GetFloat(), false, NULL, false );
 	}
 
-	else if ( !V_strcmp( "game_newmap", eventname ) )
+	else if ( V_streq( "game_newmap", eventname ) )
 	{
 		// Make sure the instance count is reset to 0.  Sometimes the count stay in sync and we get replay messages displaying lower than they should.
 		CReplayMessagePanel::RemoveAll();

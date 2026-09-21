@@ -172,7 +172,7 @@ void VoteBarPanel::FireGameEvent( IGameEvent *event )
 		for ( int index = 0; index < MAX_VOTE_OPTIONS; index++ )
 		{
 			char szOption[2];
-			Q_snprintf( szOption, sizeof( szOption ), "%i", index + 1 );
+			V_to_chars( szOption, index + 1 );
 
 			char szVoteOption[13] = "vote_option";
 			Q_strncat( szVoteOption, szOption, sizeof( szVoteOption ), COPY_ALL_CHARACTERS );
@@ -474,7 +474,7 @@ void CVoteSetupDialog::OnClose()
 void CVoteSetupDialog::OnCommand(const char *command)
 {
 	// We should have enough data to issue a CallVote command
-	if ( !V_stricmp( command, "CallVote" ) )
+	if ( V_strieq( command, "CallVote" ) )
 	{
 		int iSelectedItem = m_pVoteSetupList->GetSelectedItem();
 		if ( iSelectedItem >= 0 )
@@ -482,7 +482,7 @@ void CVoteSetupDialog::OnCommand(const char *command)
 			char szVoteCommand[k_MAX_VOTE_NAME_LENGTH];
 			KeyValues *pIssueKeyValues = m_pVoteSetupList->GetItemData( iSelectedItem );
 			const char *szIssueRaw = pIssueKeyValues->GetString( "IssueRaw" );
-			if ( !V_stricmp( "ChangeLevel", szIssueRaw ) || !V_stricmp( "NextLevel", szIssueRaw ) )
+			if ( V_strieq( "ChangeLevel", szIssueRaw ) || V_strieq( "NextLevel", szIssueRaw ) )
 			{
 				int nSelectedParam = m_pVoteParameterList->GetSelectedItem();
 				if ( nSelectedParam >= 0 )
@@ -502,7 +502,7 @@ void CVoteSetupDialog::OnCommand(const char *command)
 					}
 				}
 			}
-			else if ( !V_stricmp( "Kick", szIssueRaw ) )
+			else if ( V_strieq( "Kick", szIssueRaw ) )
 			{
 				// Get selected Player
 				int iSelectedParam = m_pVoteParameterList->GetSelectedItem();
@@ -537,7 +537,7 @@ void CVoteSetupDialog::OnCommand(const char *command)
 				}
 			}
 #ifdef TF_CLIENT_DLL
-			else if ( !V_stricmp( "ChangeMission", szIssueRaw ) )
+			else if ( V_strieq( "ChangeMission", szIssueRaw ) )
 			{
 				int nSelectedParam = m_pVoteParameterList->GetSelectedItem();
 				if ( nSelectedParam >= 0 )
@@ -609,7 +609,7 @@ void CVoteSetupDialog::OnItemSelected( vgui::Panel *panel )
 				m_bVoteButtonEnabled = false;
 			}
 			// CHANGELEVEL / NEXTLEVEL
-			else if ( !V_stricmp( "ChangeLevel", pszIssueRaw ) || !V_stricmp( "NextLevel", pszIssueRaw ) )
+			else if ( V_strieq( "ChangeLevel", pszIssueRaw ) || V_strieq( "NextLevel", pszIssueRaw ) )
 			{
 				// Feed the mapcycle to the parameters list
 				for ( int index = 0; index < m_VoteIssuesMapCycle.Count(); index++ )
@@ -641,7 +641,7 @@ void CVoteSetupDialog::OnItemSelected( vgui::Panel *panel )
 				}
 			}
 			// KICK
-			else if ( !V_stricmp( "Kick", pszIssueRaw ) )
+			else if ( V_strieq( "Kick", pszIssueRaw ) )
 			{
 				// Feed the player list to the parameters list
 				int nMaxClients = engine->GetMaxClients();
@@ -672,7 +672,7 @@ void CVoteSetupDialog::OnItemSelected( vgui::Panel *panel )
 						continue;
 
 					char szPlayerIndex[32];
-					Q_snprintf( szPlayerIndex, sizeof( szPlayerIndex ), "%d", playerIndex );
+					V_to_chars( szPlayerIndex, playerIndex );
 
 					KeyValues *pKeyValues = new KeyValues( szPlayerIndex );
 					pKeyValues->SetString( "Name", pPlayer->GetPlayerName() );
@@ -699,7 +699,7 @@ void CVoteSetupDialog::OnItemSelected( vgui::Panel *panel )
 			}
 #ifdef TF_CLIENT_DLL
 			// CHANGE POP FILE
-			else if ( !V_stricmp( "ChangeMission", pszIssueRaw ) )
+			else if ( V_strieq( "ChangeMission", pszIssueRaw ) )
 			{
 				// Feed the popfiles to the parameters list
 				for ( int index = 0; index < m_VoteIssuesPopFiles.Count(); index++ )
@@ -786,7 +786,7 @@ void CVoteSetupDialog::RefreshIssueParameters()
 	{
 		KeyValues *pIssueKeyValues = m_pVoteSetupList->GetItemData( iSelectedItem );
 		const char *pszIssueRaw = pIssueKeyValues->GetString( "IssueRaw" );
-		if ( !V_stricmp( "Kick", pszIssueRaw ) )
+		if ( V_strieq( "Kick", pszIssueRaw ) )
 		{
 			if ( m_pVoteParameterList->GetItemCount() > 0 )
 			{
@@ -993,7 +993,7 @@ int	CHudVote::KeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBin
 		return 1;
 
 	char szNumber[2];
-	Q_snprintf( szNumber, sizeof( szNumber ), "%i", nSlot );
+	V_to_chars( szNumber, nSlot );
 
 	char szOptionName[13] = "vote option";
 	Q_strncat( szOptionName, szNumber, sizeof( szOptionName ), COPY_ALL_CHARACTERS );
@@ -1039,7 +1039,7 @@ void CHudVote::MsgFunc_CallVoteFailed( bf_read &msg )
 	{
 		nTime /= 60;
 	}
-	Q_snprintf( szTime, sizeof ( szTime), "%i", nTime );
+	V_to_chars( szTime, nTime );
 	g_pVGuiLocalize->ConvertANSIToUnicode( szTime, wszTime, sizeof( wszTime ) );
 
 	wchar_t wszHeaderString[k_MAX_VOTE_NAME_LENGTH];
@@ -1291,7 +1291,7 @@ void CHudVote::MsgFunc_VoteStart( bf_read &msg )
 	wchar_t *pwcIssue;
 	wchar_t wcIssue[k_MAX_VOTE_NAME_LENGTH];
 
-	if ( Q_strlen( szParam1 ) > 0 )
+	if ( !Q_isempty( szParam1 ) )
 	{
 		if ( szParam1[0] == '#' )
 		{
@@ -1347,7 +1347,7 @@ void CHudVote::MsgFunc_VoteStart( bf_read &msg )
 			{
 				// Construct Label name
 				char szOptionNum[2];
-				Q_snprintf( szOptionNum, sizeof( szOptionNum ), "%i", iIndex + 1 );
+				V_to_chars( szOptionNum, iIndex + 1 );
 
 				char szVoteOptionCount[13] = "LabelOption";
 				Q_strncat( szVoteOptionCount, szOptionNum, sizeof( szVoteOptionCount ), COPY_ALL_CHARACTERS );
@@ -1368,7 +1368,7 @@ void CHudVote::MsgFunc_VoteStart( bf_read &msg )
 
 				// Construct Label name
 				char szOptionNum[2];
-				Q_snprintf( szOptionNum, sizeof( szOptionNum ), "%i", iIndex + 1 );
+				V_to_chars( szOptionNum, iIndex + 1 );
 
 				char szVoteOptionCount[13] = "LabelOption";
 				Q_strncat( szVoteOptionCount, szOptionNum, sizeof( szVoteOptionCount ), COPY_ALL_CHARACTERS );
@@ -1449,7 +1449,7 @@ void CHudVote::MsgFunc_VotePass( bf_read &msg )
 	wchar_t *pwcIssue;
 	wchar_t wcIssue[k_MAX_VOTE_NAME_LENGTH];
 
-	if ( Q_strlen( szParam1 ) > 0 )
+	if ( !Q_isempty( szParam1 ) )
 	{
 		if ( szParam1[0] == '#' )
 		{
@@ -1530,7 +1530,7 @@ void CHudVote::MsgFunc_VoteSetup( bf_read &msg )
 			bool bAdd = true;
 			FOR_EACH_VEC( m_VoteSetupIssues, j )
 			{
-				if ( !V_strcmp( szIssue, m_VoteSetupIssues[j].szName ) )
+				if ( V_streq( szIssue, m_VoteSetupIssues[j].szName ) )
 				{
 					bAdd = false;
 					break;
@@ -1665,7 +1665,7 @@ void CHudVote::FireGameEvent( IGameEvent *event )
 		for ( int index = 0; index < MAX_VOTE_OPTIONS; index++ )
 		{
 			char szOption[2];
-			Q_snprintf( szOption, sizeof( szOption ), "%i", index + 1 );
+			V_to_chars( szOption, index + 1 );
 
 			char szVoteOptionCount[13] = "vote_option";
 			Q_strncat( szVoteOptionCount, szOption, sizeof( szVoteOptionCount ), COPY_ALL_CHARACTERS );
@@ -1682,7 +1682,7 @@ void CHudVote::FireGameEvent( IGameEvent *event )
 		for ( int iIndex = 0; iIndex < m_nVoteChoicesCount; iIndex++ )
 		{
 			char szNumber[2];
-			Q_snprintf( szNumber, sizeof( szNumber ), "%i", iIndex + 1 );
+			V_to_chars( szNumber, iIndex + 1 );
 
 			char szOptionName[8] = "option";
 			Q_strncat( szOptionName, szNumber, sizeof( szOptionName ), COPY_ALL_CHARACTERS );
@@ -1778,10 +1778,10 @@ void CHudVote::OnThink()
 			if ( m_bIsYesNoVote && m_pVoteActive )
 			{
 				char szYesCount[k_MAX_VOTE_NAME_LENGTH] = "";
-				Q_snprintf( szYesCount, sizeof( szYesCount ), "%d", m_nVoteOptionCount[0] );
+				V_to_chars( szYesCount, m_nVoteOptionCount[0] );
 
 				char szNoCount[k_MAX_VOTE_NAME_LENGTH] = "";
-				Q_snprintf( szNoCount, sizeof( szNoCount ), "%d", m_nVoteOptionCount[1] );
+				V_to_chars( szNoCount, m_nVoteOptionCount[1] );
 
 				m_pVoteActive->SetControlString( "Option1CountLabel", szYesCount );
 				m_pVoteActive->SetControlString( "Option2CountLabel", szNoCount );

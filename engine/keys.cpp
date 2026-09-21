@@ -78,7 +78,7 @@ void Key_SetBinding( ButtonCode_t keynum, const char *pBinding )
 	if ( s_pKeyInfo[keynum].m_pKeyBinding )
 	{
 		// Exactly the same, don't re-bind and fragment memory
-		if ( !Q_strcmp( s_pKeyInfo[keynum].m_pKeyBinding, pBinding ) )
+		if ( V_streq( s_pKeyInfo[keynum].m_pKeyBinding, pBinding ) )
 			return;
 
 		delete[] s_pKeyInfo[keynum].m_pKeyBinding;
@@ -341,12 +341,12 @@ const char *Key_NameForBinding( const char *pBinding )
 			{
 				if ( s_pKeyInfo[i].m_pKeyBinding[0] == '+' )
 				{
-					if ( !Q_strcasecmp( s_pKeyInfo[i].m_pKeyBinding+1, pBind ) )
+					if ( V_strieq( s_pKeyInfo[i].m_pKeyBinding+1, pBind ) )
 						return g_pInputSystem->ButtonCodeToString( (ButtonCode_t)i );
 				}
 				else
 				{
-					if ( !Q_strcasecmp( s_pKeyInfo[i].m_pKeyBinding, pBind ) )
+					if ( V_strieq( s_pKeyInfo[i].m_pKeyBinding, pBind ) )
 						return g_pInputSystem->ButtonCodeToString( (ButtonCode_t)i );
 				}
 
@@ -355,10 +355,10 @@ const char *Key_NameForBinding( const char *pBinding )
 	}
 
 	// Xbox 360 controller: Handle the dual bindings for duck and zoom
-	if ( !Q_stricmp( "duck", pBind ) )
+	if ( V_strieq( "duck", pBind ) )
 		return Key_NameForBinding( "toggle_duck" );
 
-	if ( !Q_stricmp( "zoom", pBind ) )
+	if ( V_strieq( "zoom", pBind ) )
 		return Key_NameForBinding( "toggle_zoom" );
 
 	return NULL;
@@ -384,7 +384,7 @@ const char *Key_NameForBindingExact( const char *pBinding )
 		{
 			if (*s_pKeyInfo[i].m_pKeyBinding)
 			{
-				if ( !Q_strcasecmp( s_pKeyInfo[i].m_pKeyBinding, pBinding ) )
+				if ( V_strieq( s_pKeyInfo[i].m_pKeyBinding, pBinding ) )
 					return g_pInputSystem->ButtonCodeToString( (ButtonCode_t)i );
 			}
 		}
@@ -636,7 +636,7 @@ static bool HandleEngineKey( const InputEvent_t &event )
 	}
 
 	// Swallow console toggle if any modifier keys are down if it's bound to toggleconsole (the default)
-	if ( !Q_stricmp( kb, "toggleconsole" ) )
+	if ( V_strieq( kb, "toggleconsole" ) )
 	{
 		if ( s_pKeyInfo[KEY_LALT].m_bKeyDown || s_pKeyInfo[KEY_LSHIFT].m_bKeyDown || s_pKeyInfo[KEY_LCONTROL].m_bKeyDown ||
 			s_pKeyInfo[KEY_RALT].m_bKeyDown || s_pKeyInfo[KEY_RSHIFT].m_bKeyDown || s_pKeyInfo[KEY_RCONTROL].m_bKeyDown )

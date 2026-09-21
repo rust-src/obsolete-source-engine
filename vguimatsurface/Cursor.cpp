@@ -202,7 +202,7 @@ void Cursor_ClearUserCursors()
 //-----------------------------------------------------------------------------
 // Initializes all the textures for software cursors
 //-----------------------------------------------------------------------------
-int InitSoftwareCursorTexture( const char *pchFilename )
+static int InitSoftwareCursorTexture( const char *pchFilename )
 {
 	if( !pchFilename || !*pchFilename )
 		return -1;
@@ -221,7 +221,9 @@ void InitSoftwareCursors()
 	if( s_bSoftwareCursorsInitialized )
 		return;
 
-	memset( s_rfSoftwareCursorOffset, 0, sizeof( s_rfSoftwareCursorOffset ) );
+	// dimhotepus: 0.0f is 0 byte.
+	static_assert(std::numeric_limits<float>::is_iec559);
+	BitwiseClear( s_rfSoftwareCursorOffset );
 
 	s_rnSoftwareCursorID[dc_none]     = -1;
 	s_rnSoftwareCursorID[dc_arrow]    =InitSoftwareCursorTexture( "vgui/cursors/arrow" );
@@ -533,8 +535,7 @@ void EnableSoftwareCursor( bool bEnable )
 	if( bEnable )
 		InitSoftwareCursors();
 
-	bool bWasEnabled = s_bSoftwareCursorActive;
-	s_bSoftwareCursorActive = bEnable;
+	const bool bWasEnabled = std::exchange( s_bSoftwareCursorActive, bEnable );
 
 	// set the cursor to the arrow (or none if appropriate) if we're activating the
 	// software cursor. VGUI will likely update it again soon, but this will give

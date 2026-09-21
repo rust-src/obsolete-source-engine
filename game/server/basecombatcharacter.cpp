@@ -325,7 +325,7 @@ public:
 };
 
 static CUtlRBTree<VisibilityCacheEntry_t, unsigned short, CVisibilityCacheEntryLess> g_VisibilityCache;
-constexpr inline float VIS_CACHE_ENTRY_LIFE = ( !IsXbox() ) ? .090 : .500;
+constexpr inline float VIS_CACHE_ENTRY_LIFE = ( !IsXbox() ) ? .090f : .500f;
 
 bool CBaseCombatCharacter::FVisible( CBaseEntity *pEntity, int traceMask, CBaseEntity **ppBlocker )
 {
@@ -1620,7 +1620,7 @@ void CBaseCombatCharacter::Event_Killed( const CTakeDamageInfo &info )
 	if( info.GetAttacker() )
 	{
 		info.GetAttacker()->Event_KilledOther(this, info);
-		g_EventQueue.AddEvent( info.GetAttacker(), "KilledNPC", 0.3, this, this );
+		g_EventQueue.AddEvent( info.GetAttacker(), "KilledNPC", 0.3f, this, this );
 	}
 	SendOnKilledGameEvent( info );
 
@@ -2007,7 +2007,7 @@ void CBaseCombatCharacter::Weapon_Drop( CBaseCombatWeapon *pWeapon, const Vector
 	if (pvecTarget)
 	{
 		// I've been told to throw it somewhere specific.
-		vecThrow = VecCheckToss( this, pWeapon->GetAbsOrigin(), *pvecTarget, 0.2, 1.0, false );
+		vecThrow = VecCheckToss( this, pWeapon->GetAbsOrigin(), *pvecTarget, 0.2f, 1.0f, false );
 	}
 	else
 	{

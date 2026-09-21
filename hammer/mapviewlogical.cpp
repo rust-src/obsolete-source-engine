@@ -143,7 +143,8 @@ bool CMapViewLogical::SelectAtCascading( const Vector2D &ptClient, bool bMakeFir
 
 	for ( int i=0; i<nHits; ++i )
 	{
-		CMapClass *pSelObject = HitData[i].pObject->PrepareSelection( eSelectMode );
+		auto *pMapClass = dynamic_cast<CMapClass *>(HitData[i].pObject);
+		CMapClass *pSelObject = pMapClass->PrepareSelection( eSelectMode );
 		if ( !pSelObject )
 			continue;
 		
@@ -184,7 +185,7 @@ void CMapViewLogical::AddToRenderLists( CMapClass *pObject )
 	if (pEntity)
 	{
 		LPCTSTR	pszTargetName = pEntity->GetKeyValue("targetname");
-		if ( pszTargetName && !strcmp(pszTargetName, "relay_cancelVCDs") )
+		if ( pszTargetName && V_streq(pszTargetName, "relay_cancelVCDs") )
 		{
 			// Set breakpoint here for debugging this entity's visiblity
 			int foo = 0;

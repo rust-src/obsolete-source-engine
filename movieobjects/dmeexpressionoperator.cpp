@@ -68,7 +68,7 @@ intp FindString( const CUtlVector< CUtlString > &strings, const char *str )
 	intp sn = strings.Count();
 	for ( intp si = 0; si < sn; ++si )
 	{
-		if ( !Q_strcmp( str, strings[ si ] ) )
+		if ( V_streq( str, strings[ si ] ) )
 			return si;
 	}
 	return -1;
@@ -219,7 +219,7 @@ bool CExpressionCalculator::ParseOr( const char *&expr )
 		m_stack.Pop();
 		float f1 = m_stack.Top();
 		m_stack.Pop();
-		m_stack.Push( ( f1 != 0.0f ) || ( f2 != 0.0f ) ? 1 : 0 );
+		m_stack.Push( ( f1 != 0.0f ) || ( f2 != 0.0f ) ? 1.0f : 0.0f );
 		return true; // and matched
 	}
 	ps1.Reset( m_stack, expr );
@@ -243,7 +243,7 @@ bool CExpressionCalculator::ParseAnd( const char *&expr )
 		m_stack.Pop();
 		float f1 = m_stack.Top();
 		m_stack.Pop();
-		m_stack.Push( ( f1 != 0.0f ) && ( f2 != 0.0f ) ? 1 : 0 );
+		m_stack.Push( ( f1 != 0.0f ) && ( f2 != 0.0f ) ? 1.0f : 0.0f );
 		return true; // and matched
 	}
 	ps1.Reset( m_stack, expr );
@@ -273,10 +273,10 @@ bool CExpressionCalculator::ParseEquality( const char *&expr )
 		switch ( nOp )
 		{
 		case 0: // ==
-			m_stack.Push( f1 == f2 ? 1 : 0 );
+			m_stack.Push( f1 == f2 ? 1.0f : 0.0f );
 			break;
 		case 1: // !=
-			m_stack.Push( f1 != f2 ? 1 : 0 );
+			m_stack.Push( f1 != f2 ? 1.0f : 0.0f );
 			break;
 		}
 		return true; // equality matched
@@ -308,16 +308,16 @@ bool CExpressionCalculator::ParseLessGreater( const char *&expr )
 		switch ( nOp )
 		{
 		case 0: // <
-			m_stack.Push( f1 < f2 ? 1 : 0 );
+			m_stack.Push( f1 < f2 ? 1.0f : 0.0f );
 			break;
 		case 1: // >
-			m_stack.Push( f1 > f2 ? 1 : 0 );
+			m_stack.Push( f1 > f2 ? 1.0f : 0.0f );
 			break;
 		case 2: // <=
-			m_stack.Push( f1 <= f2 ? 1 : 0 );
+			m_stack.Push( f1 <= f2 ? 1.0f : 0.0f );
 			break;
 		case 3: // >=
-			m_stack.Push( f1 >= f2 ? 1 : 0 );
+			m_stack.Push( f1 >= f2 ? 1.0f : 0.0f );
 			break;
 		}
 		return true; // inequality matched
@@ -420,7 +420,7 @@ bool CExpressionCalculator::ParseUnary( const char *&expr )
 			m_stack.Push( -f1 );
 			break;
 		case 2: // !
-			m_stack.Push( f1 == 0 ? 1 : 0 );
+			m_stack.Push( f1 == 0 ? 1.0f : 0.0f );
 			break;
 		}
 		return true;
@@ -476,11 +476,13 @@ bool CExpressionCalculator::ParsePrimary( const char *&expr )
 		return false;
 
 	// Variables can't start with a number
-	if ( isdigit( *expr ) )
+	// dimhotepus: isdigit -> V_isdigit.
+	if ( V_isdigit( *expr ) )
 		return false;
 
 	const char *pStart = expr;
-	while ( isalnum( *expr ) || *expr == '_' )
+	// dimhotepus: isalnum -> V_isalnum.
+	while ( V_isalnum( *expr ) || *expr == '_' )
 	{
 		++expr;
 	}
@@ -812,7 +814,7 @@ void TestCalculator()
 	TestCalculator( "(((5)))", 5 );
 	TestCalculator( "--5", 5 );
 	TestCalculator( "3.5 % 2", 1.5 );
-	TestCalculator( "1e-2", 0.01 );
+	TestCalculator( "1e-2", 0.01f );
 	TestCalculator( "9 == ( 3 * ( 1 + 2 ) )", 1 );
 	TestCalculator( "9 != ( 3 * ( 1 + 2 ) )", 0 );
 	TestCalculator( "9 <= ( 3 * ( 1 + 2 ) )", 1 );
@@ -821,7 +823,7 @@ void TestCalculator()
 	TestCalculator( "10 >= 5", 1 );
 //	TestCalculator( "9 < ( 3 * ( 2 + 2 ) )", 0 );
 	TestCalculator( "x + 1", 5, "x", 4 );
-	TestCalculator( "pi - 3.14159", 0, "pi", 3.14159 );
+	TestCalculator( "pi - 3.14159", 0, "pi", 3.14159f );
 //	TestCalculator( "pi / 2", 0, "pi", 3.14159 );
 	TestCalculator( "abs(-10)", 10 );
 	TestCalculator( "sqr(-5)", 25 );
@@ -841,7 +843,7 @@ void TestCalculator()
 	TestCalculator( "1 > 2 ? 6 : 9", 9 );
 	TestCalculator( "1 ? 1 ? 2 : 4 : 1 ? 6 : 8", 2 );
 	TestCalculator( "0 ? 1 ? 2 : 4 : 1 ? 6 : 8", 6 );
-	TestCalculator( "noise( 0.123, 4.56, 78.9 )", ImprovedPerlinNoise( Vector( 0.123, 4.56, 78.9 ) ) );
+	TestCalculator( "noise( 0.123, 4.56, 78.9 )", ImprovedPerlinNoise( Vector( 0.123f, 4.56f, 78.9f ) ) );
 }
 
 
@@ -877,14 +879,14 @@ bool CDmeExpressionOperator::IsInputAttribute( CDmAttribute *pAttribute )
 {
 	const char *pName = pAttribute->GetName( );
 #if 0 // skip this test, since none of these are float attributes, but leave the code as a reminder
-	if ( Q_strcmp( pName, "name" ) == 0 )
+	if ( V_streq( pName, "name" ) )
 		return false;
 
-	if ( Q_strcmp( pName, "expr" ) == 0 )
+	if ( V_streq( pName, "expr" ) )
 		return false;
 #endif
 
-	if ( Q_strcmp( pName, "result" ) == 0 )
+	if ( V_streq( pName, "result" ) )
 		return false;
 
 	if ( pAttribute->GetType() != AT_FLOAT )

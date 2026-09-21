@@ -286,7 +286,8 @@ void CSaxxyAwardsPanel::OnCommand( const char *pCommand )
 	{
 		if ( steamapicontext && steamapicontext->SteamFriends() )
 		{
-			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( "http://www.teamfortress.com/saxxyawards/" );
+			// dimhotepus: http:// -> https://
+			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( "https://www.teamfortress.com/saxxyawards/" );
 		}
 	}
 	else if ( FStrEq( pCommand, "submit" ) )
@@ -787,7 +788,7 @@ void CSaxxyAwardsSubmitForm::OnCommand( const char *pCommand )
 		// need a non-empty string
 		char szText[256];
 		m_pURLInput->GetText( szText, sizeof( szText ) );
-		if ( Q_strlen( szText ) == 0 )
+		if ( Q_isempty( szText ) )
 		{
 			ShowMessageBox( "#Replay_Contest_StatusTitle",  "#Replay_Contest_EnterURL", "#GameUI_OK" );
 			return;
@@ -813,7 +814,8 @@ void CSaxxyAwardsSubmitForm::OnCommand( const char *pCommand )
 	{
 		if ( steamapicontext && steamapicontext->SteamFriends() )
 		{
-			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( "http://www.teamfortress.com/saxxyawards/#rules" );
+			// dimhotepus: http:// -> https://
+			steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage( "https://www.teamfortress.com/saxxyawards/#rules" );
 		}
 	}
 	else

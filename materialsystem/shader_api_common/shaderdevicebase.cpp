@@ -159,9 +159,9 @@ void CShaderDeviceMgrBase::Disconnect()
 //-----------------------------------------------------------------------------
 void *CShaderDeviceMgrBase::QueryInterface( const char *pInterfaceName )
 {
-	if ( !Q_stricmp( pInterfaceName, SHADER_DEVICE_MGR_INTERFACE_VERSION ) )
+	if ( V_strieq( pInterfaceName, SHADER_DEVICE_MGR_INTERFACE_VERSION ) )
 		return ( IShaderDeviceMgr* )this;
-	if ( !Q_stricmp( pInterfaceName, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION ) )
+	if ( V_strieq( pInterfaceName, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION ) )
 		return ( IMaterialSystemHardwareConfig* )g_pHardwareConfig;
 	return NULL;
 }
@@ -488,7 +488,7 @@ static void OverrideKeyValues( KeyValues *pDst, KeyValues *pSrc )
 		}
 	}
 
-	//	if( CommandLine()->FindParm( "-debugdxsupport" ) )
+	//	if( CommandLine()->HasParm( "-debugdxsupport" ) )
 	//	{
 	//		CUtlBuffer tmpBuf;
 	//		pDst->RecursiveSaveToFile( tmpBuf, 0 );
@@ -498,7 +498,7 @@ static void OverrideKeyValues( KeyValues *pDst, KeyValues *pSrc )
 
 KeyValues *CShaderDeviceMgrBase::ReadDXSupportKeyValues()
 {
-	if ( CommandLine()->CheckParm( "-ignoredxsupportcfg" ) )
+	if ( CommandLine()->HasParm( "-ignoredxsupportcfg" ) )
 		return NULL;
 
 	if ( m_pDXSupport )
@@ -587,7 +587,7 @@ void CShaderDeviceMgrBase::LoadHardwareCaps( KeyValues *pGroup, HardwareCaps_t &
 	// don't just blanket kill clip planes on POSIX, only shoot them down if we're running ARB, or asked for nouserclipplanes.
 	//FIXME need to take into account the caps bit that GLM can now provide, so NV can use normal clipping and ATI can fall back to fastclip.
 	
-	if ( CommandLine()->FindParm("-arbmode") || CommandLine()->CheckParm( "-nouserclip" ) )
+	if ( CommandLine()->HasParm("-arbmode") || CommandLine()->HasParm( "-nouserclip" ) )
 	{
 		caps.m_UseFastClipping = true;
 	}
@@ -645,7 +645,7 @@ void CShaderDeviceMgrBase::LoadConfig( KeyValues *pKeyValues, KeyValues *pConfig
 	if( !pKeyValues )
 		return;
 
-	if( CommandLine()->FindParm( "-debugdxsupport" ) )
+	if( CommandLine()->HasParm( "-debugdxsupport" ) )
 	{
 		CUtlBuffer tmpBuf;
 		pKeyValues->RecursiveSaveToFile( tmpBuf, 0 );
@@ -738,7 +738,7 @@ bool CShaderDeviceMgrBase::GetRecommendedConfigurationInfo( unsigned nAdapter, i
 	KeyValues *pVidMemKeyValues = FindVidMemSpecificConfig( pCfg, vidMemMB );
 	if ( pVidMemKeyValues && nTextureMemorySize > 0 )
 	{
-		if ( CommandLine()->FindParm( "-debugdxsupport" ) )
+		if ( CommandLine()->HasParm( "-debugdxsupport" ) )
 		{
 			CUtlBuffer tmpBuf;
 			pVidMemKeyValues->RecursiveSaveToFile( tmpBuf, 0 );
@@ -759,7 +759,7 @@ bool CShaderDeviceMgrBase::GetRecommendedConfigurationInfo( unsigned nAdapter, i
 	// Hack to slam the mat_dxlevel ConVar to match the requested dxlevel
 	pConfiguration->SetInt( "ConVar.mat_dxlevel", nDXLevel );
 
-	if ( CommandLine()->FindParm( "-debugdxsupport" ) )
+	if ( CommandLine()->HasParm( "-debugdxsupport" ) )
 	{
 		CUtlBuffer tmpBuf;
 		pConfiguration->RecursiveSaveToFile( tmpBuf, 0 );
@@ -854,11 +854,11 @@ void* CShaderDeviceMgrBase::ShaderInterfaceFactory( const char *pInterfaceName, 
 	{
 		*pReturnCode = IFACE_OK;
 	}
-	if ( !Q_stricmp( pInterfaceName, SHADER_DEVICE_INTERFACE_VERSION ) )
+	if ( V_strieq( pInterfaceName, SHADER_DEVICE_INTERFACE_VERSION ) )
 		return static_cast< IShaderDevice* >( g_pShaderDevice );
-	if ( !Q_stricmp( pInterfaceName, SHADERAPI_INTERFACE_VERSION ) )
+	if ( V_strieq( pInterfaceName, SHADERAPI_INTERFACE_VERSION ) )
 		return static_cast< IShaderAPI* >( g_pShaderAPI );
-	if ( !Q_stricmp( pInterfaceName, SHADERSHADOW_INTERFACE_VERSION ) )
+	if ( V_strieq( pInterfaceName, SHADERSHADOW_INTERFACE_VERSION ) )
 		return static_cast< IShaderShadow* >( g_pShaderShadow );
 
 	if ( pReturnCode )
@@ -902,7 +902,7 @@ void CShaderDeviceBase::SetCurrentThreadAsOwner()
 
 void CShaderDeviceBase::RemoveThreadOwner()
 {
-	m_dwThreadId.store( std::numeric_limits<ThreadId_t>::max(), std::memory_order::memory_order_relaxed );
+	m_dwThreadId.store( INVALID_THREAD_ID, std::memory_order::memory_order_relaxed );
 }
 
 bool CShaderDeviceBase::ThreadOwnsDevice() const

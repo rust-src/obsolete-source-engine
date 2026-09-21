@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
   constexpr char kEnUsUtf8Locale[]{"en_US.UTF-8"};
 
   const se::ScopedAppLocale scoped_app_locale{kEnUsUtf8Locale};
-  if (V_stricmp(se::ScopedAppLocale::GetCurrentLocale(), kEnUsUtf8Locale)) {
+  if (!V_strieq(se::ScopedAppLocale::GetCurrentLocale(), kEnUsUtf8Locale)) {
     fprintf(stderr, "setlocale('%s') failed, current locale is '%s'.\n",
             kEnUsUtf8Locale, se::ScopedAppLocale::GetCurrentLocale());
   }
@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
   // Check if we are in decompiler mode
   //
 #if VFONT_DECOMPILER
-  bool bDecompiler = !stricmp(argv[iArg], "-d");
+  bool bDecompiler = V_strieq(argv[iArg], "-d");
   if (bDecompiler) ++iArg;
 #endif
 

@@ -36,13 +36,13 @@ bool CMakefileCreator::CreateMakefiles(CVCProjConvert &proj) {
       continue;
     }
 
+    RunCodeAtScopeExit(g_pFileSystem->Close(f));
+
     ok = ok && OutputDirs(f);
     ok = ok && OutputIncludes(proj.GetConfiguration(i), f);
     ok = ok && OutputObjLists(proj.GetConfiguration(i), f);
     ok = ok && OutputMainBuilder(f);
     ok = ok && OutputBuildTarget(f);
-
-    g_pFileSystem->Close(f);
   }
 
   return ok && !isSkippedMakefile;
@@ -106,9 +106,10 @@ void CMakefileCreator::CreateDirectoryFriendlyName(const char *dirName,
       friendlyDirName[i] = '_';
     }
 
-    if (isalpha(friendlyDirName[i])) {
-      friendlyDirName[i] = static_cast<unsigned char>(
-          toupper(static_cast<unsigned char>(friendlyDirName[i])));
+    // dimhotepus: isalpha -> V_isalpha.
+    if (V_isalpha(friendlyDirName[i])) {
+      // dimhotepus: toupper -> V_toupper.
+      friendlyDirName[i] = V_toupper(friendlyDirName[i]);
     }
 
     if (friendlyDirName[i] == '.') {
@@ -119,13 +120,13 @@ void CMakefileCreator::CreateDirectoryFriendlyName(const char *dirName,
   }
 
   // strip any leading/trailing underscores
-  while (friendlyDirName[0] == '_' && Q_strlen(friendlyDirName) > 0) {
+  while (friendlyDirName[0] == '_' && !Q_isempty(friendlyDirName)) {
     Q_memmove(&friendlyDirName[0], &friendlyDirName[1],
               Q_strlen(friendlyDirName) - 1);
     friendlyDirName[Q_strlen(friendlyDirName) - 1] = 0;
   }
 
-  while (Q_strlen(friendlyDirName) > 0 &&
+  while (!Q_isempty(friendlyDirName) &&
          friendlyDirName[Q_strlen(friendlyDirName) - 1] == '_') {
     friendlyDirName[Q_strlen(friendlyDirName) - 1] = 0;
   }
@@ -189,7 +190,7 @@ bool CMakefileCreator::OutputDirs(FileHandle_t f) {
   for (auto i = m_BaseDirs.First(); i != m_BaseDirs.InvalidIndex();
        i = m_BaseDirs.Next(i)) {
     const char *dirName = m_BaseDirs.GetElementName(i);
-    if (!dirName || !Q_strlen(dirName)) dirName = m_BaseDir.String();
+    if (Q_isempty(dirName)) dirName = m_BaseDir.String();
 
     char friendlyDirName[MAX_PATH];
     CreateDirectoryFriendlyName(dirName, friendlyDirName,

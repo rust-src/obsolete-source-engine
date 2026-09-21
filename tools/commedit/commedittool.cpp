@@ -836,7 +836,7 @@ void CCommEditTool::OnExit()
 //-----------------------------------------------------------------------------
 void CCommEditTool::OnCommand( const char *cmd )
 {
-	if ( !V_stricmp( cmd, "HideActionMenu" ) )
+	if ( V_strieq( cmd, "HideActionMenu" ) )
 	{
 		if ( GetActionMenu() )
 		{
@@ -853,15 +853,15 @@ void CCommEditTool::OnCommand( const char *cmd )
 		int idx = Q_atoi( pSuffixTool );
 		enginetools->SwitchToTool( idx );
 	}
-	else if ( !V_stricmp( cmd, "OnUndo" ) )
+	else if ( V_strieq( cmd, "OnUndo" ) )
 	{
 		OnUndo();
 	}
-	else if ( !V_stricmp( cmd, "OnRedo" ) )
+	else if ( V_strieq( cmd, "OnRedo" ) )
 	{
 		OnRedo();
 	}
-	else if ( !V_stricmp( cmd, "OnDescribeUndo" ) )
+	else if ( V_strieq( cmd, "OnDescribeUndo" ) )
 	{
 		OnDescribeUndo();
 	}
@@ -1043,7 +1043,7 @@ void CCommEditTool::AttachAllEngineEntities()
 		HTOOLHANDLE handle = clienttools->AttachToEntity( sr );
 
 		const char *pClassName = clienttools->GetClassname( handle );
-		if ( Q_strcmp( pClassName, "class C_PointCommentaryNode" ) == 0 )
+		if ( V_streq( pClassName, "class C_PointCommentaryNode" ) )
 		{
 			Vector vecOrigin = clienttools->GetAbsOrigin( handle );
 			QAngle angAngles = clienttools->GetAbsAngles( handle );
@@ -1068,7 +1068,7 @@ void CCommEditTool::OpenSpecificFile( const char *pFileName )
 	if ( m_pDoc )
 	{
 		// File is already open
-		if ( !Q_stricmp( m_pDoc->GetTXTFileName(), pFileName ) )
+		if ( V_strieq( m_pDoc->GetTXTFileName(), pFileName ) )
 			return;
 
 		if ( m_pDoc->IsDirty() )
@@ -1110,20 +1110,20 @@ void CCommEditTool::OnFileOperationCompleted( [[maybe_unused]] const char *pFile
 	if ( state != FileOpenStateMachine::SUCCESSFUL )
 		return;
 
-	if ( !Q_stricmp( pContextKeyValues->GetName(), "OnClose" ) )
+	if ( V_strieq( pContextKeyValues->GetName(), "OnClose" ) )
 	{
 		OnCloseNoSave();
 		return;
 	}
 
-	if ( !Q_stricmp( pContextKeyValues->GetName(), "OnQuit" ) )
+	if ( V_strieq( pContextKeyValues->GetName(), "OnQuit" ) )
 	{
 		OnCloseNoSave();
 		vgui::ivgui()->PostMessage( GetVPanel(), new KeyValues( "OnExit" ), 0 );
 		return;
 	}
 
-	if ( !Q_stricmp( pContextKeyValues->GetName(), "RestartLevel" ) )
+	if ( V_strieq( pContextKeyValues->GetName(), "RestartLevel" ) )
 	{
 		OnRestartLevel();
 		return;
@@ -1140,7 +1140,7 @@ void CCommEditTool::SetupFileOpenDialog( vgui::FileOpenDialog *pDialog, [[maybe_
 
 	GetModSubdirectory( "maps", pStartingDir, sizeof(pStartingDir) );
 
-	if ( !Q_stricmp( pFileFormat, "bsp" ) )
+	if ( V_strieq( pFileFormat, "bsp" ) )
 	{
 		// Open a bsp file to create a new commentary file
 		pDialog->SetTitle( "Choose BSP File", true );

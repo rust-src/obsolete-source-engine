@@ -80,7 +80,8 @@ static int FastToLower( char c )
 	}
 	else
 	{
-		i += isupper( i ) ? 0x20 : 0;
+		// dimhotepus: isupper -> V_isupper.
+		i += V_isupper( c ) ? 0x20 : 0;
 	}
 	return i;
 }
@@ -190,13 +191,10 @@ wchar_t *_V_wcslower (const char*, int, INOUT_Z wchar_t *start)
 
 char *V_strupr( INOUT_Z char *start )
 {
-	auto *str = (unsigned char*)start;
+	auto *str = start;
 	while( *str )
 	{
-		if ( (unsigned char)(*str - 'a') <= ('z' - 'a') )
-			*str -= 'a' - 'A';
-		else if ( (unsigned char)*str >= 0x80 ) // non-ascii, fall back to CRT
-			*str = static_cast<unsigned char>(toupper( *str ));
+		*str = V_toupper( *str );
 		str++;
 	}
 	return start;
@@ -204,13 +202,10 @@ char *V_strupr( INOUT_Z char *start )
 
 char *V_strlower( INOUT_Z char *start )
 {
-	auto *str = (unsigned char*)start;
+	auto *str = start;
 	while( *str )
 	{
-		if ( (unsigned char)(*str - 'A') <= ('Z' - 'A') )
-			*str += 'a' - 'A';
-		else if ( (unsigned char)*str >= 0x80 ) // non-ascii, fall back to CRT
-			*str = static_cast<unsigned char>(tolower( *str ));
+		*str = V_tolower( *str );
 		str++;
 	}
 	return start;
@@ -221,7 +216,7 @@ char *V_strnlwr( INOUT_Z_CAP(count) char *s, size_t count )
 	// Assert( count >= 0 ); tautology since size_t is unsigned
 	AssertValidStringPtr( s, count );
 
-	auto *it = reinterpret_cast<unsigned char *>(s);
+	auto *it = s;
 	char* pRet = s;
 	if ( !s || !count )
 		return s;
@@ -231,16 +226,11 @@ char *V_strnlwr( INOUT_Z_CAP(count) char *s, size_t count )
 		if ( !*it )
 			return pRet; // reached end of string
 
-		// dimhotepus: Use fast ASCII way to lowercase.
-		if ( (unsigned char)(*it - 'A') <= ('Z' - 'A') )
-			*it += 'a' - 'A';
-		else if ( (unsigned char)*it >= 0x80 ) // non-ascii, fall back to CRT
-			*it =static_cast<unsigned char>(tolower( static_cast<unsigned char>(*it) ));
-
+		*it = V_tolower(*it);
 		++it;
 	}
 
-	*it = 0; // null-terminate original string at "count-1"
+	*it = '\0'; // null-terminate original string at "count-1"
 	return pRet;
 }
 
@@ -417,7 +407,7 @@ int64 V_atoi64( IN_Z const char *str )
 	while (true)
 	{
 		c = *str++;
-		if (c <'0' || c > '9')
+		if (c < '0' || c > '9')
 			return val*sign;
 		val = val*10 + c - '0';
 	}
@@ -476,7 +466,7 @@ uint64 V_atoui64( IN_Z const char *str )
 	while (true)
 	{
 		c = *str++;
-		if (c <'0' || c > '9')
+		if (c < '0' || c > '9')
 			return val;
 		val = val*10 + c - '0';
 	}
@@ -551,7 +541,7 @@ int V_atoi( IN_Z const char *str )
 	while (true)
 	{
 		c = *str++;
-		if (c <'0' || c > '9')
+		if (c < '0' || c > '9')
 			return val*sign;
 		val = val*10 + c - '0';
 	}
@@ -713,7 +703,7 @@ RET_MAY_BE_NULL char const* V_stristr( IN_Z char const* pStr, IN_Z char const* p
 	while (*pLetter != 0)
 	{
 		// Skip over non-matches
-		if (FastToLower((unsigned char)*pLetter) == FastToLower((unsigned char)*pSearch))
+		if (FastToLower(*pLetter) == FastToLower(*pSearch))
 		{
 			// Check for match
 			char const* pMatch = pLetter + 1;
@@ -724,7 +714,7 @@ RET_MAY_BE_NULL char const* V_stristr( IN_Z char const* pStr, IN_Z char const* p
 				if (*pMatch == 0)
 					return nullptr;
 
-				if (FastToLower((unsigned char)*pMatch) != FastToLower((unsigned char)*pTest))
+				if (FastToLower(*pMatch) != FastToLower(*pTest))
 					break;
 
 				++pMatch;
@@ -1236,7 +1226,7 @@ char *V_pretifynum( int64 inputValue )
 //			characters in this set are removed from the beginning and/or end of strings
 //			by Q_AggressiveStripPrecedingAndTrailingWhitespaceW() 
 //-----------------------------------------------------------------------------
-bool Q_IsMeanSpaceW( wchar_t wch )
+static bool Q_IsMeanSpaceW( wchar_t wch )
 {
 	bool bIsMean = false;
 
@@ -1689,7 +1679,7 @@ bool V_hextobinary( IN_Z_CAP(numchars) char const *in, intp numchars, OUT_BYTECA
 	Assert( numchars >= 2 );
 	if ( numchars < 2) return false;
 
-	BitwiseClear( out, maxoutputbytes );
+	memset( out, 0, maxoutputbytes );
 	
 	unsigned char nibble1, nibble2;
 
@@ -1729,7 +1719,7 @@ void V_binarytohex( IN_BYTECAP(inputbytes) const byte *in, intp inputbytes, OUT_
 	for ( i = 0; i < inputbytes; i++ )
 	{
 		unsigned char c = in[i];
-		V_snprintf( doublet, sizeof( doublet ), "%02x", c );
+		V_sprintf_safe( doublet, "%02x", c );
 		V_strncat( out, doublet, outsize, COPY_ALL_CHARACTERS );
 	}
 }
@@ -2045,9 +2035,9 @@ void V_FixDoubleSlashes( INOUT_Z char *pStr )
 //-----------------------------------------------------------------------------
 bool V_StripLastDir( INOUT_Z_CAP(maxlen) char *dirName, intp maxlen )
 {
-	if( dirName[0] == 0 || 
-		!V_stricmp( dirName, "./" ) || 
-		!V_stricmp( dirName, ".\\" ) )
+	if( Q_isempty( dirName ) || 
+		V_streq( dirName, "./" ) || 
+		V_streq( dirName, ".\\" ) )
 		return false;
 	
 	intp len = V_strlen( dirName );
@@ -2627,7 +2617,7 @@ bool V_StrSubst(
 }
 
 
-char* AllocString( const char *pStr, intp nMaxChars )
+static char* AllocString( const char *pStr, intp nMaxChars )
 {
 	intp allocLen = (intp)strlen( pStr );
 	if ( nMaxChars == -1 )
@@ -2939,7 +2929,7 @@ static constexpr int iHexCharToInt( char cValue )
 // Purpose: Internal implementation of encode, works in the strict RFC manner, or
 //          with spaces turned to + like HTML form encoding.
 //-----------------------------------------------------------------------------
-void Q_URLEncodeInternal( char *pchDest, intp nDestLen, const char *pchSource, intp nSourceLen, bool bUsePlusForSpace )
+static void Q_URLEncodeInternal( char *pchDest, intp nDestLen, const char *pchSource, intp nSourceLen, bool bUsePlusForSpace )
 {
 	if ( nDestLen < 3*nSourceLen )
 	{
@@ -2998,7 +2988,7 @@ void Q_URLEncodeInternal( char *pchDest, intp nDestLen, const char *pchSource, i
 //
 //			Returns the amount of space used in the output buffer.
 //-----------------------------------------------------------------------------
-size_t Q_URLDecodeInternal( char *pchDecodeDest, intp nDecodeDestLen, const char *pchEncodedSource, intp nEncodedSourceLen, bool bUsePlusForSpace )
+static size_t Q_URLDecodeInternal( char *pchDecodeDest, intp nDecodeDestLen, const char *pchEncodedSource, intp nEncodedSourceLen, bool bUsePlusForSpace )
 {
 	if ( nDecodeDestLen < nEncodedSourceLen )
 	{
@@ -3235,8 +3225,8 @@ void V_LogMultiline( bool input, char const *label, const char *data, size_t len
 	char hex_line[LINE_SIZE * 9 / 4 + 2], asc_line[LINE_SIZE + 1];
 	while (len > 0) 
 	{
-		V_memset(asc_line, ' ', sizeof(asc_line));
-		V_memset(hex_line, ' ', sizeof(hex_line));
+		BitwiseSet(asc_line, ' ');
+		BitwiseSet(hex_line, ' ');
 		size_t line_len = MIN(len, LINE_SIZE);
 		for (size_t i=0; i<line_len; ++i) {
 			auto ch = static_cast<unsigned char>(data[i]);
@@ -3244,8 +3234,8 @@ void V_LogMultiline( bool input, char const *label, const char *data, size_t len
 			hex_line[i*2 + i/4] = HEX[ch >> 4];
 			hex_line[i*2 + i/4 + 1] = HEX[ch & 0xf];
 		}
-		asc_line[sizeof(asc_line)-1] = 0;
-		hex_line[sizeof(hex_line)-1] = 0;
+		asc_line[ssize(asc_line)-1] = 0;
+		hex_line[ssize(hex_line)-1] = 0;
 		output += CFmtStr( "%s %s %s %s\n", label, direction, asc_line, hex_line );
 		data += line_len;
 		len -= line_len;
@@ -3827,7 +3817,7 @@ bool V_BBCodeToHTML( OUT_Z_CAP( nDestSize ) char *pDest, const intp nDestSize, I
 //			characters in this set are removed from the beginning and/or end of strings
 //			by Q_AggressiveStripPrecedingAndTrailingWhitespaceW() 
 //-----------------------------------------------------------------------------
-bool V_IsMeanUnderscoreW( wchar_t wch )
+static bool V_IsMeanUnderscoreW( wchar_t wch )
 {
 	bool bIsMean = false;
 
@@ -4188,7 +4178,7 @@ bool V_URLContainsDomain( IN_Z const char *pchURL, IN_Z const char *pchDomain )
 			if ( cchExtractedDomain > cchDomain && rgchExtractedDomain[ cchExtractedDomain - cchDomain - 1 ] != '.' )
 				return false;
 
-			if ( 0 == V_stricmp( rgchExtractedDomain + cchExtractedDomain - cchDomain, pchDomain ) )
+			if ( V_strieq( rgchExtractedDomain + cchExtractedDomain - cchDomain, pchDomain ) )
 				return true;
 		}
 	}
@@ -4209,7 +4199,7 @@ void V_StripAndPreserveHTMLCore( CUtlBuffer *pbuffer, IN_Z const char *pchHTML, 
 	{
 		for ( size_t i = 0; i < cPreserveTags; ++i )
 		{
-			if ( !Q_stricmp( rgszPreserveTags[ i ], "\n" ) )
+			if ( V_strieq( rgszPreserveTags[ i ], "\n" ) )
 				bStripNewLines = false;
 		}
 	}
@@ -4367,7 +4357,7 @@ void V_StripAndPreserveHTMLCore( CUtlBuffer *pbuffer, IN_Z const char *pchHTML, 
 								if ( bEndTag )
 								{
 									// ending a paragraph tag is optional. If we were expecting to find one, and didn't, skip
-									if ( Q_stricmp( szTag, "p" ) != 0 )
+									if ( !V_strieq( szTag, "p" ) )
 									{
 										while ( vecTagStack.Count() > 0 && Q_stricmp( vecTagStack[ vecTagStack.Count() - 1 ], "p" ) == 0 )
 										{
@@ -4379,7 +4369,7 @@ void V_StripAndPreserveHTMLCore( CUtlBuffer *pbuffer, IN_Z const char *pchHTML, 
 									{
 										vecTagStack.Remove( vecTagStack.Count() - 1 );
 
-										if ( Q_stricmp( szTag, "pre" ) == 0 )
+										if ( V_strieq( szTag, "pre" ) )
 										{
 											nPreTagDepth--;
 											if ( nPreTagDepth < 0 )
@@ -4409,7 +4399,7 @@ void V_StripAndPreserveHTMLCore( CUtlBuffer *pbuffer, IN_Z const char *pchHTML, 
 									if ( !bNoCloseTag )
 									{
 										vecTagStack.AddToTail( szTag );
-										if ( Q_stricmp( szTag, "pre" ) == 0 )
+										if ( V_strieq( szTag, "pre" ) )
 										{
 											nPreTagDepth++;
 										}

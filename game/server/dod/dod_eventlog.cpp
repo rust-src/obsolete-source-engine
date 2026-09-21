@@ -325,7 +325,7 @@ protected:
 		{
 			CDODTeam *pTeam = GetGlobalDODTeam( event->GetInt( "team" ) );
 
-			UTIL_LogPrintf( "Team \"%s\" triggered \"round_win\" (rounds_won \"%d\") (numplayers \"%d\")\n",
+			UTIL_LogPrintf( "Team \"%s\" triggered \"round_win\" (rounds_won \"%d\") (numplayers \"%zd\")\n",
 				pTeam->GetName(),
 				pTeam->GetRoundsWon(),
 				pTeam->GetNumPlayers() );
@@ -339,7 +339,7 @@ protected:
 			int iScore = event->GetInt( "score" );
 			int iTotalScore = event->GetInt( "totalscore" );
 
-			UTIL_LogPrintf( "Team \"%s\" triggered \"tick_score\" (score \"%i\") (totalscore \"%d\") (numplayers \"%d\")\n",
+			UTIL_LogPrintf( "Team \"%s\" triggered \"tick_score\" (score \"%i\") (totalscore \"%d\") (numplayers \"%zd\")\n",
 				pTeam->GetName(),
 				iScore,
 				iTotalScore,

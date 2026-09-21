@@ -840,7 +840,7 @@ void C_TFRagdoll::Interp_Copy( C_BaseAnimatingOverlay *pSourceEntity )
 		for ( int j=0; j < pSrc->m_Entries.Count(); j++ )
 		{
 			VarMapEntry_t *pSrcEntry = &pSrc->m_Entries[j];
-			if ( !Q_strcmp( pSrcEntry->watcher->GetDebugName(), pDestEntry->watcher->GetDebugName() ) )
+			if ( V_streq( pSrcEntry->watcher->GetDebugName(), pDestEntry->watcher->GetDebugName() ) )
 			{
 				pDestEntry->watcher->Copy( pSrcEntry->watcher );
 				break;
@@ -3873,7 +3873,7 @@ public:
 			const char *vArgs = VarArgs( "wear_level_%d", nWear );
 			FOR_EACH_SUBKEY( s_kvOverridePaintkit, wearKv )
 			{
-				if ( !V_strcmp( vArgs, wearKv->GetName() ) )
+				if ( V_streq( vArgs, wearKv->GetName() ) )
 				{
 					rootKV = wearKv;
 					break;
@@ -6757,7 +6757,7 @@ void C_TFPlayer::AvoidPlayers( CUserCmd *pCmd )
 	float flAvoidRadius = 0.0f;
 
 	Vector vecAvoidCenter, vecAvoidMin, vecAvoidMax;
-	for ( int i = 0; i < pTeam->GetNumPlayers(); ++i )
+	for ( intp i = 0; i < pTeam->GetNumPlayers(); ++i )
 	{
 		C_TFPlayer *pAvoidPlayer = static_cast< C_TFPlayer * >( pTeam->GetPlayer( i ) );
 		if ( pAvoidPlayer == NULL )
@@ -11630,7 +11630,7 @@ const char* C_TFPlayer::ModifyEventParticles( const char* token )
 {
 	if ( GetPlayerClass()->IsClass( TF_CLASS_SCOUT ) )
 	{
-		if ( !Q_strcmp( token, "doublejump_puff" ) )
+		if ( V_streq( token, "doublejump_puff" ) )
 		{
 			if ( m_Shared.GetAirDash() > 1 )
 			{
@@ -12104,7 +12104,7 @@ static void cc_taunt_by_name( const CCommand &args )
 		g_pVGuiLocalize->ConvertUnicodeToANSI( g_pVGuiLocalize->Find ( pItem->GetStaticData()->GetItemBaseName() ) , pszItemName, sizeof(pszItemName) );
 		strTauntList.CopyAndAddToTail( pszItemName );
 
-		if ( V_stricmp( pszTauntItemName, pszItemName ) == 0 )
+		if ( V_strieq( pszTauntItemName, pszItemName ) )
 		{
 			int iTauntSlot = iSlot - LOADOUT_POSITION_TAUNT + 1;
 			engine->ClientCmd( CFmtStr( "taunt %d", iTauntSlot ) );

@@ -2277,7 +2277,7 @@ private:
 			case OT_STRING:
 				{
 					const int len = m_pBuffer->GetInt();
-					char *pString = (char *)stackalloc( len + 1 );
+					char *pString = stackallocT( char, len + 1 );
 					int read = m_pBuffer->GetUpTo( pString, len + 1 );
 					if (read > 0)
 					{
@@ -3094,7 +3094,7 @@ void AnotherFunction()
 	g_pScriptVM->RegisterInstance( &derivedInstance, "theInstance" );
 }
 
-int main( int argc, const char **argv)
+int main( int argc, char **argv)
 {
 	if ( argc < 2 )
 	{

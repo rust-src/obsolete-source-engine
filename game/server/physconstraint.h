@@ -113,7 +113,9 @@ public:
 		if ( m_pConstraint )
 		{
 			matrix3x4_t xformRef;
-			m_pConstraint->GetConstraintTransform( &xformRef, NULL );
+			[[maybe_unused]] const bool bXform = m_pConstraint->GetConstraintTransform( &xformRef, NULL );
+			// dimhotepus: Check constraint transform succeeded.
+			Assert(bXform);
 			IPhysicsObject *pObj = m_pConstraint->GetReferenceObject();
 			if ( pObj && pObj->IsMoveable() )
 			{

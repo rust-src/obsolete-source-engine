@@ -264,7 +264,7 @@ void CBaseHudChatLine::PerformFadeout( void )
 		float frac = frac1;
 
 		frac *= CHATLINE_NUM_FLASHES;
-		frac *= 2 * M_PI;
+		frac *= 2 * M_PI_F;
 
 		frac = cos( frac );
 
@@ -778,7 +778,7 @@ void CBaseHudChat::MsgFunc_SayText( bf_read &msg )
 
 int CBaseHudChat::GetFilterForString( const char *pString )
 {
-	if ( !Q_stricmp( pString, "#HL_Name_Change" ) ) 
+	if ( V_strieq( pString, "#HL_Name_Change" ) ) 
 	{
 		return CHAT_FILTER_NAMECHANGE;
 	}
@@ -1501,7 +1501,7 @@ void CBaseHudChatLine::Colorize( int alpha )
 	for ( intp i=0; i<m_textRanges.Count(); ++i )
 	{
 		wchar_t * start = m_text + m_textRanges[i].start;
-		int len = m_textRanges[i].end - m_textRanges[i].start + 1;
+		intp len = m_textRanges[i].end - m_textRanges[i].start + 1;
 		if ( len > 1 && len <= ssize( wText ) )
 		{
 			wcsncpy( wText, start, len );
@@ -1796,7 +1796,7 @@ void CBaseHudChat::FireGameEvent( IGameEvent *event )
 #ifndef _XBOX
 	const char *eventname = event->GetName();
 
-	if ( Q_strcmp( "hltv_chat", eventname ) == 0 )
+	if ( V_streq( "hltv_chat", eventname ) )
 	{
 		C_BasePlayer *player = C_BasePlayer::GetLocalPlayer();
 

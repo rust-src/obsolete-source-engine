@@ -47,7 +47,7 @@ struct S3TCBlock_DXT5
 // ------------------------------------------------------------------------------------------ //
 
 template<typename T>
-T ReadBitInt( const char *pBits, T iBaseBit, T nBits )
+static [[nodiscard]] T ReadBitInt( const char *pBits, T iBaseBit, T nBits )
 {
 	T ret = 0;
 	for ( T i=0; i < nBits; i++ )
@@ -60,7 +60,7 @@ T ReadBitInt( const char *pBits, T iBaseBit, T nBits )
 	return ret;
 }
 
-void WriteBitInt( char *pBits, int iBaseBit, int nBits, int val )
+static void WriteBitInt( char *pBits, int iBaseBit, int nBits, int val )
 {
 	for ( int i=0; i < nBits; i++ )
 	{
@@ -71,7 +71,7 @@ void WriteBitInt( char *pBits, int iBaseBit, int nBits, int val )
 	}
 }
 
-int S3TC_BytesPerBlock( ImageFormat format )
+static int S3TC_BytesPerBlock( ImageFormat format )
 {
 	if ( format == IMAGE_FORMAT_DXT1 || format == IMAGE_FORMAT_ATI1N )
 	{
@@ -205,7 +205,7 @@ char* S3TC_GetBlock(
 }
 
 
-void GenerateRepresentativePalette(
+static void GenerateRepresentativePalette(
 	[[maybe_unused]] ImageFormat format,
 	[[maybe_unused]] S3RGBA **pOriginals,	// Original RGBA colors in the texture. This allows it to avoid doubly compressing.
 	[[maybe_unused]] int nBlocks,
@@ -219,7 +219,7 @@ void GenerateRepresentativePalette(
 	Assert( nBlocks == 2 || nBlocks == 3 );
 
 	S3RGBA values[12*4];
-	memset( values, 0xFF, sizeof( values ) );
+	BitwiseSet( values, 0xFF );
 	int width = nBlocks * 4;
 	for ( int i=0; i < nBlocks; i++ )
 	{
@@ -230,13 +230,13 @@ void GenerateRepresentativePalette(
 				int outIndex = y*width+(i*4+x);
 				values[outIndex] = pOriginals[i][y * (lPitch/4) + x];
 			}
-		}			
+		}
 	}
 	
 	DDSURFACEDESC descIn;
+	BitwiseClear( descIn );
 	DDSURFACEDESC descOut;
-	memset( &descIn, 0, sizeof(descIn) );
-	memset( &descOut, 0, sizeof(descOut) );
+	BitwiseClear( descOut );
 
 	descIn.dwSize = sizeof(descIn);
 	descIn.dwFlags = DDSD_WIDTH | DDSD_HEIGHT | DDSD_LPSURFACE | DDSD_PIXELFORMAT;
@@ -335,8 +335,8 @@ void S3TC_MergeBlocks(
 					int iBasePixel = (y*nBlocks*4 + x + iBlock*4); //-V112
 					
 					S3PaletteIndex index;
-					index.m_ColorIndex = ReadBitInt<unsigned>( pColorBits, iBasePixel * 2, 2 );
 					index.m_AlphaIndex = ReadBitInt<unsigned>( pAlphaBits, iBasePixel * 3, 3 );
+					index.m_ColorIndex = ReadBitInt<unsigned>( pColorBits, iBasePixel * 2, 2 );
 					
 					S3TC_SetPixelPaletteIndex( format, (char*)pBlock, x, y, index );
 				}

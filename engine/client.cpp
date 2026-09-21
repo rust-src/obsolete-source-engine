@@ -160,15 +160,17 @@ const char *CClientState::GetCDKeyHash( void )
 		return "";
 	}
 	
-	MD5Context_t ctx;
 	unsigned char digest[16]; // The MD5 Hash
+	BitwiseClear( digest );
+
+	MD5Context_t ctx;
 	// Now get the md5 hash of the key
-	memset( &ctx, 0, sizeof( ctx ) );
-	memset( digest, 0, sizeof( digest ) );
+	BitwiseClear( ctx );
 
 	MD5Init(&ctx);
 	MD5Update(&ctx, szKeyBuffer, nKeyLength);
 	MD5Final(digest, &ctx);
+
 	V_strcpy_safe( szHashedKeyBuffer, MD5_Print ( digest ) );
 	return szHashedKeyBuffer;
 }
@@ -399,67 +401,67 @@ bool CClientState::HookClientStringTable( char const *tableName )
 #endif
 
 	// Hook Model Precache table
-	if ( !Q_strcasecmp( tableName, szModelPrecacheTablename ) )
+	if ( V_strieq( tableName, szModelPrecacheTablename ) )
 	{
 		m_pModelPrecacheTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, szGenericPrecacheTablename ) )
+	if ( V_strieq( tableName, szGenericPrecacheTablename ) )
 	{
 		m_pGenericPrecacheTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, szSoundPrecacheTablename ) )
+	if ( V_strieq( tableName, szSoundPrecacheTablename ) )
 	{
 		m_pSoundPrecacheTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, szDecalPrecacheTablename ) )
+	if ( V_strieq( tableName, szDecalPrecacheTablename ) )
 	{
 		// Cache the id
 		m_pDecalPrecacheTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, INSTANCE_BASELINE_TABLENAME ) )
+	if ( V_strieq( tableName, INSTANCE_BASELINE_TABLENAME ) )
 	{
 		// Cache the id
 		m_pInstanceBaselineTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, LIGHT_STYLES_TABLENAME ) )
+	if ( V_strieq( tableName, LIGHT_STYLES_TABLENAME ) )
 	{
 		// Cache the id
 		m_pLightStyleTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, USER_INFO_TABLENAME ) )
+	if ( V_strieq( tableName, USER_INFO_TABLENAME ) )
 	{
 		// Cache the id
 		m_pUserInfoTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, SERVER_STARTUP_DATA_TABLENAME ) )
+	if ( V_strieq( tableName, SERVER_STARTUP_DATA_TABLENAME ) )
 	{
 		// Cache the id
 		m_pServerStartupTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, szDownloadableFileTablename ) )
+	if ( V_strieq( tableName, szDownloadableFileTablename ) )
 	{
 		// Cache the id
 		m_pDownloadableFileTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, "DynamicModels" ) )
+	if ( V_strieq( tableName, "DynamicModels" ) )
 	{
 		m_pDynamicModelsTable = table;
 		return true;
@@ -500,63 +502,63 @@ bool CClientState::InstallEngineStringTableCallback( char const *tableName )
 #endif
 
 	// Hook Model Precache table
-	if ( !Q_strcasecmp( tableName, szModelPrecacheTablename ) )
+	if ( V_strieq( tableName, szModelPrecacheTablename ) )
 	{
 		table->SetStringChangedCallback( NULL, Callback_ModelChanged );
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, szGenericPrecacheTablename ) )
+	if ( V_strieq( tableName, szGenericPrecacheTablename ) )
 	{
 		// Install the callback
 		table->SetStringChangedCallback( NULL, Callback_GenericChanged );
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, szSoundPrecacheTablename ) )
+	if ( V_strieq( tableName, szSoundPrecacheTablename ) )
 	{
 		// Install the callback
 		table->SetStringChangedCallback( NULL, Callback_SoundChanged );
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, szDecalPrecacheTablename ) )
+	if ( V_strieq( tableName, szDecalPrecacheTablename ) )
 	{
 		// Install the callback
 		table->SetStringChangedCallback( NULL, Callback_DecalChanged );
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, INSTANCE_BASELINE_TABLENAME ) )
+	if ( V_strieq( tableName, INSTANCE_BASELINE_TABLENAME ) )
 	{
 		// Install the callback (already done above)
 		table->SetStringChangedCallback( NULL, Callback_InstanceBaselineChanged );
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, LIGHT_STYLES_TABLENAME ) )
+	if ( V_strieq( tableName, LIGHT_STYLES_TABLENAME ) )
 	{
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, USER_INFO_TABLENAME ) )
+	if ( V_strieq( tableName, USER_INFO_TABLENAME ) )
 	{
 		// Install the callback
 		table->SetStringChangedCallback( NULL, Callback_UserInfoChanged );
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, SERVER_STARTUP_DATA_TABLENAME ) )
+	if ( V_strieq( tableName, SERVER_STARTUP_DATA_TABLENAME ) )
 	{
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, szDownloadableFileTablename ) )
+	if ( V_strieq( tableName, szDownloadableFileTablename ) )
 	{
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, "DynamicModels" ) )
+	if ( V_strieq( tableName, "DynamicModels" ) )
 	{
 		table->SetStringChangedCallback( NULL, Callback_DynamicModelsChanged );
 		m_pDynamicModelsTable = table;
@@ -735,11 +737,12 @@ void CClientState::FullConnect( netadr_t &adr )
 
 	// we didn't send commands yet
 	chokedcommands = 0;
-	
+
+	char address[32];
 	// Report connection success.
-	if ( Q_stricmp("loopback", adr.ToString() ) )
+	if ( !V_strieq( "loopback", adr.ToString_safe(address) ) )
 	{
-		ConMsg( "Connected to %s\n", adr.ToString() );
+		ConMsg( "Connected to %s\n", address );
 	}
 }
 
@@ -849,11 +852,11 @@ void CClientState::SetModel( int tableIndex )
 	const CPrecacheUserData *data = CL_GetPrecacheUserData( m_pModelPrecacheTable, tableIndex );
 
 	bool bLoadNow = ( data && ( data->flags & RES_PRELOAD ) ) || IsX360();
-	if ( CommandLine()->FindParm( "-nopreload" ) ||	CommandLine()->FindParm( "-nopreloadmodels" ))
+	if ( CommandLine()->HasParm( "-nopreload" ) ||	CommandLine()->HasParm( "-nopreloadmodels" ))
 	{
 		bLoadNow = false;
 	}
-	else if ( CommandLine()->FindParm( "-preload" ) )
+	else if ( CommandLine()->HasParm( "-preload" ) )
 	{
 		bLoadNow = true;
 	}
@@ -1029,11 +1032,11 @@ void CClientState::SetSound( int tableIndex )
 	const CPrecacheUserData *data = CL_GetPrecacheUserData( m_pSoundPrecacheTable, tableIndex );
 
 	bool bLoadNow = ( data && ( data->flags & RES_PRELOAD ) ) || IsX360();
-	if ( CommandLine()->FindParm( "-nopreload" ) ||	CommandLine()->FindParm( "-nopreloadsounds" ))
+	if ( CommandLine()->HasParm( "-nopreload" ) ||	CommandLine()->HasParm( "-nopreloadsounds" ))
 	{
 		bLoadNow = false;
 	}
-	else if ( CommandLine()->FindParm( "-preload" ) )
+	else if ( CommandLine()->HasParm( "-preload" ) )
 	{
 		bLoadNow = true;
 	}
@@ -1245,19 +1248,19 @@ void CClientState::DumpPrecacheStats( const char * name )
 
 	CPrecacheItem *items = NULL;
 	
-	if ( !Q_strcmp(MODEL_PRECACHE_TABLENAME, name ) )
+	if ( V_streq(MODEL_PRECACHE_TABLENAME, name ) )
 	{
 		items = model_precache;
 	}
-	else if ( !Q_strcmp(GENERIC_PRECACHE_TABLENAME, name ) )
+	else if ( V_streq(GENERIC_PRECACHE_TABLENAME, name ) )
 	{
 		items = generic_precache;
 	}
-	else if ( !Q_strcmp(SOUND_PRECACHE_TABLENAME, name ) )
+	else if ( V_streq(SOUND_PRECACHE_TABLENAME, name ) )
 	{
 		items = sound_precache;
 	}
-	else if ( !Q_strcmp(DECAL_PRECACHE_TABLENAME, name ) )
+	else if ( V_streq(DECAL_PRECACHE_TABLENAME, name ) )
 	{
 		items = decal_precache;
 	}
@@ -1283,7 +1286,7 @@ void CClientState::DumpPrecacheStats( const char * name )
 		CPrecacheItem *slot = &items[ i ];
 		const CPrecacheUserData *p = CL_GetPrecacheUserData( table, i );
 
-		if ( !pchName || !slot || !p )
+		if ( !pchName || !p )
 			continue;
 
 		ConMsg( "%03i:  %s (%s):   ",
@@ -1491,15 +1494,15 @@ void CClientState::CheckUpdatingSteamResources()
 				bool allowDownloads = true;
 				bool allowSoundDownloads = true;
 				bool allowNonMaps = true;
-				if ( !Q_strcasecmp( cl_downloadfilter.GetString(), "none" ) )
+				if ( V_strieq( cl_downloadfilter.GetString(), "none" ) )
 				{
 					allowDownloads = allowSoundDownloads = allowNonMaps = false;
 				}
-				else if ( !Q_strcasecmp( cl_downloadfilter.GetString(), "nosounds" ) )
+				else if ( V_strieq( cl_downloadfilter.GetString(), "nosounds" ) )
 				{
 					allowSoundDownloads = false;
 				}
-				else if ( !Q_strcasecmp( cl_downloadfilter.GetString(), "mapsonly" ) )
+				else if ( V_strieq( cl_downloadfilter.GetString(), "mapsonly" ) )
 				{
 					allowNonMaps = false;
 				}
@@ -1514,7 +1517,7 @@ void CClientState::CheckUpdatingSteamResources()
 						if ( !allowSoundDownloads )
 						{
 							V_ExtractFileExtension( fname, extension );
-							if ( !Q_strcasecmp( extension, "wav" ) || !Q_strcasecmp( extension, "mp3" ) )
+							if ( V_strieq( extension, "wav" ) || V_strieq( extension, "mp3" ) )
 							{
 								continue;
 							}
@@ -1526,7 +1529,7 @@ void CClientState::CheckUpdatingSteamResources()
 							V_ExtractFileExtension( fname, extension );
 
 							// If the extension is not bsp, skip it.
-							if ( Q_strcasecmp( extension, "bsp" ) )
+							if ( !V_strieq( extension, "bsp" ) )
 							{
 								continue;
 							}
@@ -1658,7 +1661,7 @@ int FindFilenameInStringTable( INetworkStringTable *table, const char *searchFna
 		Q_strncpy( tableFilename, tableFname, MAX_PATH );
 		Q_FixSlashes( tableFilename );
 
-		if ( !Q_strcasecmp( searchFilename, tableFilename ) )
+		if ( V_strieq( searchFilename, tableFilename ) )
 		{
 			return i;
 		}
@@ -1964,12 +1967,12 @@ void CClientState::UpdateAreaBits_BackwardsCompatible()
 	{
 		tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "%s", __FUNCTION__ );
 
-		memcpy( m_chAreaBits, m_pAreaBits, sizeof( m_chAreaBits ) );
-		
+		BitwiseCopy( m_pAreaBits, m_chAreaBits, ssize( m_chAreaBits ) );
+
 		// The whole point of adding this array was that the client could react to closed portals.
 		// If they're using the old interface to set area portal bits, then we use the old 
 		// behavior of assuming all portals are open on the clent.
-		memset( m_chAreaPortalBits, 0xFF, sizeof( m_chAreaPortalBits ) );
+		BitwiseSet( m_chAreaPortalBits, 0xFF );
 
 		m_bAreaBitsValid = true;
 	}

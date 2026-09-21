@@ -43,9 +43,10 @@ public:
 		BaseClass::OnCommand( command );
 
 		// For some weird reason, this dialog can 
-		if ( Q_stricmp( command, "ShowFAQ" ) == 0 )
+		if ( V_strieq( command, "ShowFAQ" ) )
 		{
-			system()->ShellExecute( "open", "http://www.valve-erc.com/srcsdk/faq.html#convertINI" );
+			// dimhotepus: Change dead link to a valid one.
+			system()->ShellExecute( "open", "https://developer.valvesoftware.com/wiki/SDK_Installation" );
 		}
 	}
 };
@@ -108,7 +109,6 @@ CVConfigDialog::CVConfigDialog( Panel *parent, const char *name ) : BaseClass( p
 	// See if we converted on load and notify
 	if ( g_ConfigManager.WasConvertedOnLoad() )
 	{
-		//VGUIMessageBox( this, "Update Occured", "Your game configurations have been updated.\n\nA backup file GameCfg.INI.OLD has been created.\n\nPlease visit http://www.valve-erc.com/srcsdk/faq.html#GameConfigUpdate for more information." );
 		CConversionInfoMessageBox *pDlg = new CConversionInfoMessageBox( this, "ConversionInfo" );
 
 		pDlg->RequestFocus();
@@ -166,7 +166,7 @@ void CVConfigDialog::PopulateConfigList( bool bSelectActiveConfig /*=true*/ )
 
 		if ( bSelectActiveConfig )
 		{
-			if ( !Q_stricmp( g_Configs[i]->m_ModDir.Base(), szKeyValue ) )
+			if ( V_strieq( g_Configs[i]->m_ModDir.Base(), szKeyValue ) )
 			{
 				activeItem = index;
 			}
@@ -216,7 +216,7 @@ void CVConfigDialog::SetGlobalConfig( const char *modDir )
 //-----------------------------------------------------------------------------
 void CVConfigDialog::OnCommand( const char *command )
 {
-	if ( Q_stricmp( command, "Select" ) == 0 )
+	if ( V_strieq( command, "Select" ) )
 	{
 		int activeID = m_pConfigCombo->GetActiveItem();
 
@@ -230,7 +230,7 @@ void CVConfigDialog::OnCommand( const char *command )
 
 		Close();
 	}
-	else if ( Q_stricmp( command, "Manage" ) == 0 )
+	else if ( V_strieq( command, "Manage" ) )
 	{
 		int activeID = m_pConfigCombo->GetActiveItem();
 
@@ -242,7 +242,7 @@ void CVConfigDialog::OnCommand( const char *command )
   		pDialog->SetGameName( g_Configs[activeID]->m_Name.Base() );
 		pDialog->DoModal();
 	}
-	else if ( Q_stricmp( command, "AddConfig" ) == 0 )
+	else if ( V_strieq( command, "AddConfig" ) )
 	{
 		// Launch the edit window, specifying that we're adding a config
 		CManageGamesDialog *pDialog = new CManageGamesDialog( this, "ManageGamesDialog", NEW_CONFIG_ID );
@@ -250,7 +250,7 @@ void CVConfigDialog::OnCommand( const char *command )
 		pDialog->AddActionSignalTarget( this );
 		pDialog->DoModal();
 	}
-	else if ( Q_stricmp( command, "RemoveConfig" ) == 0 )
+	else if ( V_strieq( command, "RemoveConfig" ) )
 	{	
 		// Don't allow the list to completely vanish
 		// NOTE: We should display the list as being empty, i.e. "<EMPTY>"

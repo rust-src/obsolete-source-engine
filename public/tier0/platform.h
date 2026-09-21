@@ -751,7 +751,19 @@ inline std::enable_if_t<std::is_scalar_v<T> && sizeof(T) == 8 && alignof(T) == a
 
 // If a swapped float passes through the fpu, the bytes may get changed.
 // Prevent this by swapping floats as DWORDs.
-#define SafeSwapFloat( pOut, pIn )	(*((uint*)pOut) = DWordSwap( *((const uint*)pIn) ))
+// dimhotepus: Use safe swap instead of UB on casts. Also return float, not uint swap.
+inline float SafeSwapFloat( float *pOut, const float *pIn )
+{
+	uint tmp;
+	static_assert(sizeof(tmp) == sizeof(*pIn));
+	memcpy( &tmp, pIn, sizeof(*pIn) );
+
+	const uint swap{ DWordSwap( tmp ) };
+	static_assert(sizeof(swap) == sizeof(*pOut));
+	memcpy( pOut, &swap, sizeof(*pOut) );
+
+	return *pOut;
+}
 
 #if defined(VALVE_LITTLE_ENDIAN)
 
@@ -1135,69 +1147,6 @@ inline uint64_t Plat_MeasureRtscpOverhead()
 // b/w compatibility
 #define Sys_FloatTime Plat_FloatTime
 
-// Type-safe copying for trivial types.
-template<typename T>
-std::enable_if_t<std::is_trivially_copyable_v<T>>
-BitwiseCopy(const T* src, T* dest, size_t size) noexcept
-{
-  std::memcpy(dest, src, sizeof(T) * size);
-}
-
-// Type-safe copying for trivial types.
-template<typename T, size_t size>
-std::enable_if_t<std::is_trivially_copyable_v<T>>
-BitwiseCopy(const T (&src)[size], T (&dest)[size]) noexcept
-{
-  std::memcpy(dest, src, sizeof(T) * size);
-}
-
-// Type-safe copying for non-trivial types.
-template<typename T>
-std::enable_if_t<!std::is_trivially_copyable_v<T>>
-constexpr BitwiseCopy(const T* src, T* dest, size_t size = 1) noexcept
-{
-  std::copy_n(src, size, dest);
-}
-
-// is_trivially_default_constructible - that last one is important, because some
-// TriviallyCopyable types still want to be able to control their contents.  For
-// example, such a type could have a private int variable that is always 5,
-// initialized in its default constructor.
-//
-// See https://stackoverflow.com/questions/53339268/what-trait-concept-can-guarantee-memsetting-an-object-is-well-defined
-template<typename T>
-std::enable_if_t<std::is_trivially_copyable_v<T> && std::is_trivially_constructible_v<T>>
-BitwiseClear(T &src) noexcept
-{
-  std::memset(&src, 0, sizeof(T));
-}
-
-// is_trivially_default_constructible - that last one is important, because some
-// TriviallyCopyable types still want to be able to control their contents.  For
-// example, such a type could have a private int variable that is always 5,
-// initialized in its default constructor.
-//
-// See https://stackoverflow.com/questions/53339268/what-trait-concept-can-guarantee-memsetting-an-object-is-well-defined
-template<typename T, size_t size>
-std::enable_if_t<std::is_trivially_copyable_v<T> && std::is_trivially_constructible_v<T>>
-BitwiseClear(T (&src)[size]) noexcept
-{
-  std::memset(src, 0, sizeof(src));
-}
-
-// is_trivially_default_constructible - that last one is important, because some
-// TriviallyCopyable types still want to be able to control their contents.  For
-// example, such a type could have a private int variable that is always 5,
-// initialized in its default constructor.
-//
-// See https://stackoverflow.com/questions/53339268/what-trait-concept-can-guarantee-memsetting-an-object-is-well-defined
-template<typename T>
-std::enable_if_t<std::is_trivially_copyable_v<T> && std::is_trivially_constructible_v<T>>
-BitwiseClear(T *src, size_t size) noexcept
-{
-  std::memset(src, 0, size);
-}
-
 // Protect against bad auto operator=
 #define DISALLOW_OPERATOR_EQUAL( _classname )			\
 	public:											\
@@ -1579,16 +1528,45 @@ private:
 };
 
 //--------------------------------------------------------------------------------------------------
+// RunCodeAtScopeExitOpt
+//
+// Example:
+//	if ( flag ) Lock();
+//	RunCodeAtScopeExitOpt( flag, Unlock() )
+//--------------------------------------------------------------------------------------------------
+template <typename LambdaType>
+class CScopeGuardLambdaImplOpt
+{
+public:
+	CScopeGuardLambdaImplOpt( bool do_invoke, LambdaType&& lambda )
+		: m_lambda( std::move( lambda ) ), m_do_invoke( do_invoke ) { }
+	~CScopeGuardLambdaImplOpt() { if ( m_do_invoke ) { m_lambda(); } }
+private:
+	LambdaType m_lambda;
+	const bool m_do_invoke;
+};
+
+//--------------------------------------------------------------------------------------------------
 template <typename LambdaType>
 CScopeGuardLambdaImpl< LambdaType > MakeScopeGuardLambda( LambdaType&& lambda )
 {
 	return CScopeGuardLambdaImpl< LambdaType >( std::move( lambda ) );
 }
 
+template <typename LambdaType>
+CScopeGuardLambdaImplOpt< LambdaType > MakeScopeGuardLambdaOpt( bool do_invoke, LambdaType&& lambda )
+{
+	return CScopeGuardLambdaImplOpt< LambdaType >( do_invoke, std::move( lambda ) );
+}
+
 //--------------------------------------------------------------------------------------------------
-#define RunLambdaAtScopeExit2( VarName, ... )		[[maybe_unused]] const auto VarName( MakeScopeGuardLambda( __VA_ARGS__ ) );
+#define RunLambdaAtScopeExit2( VarName, ... )		[[maybe_unused]] const auto VarName( MakeScopeGuardLambda( __VA_ARGS__ ) )
 #define RunLambdaAtScopeExit( ... )					RunLambdaAtScopeExit2( UNIQUE_ID, __VA_ARGS__ )
 #define RunCodeAtScopeExit( ... )					RunLambdaAtScopeExit( [&]() { __VA_ARGS__ ; } )
+
+#define RunLambdaAtScopeExit2Opt( VarName, do_invoke, ... )		[[maybe_unused]] const auto VarName( MakeScopeGuardLambdaOpt( do_invoke, __VA_ARGS__ ) )
+#define RunLambdaAtScopeExitOpt( do_invoke, ... )		RunLambdaAtScopeExit2Opt( UNIQUE_ID, do_invoke, __VA_ARGS__ )
+#define RunCodeAtScopeExitOpt( do_invoke, ... )			RunLambdaAtScopeExitOpt( do_invoke, [&]() { __VA_ARGS__ ; } )
 
 
 //

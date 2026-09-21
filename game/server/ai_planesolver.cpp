@@ -690,11 +690,11 @@ bool CAI_PlaneSolver::RunMoveSolver( const AILocalMoveGoal_t &goal, const AIMove
 				VectorNormalize( curVelocity );
 				if ( !fNewTarget )
 				{
-					*pResult = curVelocity * 0.1 + m_PrevSolutionVector * 0.1 + *pResult * 0.8;
+					*pResult = curVelocity * 0.1f + m_PrevSolutionVector * 0.1f + *pResult * 0.8f;
 				}
 				else
 				{
-					*pResult = curVelocity * 0.2 + *pResult * 0.8;
+					*pResult = curVelocity * 0.2f + *pResult * 0.8f;
 				}
 			}
 

@@ -947,7 +947,7 @@ void CCSPlayer::ShowViewPortPanel( const char * name, bool bShow, KeyValues *dat
 	if ( CSGameRules()->IsLogoMap() )
 		return;
 
-	if ( CommandLine()->FindParm("-makedevshots") )
+	if ( CommandLine()->HasParm("-makedevshots") )
 		return;
 
 	BaseClass::ShowViewPortPanel( name, bShow, data );
@@ -1829,9 +1829,9 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	{
 
 		//Count enemies
-		int livingEnemies = 0;
+		intp livingEnemies = 0;
 		CTeam *pAttackerTeam = GetGlobalTeam( pAttacker->GetTeamNumber() );
-		for ( int iPlayer=0; iPlayer < pAttackerTeam->GetNumPlayers(); iPlayer++ )
+		for ( intp iPlayer=0; iPlayer < pAttackerTeam->GetNumPlayers(); iPlayer++ )
 		{
 			CCSPlayer *pPlayer = ToCSPlayer( pAttackerTeam->GetPlayer( iPlayer ) );
 			Assert( pPlayer );
@@ -3145,7 +3145,7 @@ bool CCSPlayer::CanPlayerBuy( bool display )
 		if ( display == true )
 		{
 			char strBuyTime[16];
-			Q_snprintf( strBuyTime, sizeof( strBuyTime ), "%d", buyTime );
+			V_to_chars( strBuyTime, buyTime );
 			ClientPrint( this, HUD_PRINTCENTER, "#Cant_buy", strBuyTime );
 		}
 
@@ -3450,11 +3450,11 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 	CCSWeaponInfo *pWeaponInfo = GetWeaponInfo( AliasToWeaponID( wpnName ) );
 	if ( pWeaponInfo == NULL )
 	{
-		if ( Q_stricmp( wpnName, "primammo" ) == 0 )
+		if ( V_strieq( wpnName, "primammo" ) )
 		{
 			result = AttemptToBuyAmmo( 0 );
 		}
-		else if ( Q_stricmp( wpnName, "secammo" ) == 0 )
+		else if ( V_strieq( wpnName, "secammo" ) )
 		{
 			result = AttemptToBuyAmmo( 1 );
 		}
@@ -3774,7 +3774,7 @@ const char *RadioEventName[ RADIO_NUM_EVENTS+1 ] =
 RadioType NameToRadioEvent( const char *name )
 {
 	for( int i=0; RadioEventName[i]; ++i )
-		if (!stricmp( RadioEventName[i], name ))
+		if (V_strieq( RadioEventName[i], name ))
 			return static_cast<RadioType>( i );
 
 	return RADIO_INVALID;
@@ -5147,7 +5147,7 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 
 
 	// If startspot is set, (re)spawn there.
-	if ( !gpGlobals->startspot || !strlen(STRING(gpGlobals->startspot)))
+	if ( !gpGlobals->startspot || Q_isempty(STRING(gpGlobals->startspot)))
 	{
 		pSpot = gEntList.FindEntityByClassname(NULL, "info_player_terrorist");
 		if ( pSpot )
@@ -5287,7 +5287,7 @@ void CCSPlayer::State_Enter_WELCOME()
 	// Show info panel (if it's not a simple demo map).
 	if ( !CSGameRules()->IsLogoMap() )
 	{
-		if ( CommandLine()->FindParm( "-makereslists" ) ) // don't show the MOTD when making reslists
+		if ( CommandLine()->HasParm( "-makereslists" ) ) // don't show the MOTD when making reslists
 		{
 			engine->ClientCommand( edict(), "jointeam 3\n" );
 		}
@@ -5514,7 +5514,7 @@ void CCSPlayer::State_PreThink_OBSERVER_MODE()
 
 void CCSPlayer::State_Enter_PICKINGCLASS()
 {
-	if ( CommandLine()->FindParm( "-makereslists" ) ) // don't show the menu when making reslists
+	if ( CommandLine()->HasParm( "-makereslists" ) ) // don't show the menu when making reslists
 	{
 		engine->ClientCommand( edict(), "joinclass 0\n" );
 		return;
@@ -5810,7 +5810,7 @@ CON_COMMAND( timeleft, "prints the time remaining in the match" )
 		char minutes[8];
 		char seconds[8];
 
-		Q_snprintf( minutes, sizeof(minutes), "%d", iMinutes );
+		V_to_chars( minutes, iMinutes );
 		Q_snprintf( seconds, sizeof(seconds), "%2.2d", iSeconds );
 
 		if ( pPlayer )
@@ -5931,7 +5931,7 @@ void CCSPlayer::ParseAutoBuyString(const char *string, bool &boughtPrimary, bool
 		}
 
 		// make sure we actually have a command.
-		if (strlen(command) == 0)
+		if (Q_isempty(command))
 		{
 			continue;
 		}
@@ -6092,7 +6092,7 @@ void CCSPlayer::PrioritizeAutoBuyString(char *autobuyString, const char *priorit
 			++priorityChar;
 		}
 
-		if (strlen(priorityToken) == 0)
+		if (Q_isempty(priorityToken))
 		{
 			continue;
 		}
@@ -6140,7 +6140,7 @@ void CCSPlayer::PrioritizeAutoBuyString(char *autobuyString, const char *priorit
 	// terminate the string.  Trailing spaces shouldn't matter.
 	newString[newStringPos] = 0;
 
-	Q_snprintf(autobuyString, sizeof(autobuyString), "%s", newString);
+	V_strcpy_safe(autobuyString, newString);
 }
 
 
@@ -6363,7 +6363,7 @@ BuyResult_e CCSPlayer::RebuyPrimaryWeapon()
 		return BUY_ALREADY_HAVE;	// don't drop primary weapons via rebuy - if the player picked up a different weapon, he wants to keep it.
 	}
 
-	if( strlen( m_rebuyStruct.m_szPrimaryWeapon ) > 0 )
+	if( !Q_isempty( m_rebuyStruct.m_szPrimaryWeapon ) )
 		return HandleCommand_Buy(m_rebuyStruct.m_szPrimaryWeapon);
 
 	return BUY_ALREADY_HAVE;
@@ -6377,7 +6377,7 @@ BuyResult_e CCSPlayer::RebuySecondaryWeapon()
 		return BUY_ALREADY_HAVE;	// don't drop pistols via rebuy if we've bought one other than the default pistol
 	}
 
-	if( strlen( m_rebuyStruct.m_szSecondaryWeapon ) > 0 )
+	if( !Q_isempty( m_rebuyStruct.m_szSecondaryWeapon ) )
 		return HandleCommand_Buy(m_rebuyStruct.m_szSecondaryWeapon);
 
 	return BUY_ALREADY_HAVE;
@@ -6684,7 +6684,7 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pszName, int iSubType )
 		return  NULL;
 
 #ifndef CS_SHIELD_ENABLED
-	if ( !Q_stricmp( pszName, "weapon_shield" ) )
+	if ( V_strieq( pszName, "weapon_shield" ) )
 		return NULL;
 #endif
 
@@ -7446,8 +7446,8 @@ void CCSPlayer::ResetRoundBasedAchievementVariables()
 {
 	m_KillingSpreeStartTime = -1;
 
-	int numCTPlayers = 0, numTPlayers = 0;
-	for (int i = 0; i < g_Teams.Count(); i++ )
+	intp numCTPlayers = 0, numTPlayers = 0;
+	for (intp i = 0; i < g_Teams.Count(); i++ )
 	{
 		if(g_Teams[i])
 		{
@@ -7547,7 +7547,7 @@ CSWeaponID CCSPlayer::GetWeaponIdCausingDamange( const CTakeDamageInfo &info )
 
 		return pAttackerWeapon->GetWeaponID();
 	}
-	else if (pInflictor && V_strcmp(pInflictor->GetClassname(), "hegrenade_projectile") == 0)
+	else if (pInflictor && V_streq(pInflictor->GetClassname(), "hegrenade_projectile"))
 	{
 		return WEAPON_HEGRENADE;
 	}
@@ -7954,7 +7954,7 @@ void CCSPlayer::OnRoundEnd(int winningTeam, int reason)
 		
 		CTeam* losingTeam = GetGlobalTeam(losingTeamId);
 
-		int losingTeamPlayers = 0;
+		intp losingTeamPlayers = 0;
 
 		if (losingTeam)
 		{

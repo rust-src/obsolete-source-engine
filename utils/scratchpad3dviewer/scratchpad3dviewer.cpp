@@ -760,14 +760,14 @@ bool CheckForNewFile( bool bForce )
 		OPEN_EXISTING,
 		0,
 		NULL );
-
-	if( !hFile )
+	if( hFile == INVALID_HANDLE_VALUE )
 		return false;
+
+	RunCodeAtScopeExit(CloseHandle(hFile));
 
 	FILETIME createTime, accessTime, writeTime;
 	if( !GetFileTime( hFile, &createTime, &accessTime, &writeTime ) )
 	{
-		CloseHandle( hFile );
 		return false;
 	}
 
@@ -781,7 +781,6 @@ bool CheckForNewFile( bool bForce )
 		}
 	}
 
-	CloseHandle( hFile );
 	return bChange;
 }
 
@@ -793,7 +792,7 @@ bool CheckForNewFile( bool bForce )
 void UpdateWindowText()
 {
 	char str[512];
-	sprintf( str, "ScratchPad3DViewer: <%s>  lines: %d, polygons: %d", g_Filename, g_nLines, g_nPolygons );
+	V_sprintf_safe( str, "ScratchPad3DViewer: <%s>  lines: %d, polygons: %d", g_Filename, g_nLines, g_nPolygons );
 	Sys_SetWindowText( str );
 }
 

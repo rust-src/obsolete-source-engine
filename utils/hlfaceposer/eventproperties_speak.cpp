@@ -287,7 +287,7 @@ void CEventPropertiesSpeakDialog::PopulateSoundList( char const *current, HWND w
 		{
 			LRESULT temp = SendMessage( wnd, LB_ADDSTRING, 0, (LPARAM)name ); 
 
-			if ( !Q_stricmp( name, current ) )
+			if ( V_strieq( name, current ) )
 			{
 				selectslot = temp;
 			}
@@ -328,7 +328,7 @@ void CEventPropertiesSpeakDialog::FindWaveInSoundEntries( CUtlVector< int >& ent
 		{
 			char const *waveName = soundemitter->GetWaveName( params->GetSoundNames()[ wave ].symbol );
 
-			if ( !Q_stricmp( waveName, search ) )
+			if ( V_strieq( waveName, search ) )
 			{
 				entryList.AddToTail( i );
 				break;
@@ -568,7 +568,7 @@ BOOL CEventPropertiesSpeakDialog::HandleMessage( HWND hwndDlg, UINT uMsg, WPARAM
 						if ( scriptfile )
 						{
 							char relative_path[MAX_PATH];
-							Q_snprintf( relative_path, MAX_PATH, "%s", scriptfile );
+							V_strcpy_safe( relative_path, scriptfile );
 
 							char full_path[MAX_PATH];
 							if ( filesystem->GetLocalPath_safe( relative_path, full_path ) )

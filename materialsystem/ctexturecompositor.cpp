@@ -332,7 +332,7 @@ void ParseRangeFromKV( KeyValues* _kv, void* _pDest )
 // ------------------------------------------------------------------------------------------------
 void ParseInverseRangeFromKV( KeyValues* _kv, void* _pDest )
 {
-	constexpr float kSubstValue = 0.00001;
+	constexpr float kSubstValue = 0.00001f;
 	ParseRangeFromKV( _kv, _pDest );
 	Range* realDest = ( Range* ) _pDest;
 
@@ -689,11 +689,11 @@ void ParseOperationFromKV( KeyValues* _kv, void* _pDest )
 	ECombineOperation* realDest = ( ECombineOperation* ) _pDest;
 	const char* opStr = _kv->GetString();
 
-	if ( V_stricmp( "multiply", opStr ) == 0 )
+	if ( V_strieq( "multiply", opStr ) )
 		(*realDest) = ECO_Multiply;
-	else if ( V_stricmp( "add", opStr ) == 0 )
+	else if ( V_strieq( "add", opStr ) )
 		(*realDest) = ECO_Add;
-	else if ( V_stricmp( "lerp", opStr) == 0 )
+	else if ( V_strieq( "lerp", opStr) )
 		(*realDest) = ECO_Lerp;
 	else
 		(*realDest) = ECO_Error;
@@ -909,7 +909,7 @@ protected:
 		{
 			bool bFound = false;
 
-			V_snprintf( buffer, ssize( buffer ), "$selector%d", i );
+			V_sprintf_safe( buffer, "$selector%d", i );
 			IMaterialVar* pVar = m_pMaterial->FindVar( buffer, &bFound );
 			Assert(bFound);
 			if ( i < m_Parameters.m_Select.Count() )
@@ -1308,7 +1308,7 @@ private:
 			if ( r_texcomp_dump.GetInt() == 2 )
 			{
 				char buffer[128];
-				V_snprintf( buffer, ssize(buffer), "composite_%s_result_%02d.tga", _comp->GetName().Get(), s_nDumpCount++ );
+				V_sprintf_safe( buffer, "composite_%s_result_%02d.tga", _comp->GetName().Get(), s_nDumpCount++ );
 				GetFirstChild()->GetResult().m_pRenderTarget->SaveToFile( buffer );
 			}
 #endif
@@ -1790,7 +1790,7 @@ void CTCStage::Render( ITexture* _destRT, IMaterial* _mat, const CUtlVector<CTCS
 			            ? stageParams.m_pTexture 
 						: stageParams.m_pRenderTarget;
 
-		V_snprintf( buffer, ssize( buffer ), "$srctexture%d", i );
+		V_sprintf_safe( buffer, "$srctexture%zd", i );
 
 		// Set the texture
 		IMaterialVar* var = _mat->FindVar( buffer, &bFound );
@@ -1799,13 +1799,13 @@ void CTCStage::Render( ITexture* _destRT, IMaterial* _mat, const CUtlVector<CTCS
 		varsToClean.AddToTail( var );
 
 		// And the levels parameters
-		V_snprintf( buffer, ssize(buffer), "$texadjustlevels%d", i );
+		V_sprintf_safe( buffer, "$texadjustlevels%zd", i );
 		var = _mat->FindVar( buffer, &bFound );
 		Assert(bFound);
 		var->SetVecValue( stageParams.m_fAdjustBlackPoint, stageParams.m_fAdjustWhitePoint, stageParams.m_fAdjustGamma );
 
 		// And the expected transform
-		V_snprintf( buffer, ssize(buffer), "$textransform%d", i );
+		V_sprintf_safe( buffer, "$textransform%zd", i );
 		var = _mat->FindVar( buffer, &bFound );
 		Assert(bFound);
 		var->SetMatrixValue( stageParams.m_mUvAdjust );
@@ -1838,12 +1838,12 @@ void CTCStage::Render( ITexture* _destRT, IMaterial* _mat, const CUtlVector<CTCS
 		{
 			if (_inputs[i].m_pTexture)
 			{
-				V_snprintf(buffer, ssize(buffer), "composite_%s_input_%02d_in%01d_%16x.tga", _comp->GetName().Get(), s_nDumpCount, i, (intp) this);
+				V_sprintf_safe(buffer, "composite_%s_input_%02d_in%01d_%16x.tga", _comp->GetName().Get(), s_nDumpCount, i, (intp) this);
 				_inputs[i].m_pTexture->SaveToFile(buffer);
 			}
 		}
 
-		V_snprintf(buffer, ssize(buffer), "composite_%s_result_%02d_%16x.tga", _comp->GetName().Get(), s_nDumpCount++, (intp) this);
+		V_sprintf_safe(buffer, "composite_%s_result_%02d_%16x.tga", _comp->GetName().Get(), s_nDumpCount++, (intp) this);
 		_destRT->SaveToFile(buffer);
 	}
 #endif
@@ -1916,7 +1916,7 @@ void ParseIntoStruct( S* _outStruct, CUtlVector< KeyValues *>* _leftovers, KeyVa
 		bool parsed = false;
 		for ( int e = 0; _entries[e].keyName; ++e )
 		{
-			if ( V_stricmp( _entries[e].keyName, thisKey->GetName() ) == 0 )
+			if ( V_strieq( _entries[e].keyName, thisKey->GetName() ) )
 			{
 				// If we're instancing, go ahead and run the parse function. If we're just doing template verification
 				// then the right hand side may still have variables that need to be expanded, so just verify that the
@@ -1952,7 +1952,7 @@ bool ParseNodes( CUtlVector< CTCStage* >* _outStages, const CUtlVector< KeyValue
 		bool parsed = false;
 		for ( int e = 0; cNodeParseTable[ e ].keyName; ++e )
 		{			
-			if ( V_stricmp( cNodeParseTable[ e ].keyName, thisKV->GetName() ) == 0 )
+			if ( V_strieq( cNodeParseTable[ e ].keyName, thisKV->GetName() ) )
 			{
 				CTCStage* pNewStage = NULL;
 				if ( !cNodeParseTable[ e ].buildFunc( &pNewStage, thisKV->GetName(), thisKV, nTexCompositeCreateFlags ) )
@@ -2093,7 +2093,7 @@ KeyValues* ResolveTemplate( const char* pRootName, KeyValues* pValues, uint32 nT
 	FOR_EACH_SUBKEY( pValues, pChild )
 	{
 		const char* pChildName = pChild->GetName();
-		if ( V_stricmp( pChildName, "implements" ) == 0 )
+		if ( V_strieq( pChildName, "implements" ) )
 		{
 			if ( bImplementsTemplate )
 			{
@@ -2535,7 +2535,7 @@ bool HasTemplateOrVariables( const char** ppOutTemplateName, KeyValues* pKV)
 	FOR_EACH_SUBKEY( pKV, pChild )
 	{
 		const char* pName = pChild->GetName();
-		if ( V_stricmp( pName, "implements" ) == 0 )	
+		if ( V_strieq( pName, "implements" ) )
 		{
 			( *ppOutTemplateName ) = pChild->GetString();
 			retVal = true;

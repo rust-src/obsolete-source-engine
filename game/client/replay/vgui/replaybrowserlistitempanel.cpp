@@ -85,7 +85,7 @@ CReplayBrowserThumbnail::CReplayBrowserThumbnail( Panel *pParent, const char *pN
 	Panel *pTarget = GetParent();
 	while ( pTarget )
 	{
-		if ( !V_strcmp( "BasePage", pTarget->GetName() ) )
+		if ( V_streq( "BasePage", pTarget->GetName() ) )
 			break;
 		pTarget = pTarget->GetParent();
 	}
@@ -900,7 +900,7 @@ void CReplayThumbnailCollection::ApplySchemeSettings( IScheme *pScheme )
 	else
 	{
 		char szKey[16];
-		Q_snprintf( szKey, sizeof(szKey), "%s", pBoundKey );
+		V_strcpy_safe( szKey, pBoundKey );
 
 		wchar_t wKey[16];
 		wchar_t wLabel[256];

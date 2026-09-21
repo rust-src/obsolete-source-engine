@@ -237,7 +237,7 @@ StudioModel *FindAssociatedModel( CChoreoScene *scene, CChoreoActor *a )
 	for ( intp i = 0; i < c; i++ )
 	{
 		char const *modelname = models->GetModelName( i );
-		if ( !Q_stricmp( modelname, a->GetName() ) )
+		if ( V_strieq( modelname, a->GetName() ) )
 		{
 			return models->GetStudioModel( i );
 		}
@@ -1461,7 +1461,7 @@ void CChoreoView::AssociateModel( void )
 
 		V_strcpy_safe( text.choice, modelname );
 
-		if ( !stricmp( a->GetName(), modelname ) )
+		if ( V_strieq( a->GetName(), modelname ) )
 		{
 			params.m_nSelected = i;
 			oldsel = -1;
@@ -4621,7 +4621,7 @@ void CChoreoView::ProcessFlexAnimation( CChoreoScene *scene, CChoreoEvent *event
 		if ( !actor )
 			continue;
 
-		if ( !stricmp( actor->GetActor()->GetName(), a->GetName() ) )
+		if ( V_strieq( actor->GetActor()->GetName(), a->GetName() ) )
 			break;
 	}
 
@@ -4743,12 +4743,12 @@ void CChoreoView::ProcessLookat( CChoreoScene *scene, CChoreoEvent *event )
 	flMaxIntensity = min( flMaxIntensity, flDuration < 0.3f ? SimpleSpline( flDuration / 0.3f ) : 1.0f );
 	flIntensity = clamp( flIntensity, 0.0f, flMaxIntensity );
 
-	if (!stricmp( event->GetParameters(), a->GetName() ) || !stricmp( event->GetParameters(), "!self" ))
+	if (V_strieq( event->GetParameters(), a->GetName() ) || V_strieq( event->GetParameters(), "!self" ))
 	{
 		model->AddLookTargetSelf( flIntensity );
 	}
-	else if ( !stricmp( event->GetParameters(), "player" ) || 
-		!stricmp( event->GetParameters(), "!player" ) )
+	else if ( V_strieq( event->GetParameters(), "player" ) || 
+		V_strieq( event->GetParameters(), "!player" ) )
 	{
 		Vector vecTarget = model->m_origin;
 		vecTarget.z = 0;
@@ -4854,13 +4854,13 @@ bool CChoreoView::GetTarget( CChoreoScene *scene, CChoreoEvent *event, Vector &v
 		return false;
 	}
 
-	if (!stricmp( event->GetParameters(), a->GetName() ))
+	if (V_strieq( event->GetParameters(), a->GetName() ))
 	{
 		vecTarget = vec3_origin;
 		return true;
 	}
-	else if ( !stricmp( event->GetParameters(), "player" ) || 
-		!stricmp( event->GetParameters(), "!player" ) )
+	else if ( V_strieq( event->GetParameters(), "player" ) || 
+		V_strieq( event->GetParameters(), "!player" ) )
 	{
 		vecTarget = model->m_origin;
 		vecTarget.z = 0;
@@ -5039,7 +5039,7 @@ void CChoreoView::ProcessGesture( CChoreoScene *scene, CChoreoEvent *event )
 	Assert( event->GetType() == CChoreoEvent::GESTURE );
 
 	// NULL event is just a placeholder
-	if ( !Q_stricmp( event->GetName(), "NULL" ) )
+	if ( V_strieq( event->GetName(), "NULL" ) )
 	{
 		return;
 	}
@@ -5209,15 +5209,15 @@ intp CChoreoView::GetMovetoSequence( CChoreoScene *scene, CChoreoEvent *event, S
 		pszAct = event->GetParameters2();
 	}
 
-	if ( !Q_strcmp( pszAct, "Walk" ) )
+	if ( V_streq( pszAct, "Walk" ) )
 	{
 		pszAct = "ACT_WALK";
 	}
-	else if ( !Q_strcmp( pszAct, "Run" ) )
+	else if ( V_streq( pszAct, "Run" ) )
 	{
 		pszAct = "ACT_RUN";
 	}
-	else if ( !Q_strcmp( pszAct, "CrouchWalk" ) )
+	else if ( V_streq( pszAct, "CrouchWalk" ) )
 	{
 		pszAct = "ACT_WALK_CROUCH";
 	}
@@ -5257,16 +5257,16 @@ void CChoreoView::ProcessPause( CChoreoScene *scene, CChoreoEvent *event )
 	if ( tokenprocessor->TokenAvailable() )
 	{
 		tokenprocessor->GetToken( false );
-		if ( !stricmp( tokenprocessor->CurrentToken(), "automate" ) )
+		if ( V_strieq( tokenprocessor->CurrentToken(), "automate" ) )
 		{
 			if ( tokenprocessor->TokenAvailable() )
 			{
 				tokenprocessor->GetToken( false );
-				if ( !stricmp( tokenprocessor->CurrentToken(), "Cancel" ) )
+				if ( V_strieq( tokenprocessor->CurrentToken(), "Cancel" ) )
 				{
 					m_nAutomatedAction = SCENE_ACTION_CANCEL;
 				}
-				else if ( !stricmp( tokenprocessor->CurrentToken(), "Resume" ) )
+				else if ( V_strieq( tokenprocessor->CurrentToken(), "Resume" ) )
 				{
 					m_nAutomatedAction = SCENE_ACTION_RESUME;
 				}
@@ -6126,7 +6126,7 @@ void CChoreoView::LoadNext( void )
 
 	for (intp i = 0; i < m_nextFileList.Count(); i++)
 	{
-		if (!stricmp( fileBase, m_nextFileList[i] ))
+		if (V_strieq( fileBase, m_nextFileList[i] ))
 		{
 			char fileName[512];
 			V_strcpy_safe( fileName, relativePath );
@@ -6709,14 +6709,14 @@ void CChoreoView::AddEvent( int type, int subtype /*= 0*/, char const *defaultpa
 		}
 		m_bForceProcess = false;
 
-		if ( Q_strlen( params.m_szName ) <= 0 )
+		if ( Q_isempty( params.m_szName ) )
 		{
 			mxMessageBox( this, va( "Event must have a valid name" ),
 				"Edit Event", MX_MB_OK | MX_MB_ERROR );
 			continue;
 		}
 
-		if ( Q_strlen( params.m_szParameters ) <= 0 )
+		if ( Q_isempty( params.m_szParameters ) )
 		{
 			bool shouldBreak = false;
 
@@ -7253,14 +7253,14 @@ void CChoreoView::EditEvent( CChoreoEvent *event )
 		}
 		m_bForceProcess = false;
 
-		if ( Q_strlen( params.m_szName ) <= 0 )
+		if ( Q_isempty( params.m_szName ) )
 		{
 			mxMessageBox( this, va( "Event %s must have a valid name", event->GetName() ),
 				"Edit Event", MX_MB_OK | MX_MB_ERROR );
 			continue;
 		}
 
-		if ( Q_strlen( params.m_szParameters ) <= 0 )
+		if ( Q_isempty( params.m_szParameters ) )
 		{
 			bool shouldBreak = false;
 
@@ -7272,7 +7272,7 @@ void CChoreoView::EditEvent( CChoreoEvent *event )
 				shouldBreak = true;
 				break;
 			case CChoreoEvent::GESTURE:
-				if ( !Q_stricmp( params.m_szName, "NULL" ) )
+				if ( V_strieq( params.m_szName, "NULL" ) )
 				{ 
 					shouldBreak = true;
 				}
@@ -10687,7 +10687,7 @@ bool CChoreoView::GenerateCombinedFile( char const *outfilename, char const *cct
 
 	char actualfile[ 512 ];
 	soundemitter->GenderExpandString( gender, outfilename, actualfile, sizeof( actualfile ) );
-	if ( Q_strlen( actualfile ) <= 0 )
+	if ( Q_isempty( actualfile ) )
 	{
 		return false;
 	}
@@ -10732,7 +10732,7 @@ bool CChoreoView::ValidateCombinedFileCheckSum( char const *outfilename, char co
 
 	char actualfile[ 512 ];
 	soundemitter->GenderExpandString( gender, outfilename, actualfile, sizeof( actualfile ) );
-	if ( Q_strlen( actualfile ) <= 0 )
+	if ( Q_isempty( actualfile ) )
 	{
 		return false;
 	}
@@ -10804,7 +10804,7 @@ void SuggestCaption( char *dest, int destlen, CUtlVector< CChoreoEvent * >& even
 			}
 		}
 
-		if ( found && Q_strlen( dest ) > 0 && i != c - 1 )
+		if ( found && !Q_isempty( dest ) && i != c - 1 )
 		{
 			Q_strncat( dest, " ", destlen, COPY_ALL_CHARACTERS );
 		}
@@ -10896,7 +10896,7 @@ void CChoreoView::OnCombineSpeakEvents()
 
 		SuggestCaption( suggested, sizeof( suggested ), selected );
 
-		Q_snprintf( ip.m_szInputText, sizeof( ip.m_szInputText ), "%s", suggested );
+		V_strcpy_safe( ip.m_szInputText, suggested );
 
 		if ( !InputProperties( &ip ) )
 		{

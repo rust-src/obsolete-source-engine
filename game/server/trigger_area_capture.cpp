@@ -802,7 +802,7 @@ void CTriggerAreaCapture::StartCapture( int team, int capmode )
 			CTeam *pTeam = GetGlobalTeam( m_nCapturingTeam );
 			if ( pTeam )
 			{
-				for ( int i=0;i<pTeam->GetNumPlayers();i++ )
+				for ( intp i=0;i<pTeam->GetNumPlayers();i++ )
 				{
 					CBaseMultiplayerPlayer *pPlayer = ToBaseMultiplayerPlayer( pTeam->GetPlayer(i) );
 					if ( pPlayer && IsTouching( pPlayer ) )
@@ -909,7 +909,7 @@ void CTriggerAreaCapture::EndCapture( int team )
 	CTeam *pTeam = GetGlobalTeam( m_nCapturingTeam );
 	if ( pTeam )
 	{
-		for ( int i=0;i<pTeam->GetNumPlayers();i++ )
+		for ( intp i=0;i<pTeam->GetNumPlayers();i++ )
 		{
 			CBaseMultiplayerPlayer *pPlayer = ToBaseMultiplayerPlayer( pTeam->GetPlayer(i) );
 			if ( pPlayer && IsTouching( pPlayer ) )
@@ -976,7 +976,7 @@ void CTriggerAreaCapture::BreakCapture( bool bNotEnoughPlayers )
 		CTeam *pTeam = GetGlobalTeam( m_nCapturingTeam );
 		if ( pTeam )
 		{
-			for ( int i=0;i<pTeam->GetNumPlayers();i++ )
+			for ( intp i=0;i<pTeam->GetNumPlayers();i++ )
 			{
 				CBaseMultiplayerPlayer *pPlayer = ToBaseMultiplayerPlayer( pTeam->GetPlayer(i) );
 				if ( pPlayer && IsTouching( pPlayer ) )

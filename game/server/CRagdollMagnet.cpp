@@ -60,14 +60,11 @@ void CRagdollMagnet::InputDisable( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 CRagdollMagnet *CRagdollMagnet::FindBestMagnet( CBaseEntity *pNPC )
 {
-	CRagdollMagnet	*pMagnet = NULL;
-	CRagdollMagnet	*pBestMagnet;
-
-	float			flClosestDist;
+	CRagdollMagnet *pMagnet = NULL;
 
 	// Assume we won't find one.
-	pBestMagnet = NULL;
-	flClosestDist = FLT_MAX;
+	CRagdollMagnet *pBestMagnet = NULL;
+	float flClosestDist = std::numeric_limits<vec_t>::max();
 	
 	do
 	{

@@ -196,13 +196,13 @@ CLoadCommentaryDialog::CLoadCommentaryDialog(vgui::Panel *parent) : BaseClass(pa
 //-----------------------------------------------------------------------------
 void CLoadCommentaryDialog::OnCommand( const char *command )
 {
-	if ( !Q_stricmp( command, "loadcommentary" ) )
+	if ( V_strieq( command, "loadcommentary" ) )
 	{
 		intp itemIndex = GetSelectedItemIndex();
 		if ( m_CommentaryItems.IsValidIndex(itemIndex) )
 		{
 			const char *mapName = m_CommentaryItems[itemIndex].szMapName;
-			if ( mapName && mapName[ 0 ] )
+			if ( !Q_isempty( mapName ) )
 			{
 				// Load the game, return to top and switch to engine
 				char sz[ 256 ];
@@ -282,6 +282,8 @@ void CLoadCommentaryDialog::ScanCommentaryFiles()
 	// iterate the files
 	FileFindHandle_t handle = FILESYSTEM_INVALID_FIND_HANDLE;
 	const char *pFileName = g_pFullFileSystem->FindFirst( szDirectory, &handle );
+	RunCodeAtScopeExit( g_pFullFileSystem->FindClose( handle ) );
+
 	while (pFileName)
 	{
 		char szFileName[MAX_PATH];
@@ -298,8 +300,6 @@ void CLoadCommentaryDialog::ScanCommentaryFiles()
 
 		pFileName = g_pFullFileSystem->FindNext( handle );
 	}
-
-	g_pFullFileSystem->FindClose( handle );
 
 	// sort the save list
 	std::sort( m_CommentaryItems.begin(), m_CommentaryItems.end(), []( const CommentaryItem_t &s1, const CommentaryItem_t &s2 )
@@ -320,6 +320,8 @@ void CLoadCommentaryDialog::ScanCommentaryFiles()
 	{
 		vgui::Label *pNoCommentaryItemsLabel = SETUP_PANEL(new Label(m_pGameList, "NoCommentaryItemsLabel", "#GameUI_NoCommentaryItemsToDisplay"));
 		pNoCommentaryItemsLabel->SetTextColorState(vgui::Label::CS_DULL);
+		// dimhotepus: Ensure label looks good regarding of UI scaling.
+		pNoCommentaryItemsLabel->SizeToContents();
 		m_pGameList->AddItem( NULL, pNoCommentaryItemsLabel );
 	}
 

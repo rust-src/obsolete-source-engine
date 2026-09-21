@@ -592,7 +592,7 @@ void CTFTeam::RecomputeTeamResources( void )
 {
 	// Recalculate the total amount of resources the team has
 	m_fResources = 0.0f;
-	for ( int i = 0; i < GetNumPlayers(); i++ )
+	for ( intp i = 0; i < GetNumPlayers(); i++ )
 	{
 		m_fResources += ((CBaseTFPlayer*)GetPlayer(i))->GetBankResources();
 	}
@@ -738,8 +738,8 @@ void CTFTeam::RemovePlayer( CBasePlayer *pPlayer )
 //-----------------------------------------------------------------------------
 int	CTFTeam::GetNumOfClass( TFClass iClass )
 {
-	int iNumber = 0;
-	for ( int i = 0; i < GetNumPlayers(); i++ )
+	intp iNumber = 0;
+	for ( intp i = 0; i < GetNumPlayers(); i++ )
 	{
 		if ( ((CBaseTFPlayer*)GetPlayer(i))->IsClass(iClass) )
 		{
@@ -782,7 +782,7 @@ int CTFTeam::AddTeamResources( float fAmount, int nStat )
 
 	// Divvy the resources out to the players
 	int iAmountPerPlayer = Ceil2Int( fAmount / GetNumPlayers() );	// Yes, this does create some resources in the roundoff.
-	for ( int i = 0; i < GetNumPlayers(); i++ )
+	for ( intp i = 0; i < GetNumPlayers(); i++ )
 	{
 		CBaseTFPlayer *pPlayer = (CBaseTFPlayer*)GetPlayer(i);
 		pPlayer->AddBankResources( iAmountPerPlayer );
@@ -804,7 +804,7 @@ int CTFTeam::AddTeamResources( float fAmount, int nStat )
 //-----------------------------------------------------------------------------
 void CTFTeam::DonateResources( CBaseTFPlayer *pPlayer )
 {
-	int nPlayerCount = GetNumPlayers();
+	intp nPlayerCount = GetNumPlayers();
 	if (nPlayerCount <= 1)
 		return;
 
@@ -831,7 +831,7 @@ void CTFTeam::DonateResources( CBaseTFPlayer *pPlayer )
 		return;
 
 	// Now that we've figured how much to donate, do it!
-	for ( int i = 0; i < nPlayerCount; i++ )
+	for ( intp i = 0; i < nPlayerCount; i++ )
 	{
 		CBaseTFPlayer *pDest = (CBaseTFPlayer*)GetPlayer(i);
 		if (pDest == pPlayer)

@@ -123,7 +123,7 @@ void AddIntersectingLeafSurfaces( mleaf_t *pLeaf, GetIntersectingSurfaces_Struct
 	for ( int iSurf=0; iSurf < pLeaf->nummarksurfaces; iSurf++ )
 	{
 		SurfaceHandle_t surfID = pHandle[iSurf];
-		ASSERT_SURF_VALID( surfID );
+		(void)ASSERT_SURF_VALID( surfID );
 		
 		if ( MSurf_Flags(surfID) & SURFDRAW_SKY )
 			continue;
@@ -360,7 +360,6 @@ public:
 	int GetLocalPlayer( void ) override;
 	float GetLastTimeStamp( void ) override;
 	const model_t *LoadModel( const char *pName, bool bProp ) override;
-	void UnloadModel( const model_t *model, bool bProp );
 	CSentence *GetSentence( CAudioSource *pAudioSource ) override;
 	float GetSentenceLength( CAudioSource *pAudioSource ) override;
 	bool IsStreaming( CAudioSource *pAudioSource ) const override;
@@ -370,7 +369,6 @@ public:
 	void GetViewAngles( QAngle& va ) override;
 	void SetViewAngles( QAngle& va ) override;
 	int GetMaxClients( void ) override;
-	void Key_Event( ButtonCode_t key, int down );
 	const char *Key_LookupBinding( const char *pBinding ) override;
 	const char *Key_LookupBindingExact( const char *pBinding ) override;
 	const char *Key_BindingForKey( ButtonCode_t code ) override;
@@ -450,7 +448,8 @@ public:
 	virtual void EngineStats_EndFrame( void ) override;
 	virtual void FireEvents() override;
 	virtual void CheckPoint( const char *pName ) override;
-	virtual int GetLeavesArea( int *pLeaves, int nLeaves ) override;
+	// dimhotepus: int -> short.
+	virtual short GetLeavesArea( int *pLeaves, int nLeaves ) override;
 	virtual bool DoesBoxTouchAreaFrustum( const Vector &mins, const Vector &maxs, int iArea ) override;
 
 	// Sets the hearing origin
@@ -1180,15 +1179,16 @@ void CEngineClient::CheckPoint( const char *pName )
 	GetTestScriptMgr()->CheckPoint( pName );
 }
 
-int CEngineClient::GetLeavesArea( int *pLeaves, int nLeaves )
+// dimhotepus: int -> short.
+short CEngineClient::GetLeavesArea( int *pLeaves, int nLeaves )
 {
 	if ( nLeaves == 0 )
 		return -1;
 
-	int iArea = host_state.worldbrush->leafs[pLeaves[0]].area;
+	short iArea = host_state.worldbrush->leafs[pLeaves[0]].area;
 	for ( int i=1; i < nLeaves; i++ )
 	{
-		int iTestArea = host_state.worldbrush->leafs[pLeaves[i]].area;
+		short iTestArea = host_state.worldbrush->leafs[pLeaves[i]].area;
 		if ( iTestArea != iArea )
 			return -1;
 	}
@@ -1766,8 +1766,8 @@ bool ClientDLL_Load()
 	return true;
 }
 
-void InitExtraClientCmdCanExecuteVars()
-{	
+static void InitExtraClientCmdCanExecuteVars()
+{
 	// This can go away when we ship a client DLL with the FCVAR_CLIENTCMD_CAN_EXECUTE flag set on these cvars/concommands.
 	Cmd_AddClientCmdCanExecuteVar( "cancelselect" );
 	Cmd_AddClientCmdCanExecuteVar( "menuselect" );
@@ -1790,7 +1790,37 @@ void InitExtraClientCmdCanExecuteVars()
 	Cmd_AddClientCmdCanExecuteVar( "overview_locked" );
 	Cmd_AddClientCmdCanExecuteVar( "overview_alpha" );
 
-	Cmd_AddClientCmdCanExecuteVar( "playgamesound" );
+	// dimhotepus: Drop duplicated.
+	// Cmd_AddClientCmdCanExecuteVar( "playgamesound" );
+}
+
+// dimhotepus: Pair init.
+static void ShutdownExtraClientCmdCanExecuteVars()
+{
+	// This can go away when we ship a client DLL with the FCVAR_CLIENTCMD_CAN_EXECUTE flag set on these cvars/concommands.
+	// dimhotepus: Drop duplicated.
+	// Cmd_RemoveClientCmdCanExecuteVar( "playgamesound" );
+
+	Cmd_RemoveClientCmdCanExecuteVar( "overview_alpha" );
+	Cmd_RemoveClientCmdCanExecuteVar( "overview_locked" );
+	Cmd_RemoveClientCmdCanExecuteVar( "overview_tracks" );
+	Cmd_RemoveClientCmdCanExecuteVar( "overview_names" );
+	Cmd_RemoveClientCmdCanExecuteVar( "overview_health" );
+	Cmd_RemoveClientCmdCanExecuteVar( "overview_mode" );
+	Cmd_RemoveClientCmdCanExecuteVar( "overview_zoom" );
+	Cmd_RemoveClientCmdCanExecuteVar( "spec_autodirector" );
+	Cmd_RemoveClientCmdCanExecuteVar( "spec_menu" );
+	Cmd_RemoveClientCmdCanExecuteVar( "spec_mode" );
+	Cmd_RemoveClientCmdCanExecuteVar( "spec_prev" );
+	Cmd_RemoveClientCmdCanExecuteVar( "spec_next" );
+	
+	Cmd_RemoveClientCmdCanExecuteVar( "togglescores" );
+	Cmd_RemoveClientCmdCanExecuteVar( "voice_modenable" );
+	Cmd_RemoveClientCmdCanExecuteVar( "cl_buy_favorite" );
+	Cmd_RemoveClientCmdCanExecuteVar( "_cl_classmenuopen" );
+	Cmd_RemoveClientCmdCanExecuteVar( "playgamesound" );
+	Cmd_RemoveClientCmdCanExecuteVar( "menuselect" );
+	Cmd_RemoveClientCmdCanExecuteVar( "cancelselect" );
 }
 
 //-----------------------------------------------------------------------------
@@ -1837,7 +1867,7 @@ void ClientDLL_Init( void )
 			centerprint = ( ICenterPrint * )g_ClientFactory( VCENTERPRINT_INTERFACE_VERSION, NULL );
 			if ( !centerprint )
 			{
-				Sys_Error( "Could not get centerprint interface from library client" );
+				Sys_Error( "Could not get center print interface from library client" );
 			}
 
 			clientleafsystem = ( IClientLeafSystemEngine *)g_ClientFactory( CLIENTLEAFSYSTEM_INTERFACE_VERSION, NULL );
@@ -1845,7 +1875,7 @@ void ClientDLL_Init( void )
 			{
 				g_bClientLeafSystemV1 = false;
 			}
-			else if ( !clientleafsystem )
+			else
 			{
 				clientleafsystem = ( IClientLeafSystemEngine *)g_ClientFactory( CLIENTLEAFSYSTEM_INTERFACE_VERSION_1, NULL );
 				if ( !clientleafsystem )
@@ -1930,29 +1960,54 @@ void ClientDLL_Init( void )
 //-----------------------------------------------------------------------------
 void ClientDLL_Shutdown( void )
 {
-#if defined( REPLAY_ENABLED )
-	if ( g_pReplay )
-	{
-		g_pReplay->CL_Shutdown();
-	}
-#endif
+	// dimhotepus: In reverse order.
 
-	toolframework->ClientShutdown();
+	ShutdownExtraClientCmdCanExecuteVars();
 
 	ClientDLL_ShutdownRecvTableMgr();
 
+	toolframework->ClientShutdown();
+
+#if defined( REPLAY_ENABLED )
+	if ( Replay_IsSupportedModAndPlatform() )
+	{
+#if !defined(DEDICATED)
+		extern CGameServer sv;
+		if ( !sv.IsDedicated() )
+		{
+			ReplayLib_Shutdown();
+			
+			g_pReplayPerformanceController = nullptr;
+			g_pReplayPerformanceManager = nullptr;
+			g_pReplayMovieRenderer = nullptr;
+			g_pReplayMovieManager = nullptr;
+			g_pReplayManager = nullptr;
+			g_pClientReplayContext = nullptr;
+		}
+#endif
+
+		if ( g_pReplay )
+		{
+			g_pReplay->CL_Shutdown();
+		}
+
+		g_pClientReplay = nullptr;
+	}
+#endif
+
+	clientleafsystem = nullptr;
+	centerprint = nullptr;
+	entitylist = nullptr;
+
+	g_pClientSidePrediction->Shutdown();
+	g_pClientSidePrediction = nullptr;
+
+
 	vgui::ivgui()->RunFrame();
-	
+
 	materials->UncacheAllMaterials();
 
 	vgui::ivgui()->RunFrame();
-
-	g_pClientSidePrediction->Shutdown();
-
-	entitylist = NULL;
-	g_pClientSidePrediction = NULL;
-	g_ClientFactory = NULL;
-	centerprint = NULL;
 
 	g_ClientDLL->Shutdown();
 }
@@ -1968,9 +2023,9 @@ void ClientDLL_Unload()
 	g_pClientVR = NULL;
 	g_ClientDLL = NULL;
 	g_ClientFactory = NULL;
-	g_ClientDLLModule = NULL;
 
-	FileSystem_UnloadModule( g_ClientDLLModule );
+	FileSystem_UnloadModule(g_ClientDLLModule);
+	g_ClientDLLModule = NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -2122,7 +2177,7 @@ bool CEngineClient::StartDemoRecording( const char *pszFilename, const char *psz
 	}
 	else
 	{
-		V_sprintf_safe( szTemp, "%s", pszFilename );
+		V_strcpy_safe( szTemp, pszFilename );
 	}
 
 	// remove .dem extension if it exists
@@ -2193,7 +2248,7 @@ void CEngineClient::TakeScreenshot( const char *pszFilename, const char *pszFold
 		}
 		else
 		{
-			V_sprintf_safe( szFinal, "%s", pszFilename );
+			V_strcpy_safe( szFinal, pszFilename );
 		}
 
 		V_SetExtension( szFinal, ".tga" ); 

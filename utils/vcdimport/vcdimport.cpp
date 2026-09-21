@@ -49,8 +49,15 @@ static SpewRetval_t VcdImportOutputFunc( SpewType_t spewType, const char *pMsg )
 	OutputDebugString( pMsg );
 #endif
 
-	printf( pMsg );
-	fflush( stdout );
+	if ( spewType == SPEW_WARNING || spewType == SPEW_ERROR )
+	{
+		fprintf( stderr, "%s", pMsg );
+	}
+	else
+	{
+		printf( "%s", pMsg );
+		fflush( stdout );
+	}
 
 	if (spewType == SPEW_ERROR)
 		return SPEW_ABORT;
@@ -140,7 +147,7 @@ int CVcdImportApp::Main()
 	g_pFullFileSystem->AddSearchPath( "", "LOCAL", PATH_ADD_TO_HEAD ); 
 
 	// Do Perforce Stuff
-	if ( CommandLine()->FindParm( "-nop4" ) )
+	if ( CommandLine()->HasParm( "-nop4" ) )
 	{
 		g_p4factory->SetDummyMode( true );
 	}
@@ -154,7 +161,7 @@ int CVcdImportApp::Main()
 	const char *pOutFileName = CommandLine()->ParmValue("-o" );
 	info.m_flSimplificationThreshhold = CommandLine()->ParmValue( "-s", 0.05f );
 	info.m_nInterpolationType = Interpolator_InterpolatorForName( CommandLine()->ParmValue( "-c", "linear_interp" ) );
-	info.m_bIgnorePhonemes = CommandLine()->FindParm( "-p" ) != 0;
+	info.m_bIgnorePhonemes = CommandLine()->HasParm( "-p" );
 	if ( !pImportFileName || !pInFileName )
 	{
 		Msg( "Usage: vcdimport -f <imported .fac file> -i <in .vcd file> [-o <out .vcd file>]\n" );

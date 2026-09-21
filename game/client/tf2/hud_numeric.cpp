@@ -62,10 +62,10 @@ void CHudNumeric::BuildPrintablesList( void )
 		return;
 
 	s_bPrintablesBuilt = true;
-	int i;
-	for ( i = 0; i < 256; i++ )
+	for ( int i = 0; i < 256; i++ )
 	{
-		if ( isalnum( i ) )  // isprint or isgraph?
+		// dimhotpeus: isalnum -> V_isalnum.
+		if ( V_isalnum( i ) )  // isprint or isgraph?
 		{
 			m_Printables.Insert( i );
 		}
@@ -931,7 +931,7 @@ void CHudNumeric::Paint( void )
 	int w, h;
 	GetSize( w, h );
 
-	bool dopulse = ( Q_strcmp( value, m_szPreviousValue ) != 0 ) || ( m_bPulseForced );
+	bool dopulse = !V_streq( value, m_szPreviousValue ) || m_bPulseForced;
 	bool increment = false;
 	if ( dopulse )
 	{

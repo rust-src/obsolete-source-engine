@@ -99,7 +99,7 @@ S3PaletteIndex S3TC_GetPaletteIndex(
         int y )
 {
 	S3PaletteIndex nullPalette;
-	memset(&nullPalette, 0x0, sizeof(nullPalette));
+	BitwiseClear(nullPalette);
 	return nullPalette;
 }
 
@@ -240,7 +240,7 @@ CVTFTexture::CVTFTexture()
 	Assert( m_arrResourcesData.Count() == 0 );
 	Assert( m_arrResourcesData_ForReuse.Count() == 0 );
 
-	memset( &m_Options, 0, sizeof( m_Options ) );
+	BitwiseClear( m_Options );
 	m_Options.cbSize = sizeof( m_Options );
 
 	m_nFinestMipmapLevel = 0;
@@ -314,7 +314,8 @@ bool CVTFTexture::AllocateLowResImageData( intp nMemorySize )
 	return GenericAllocateReusableData( &m_pLowResImageData, &m_nLowResImageAllocSize, nMemorySize );
 }
 
-inline bool IsMultipleOf4( int value )
+[[nodiscard]]
+static constexpr inline bool IsMultipleOf4( int value )
 {
 	// NOTE: This catches powers of 2 less than 4 also
 	return ( value <= 2 ) || ( (value & 0x3) == 0 );
@@ -445,7 +446,7 @@ void CVTFTexture::SetReflectivity( const Vector &vecReflectivity )
 	VectorCopy( vecReflectivity, m_vecReflectivity );
 }
 
-// Sets threshhold values for alphatest mipmapping
+// Sets threshold values for alpha test mipmapping
 void CVTFTexture::SetAlphaTestThreshholds( float flBase, float flHighFreq )
 {
 	m_flAlphaThreshhold = flBase;
@@ -835,7 +836,7 @@ bool CVTFTexture::ResourceMemorySection::LoadData( CUtlBuffer &buf, CByteswap &b
 bool CVTFTexture::ResourceMemorySection::WriteData( CUtlBuffer &buf ) const
 {
 	Assert( m_nDataLength && m_pData );
-	// dimhotepus(x64): Oh, unable to bump to size_t as data will not be interchangable between x86 & x64.
+	// dimhotepus(x64): Oh, unable to bump to size_t as data will not be interchangeable between x86 & x64.
 	int iBufSize = static_cast<int>(m_nDataLength);
 	
 	buf.Put( &iBufSize, sizeof( iBufSize ) );
@@ -907,7 +908,7 @@ static bool ReadHeaderFromBufferPastBaseHeader( CUtlBuffer &buf, VTFFileHeader_t
 
 bool CVTFTexture::ReadHeader( CUtlBuffer &buf, VTFFileHeader_t &header )
 {
-	memset( &header, 0, sizeof(VTFFileHeader_t) );
+	BitwiseClear( header );
 	buf.Get( &header, sizeof(VTFFileBaseHeader_t) );
 	if ( !buf.IsValid() )
 	{
@@ -1171,42 +1172,32 @@ ResourceEntryInfo const *CVTFTexture::FindResourceEntryInfo( uint32 eType ) cons
 {
 	Assert( ( eType & RSRCF_MASK ) == 0 );
 
-	ResourceEntryInfo const *pRange[2];
-	pRange[0] = m_arrResourcesInfo.Base();
-	pRange[1] = pRange[0] + m_arrResourcesInfo.Count();
-
-	if ( IsPC() )
+	// dimhotepus: Ensure range is initialized.
+	const auto *base = m_arrResourcesInfo.Base(); 
+	ResourceEntryInfo const* pRange[2]
 	{
-		// Quick-search in a sorted array
-		ResourceEntryInfo const *pMid;
+		base,
+		base + m_arrResourcesInfo.Count()
+	};
+
+	// Quick-search in a sorted array
 find_routine:
-		if ( pRange[0] != pRange[1] )
+	if ( pRange[0] != pRange[1] )
+	{
+		ResourceEntryInfo const *pMid = pRange[0] + ( pRange[1] - pRange[0] ) / 2;
+		if ( int diff = int( pMid->eType & ~RSRCF_MASK ) - int( eType ) )
 		{
-			pMid = pRange[0] + ( pRange[1] - pRange[0] ) / 2;
-			if ( int diff = int( pMid->eType & ~RSRCF_MASK ) - int( eType ) )
-			{
-				int off = !( diff > 0 );
-				pRange[ !off ] = pMid + off;
-				goto find_routine;
-			}
-			else
-				return pMid;
+			int off = !( diff > 0 );
+			pRange[ !off ] = pMid + off;
+			goto find_routine;
 		}
 		else
-			return NULL;
-	}
-	else
-	{
-		// 360 eschews a sorted format due to endian issues
-		// use a linear search for compatibility with reading pc formats
-		for ( ; pRange[0] < pRange[1]; ++pRange[0] )
 		{
-			if ( ( pRange[0]->eType & ~RSRCF_MASK ) == eType )
-				return pRange[0];
+			return pMid;
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 ResourceEntryInfo * CVTFTexture::FindResourceEntryInfo( uint32 eType )
@@ -1238,7 +1229,7 @@ ResourceEntryInfo * CVTFTexture::FindOrCreateResourceEntryInfo( uint32 eType )
 	}
 
 	ResourceEntryInfo rei;
-	memset( &rei, 0, sizeof( rei ) );
+	BitwiseClear( rei );
 	rei.eType = eType;
 
 	// Inserting before "k"
@@ -1327,7 +1318,7 @@ bool CVTFTexture::Serialize( CUtlBuffer &buf )
 	}
 
 	VTFFileHeader_t header;
-	memset( &header, 0, sizeof( header ) );
+	BitwiseClear( header );
 	V_strcpy_safe( header.fileTypeString, "VTF" );
 	header.version[0] = VTF_MAJOR_VERSION;
 	header.version[1] = VTF_MINOR_VERSION;
@@ -2586,7 +2577,7 @@ void CVTFTexture::PutOneOverMipLevelInAlpha()
 //-----------------------------------------------------------------------------
 void CVTFTexture::ComputeReflectivity( )
 {
-	// HDRFIXME: fix this when we ahve a new intermediate format
+	// HDRFIXME: fix this when we have a new intermediate format
 	if( m_Format != IMAGE_FORMAT_RGBA8888 )
 	{
 		m_vecReflectivity.Init( 0.2f, 0.2f, 0.2f );
@@ -2735,7 +2726,7 @@ void CVTFTexture::PostProcess( bool bGenerateSpheremap, LookDir_t lookDir, bool 
 
 void CVTFTexture::SetPostProcessingSettings( VtfProcessingOptions const *pOptions )
 {
-	memset( &m_Options, 0, sizeof( m_Options ) );
+	BitwiseClear( m_Options );
 	memcpy( &m_Options, pOptions, min( (uint32)sizeof( m_Options ), pOptions->cbSize ) );
 	m_Options.cbSize = sizeof( m_Options );
 
@@ -2844,7 +2835,7 @@ void CVTFTexture::SetupTextureEdgeIncrements(
 	SetupEdgeIncrement( incs->iFace2Start, incs->iFace2End, incs->iFace2Inc );
 }
 
-void BlendTexels( unsigned char **texels, int nTexels )
+static void BlendTexels( unsigned char **texels, int nTexels )
 {
 	int sum[4] = { 0, 0, 0, 0 };
 	int i;

@@ -48,7 +48,7 @@ int AliasToWeaponID( const char *alias )
 	if (alias)
 	{
 		for( int i=0; s_WeaponAliasInfo[i] != NULL; ++i )
-			if (!Q_stricmp( s_WeaponAliasInfo[i], alias ))
+			if (V_strieq( s_WeaponAliasInfo[i], alias ))
 				return i;
 	}
 
@@ -66,11 +66,11 @@ void CDODPlayerClassInfo::Parse( KeyValues *pKeyValuesData, const char *szWeapon
 	const char *pTeam = pKeyValuesData->GetString( "team", NULL );
 	if ( pTeam )
 	{
-		if ( Q_stricmp( pTeam, "ALLIES" ) == 0 )
+		if ( V_strieq( pTeam, "ALLIES" ) )
 		{
 			m_iTeam = TEAM_ALLIES;
 		}
-		else if ( Q_stricmp( pTeam, "AXIS" ) == 0 )
+		else if ( V_strieq( pTeam, "AXIS" ) )
 		{
 			m_iTeam = TEAM_AXIS;
 		}
@@ -133,11 +133,11 @@ void CDODPlayerClassInfo::Parse( KeyValues *pKeyValuesData, const char *szWeapon
 
 	if( pszHelmetModel )
 	{
-		if ( Q_stricmp( pszHelmetModel, "HELMET_ALLIES" ) == 0 )
+		if ( V_strieq( pszHelmetModel, "HELMET_ALLIES" ) )
 		{
 			m_iDropHelmet = HELMET_ALLIES;
 		}
-		else if ( Q_stricmp( pszHelmetModel, "HELMET_AXIS" ) == 0 )
+		else if ( V_strieq( pszHelmetModel, "HELMET_AXIS" ) )
 		{
 			m_iDropHelmet = HELMET_AXIS;
 		}
@@ -153,7 +153,7 @@ void CDODPlayerClassInfo::Parse( KeyValues *pKeyValuesData, const char *szWeapon
 
 	Q_strncpy( m_szLimitCvar, pKeyValuesData->GetString( "limitcvar", "!! Missing limit cvar on Player Class" ), sizeof(m_szLimitCvar) );
 
-	Assert( Q_strlen( m_szLimitCvar ) > 0 && "Every class must specify a limitcvar" );
+	Assert( !Q_isempty( m_szLimitCvar ) && "Every class must specify a limitcvar" );
 
 	m_bClassLimitMGMerge = ( pKeyValuesData->GetInt( "mergemgclass" ) > 0 );
 

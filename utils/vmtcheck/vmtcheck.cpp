@@ -61,18 +61,19 @@ void printusage( void )
 
 void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char const *extension )
 {
+
+	char directory[ MAX_PATH ];
+	V_sprintf_safe( directory, "%s\\*.*", dir );
+	
 	WIN32_FIND_DATA wfd;
-
-	char directory[ 256 ];
-	char filename[ 256 ];
 	HANDLE ff;
-
-	sprintf( directory, "%s\\*.*", dir );
-
 	if ( ( ff = FindFirstFile( directory, &wfd ) ) == INVALID_HANDLE_VALUE )
 		return;
 
+	RunCodeAtScopeExit(FindClose( ff ));
+
 	int extlen = strlen( extension );
+	char filename[ MAX_PATH ];
 
 	do
 	{
@@ -83,7 +84,7 @@ void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char con
 				continue;
 
 			// Recurse down directory
-			sprintf( filename, "%s\\%s", dir, wfd.cFileName );
+			V_sprintf_safe( filename, "%s\\%s", dir, wfd.cFileName );
 			BuildFileList_R( files, filename, extension );
 		}
 		else
@@ -91,7 +92,7 @@ void BuildFileList_R( CUtlVector< CUtlSymbol >& files, char const *dir, char con
 			int len = strlen( wfd.cFileName );
 			if ( len > extlen )
 			{
-				if ( !stricmp( &wfd.cFileName[ len - extlen ], extension ) )
+				if ( V_strieq( &wfd.cFileName[ len - extlen ], extension ) )
 				{
 					char filename[ MAX_PATH ];
 					Q_snprintf( filename, sizeof( filename ), "%s\\%s", dir, wfd.cFileName );
@@ -250,7 +251,7 @@ int main( int argc, char* argv[] )
 	vprint( 0, "    Looking for messed up .vmt files...\n" );
 
 	char vmtdir[ 256 ];
-	strcpy( vmtdir, argv[ i - 1 ] );
+	V_strcpy_safe( vmtdir, argv[ i - 1 ] );
 
 	if ( !strstr( vmtdir, "materials" ) )
 	{

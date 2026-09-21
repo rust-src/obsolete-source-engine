@@ -136,15 +136,17 @@ public:
 	void DrawOverlay( float fSetting );
 
 protected:
-	float m_fLastTickTime;
-	float m_fLastTickOverlay;
+	// dimhotepus: float -> double.
+	double m_fLastTickTime;
+	// dimhotepus: float -> double.
+	double m_fLastTickOverlay;
 	enum Overlay { OVR_NONE = 0, OVR_REC = 1 << 1, OVR_PLAY = 1 << 2 };
 	bool m_bTick;
 	int m_maskDrawnOverlay;
 } g_DemoOverlay;
 
 DemoOverlay::DemoOverlay() :
-	m_fLastTickTime( 0.f ), m_fLastTickOverlay( 0.f ), m_bTick( false ), m_maskDrawnOverlay( OVR_NONE )
+	m_fLastTickTime( 0 ), m_fLastTickOverlay( 0 ), m_bTick( false ), m_maskDrawnOverlay( OVR_NONE )
 {
 }
 
@@ -154,12 +156,12 @@ void DemoOverlay::Tick()
 	{
 		m_bTick = true;
 
-		float const fRealTime = Sys_FloatTime();
+		double const fRealTime = Sys_FloatTime();
 		if ( m_fLastTickTime != fRealTime )
 		{
 			m_fLastTickTime = fRealTime;
 
-			float const fDelta = m_fLastTickTime - m_fLastTickOverlay;
+			float const fDelta = static_cast<float>( m_fLastTickTime - m_fLastTickOverlay );
 			float const fSettingDelta = cl_showdemooverlay.GetFloat();
 
 			if ( fSettingDelta <= 0.f ||
@@ -205,7 +207,7 @@ void DemoOverlay::DrawOverlay( float fSetting )
 		 OVR_NONE != m_maskDrawnOverlay )
 	{
 		con_nprint_s xprn;
-		memset( &xprn, 0, sizeof( xprn ) );
+		BitwiseClear( xprn );
 		xprn.index = idx;
 		xprn.time_to_live = -1;
 		Con_NXPrintf( &xprn, "" );
@@ -214,7 +216,7 @@ void DemoOverlay::DrawOverlay( float fSetting )
 	if ( OVR_PLAY & maskDrawnOverlay )
 	{
 		con_nprint_s xprn;
-		memset( &xprn, 0, sizeof( xprn ) );
+		BitwiseClear( xprn );
 		xprn.index = idx;
 		xprn.color[0] = 0.f;
 		xprn.color[1] = 1.f;
@@ -227,7 +229,7 @@ void DemoOverlay::DrawOverlay( float fSetting )
 	if ( OVR_REC & maskDrawnOverlay )
 	{
 		con_nprint_s xprn;
-		memset( &xprn, 0, sizeof( xprn ) );
+		BitwiseClear( xprn );
 		xprn.index = idx;
 		xprn.color[0] = 1.f;
 		xprn.color[1] = 0.f;
@@ -377,22 +379,8 @@ void CDemoRecorder::RecordServerClasses( ServerClass *pClasses )
 {
 	MEM_ALLOC_CREDIT();
 
-	char *pBigBuffer;
-	CUtlBuffer bigBuff;
-
-	int buffSize = 256*1024;
-	if ( !IsX360() )
-	{
-		pBigBuffer = (char*)stackalloc( buffSize );
-	}
-	else
-	{
-		// keep temp large allocations off of stack
-		bigBuff.EnsureCapacity( buffSize );
-		pBigBuffer = bigBuff.Base<char>();
-	}
-
-	bf_write buf( pBigBuffer, buffSize );
+	char pBigBuffer[256*1024];
+	bf_write buf( pBigBuffer );
 
 	// Send SendTable info.
 	DataTable_WriteSendTablesBuffer( pClasses, &buf );
@@ -445,7 +433,7 @@ void CDemoRecorder::RecordUserInput( int cmdnumber )
 {
 	char buffer[256];
 	buffer[0] = '\0';
-	bf_write msg( "CDemo::WriteUserCmd", buffer, sizeof(buffer) );
+	bf_write msg( "CDemo::WriteUserCmd", buffer );
 
 	g_ClientDLL->EncodeUserCmdToBuffer( msg, cmdnumber );
 
@@ -556,7 +544,7 @@ void CDemoRecorder::StartupDemoFile( void )
 	// make sure the .dem extension is still present
 	char ext[10];
 	V_ExtractFileExtension( demoFileName, ext );
-	if ( Q_strcasecmp( ext, "dem" ) )
+	if ( !V_strieq( ext, "dem" ) )
 	{
 		ConMsg( "StartupDemoFile: invalid filename.\n" );
 		return;
@@ -841,7 +829,7 @@ void CDemoPlayer::StopPlayback( void )
 	m_bPlayingBack = false;
 	m_bLoading = false;
 	m_bPlaybackPaused = false;
-	m_flAutoResumeTime = 0.0f;
+	m_flAutoResumeTime = 0.0;
 	m_nEndTick = 0;
 
 	if ( m_bTimeDemo )
@@ -862,7 +850,7 @@ void CDemoPlayer::StopPlayback( void )
 	else
 	{
 		int framecount = host_framecount - m_nTimeDemoStartFrame;
-		float demotime = Sys_FloatTime() - m_flTimeDemoStartTime;
+		float demotime = static_cast<float>( Sys_FloatTime() - m_flTimeDemoStartTime );
 
 		if ( demotime > 0.0f )
 		{
@@ -1229,7 +1217,8 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 					Msg( "%d dem_datatables\n", tick );
 				}
 
-				void *data = malloc( 256*1024 ); // X360TBD: How much memory is really needed here?
+				void *data = malloc( 256*1024 ); 
+				RunCodeAtScopeExit(free( data ));
 				bf_read buf( "dem_datatables", data, 256*1024 );
 				m_DemoFile.ReadNetworkDataTables( &buf );
 				buf.Seek( 0 );								// re-read data
@@ -1239,7 +1228,6 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 				{
 					Host_Error( "Error parsing network data tables during demo playback." );
 				}
-				free( data );
 			}
 			break;
 		case dem_stringtables:
@@ -1286,7 +1274,7 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 				int outgoing_sequence = m_DemoFile.ReadUserCmd( buffer, length );
 
 				// put it into a bitbuffer 
-				bf_read msg( "CDemo::ReadUserCmd", buffer, length );
+				bf_read msg( "CDemo::ReadUserCmd", &buffer[0], length );
 
 				g_ClientDLL->DecodeUserCmdFromBuffer( msg, outgoing_sequence );
 
@@ -1510,10 +1498,7 @@ void CDemoPlayer::InterpolateViewpoint( void )
 		if ( dt > 0.0f )
 		{
 			vel = distmoved / dt;
-		}
 
-		if ( dt > 0.0f )
-		{
 			QAngle startang = prev.info.GetLocalViewAngles();
 			QAngle destang = next.info.GetLocalViewAngles();
 	
@@ -1614,7 +1599,7 @@ CDemoPlayer::CDemoPlayer()
 	V_memset(&m_DemoPacket, 0x00, sizeof(m_DemoPacket));
 	m_bPlayingBack = false;
 	m_bPlaybackPaused = false;
-	m_flAutoResumeTime = 0.0f;
+	m_flAutoResumeTime = 0.0;
 	m_flPlaybackRateModifier = 1.0f;
 	m_nSkipToTick = -1;
 	m_nEndTick = 0;
@@ -1719,7 +1704,7 @@ bool CDemoPlayer::StartPlayback( const char *filename, bool bAsTimeDemo )
 	demoaction->StartPlaying( filename );
 
 	// m_bFastForwarding = false;
-	m_flAutoResumeTime = 0.0f;
+	m_flAutoResumeTime = 0.0;
 	m_flPlaybackRateModifier = 1.0f;
 
 	scr_demo_override_fov = 0.0f;
@@ -1740,10 +1725,8 @@ void CDemoPlayer::MarkFrame( float flFPSVariability )
 
 void CDemoPlayer::WriteTimeDemoResults( void )
 {
-	int		frames;
-	float	time;
-	frames = (host_framecount - m_nTimeDemoStartFrame) - 1;
-	time = Sys_FloatTime() - m_flTimeDemoStartTime;
+	int frames = (host_framecount - m_nTimeDemoStartFrame) - 1;
+	float time = static_cast<float>( Sys_FloatTime() - m_flTimeDemoStartTime );
 	if (!time)
 	{
 		time = 1;
@@ -1829,14 +1812,14 @@ void CDemoPlayer::WriteTimeDemoResults( void )
 	g_pFileSystem->FPrintf( fileHandle, "0x%x,", info.m_VendorID );
 	g_pFileSystem->FPrintf( fileHandle, "0x%x,", info.m_DeviceID );
 
-//	g_pFileSystem->FPrintf( fileHandle, "%s,", CommandLine()->CheckParm( "-nosound" ) ? "off" : "on" );
+//	g_pFileSystem->FPrintf( fileHandle, "%s,", CommandLine()->HasParm( "-nosound" ) ? "off" : "on" );
 	g_pFileSystem->FPrintf( fileHandle, "%s,", mat_reducefillrate.GetBool() ? "on" : "off" );
 	g_pFileSystem->FPrintf( fileHandle, "%s,", r_waterforcereflectentities.GetBool() ? "on" : "off" );
 	g_pFileSystem->FPrintf( fileHandle, "%s,", mat_motion_blur_enabled.GetBool() ? "on" : "off" );
 	g_pFileSystem->FPrintf( fileHandle, "%s,", r_flashlightdepthtexture.GetBool() ? "on" : "off" );
 	g_pFileSystem->FPrintf( fileHandle, "%s,", mat_reduceparticles.GetBool() ? "on" : "off" );
 	g_pFileSystem->FPrintf( fileHandle, "%s,", r_dopixelvisibility.GetBool() ? "on" : "off" );
-	g_pFileSystem->FPrintf( fileHandle, "%s,", CommandLine()->CheckParm( "-nulldevice" ) ? "yes" : "no" );
+	g_pFileSystem->FPrintf( fileHandle, "%s,", CommandLine()->HasParm( "-nulldevice" ) ? "yes" : "no" );
 
 	int itimedemo_comment = CommandLine()->FindParm( "-timedemo_comment" );
 	const char *timedemo_comment = itimedemo_comment ? CommandLine()->GetParm( itimedemo_comment + 1 ) : "";
@@ -1856,14 +1839,14 @@ void CDemoPlayer::PausePlayback( float seconds  )
 	}
 	else
 	{
-		m_flAutoResumeTime = 0.0f;
+		m_flAutoResumeTime = 0.0;
 	}
 }
 
 void CDemoPlayer::ResumePlayback()
 {
 	m_bPlaybackPaused = false;
-	m_flAutoResumeTime = 0.0f;
+	m_flAutoResumeTime = 0.0;
 }
 
 bool CDemoPlayer::CheckPausedPlayback()
@@ -1901,7 +1884,7 @@ bool CDemoPlayer::CheckPausedPlayback()
 
 	if ( m_bPlaybackPaused )
 	{
-		if ( (m_flAutoResumeTime > 0.0f) &&
+		if ( (m_flAutoResumeTime > 0.0) &&
 			 (Sys_FloatTime() >= m_flAutoResumeTime) )
 		{
 			// it's time to unpause replay
@@ -2082,7 +2065,7 @@ CON_COMMAND_F( record, "Record a demo.", FCVAR_DONTRECORD )
 	bool incremental = false;
 	if ( args.ArgC() == 3 )
 	{
-		if ( !Q_stricmp( args[2], "incremental" ) )
+		if ( V_strieq( args[2], "incremental" ) )
 		{
 			incremental = true;
 		}
@@ -2253,7 +2236,7 @@ CON_COMMAND( vtune, "Controls VTune's sampling." )
 		return;
 	}
 	
-	if( !Q_strcasecmp( args[1], "pause" ) )
+	if( V_strieq( args[1], "pause" ) )
 	{
 		if(!vtune(false))
 		{
@@ -2264,7 +2247,7 @@ CON_COMMAND( vtune, "Controls VTune's sampling." )
 		ConMsg("VTune sampling paused.\n");
 	}
 
-	else if( !Q_strcasecmp( args[1], "resume" ) )
+	else if( V_strieq( args[1], "resume" ) )
 	{
 		if(!vtune(true))
 		{

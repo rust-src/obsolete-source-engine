@@ -134,15 +134,16 @@ bool BoxesIntersect(Vector const &mins1, Vector const &maxs1, Vector const &mins
 // Purpose: Constructor. Initializes data members.
 //-----------------------------------------------------------------------------
 CMapWorld::CMapWorld( void )
+    // Face IDs start at 1. An ID of 0 means no ID.
+	: m_pCullTree(nullptr), m_nNextFaceID(1), m_pWorldDispMgr(nullptr), m_pOwningDocument(nullptr)
 {
-
 }
 
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor. Initializes data members.
 //-----------------------------------------------------------------------------
-CMapWorld::CMapWorld( CMapDoc *pOwningDocument )
+CMapWorld::CMapWorld( CMapDoc *pOwningDocument ) : CMapWorld()
 {
 	//
 	// Make sure subsequent UpdateBounds() will be effective.
@@ -152,9 +153,6 @@ CMapWorld::CMapWorld( CMapDoc *pOwningDocument )
 	m_Render2DBox.UpdateBounds(pt);
 
 	SetClass("worldspawn");
-	m_pCullTree = NULL;
-
-	m_nNextFaceID = 1;			// Face IDs start at 1. An ID of 0 means no ID.
 
 	// create the world displacement manager
 	m_pWorldDispMgr = CreateWorldEditDispMgr();
@@ -952,7 +950,7 @@ ChunkFileResult_t CMapWorld::LoadHiddenCallback(CChunkFile *pFile, CMapWorld *pW
 //-----------------------------------------------------------------------------
 ChunkFileResult_t CMapWorld::LoadKeyCallback(const char *szKey, const char *szValue, CMapWorld *pWorld)
 {
-	if (!stricmp(szKey, "id"))
+	if (V_strieq(szKey, "id"))
 	{
 		pWorld->SetID(atoi(szValue));
 	}
@@ -1642,7 +1640,7 @@ bool CMapWorld::GenerateNewTargetname( const char *startName, char *outputName, 
 	Q_strncat( outputName, startName, newNameBufferSize );
 
 	// if new name is still empty, set entity as default
-	if ( Q_strlen( outputName ) == 0 )
+	if ( Q_isempty( outputName ) )
 	{
 		Q_strncpy( outputName, "entity", newNameBufferSize );
 	}
@@ -1700,7 +1698,7 @@ void CMapWorld::PostloadVisGroups()
 		CMapEntity *pEntity = dynamic_cast< CMapEntity *>( (*pEntities)[pos] );
 #if	defined(_DEBUG) && 0
 		LPCTSTR	pszTargetName = pEntity->GetKeyValue("targetname");
-		if ( pszTargetName && !strcmp(pszTargetName, "relay_cancelVCDs") )
+		if ( pszTargetName && V_streq(pszTargetName, "relay_cancelVCDs") )
 		{
 			// Set breakpoint here for debugging this entity's visiblity
 			int foo = 0;
@@ -1768,7 +1766,7 @@ CMapEntity *CMapWorld::FindEntityByName( const char *pszName, bool bVisiblesOnly
 							continue;
 						}
 
-						if ( strcmpi( pszName, InstancePos + 1 ) == 0 )
+						if ( V_strieq( pszName, InstancePos + 1 ) )
 						{
 							return pEntity;
 						}
@@ -1831,7 +1829,7 @@ bool CMapWorld::FindEntitiesByKeyValue(CMapEntityList &Found, const char *pszKey
 
 			if ( pszThisValue != NULL )
 			{
-				if (( pszValue != NULL ) && ( !stricmp( pszValue, pszThisValue )))
+				if (( pszValue != NULL ) && ( V_strieq( pszValue, pszThisValue )))
 				{
 					Found.AddToTail( pEntity );
 				}

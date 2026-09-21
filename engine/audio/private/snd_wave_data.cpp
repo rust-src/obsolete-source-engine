@@ -50,7 +50,7 @@ ConVar snd_async_stream_spew( "snd_async_stream_spew", "0", 0, "Spew streaming i
 static bool SndAsyncSpewBlocking()
 {
 	int pref = snd_async_spew_blocking.GetInt();
-	return ( pref >= 2 ) || ( pref == 1 && CommandLine()->FindParm( "-steam" ) != 0 );
+	return ( pref >= 2 ) || ( pref == 1 && CommandLine()->HasParm( "-steam" ) );
 }
 
 #define SndAlignReads() 1
@@ -512,14 +512,21 @@ void CAsyncWaveData::StartAsyncLoading( const asyncwaveparams_t& params )
 	m_nReadSize = 0;
 	m_bPostProcessed = false;
 
-	// The async layer creates a copy of this string, ok to send a local reference
-	m_async.pszFilename	= szFilename;
+	// dimhotepus: The async layer creates a copy of this string, ok to send a local reference.
+	// dimhotepus: But to ensure correctness let's copy.
+	char *szFileNameStorage = strdup( szFilename );
+	m_async.pszFilename	= szFileNameStorage;
 
-	MEM_ALLOC_CREDIT();
-	
-	// Commence async I/O
-	Assert( !m_hAsyncControl );
-	g_pFileSystem->AsyncRead( m_async, &m_hAsyncControl );
+	{
+		MEM_ALLOC_CREDIT();
+
+		// Commence async I/O
+		Assert( !m_hAsyncControl );
+		g_pFileSystem->AsyncRead( m_async, &m_hAsyncControl );
+	}
+
+	free( szFileNameStorage );
+	m_async.pszFilename = nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -1721,6 +1728,12 @@ CWaveDataStreamAsync::CWaveDataStreamAsync
 	if ( m_dataSize <= 0 )
 	{
 		DevMsg(1, "Can't find streaming wav file: sound\\%s\n", GetFileName() );
+
+		// dimhotepus: Init to deafult when early exit.
+		m_sampleSize = 0;
+		m_bufferSize = 0;
+		m_waveSize = 0;
+
 		return;
 	}
 

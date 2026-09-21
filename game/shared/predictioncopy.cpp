@@ -1264,7 +1264,7 @@ static typedescription_t *FindFieldByName_R( const char *fieldname, datamap_t *d
 			}
 		}
 
-		if ( !V_stricmp( td->fieldName, fieldname ) )
+		if ( V_strieq( td->fieldName, fieldname ) )
 		{
 			return td;
 		}
@@ -1937,7 +1937,7 @@ static bool FindFieldStackByName_R( const char *fieldname, datamap_t *dmap, CUtl
 			}
 		}
 
-		if ( !Q_stricmp( td->fieldName, fieldname ) )
+		if ( V_strieq( td->fieldName, fieldname ) )
 		{
 			return true;
 		}

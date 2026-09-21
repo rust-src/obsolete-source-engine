@@ -84,7 +84,8 @@ static void RconAddressChanged_f( IConVar *pConVar, const char *pOldString, floa
 		return;
 	}
 
-	Msg( "Setting rcon_address: %s:%d\n", to.ToString( true ), to.GetPort() );
+	char buffer[32];
+	Msg( "Setting rcon_address: %s:%d\n", to.ToString_safe( buffer, true ), to.GetPort() );
 	RCONClient().SetAddress( to );
 #endif
 }
@@ -311,7 +312,8 @@ bool CRConClient::ConnectSocket()
 {
 	if ( m_Socket.ConnectSocket( m_Address, true ) < 0 )
 	{
-		Warning( "Unable to connect to remote server (%s)\n", m_Address.ToString() );
+		char buffer[32];
+		Warning( "Unable to connect to remote server (%s)\n", m_Address.ToString_safe(buffer) );
 		return false;
 	}
 	return true;
@@ -554,7 +556,7 @@ void CRConClient::RunFrame()
 	// Read data into a utlbuffer
 	m_RecvBuffer.EnsureCapacity( m_RecvBuffer.TellPut() + readLen + 1 );
 	const size_t recvbufferLen = min( 1024ul, readLen + 1 );
-	char *recvbuffer = (char *)_alloca( recvbufferLen );
+	char *recvbuffer = stackallocT( char, recvbufferLen );
 	unsigned int len = 0;
 	while ( len < readLen )
 	{

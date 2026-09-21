@@ -206,7 +206,8 @@ int CAI_Network::ListNodesInBox( CNodeList &list, int maxListCount, const Vector
 	
 	// NOTE: maxListCount must be > 0 or this will crash
 	bool full = false;
-	float flClosest = 1000000.0 * 1000000;
+	// dimhotepus: Set to float max.
+	float flClosest = std::numeric_limits<float>::max();
 	int closest = 0;
 
 // UNDONE: Store the nodes in a tree and query the tree instead of the entire list!!!
@@ -307,7 +308,7 @@ int	CAI_Network::NearestNodeToPoint( CAI_BaseNPC *pNPC, const Vector &vecOrigin,
 		m_nPerfStatNN++;
 #endif
 
-	AI_NearNode_t *pBuffer = (AI_NearNode_t *)stackalloc( sizeof(AI_NearNode_t) * MAX_NEAR_NODES );
+	AI_NearNode_t *pBuffer = stackallocT( AI_NearNode_t, MAX_NEAR_NODES );
 	CNodeList list( pBuffer, MAX_NEAR_NODES );
 
 	// OPTIMIZE: If not flying, this box should be smaller in Z (2 * height?)
@@ -528,7 +529,8 @@ CAI_Node *CAI_Network::AddNode( const Vector &origin, float yaw )
 
 	if (m_iNumNodes >= MAX_NODES)
 	{
-		DevMsg( "ERROR: too many nodes in map, deleting last node.\n" );
+		DevMsg( "ERROR: too many nodes (%d) >= (%d) in map, deleting last node.\n",
+			m_iNumNodes, MAX_NODES );
 		m_iNumNodes--;
 	}
 

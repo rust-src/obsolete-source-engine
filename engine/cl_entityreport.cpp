@@ -141,7 +141,7 @@ int CompareEntityBits(const void* pIndexA, const void* pIndexB )
 //-----------------------------------------------------------------------------
 void CL_ResetEntityBits( void )
 {
-	memset( s_EntityBits, 0, sizeof( s_EntityBits ) );
+	BitwiseClear( s_EntityBits );
 }
 
 //-----------------------------------------------------------------------------
@@ -251,7 +251,7 @@ private:
 	vgui::HFont		m_hFont;
 };
 
-static CEntityReportPanel *g_pEntityReportPanel = NULL;
+static CEntityReportPanel *g_pEntityReportPanel = nullptr;
 
 //-----------------------------------------------------------------------------
 // Purpose: Creates the CEntityReportPanel VGUI panel
@@ -260,6 +260,13 @@ static CEntityReportPanel *g_pEntityReportPanel = NULL;
 void CL_CreateEntityReportPanel( vgui::Panel *parent )
 {
 	g_pEntityReportPanel = new CEntityReportPanel( parent );
+}
+
+// dimhotepus: Pair with create.
+void CL_DestroyEntityReportPanel()
+{
+	g_pEntityReportPanel->MarkForDeletion();
+	g_pEntityReportPanel = nullptr;
 }
 
 //-----------------------------------------------------------------------------

@@ -297,7 +297,7 @@ bool CJobMgr::BIsJobRunning( const char *pchJobName )
 {
 	FOR_EACH_MAP_FAST( m_MapJob, i )
 	{
-		if ( !Q_stricmp( m_MapJob[i]->GetName(), pchJobName ) )
+		if ( V_strieq( m_MapJob[i]->GetName(), pchJobName ) )
 			return true;
 	}
 	return false;
@@ -1545,7 +1545,7 @@ void CJobMgr::DumpJobs( const char *pszJobName, int nMax, int nPrintLocksMax ) c
 			break;
 		nMax--;
 
-		if ( pszJobName == NULL || V_strcmp( pszJobName, m_MapJob[iJob]->GetName() ) == 0 )
+		if ( pszJobName == NULL || V_streq( pszJobName, m_MapJob[iJob]->GetName() ) )
 		{
 			DumpJob( m_MapJob.Key(iJob), nPrintLocksMax );
 		}

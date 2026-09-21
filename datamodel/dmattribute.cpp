@@ -1886,7 +1886,7 @@ void CDmAttribute::Init( CDmElement *pOwner, DmAttributeType_t type, const char 
 {
 	// FIXME - this is just here temporarily to catch old code trying to create type and id attributes
 	// this shouldn't actually be illegal, since users should be able to create attributes of whatever name they want
-	Assert( V_strcmp( pAttributeName, "type" ) && V_strcmp( pAttributeName, "id" ) );
+	Assert( !V_streq( pAttributeName, "type" ) && !V_streq( pAttributeName, "id" ) );
 
 	m_pOwner = pOwner;
 	m_Name = g_pDataModel->GetSymbol( pAttributeName );
@@ -3226,7 +3226,7 @@ DmAttributeType_t AttributeType( const char *pName )
 {
 	for ( int i = 0; i < AT_TYPE_COUNT; ++i )
 	{
-		if ( !Q_stricmp( s_pAttrInfo[ i ]->AttributeTypeName(), pName ) )
+		if ( V_strieq( s_pAttrInfo[ i ]->AttributeTypeName(), pName ) )
 			return (DmAttributeType_t)i;
 	}
 

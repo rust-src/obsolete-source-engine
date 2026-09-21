@@ -1892,7 +1892,7 @@ CShaderAPIDx8::CShaderAPIDx8() :
 	
 	//Debugger();
 #ifdef ENABLE_NULLREF_DEVICE_SUPPORT
-	m_NullDevice = !!CommandLine()->FindParm( "-nulldevice" );
+	m_NullDevice = CommandLine()->HasParm( "-nulldevice" );
 #endif
 }
 
@@ -2085,7 +2085,7 @@ bool CShaderAPIDx8::OnDeviceInit()
 	// Initialize the mesh manager
 	MeshMgr()->Init();
 
-	const bool bToolsMode = IsWindows() && CommandLine()->CheckParm( "-tools" );
+	const bool bToolsMode = IsWindows() && CommandLine()->HasParm( "-tools" );
 
 	// Use fat vertices when running in tools
 	MeshMgr()->UseFatVertices( bToolsMode );
@@ -2999,7 +2999,7 @@ void CShaderAPIDx8::ResetDXRenderState( void )
     SetSupportedRenderStateForce( D3DRS_CLIPPLANEENABLE, 0 );
 
 	// -disable_d3d9_hacks is for debugging. For example, the "CENT" driver hack thing causes the flashlight pass to appear much brighter on NVidia drivers.
-	if ( IsPC() && !IsOpenGL() && !CommandLine()->CheckParm( "-disable_d3d9_hacks" ) )
+	if ( IsPC() && !IsOpenGL() && !CommandLine()->HasParm( "-disable_d3d9_hacks" ) )
 	{	
 		if ( g_pHardwareConfig->Caps().m_bNeedsATICentroidHack && ( g_pHardwareConfig->Caps().m_VendorID == VENDORID_ATI ) )
 		{
@@ -4328,7 +4328,7 @@ void CShaderAPIDx8::ApplyZBias( const ShadowState_t& shaderState )
 		// this causes the z values to be more than 50 units away from the original z values
 
 		a = 0.0f;
-		c = -1.0/4096.0;
+		c = -1.0f/4096.0f;
 	}
 
 	// bias = (s * D3DRS_SLOPESCALEDEPTHBIAS) + D3DRS_DEPTHBIAS, where s is the maximum depth slope of the triangle being rendered
@@ -6539,7 +6539,7 @@ void CShaderAPIDx8::CreateTextures(
 
 	// Create a set of texture handles
 	CreateTextureHandles( pHandles, count );
-	Texture_t **arrTxp = ( Texture_t ** ) stackalloc( count * sizeof( Texture_t * ) );
+	Texture_t **arrTxp = stackallocT( Texture_t *, count );
 
 	unsigned short usSetFlags = 0;
 	usSetFlags |= ( IsPosix() || ( creationFlags & (TEXTURE_CREATE_DYNAMIC | TEXTURE_CREATE_MANAGED) ) ) ? Texture_t::IS_LOCKABLE : 0;
@@ -7841,7 +7841,7 @@ void CShaderAPIDx8::SetLight( int lightNum, const LightDesc_t& desc_ )
 
 	case MATERIAL_LIGHT_DIRECTIONAL:
 		light.Type = D3DLIGHT_DIRECTIONAL;
-		light.Range = 1e12;	// This is supposed to be ignored
+		light.Range = 1e12f;	// This is supposed to be ignored
 		break;
 
 	case MATERIAL_LIGHT_SPOT:
@@ -8590,15 +8590,15 @@ void CShaderAPIDx8::SpewBoardState()
 		boardState.m_AlphaFunc, boardState.m_SrcBlend, BlendModeToString( boardState.m_SrcBlend ),
 		boardState.m_DestBlend, BlendModeToString( boardState.m_DestBlend ) );
 	Plat_DebugString(buf);
-	int len = V_sprintf_safe(buf,"Alpha Ref %d, Lighting: %d, Ambient Color %lx, LightsEnabled ",
+	V_sprintf_safe(buf,"Alpha Ref %d, Lighting: %d, Ambient Color %lx, LightsEnabled ",
 		boardState.m_AlphaRef, boardState.m_Lighting, m_DynamicState.m_Ambient);
 
 	int i;
 	for ( i = 0; i < g_pHardwareConfig->Caps().m_MaxNumLights; ++i)
 	{
-		len += sprintf(buf+len,"%d ", m_DynamicState.m_LightEnable[i] );
+		V_sprintfcat_safe(buf,"%d ", m_DynamicState.m_LightEnable[i] );
 	}
-	sprintf(buf+len,"\n");
+	V_sprintfcat_safe(buf,"\n");
 	Plat_DebugString(buf);
 	V_sprintf_safe(buf,"Fixed Function: %d, VertexBlend %d\n",
 		boardState.m_UsingFixedFunction, m_DynamicState.m_VertexBlend );

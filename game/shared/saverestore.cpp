@@ -48,7 +48,7 @@ void AddRestoredEntity( C_BaseEntity *pEntity );
 #include "tier0/memdbgon.h"
 
 #define MAX_ENTITYARRAY 1024
-#define ZERO_TIME ((FLT_MAX*-0.5))
+#define ZERO_TIME ((FLT_MAX*-0.5f))
 // A bit arbitrary, but unlikely to collide with any saved games...
 #define TICK_NEVER_THINK_ENCODE	( INT_MAX - 3 )
 
@@ -299,7 +299,7 @@ void CSave::Log( const char *pName, fieldtype_t fieldType, void *value, int coun
 		case FIELD_STRING:
 			{
 				string_t *pValue = ( string_t* )( value );
-				Q_snprintf( szTempBuf, sizeof( szTempBuf ), "%s", ( const char* )STRING( *pValue ) );
+				V_strcpy_safe( szTempBuf, ( const char* )STRING( *pValue ) );
 				Q_strncat( szBuf, szTempBuf, sizeof( szTempBuf ), COPY_ALL_CHARACTERS );
 				break;					
 			}
@@ -1023,8 +1023,8 @@ void CSave::WriteTime( const char *pname, const float *data, int count )
 		else
 		{			
 			tmp = data[i] - m_pGameInfo->GetBaseTime();
-			if ( fabsf( tmp ) < 0.001 ) // never allow a time to become zero due to rebasing
-				tmp = 0.001;
+			if ( fabsf( tmp ) < 0.001f ) // never allow a time to become zero due to rebasing
+				tmp = 0.001f;
 		}
 
 		WriteData( (const char *)&tmp, sizeof(float) );
@@ -1053,8 +1053,8 @@ void CSave::WriteTime( const float *data, int count )
 		else
 		{			
 			tmp = data[i] - m_pGameInfo->GetBaseTime();
-			if ( fabsf( tmp ) < 0.001 ) // never allow a time to become zero due to rebasing
-				tmp = 0.001;
+			if ( fabsf( tmp ) < 0.001f ) // never allow a time to become zero due to rebasing
+				tmp = 0.001f;
 		}
 
 		WriteData( (const char *)&tmp, sizeof(float) );
@@ -2036,7 +2036,7 @@ void CRestore::ReadGameField( const SaveRestoreRecordHeader_t &header, void *pDe
 		case FIELD_MODELINDEX:
 		{
 			int *pModelIndex = (int*)pDest;
-			string_t *pModelName = (string_t *)stackalloc( pField->fieldSize * sizeof(string_t) );
+			string_t *pModelName = stackallocT( string_t, pField->fieldSize );
 			int nRead = ReadString( pModelName, pField->fieldSize, header.size );
 
 			for ( int i = 0; i < nRead; i++ )
@@ -2062,7 +2062,7 @@ void CRestore::ReadGameField( const SaveRestoreRecordHeader_t &header, void *pDe
 		case FIELD_MATERIALINDEX:
 		{
 			int *pMaterialIndex = (int*)pDest;
-			string_t *pMaterialName = (string_t *)stackalloc( pField->fieldSize * sizeof(string_t) );
+			string_t *pMaterialName = stackallocT( string_t, pField->fieldSize );
 			int nRead = ReadString( pMaterialName, pField->fieldSize, header.size );
 
 			for ( int i = 0; i < nRead; i++ )

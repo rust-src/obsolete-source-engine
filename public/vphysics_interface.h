@@ -321,7 +321,7 @@ public:
 	// Gets the triangle's verts to an array
 	virtual void	GetTriangleVerts( int convexIndex, int triangleIndex, Vector *verts ) = 0;
 	
-	// UNDONE: This doesn't work!!!
+	// dimhotepus: Implemented SetTriangleVerts.
 	virtual void	SetTriangleVerts( int convexIndex, int triangleIndex, const Vector *verts ) = 0;
 	
 	// returns the 7-bit material index
@@ -863,6 +863,8 @@ public:
 	// dumps info about the object to Msg()
 	virtual void			OutputDebugInfo() const = 0;
 
+	// dimhotepus: TF2 backport.
+	[[nodiscard]] virtual float	GetBuoyancyRatio() const = 0;
 };
 
 
@@ -978,6 +980,7 @@ abstract_class IPhysicsSurfaceProps
 public:
 	virtual ~IPhysicsSurfaceProps( void ) {}
 
+	// dimhotepus: Breaking change. Return actual existing props count if file already parsed.
 	// parses a text file containing surface prop keys
 	[[nodiscard]] virtual intp		ParseSurfaceData( const char *pFilename, const char *pTextfile ) = 0;
 	// current number of entries in the database

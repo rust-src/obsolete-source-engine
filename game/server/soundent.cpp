@@ -315,27 +315,27 @@ void CSoundEnt::Think ( void )
 
 				if( displaysoundlist.GetInt() == 1 || (displaysoundlist.GetInt() == 2 && pSound->IsSoundType( SOUND_DANGER ) ) )
 				{
-					NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() + forward * pSound->Volume(), r,g,b, false, 0.1 );
-					NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() - forward * pSound->Volume(), r,g,b, false, 0.1 );
+					NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() + forward * pSound->Volume(), r,g,b, false, 0.1f );
+					NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() - forward * pSound->Volume(), r,g,b, false, 0.1f );
 
-					NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() + right * pSound->Volume(), r,g,b, false, 0.1 );
-					NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() - right * pSound->Volume(), r,g,b, false, 0.1 );
+					NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() + right * pSound->Volume(), r,g,b, false, 0.1f );
+					NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() - right * pSound->Volume(), r,g,b, false, 0.1f );
 
-					NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() + up * pSound->Volume(), r,g,b, false, 0.1 );
-					NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() - up * pSound->Volume(), r,g,b, false, 0.1 );
+					NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() + up * pSound->Volume(), r,g,b, false, 0.1f );
+					NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() - up * pSound->Volume(), r,g,b, false, 0.1f );
 
 					if( pSound->m_flOcclusionScale != 1.0 )
 					{
 						// Draw the occluded radius, too.
 						r = 0; g = 150; b = 255;
-						NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() + forward * pSound->OccludedVolume(), r,g,b, false, 0.1 );
-						NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() - forward * pSound->OccludedVolume(), r,g,b, false, 0.1 );
+						NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() + forward * pSound->OccludedVolume(), r,g,b, false, 0.1f );
+						NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() - forward * pSound->OccludedVolume(), r,g,b, false, 0.1f );
 
-						NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() + right * pSound->OccludedVolume(), r,g,b, false, 0.1 );
-						NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() - right * pSound->OccludedVolume(), r,g,b, false, 0.1 );
+						NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() + right * pSound->OccludedVolume(), r,g,b, false, 0.1f );
+						NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() - right * pSound->OccludedVolume(), r,g,b, false, 0.1f );
 
-						NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() + up * pSound->OccludedVolume(), r,g,b, false, 0.1 );
-						NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() - up * pSound->OccludedVolume(), r,g,b, false, 0.1 );
+						NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() + up * pSound->OccludedVolume(), r,g,b, false, 0.1f );
+						NDebugOverlay::Line( pSound->GetSoundOrigin(), pSound->GetSoundOrigin() - up * pSound->OccludedVolume(), r,g,b, false, 0.1f );
 					}
 				}
 
@@ -722,7 +722,7 @@ public:
 		// in order to support legacy instances of ai_sound.
 		m_iSoundContext = 0x00000000;
 		m_iVolume = 0;
-		m_flDuration = 0.3;
+		m_flDuration = 0.3f;
 	}
 
 	DECLARE_CLASS( CAISound, CPointEntity );

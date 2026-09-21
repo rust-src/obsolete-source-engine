@@ -1447,11 +1447,10 @@ CompressVis
 
 ===============
 */
-int CompressVis (byte *vis, byte *dest)
+intp CompressVis (const byte *vis, byte *dest)
 {
 	byte *dest_p = dest;
-//	visrow = (r_numvisleafs + 7)>>3;
-	int visrow = (dvis->numclusters + 7)>>3;
+	const int visrow = (dvis->numclusters + 7)>>3;
 	
 	for (int j=0 ; j<visrow ; j++)
 	{
@@ -1480,15 +1479,10 @@ int CompressVis (byte *vis, byte *dest)
 DecompressVis
 ===================
 */
-void DecompressVis (byte *in, byte *decompressed)
+void DecompressVis (const byte *in, byte *decompressed)
 {
-	intp	c;
-	byte	*out;
-	int		row;
-
-//	row = (r_numvisleafs+7)>>3;	
-	row = (dvis->numclusters+7)>>3;	
-	out = decompressed;
+	const int row = (dvis->numclusters+7)>>3;
+	byte *out = decompressed;
 
 	do
 	{
@@ -1498,7 +1492,7 @@ void DecompressVis (byte *in, byte *decompressed)
 			continue;
 		}
 	
-		c = in[1];
+		intp c = in[1];
 		if (!c)
 			Error("Vis decompression: 0 repeat.\n");
 		in += 2;
@@ -1826,7 +1820,7 @@ static void SwapVisibilityLump( byte *pDest, byte *pSrc, int count )
 //=============================================================================
 void Lumps_Init( void )
 {
-	memset( &g_Lumps, 0, sizeof(g_Lumps) );
+	BitwiseClear( g_Lumps );
 }
 
 int LumpVersion( const dheader_t *header, int lump )
@@ -2133,8 +2127,8 @@ void LoadLeafAmbientLighting( dheader_t *header, int numLeafs )
 			g_LeafAmbientIndexHDR[i].ambientSampleCount = 1;
 			g_LeafAmbientIndexHDR[i].firstAmbientSample = i;
 
-			Q_memset( &g_LeafAmbientLightingLDR[i], 0, sizeof(g_LeafAmbientLightingLDR[i]) );
-			Q_memset( &g_LeafAmbientLightingHDR[i], 0, sizeof(g_LeafAmbientLightingHDR[i]) );
+			BitwiseClear( g_LeafAmbientLightingLDR[i] );
+			BitwiseClear( g_LeafAmbientLightingHDR[i] );
 
 			if ( pSrc )
 			{
@@ -2302,7 +2296,7 @@ bool LoadBSPFile( const char *filename )
 	if ( HasLump( header, LUMP_MAP_FLAGS ) )
 		CopyLump ( header, LUMP_MAP_FLAGS, &flags_lump );
 	else
-		memset( &flags_lump, 0, sizeof( flags_lump ) );			// default flags to 0
+		BitwiseClear( flags_lump );			// default flags to 0
 
 	g_LevelFlags = flags_lump.m_LevelFlags;
 
@@ -3042,10 +3036,8 @@ ParseEpair
 */
 epair_t *ParseEpair (void)
 {
-	epair_t	*e;
-
-	e = (epair_t*)malloc (sizeof(epair_t));
-	memset (e, 0, sizeof(epair_t));
+	epair_t	*e = (epair_t*)malloc (sizeof(epair_t));
+	memset (e, 0, sizeof(*e));
 	
 	if (strlen(token) >= MAX_KEY-1)
 		Error ("ParseEpar: token key too long (%zu > %u)", strlen(token), MAX_KEY);
@@ -3090,7 +3082,7 @@ qboolean	ParseEntity (void)
 	{
 		if (!GetToken (true))
 			Error ("ParseEntity: EOF without closing brace");
-		if (!Q_stricmp (token, "}") )
+		if (V_streq (token, "}") )
 			break;
 		e = ParseEpair ();
 		e->next = mapent->epairs;
@@ -3180,7 +3172,7 @@ void SetKeyValue(entity_t *ent, const char *key, const char *value)
 	epair_t	*ep;
 	
 	for (ep=ent->epairs ; ep ; ep=ep->next)
-		if (!Q_stricmp (ep->key, key) )
+		if (V_strieq (ep->key, key) )
 		{
 			free (ep->value);
 			ep->value = copystring(value);
@@ -3196,7 +3188,7 @@ void SetKeyValue(entity_t *ent, const char *key, const char *value)
 const char 	*ValueForKey (entity_t *ent, const char *key)
 {
 	for (epair_t *ep=ent->epairs ; ep ; ep=ep->next)
-		if (!Q_stricmp (ep->key, key) )
+		if (V_strieq (ep->key, key) )
 			return ep->value;
 	return "";
 }
@@ -3210,7 +3202,7 @@ vec_t	FloatForKey (entity_t *ent, const char *key)
 vec_t	FloatForKeyWithDefault (entity_t *ent, const char *key, float default_value)
 {
 	for (epair_t *ep=ent->epairs ; ep ; ep=ep->next)
-		if (!Q_stricmp (ep->key, key) )
+		if (V_strieq (ep->key, key) )
 			return strtof( ep->value, nullptr );
 	return default_value;
 }
@@ -4033,7 +4025,7 @@ void ConvertPakFileContents( const char *pInFilename )
 			continue;
 		}
 
-		if ( pExtension && !V_stricmp( pExtension, "vtf" ) )
+		if ( pExtension && V_strieq( pExtension, "vtf" ) )
 		{
 			bOK = g_pVTFConvertFunc( relativeName, sourceBuf, targetBuf, g_pCompressFunc );
 			if ( !bOK )
@@ -4045,7 +4037,7 @@ void ConvertPakFileContents( const char *pInFilename )
 			bConverted = true;
 			pExt = ".vtf";
 		}
-		else if ( pExtension && !V_stricmp( pExtension, "vhv" ) )
+		else if ( pExtension && V_strieq( pExtension, "vhv" ) )
 		{			
 			CUtlBuffer tempBuffer;
 			if ( g_pVHVFixupFunc )

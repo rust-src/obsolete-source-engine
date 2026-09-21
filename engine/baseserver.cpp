@@ -14,20 +14,19 @@
 #if defined(_WIN32) && !defined(_X360)
 #include "winlite.h"		// FILETIME
 #elif defined(POSIX)
-#include <time.h>
+#include <ctime>
 /*
 #include <sys/sysinfo.h>          
 #include <asm/param.h> // for HZ
 */
 #include <sys/resource.h>
 #include <netinet/in.h>
-#elif defined(_X360)
 #else
 #error "Includes for CPU usage calcs here"
 #endif
 
-#include "filesystem_engine.h"
 #include "baseserver.h"
+#include "filesystem_engine.h"
 #include "sysexternal.h"
 #include "quakedef.h"
 #include "host.h"
@@ -43,23 +42,19 @@
 #include "sv_steamauth.h"
 
 #include <proto_oob.h>
-#include <vstdlib/random.h>
 #include <irecipientfilter.h>
-#include <KeyValues.h>
-#include <tier0/vprof.h>
 #include <cdll_int.h>
 #include <eiface.h>
 #include <client_class.h>
-#include "tier0/icommandline.h"
-#include "sv_steamauth.h"
-#include "tier0/vcrmode.h"
 #include "sv_ipratelimit.h"
 #include "cl_steamauth.h"
 #include "sv_filter.h"
 
-#if defined( _X360 )
-#include "xbox/xbox_win32stubs.h"
-#endif
+#include "tier0/icommandline.h"
+#include "tier0/vcrmode.h"
+#include "tier0/vprof.h"
+#include "tier1/KeyValues.h"
+#include "vstdlib/random.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -88,14 +83,14 @@ static CIPRateLimit s_connectRateChecker( &sv_max_connects_sec, &sv_max_connects
 // Steam has a matching one in matchmakingtypes.h
 #define MAX_TAG_STRING_LENGTH		128
 
-int SortServerTags( char* const *p1, char* const *p2 )
+static int SortServerTags( char* const *p1, char* const *p2 )
 {
 	return ( Q_strcmp( *p1, *p2 ) > 0 );
 }
 
 static void ServerTagsCleanUp( void )
 {
-	CUtlVector<char*> TagList;
+	CUtlStringList TagList;
 	ConVarRef sv_tags( "sv_tags" );
 	if ( !sv_tags.IsValid() ) return;
 
@@ -145,7 +140,6 @@ static void ServerTagsCleanUp( void )
 
 	// set our convar and purge our list
 	sv_tags.SetValue( tmptags );
-	TagList.PurgeAndDeleteElementsArray();
 }
 
 static void SvTagsChangeCallback( IConVar *pConVar, const char *pOldValue, float flOldValue )
@@ -156,6 +150,7 @@ static void SvTagsChangeCallback( IConVar *pConVar, const char *pOldValue, float
 		return;
 
 	bTagsChangeCallback = true;
+	RunCodeAtScopeExit([&]{ bTagsChangeCallback = false; });
 
 	ServerTagsCleanUp();
 
@@ -164,8 +159,6 @@ static void SvTagsChangeCallback( IConVar *pConVar, const char *pOldValue, float
 		ConVarRef var( pConVar );
 		Steam3Server().SteamGameServer()->SetGameTags( var.GetString() );
 	}
-
-	bTagsChangeCallback = false;
 }
 
 ConVar			sv_region( "sv_region","-1", FCVAR_NONE, "The region of the world to report this server in." );
@@ -258,7 +251,7 @@ CBaseServer::CBaseServer()
 	m_szSkyname[0] = '\0';
 	m_Password[0] = '\0';
 
-	V_memset( worldmapMD5.bits, 0, sizeof(worldmapMD5.bits) );
+	BitwiseClear( worldmapMD5.bits );
 	
 	m_StringTables = nullptr;
 
@@ -312,10 +305,6 @@ bool CBaseServer::CheckChallengeNr( netadr_t &adr, int nChallengeValue )
 	if ( adr.IsLoopback() )
 		return true;
 
-	// X360TBD: network
-	if ( IsX360() )
-		return true;
-
 	uint64 challenge = ((uint64)adr.GetIPNetworkByteOrder() << 32) + m_CurrentRandomNonce;
 	CRC32_t hash;
 	CRC32_Init( &hash );
@@ -343,7 +332,7 @@ const char *CBaseServer::GetPassword() const
 	const char *password = sv_password.GetString();
 
 	// if password is empty or "none", return NULL
-	if ( !password[0] || !Q_stricmp(password, "none" ) )
+	if ( Q_isempty( password ) || V_strieq( password, "none" ) )
 	{
 		return NULL;
 	}
@@ -356,11 +345,11 @@ void CBaseServer::SetPassword(const char *password)
 {
 	if ( password != NULL )
 	{
-		Q_strncpy( m_Password, password, sizeof(m_Password) );
+		V_strcpy_safe( m_Password, password );
 	}
 	else
 	{
-		m_Password[0] = 0; // clear password
+		m_Password[0] = '\0'; // clear password
 	}
 }
 
@@ -375,25 +364,24 @@ Determine if this IP requesting the connect is connecting too often
 */
 bool CBaseServer::CheckIPConnectionReuse( netadr_t &adr )
 {
-	int nSimultaneouslyConnections = 0;
+	intp nSimultaneouslyConnections = 0;
 
-	for ( int slot = 0 ; slot < m_Clients.Count() ; slot++ )
+	for ( auto *client : m_Clients )
 	{
-		CBaseClient *client = m_Clients[slot];
-
 		// if the user is connected but not fully in AND the addr's match
 		if ( client->IsConnected() &&
 			 !client->IsActive() &&
 			 !client->IsFakeClient() && 
 			 adr.CompareAdr ( client->m_NetChannel->GetRemoteAddress(), true ) )
 		{
-			nSimultaneouslyConnections++;
+			++nSimultaneouslyConnections;
 		}
 	}
 	
-	if ( nSimultaneouslyConnections > MAX_REUSE_PER_IP ) 
+	if ( nSimultaneouslyConnections > MAX_REUSE_PER_IP )
 	{
-		Msg ("Too many connect packets from %s\n", adr.ToString( true ) );	
+		char buffer[32];
+		Msg ("Too many connect packets from %s\n", adr.ToString_safe( buffer, true ) );
 		return false; // too many connect packets!!!!
 	}
 	return true; // this IP is okay
@@ -403,12 +391,12 @@ bool CBaseServer::CheckIPConnectionReuse( netadr_t &adr )
 int CBaseServer::GetNextUserID()
 {
 	// Note: we'll usually exit on the first pass of this loop..
-	for ( int i=0; i < m_Clients.Count()+1; i++ )
+	for ( intp i=0; i < m_Clients.Count()+1; i++ )
 	{
 		int nTestID = (m_nUserid + i + 1) % SHRT_MAX;
 
 		// Make sure no client has this user ID.		
-		int iClient;
+		intp iClient;
 		for ( iClient=0; iClient < m_Clients.Count(); iClient++ )
 		{
 			if ( m_Clients[iClient]->GetUserID() == nTestID )
@@ -477,7 +465,8 @@ IClient *CBaseServer::ConnectClient ( netadr_t &adr, int protocol, int challenge
 		if ( !CheckPassword( adr, password, name ) )
 		{
 			// failed
-			ConMsg ( "%s:  password failed.\n", adr.ToString() );
+			char buffer[32];
+			ConMsg ( "%s:  password failed.\n", adr.ToString_safe(buffer) );
 			// Special rejection handler.
 			RejectConnection( adr, clientChallenge, "#GameUI_ServerRejectBadPassword" );
 			return NULL;
@@ -532,7 +521,8 @@ IClient *CBaseServer::ConnectClient ( netadr_t &adr, int protocol, int challenge
 	COM_TimestampedLog( "CBaseServer::ConnectClient:  NET_CreateNetChannel" );
 
 	// create network channel
-	INetChannel * netchan = NET_CreateNetChannel( m_Socket, &adr, adr.ToString(), client );
+	char buffer[32];
+	INetChannel * netchan = NET_CreateNetChannel( m_Socket, &adr, adr.ToString_safe(buffer), client );
 
 	if ( !netchan )
 	{
@@ -567,8 +557,8 @@ IClient *CBaseServer::ConnectClient ( netadr_t &adr, int protocol, int challenge
 	
 	// Tell client connection worked, now use netchannels
 	{
-		ALIGN4 char		msg_buffer[MAX_ROUTABLE_PAYLOAD] ALIGN4_POST;
-		bf_write	msg( msg_buffer, sizeof(msg_buffer) );
+		alignas(4) char msg_buffer[MAX_ROUTABLE_PAYLOAD];
+		bf_write	msg( msg_buffer );
 
 		msg.WriteLong( CONNECTIONLESS_HEADER );
 		msg.WriteByte( S2C_CONNECTION );
@@ -722,7 +712,7 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 				// checking.
 				const char *pszVersionInP4 = "2000";
 				const char *pszVersionString = GetSteamInfIDVersionInfo().szVersionString;
-				if ( V_strcmp( pszVersionString, pszVersionInP4 ) && V_strcmp( productVersion, pszVersionInP4 ) )
+				if ( !V_streq( pszVersionString, pszVersionInP4 ) && !V_streq( productVersion, pszVersionInP4 ) )
 				{
 					int nVersionCheck = Q_strncmp( pszVersionString, productVersion, V_strlen( pszVersionString ) );
 					if ( nVersionCheck < 0 )
@@ -795,9 +785,9 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 int CBaseServer::GetNumFakeClients() const
 {
 	int count = 0; 
-	for ( int i = 0; i < m_Clients.Count(); i++ )
+	for ( auto *cl : m_Clients )
 	{
-		if ( m_Clients[i]->IsFakeClient() )
+		if ( cl->IsFakeClient() )
 		{
 			count++;
 		}
@@ -816,9 +806,9 @@ int CBaseServer::GetNumClients( void ) const
 {
 	int count	= 0;
 
-	for (int i=0 ; i < m_Clients.Count() ; i++ )
+	for ( auto *cl : m_Clients )
 	{
-		if ( m_Clients[ i ]->IsConnected() )
+		if ( cl->IsConnected() )
 		{
 			count++;
 		}
@@ -838,12 +828,12 @@ int CBaseServer::GetNumProxies( void ) const
 {
 	int count	= 0;
 
-	for (int i=0 ; i < m_Clients.Count() ; i++ )
+	for ( auto *cl : m_Clients )
 	{
 #if defined( REPLAY_ENABLED )
-		if ( m_Clients[ i ]->IsConnected() && (m_Clients[ i ]->IsHLTV() || m_Clients[ i ]->IsReplay() ) )
+		if ( cl->IsConnected() && (cl->IsHLTV() || cl->IsReplay() ) )
 #else
-		if ( m_Clients[ i ]->IsConnected() && m_Clients[ i ]->IsHLTV() )
+		if ( cl->IsConnected() && cl->IsHLTV() )
 #endif
 		{
 			count++;
@@ -860,7 +850,7 @@ int CBaseServer::GetNumPlayers()
 	{
 		return 0;
 	}
-
+	
 	const int maxPlayers = GetUserInfoTable()->GetNumStrings();
 
 	for ( int i=0; i < maxPlayers; i++ )
@@ -886,7 +876,7 @@ bool CBaseServer::GetPlayerInfo( int nClientIndex, player_info_t *pinfo )
 
 	if ( nClientIndex < 0 || !GetUserInfoTable() || nClientIndex >= GetUserInfoTable()->GetNumStrings() )
 	{
-		Q_memset( pinfo, 0, sizeof( player_info_t ) );
+		BitwiseClear( *pinfo );
 		return false;
 	}
 
@@ -894,7 +884,7 @@ bool CBaseServer::GetPlayerInfo( int nClientIndex, player_info_t *pinfo )
 
 	if ( !pi )
 	{
-		Q_memset( pinfo, 0, sizeof( player_info_t ) );
+		BitwiseClear( *pinfo );
 		return false;
 	}
 
@@ -940,7 +930,7 @@ void CBaseServer::FillServerInfo(SVC_ServerInfo &serverinfo)
 
 	serverinfo.m_nProtocol		= PROTOCOL_VERSION;
 	serverinfo.m_nServerCount	= GetSpawnCount();
-	V_memcpy( serverinfo.m_nMapMD5.bits, worldmapMD5.bits, MD5_DIGEST_LENGTH );
+	BitwiseCopy( worldmapMD5.bits, serverinfo.m_nMapMD5.bits );
 	serverinfo.m_nMaxClients	= GetMaxClients();
 	serverinfo.m_nMaxClasses	= serverclasses;
 	serverinfo.m_bIsDedicated	= IsDedicated();
@@ -953,7 +943,8 @@ void CBaseServer::FillServerInfo(SVC_ServerInfo &serverinfo)
 #endif
 
 	// HACK to signal that the server is "new"
-	serverinfo.m_cOS = static_cast<char>(tolower( serverinfo.m_cOS ));
+	// dimhotepus: tolower -> V_tolower.
+	serverinfo.m_cOS = V_tolower( serverinfo.m_cOS );
 
 	serverinfo.m_fTickInterval	= GetTickInterval();
 	serverinfo.m_szGameDir		= gamedir;
@@ -980,8 +971,8 @@ challenge, they must give a valid IP address.
 
 void CBaseServer::ReplyChallenge(netadr_t &adr, int clientChallenge )
 {
-	ALIGN4 char	buffer[STEAM_KEYSIZE+32] ALIGN4_POST;
-	bf_write msg(buffer,sizeof(buffer));
+	alignas(4) char	buffer[STEAM_KEYSIZE+32];
+	bf_write msg(buffer);
 
 	// get a free challenge number
 	int challengeNr = GetChallengeNr( adr );
@@ -1029,8 +1020,8 @@ amplification.
 */
 void CBaseServer::ReplyServerChallenge(netadr_t &adr)
 {
-	ALIGN4 char	buffer[16] ALIGN4_POST;
-	bf_write msg(buffer,sizeof(buffer));
+	alignas(4) char	buffer[16];
+	bf_write msg(buffer);
 
 	// get a free challenge number
 	int challengeNr = GetChallengeNr( adr );
@@ -1078,10 +1069,8 @@ void CBaseServer::GetNetStats( float &avgIn, float &avgOut )
 {
 	avgIn = avgOut = 0.0f;
 
-	for (int i = 0; i < m_Clients.Count(); i++ )
+	for ( auto *cl : m_Clients )
 	{
-		CBaseClient	*cl = m_Clients[ i ];
-
 		// Fake clients get killed in here.
 		if ( cl->IsFakeClient() )
 			continue;
@@ -1189,10 +1178,8 @@ void CBaseServer::CalculateCPUUsage( void )
 //-----------------------------------------------------------------------------
 void CBaseServer::InactivateClients( void )
 {
-	for (int i = 0; i < m_Clients.Count(); i++ )
+	for ( auto *cl : m_Clients )
 	{
-		CBaseClient	*cl = m_Clients[ i ];
-
 		// Fake clients get killed in here.
 #if defined( REPLAY_ENABLED )
 		if ( cl->IsFakeClient() && !cl->IsHLTV() && !cl->IsReplay() )
@@ -1216,10 +1203,8 @@ void CBaseServer::InactivateClients( void )
 
 void CBaseServer::ReconnectClients( void )
 {
-	for (int i=0 ; i< m_Clients.Count() ; i++ )
+	for ( auto *cl : m_Clients )
 	{
-		CBaseClient *cl = m_Clients[i];
-		
 		if ( cl->IsConnected() )
 		{
 			cl->m_nSignonState = SIGNONSTATE_CONNECTED;
@@ -1245,23 +1230,16 @@ void CBaseServer::CheckTimeouts (void)
 {
 	VPROF_BUDGET( "CBaseServer::CheckTimeouts", VPROF_BUDGETGROUP_OTHER_NETWORKING );
 	// Don't timeout in _DEBUG builds
-	int i;
-
 #if !defined( _DEBUG )
 		
-	for (i=0 ; i< m_Clients.Count() ; i++ )
+	for ( auto *cl : m_Clients )
 	{
-		IClient	*cl = m_Clients[ i ];
-		
 		if ( cl->IsFakeClient() || !cl->IsConnected() )
 			continue;
 
 		INetChannel *netchan = cl->GetNetChannel();
-
 		if ( !netchan )
 			continue;
-
-	
 
 		if ( netchan->IsTimedOut() )
 		{
@@ -1270,17 +1248,18 @@ void CBaseServer::CheckTimeouts (void)
 	}
 #endif
 
-	for (i=0 ; i< m_Clients.Count() ; i++ )
+	intp i = 0;
+	for ( auto *cl : m_Clients )
 	{
-		IClient	*cl = m_Clients[ i ];
-		
 		if ( cl->IsFakeClient() || !cl->IsConnected() )
 			continue;
 		
 		if ( cl->GetNetChannel() && cl->GetNetChannel()->IsOverflowed() )
 		{
-			cl->Disconnect( "Client %d overflowed reliable channel.", i );
+			cl->Disconnect( "Client %zd overflowed reliable channel.", i );
 		}
+
+		++i;
 	}
 }
 
@@ -1290,10 +1269,8 @@ void CBaseServer::CheckTimeouts (void)
 void CBaseServer::UpdateUserSettings(void)
 {
 	VPROF_BUDGET( "CBaseServer::UpdateUserSettings", VPROF_BUDGETGROUP_OTHER_NETWORKING );
-	for (int i=0 ; i< m_Clients.Count() ; i++ )
+	for ( auto *cl : m_Clients )
 	{
-		CBaseClient	*cl = m_Clients[ i ];
-
 		cl->CheckFlushNameChange();
 
 		if ( cl->m_bConVarsChanged )
@@ -1309,10 +1286,8 @@ void CBaseServer::UpdateUserSettings(void)
 void CBaseServer::SendPendingServerInfo()
 {
 	VPROF_BUDGET( "CBaseServer::SendPendingServerInfo", VPROF_BUDGETGROUP_OTHER_NETWORKING );
-	for (int i=0 ; i< m_Clients.Count() ; i++ )
+	for ( auto *cl : m_Clients )
 	{
-		CBaseClient	*cl = m_Clients[ i ];
-
 		if ( cl->m_bSendServerInfo )
 		{
 			cl->SendServerInfo();
@@ -1323,9 +1298,9 @@ void CBaseServer::SendPendingServerInfo()
 // compresses a packed entity, returns data & bits
 const char *CBaseServer::CompressPackedEntity(ServerClass *pServerClass, const char *data, int &bits)
 {
-	ALIGN4 static char s_packedData[MAX_PACKEDENTITY_DATA] ALIGN4_POST;
+	alignas(4) static char s_packedData[MAX_PACKEDENTITY_DATA];
 
-	bf_write writeBuf( "CompressPackedEntity", s_packedData, sizeof( s_packedData ) );
+	bf_write writeBuf( "CompressPackedEntity", s_packedData );
 
 	const void *pBaselineData = NULL;
 	intp nBaselineBits = 0;
@@ -1376,7 +1351,7 @@ const char* CBaseServer::UncompressPackedEntity(PackedEntity *pPackedEntity, int
 	// store this baseline in u.m_pUpdateBaselines
 	bf_read oldBuf( "UncompressPackedEntity1", pBaseline, nBaselineBytes );
 	bf_read newBuf( "UncompressPackedEntity2", pPackedEntity->GetData(), Bits2Bytes(pPackedEntity->GetNumBits()) );
-	bf_write outBuf( "UncompressPackedEntity3", pdc->data, MAX_PACKEDENTITY_DATA );
+	bf_write outBuf( "UncompressPackedEntity3", pdc->data );
 
 	Assert( pPackedEntity->m_pClientClass );
 
@@ -1513,10 +1488,6 @@ bool CBaseServer::CheckIPRestrictions( const netadr_t &adr, int nAuthProtocol )
 	if ( adr.IsLoopback() )
 		return true;
 
-	// X360TBD: network
-	if ( IsX360() )
-		return true;
-
 	// allow other users if they're on the same ip range
 	if ( Steam3Server().BLanOnly() )
 	{
@@ -1552,19 +1523,8 @@ bool CBaseServer::CheckPassword( netadr_t &adr, const char *password, const char
 		return true; // local client can always connect
 	}
 
-	intp iServerPassLen = Q_strlen(server_password);
-
-	if ( iServerPassLen != Q_strlen(password) )
-	{
-		return false; // different length cannot be equal
-	}
-
-	if ( Q_strncmp( password, server_password, iServerPassLen ) == 0)
-	{
-		return true; // passwords are equal
-	}
-
-	return false; // all test failed
+	// dimhotepus: Simplify password equality check. Use cryptosafe compare in the future.
+	return V_streq( password, server_password );
 }
 
 float CBaseServer::GetTime() const
@@ -1599,10 +1559,10 @@ void CBaseServer::Clear( void )
 	
 	m_nTickCount = 0;
 	
-	Q_memset( m_szMapname, 0, sizeof( m_szMapname ) );
-	Q_memset( m_szSkyname, 0, sizeof( m_szSkyname ) );
+	BitwiseClear( m_szMapname );
+	BitwiseClear( m_szSkyname );
 
-	V_memset( worldmapMD5.bits, 0, MD5_DIGEST_LENGTH );
+	BitwiseClear( worldmapMD5.bits );
 
 	MEM_ALLOC_CREDIT();
 
@@ -1635,8 +1595,8 @@ Rejects connection request and sends back a message
 */
 void CBaseServer::RejectConnection( const netadr_t &adr, int clientChallenge, const char *s )
 {
-	ALIGN4 char		msg_buffer[MAX_ROUTABLE_PAYLOAD] ALIGN4_POST;
-	bf_write	msg( msg_buffer, sizeof(msg_buffer) );
+	alignas(4) char	msg_buffer[MAX_ROUTABLE_PAYLOAD];
+	bf_write	msg( msg_buffer );
 
 	msg.WriteLong( CONNECTIONLESS_HEADER );
 	msg.WriteByte( S2C_CONNREJECT );
@@ -1679,7 +1639,7 @@ void CBaseServer::Init (bool bIsDedicated)
 	m_nUserid = 1;
 	m_nNumConnections = 0;
 	m_bIsDedicated = bIsDedicated;
-	m_Socket = NS_SERVER;	
+	m_Socket = NS_SERVER;
 	
 	m_Signon.SetDebugName( "m_Signon" );
 	
@@ -1767,7 +1727,7 @@ void CBaseServer::CheckMasterServerRequestRestart()
 	Msg("%cMasterRequestRestart\n", 3);
 
 #ifndef _WIN32
-	if (CommandLine()->FindParm(AUTO_RESTART))
+	if (CommandLine()->HasParm(AUTO_RESTART))
 	{
 		Msg("Your server will be restarted on map change.\n");
 		Log("Your server will be restarted on map change.\n");
@@ -1818,7 +1778,7 @@ void CBaseServer::UpdateMasterServer()
         //return;
     }
 
-	static bool bUpdateMasterServers = !CommandLine()->FindParm( "-nomaster" );
+	static bool bUpdateMasterServers = !CommandLine()->HasParm( "-nomaster" );
 	if ( !bUpdateMasterServers )
 		return;
 
@@ -1908,7 +1868,7 @@ void CBaseServer::RunFrame( void )
 	VPROF_BUDGET( "CBaseServer::RunFrame", VPROF_BUDGETGROUP_OTHER_NETWORKING );
 	tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "CBaseServer::RunFrame" );
 
-	NET_ProcessSocket( m_Socket, this );	
+	NET_ProcessSocket( m_Socket, this );
 
 #ifdef LINUX
 	// Process the linux sv lan port if it's open.
@@ -1954,7 +1914,7 @@ CBaseClient * CBaseServer::GetFreeClient( netadr_t &adr )
 {
 	CBaseClient *freeclient = NULL;
 	
-	for ( int slot = 0 ; slot < m_Clients.Count() ; slot++ )
+	for ( intp slot = 0 ; slot < m_Clients.Count() ; slot++ )
 	{
 		CBaseClient *client = m_Clients[slot];
 
@@ -1965,7 +1925,8 @@ CBaseClient * CBaseServer::GetFreeClient( netadr_t &adr )
 		{
 			if ( adr.CompareAdr ( client->m_NetChannel->GetRemoteAddress() ) )
 			{
-				ConMsg ( "%s:reconnect\n", adr.ToString() );
+				char buffer[32];
+				ConMsg ( "%s:reconnect\n", adr.ToString_safe(buffer) );
 
 				RemoveClientFromGame( client );
 
@@ -1989,7 +1950,7 @@ CBaseClient * CBaseServer::GetFreeClient( netadr_t &adr )
 
 	if ( !freeclient )
 	{
-		int count = m_Clients.Count();
+		intp count = m_Clients.Count();
 
 		if ( count >= m_nMaxclients )
 		{
@@ -2010,10 +1971,8 @@ void CBaseServer::SendClientMessages ( bool bSendSnapshots )
 {
 	VPROF_BUDGET( "SendClientMessages", VPROF_BUDGETGROUP_OTHER_NETWORKING );
 	
-	for (int i=0; i< m_Clients.Count(); i++ )
+	for (auto *client : m_Clients )
 	{
-		CBaseClient* client = m_Clients[i];
-		
 		// Update Host client send state...
 		if ( !client->ShouldSendMessages() )
 			continue;
@@ -2040,14 +1999,15 @@ CBaseClient *CBaseServer::CreateFakeClient( const char *name )
 	if ( !fakeclient )
 	{
 		// server is full
-		return NULL;		
+		return NULL;
 	}
 
 	INetChannel *netchan = NULL;
 	if ( sv_stressbots.GetBool() )
 	{
+		char buffer[32];
 		netadr_t adrNull( 0, 0 ); // 0.0.0.0:0 signifies a bot. It'll plumb all the way down to winsock calls but it won't make them.
-		netchan = NET_CreateNetChannel( m_Socket, &adrNull, adrNull.ToString(), fakeclient, true );
+		netchan = NET_CreateNetChannel( m_Socket, &adrNull, adrNull.ToString_safe(buffer), fakeclient, true );
 	}
 
 	// a NULL netchannel signals a fakeclient
@@ -2093,13 +2053,19 @@ CBaseClient *CBaseServer::CreateFakeClient( const char *name )
 
 void CBaseServer::Shutdown( void )
 {
+	// dimhotepus: Cleanup itself.
+	g_pCVar->RemoveGlobalChangeCallback( ServerNotifyVarChangeCallback );
+
+	// dimhotepus: Reset debug name.
+	m_Signon.SetDebugName( nullptr );
+
 	if ( !IsActive() )
 		return;
 
 	m_State = ss_dead;
 
 	// Only drop clients if we have not cleared out entity data prior to this.
-	for(  int i=m_Clients.Count()-1; i>=0; i-- )
+	for( intp i=m_Clients.Count()-1; i>=0; i-- )
 	{
 		CBaseClient * cl = m_Clients[ i ];
 		if ( cl->IsConnected() )
@@ -2111,7 +2077,7 @@ void CBaseServer::Shutdown( void )
 			// free any memory do this out side here in case the reason the server is shutting down 
 			// is because the listen server client typed disconnect, in which case we won't call
 			// cl->DropClient, but the client might have some frame snapshot references left over, etc.
-			cl->Clear();	
+			cl->Clear();
 		}
 
 		delete cl;
@@ -2131,7 +2097,7 @@ void CBaseServer::Shutdown( void )
 // Input  : *fmt -
 //			... -
 //-----------------------------------------------------------------------------
-void CBaseServer::BroadcastPrintf (const char *fmt, ...)
+void CBaseServer::BroadcastPrintf (PRINTF_FORMAT_STRING const char *fmt, ...) FMTFUNCTION( 2, 3 )
 {
 	va_list		argptr;
 	char		string[1024];
@@ -2141,15 +2107,13 @@ void CBaseServer::BroadcastPrintf (const char *fmt, ...)
 	va_end (argptr);
 
 	SVC_Print print( string );
-	BroadcastMessage( print );	
+	BroadcastMessage( print );
 }
 
 void CBaseServer::BroadcastMessage( INetMessage &msg, bool onlyActive, bool reliable )
 {
-	for ( int i = 0; i < m_Clients.Count(); i++ )
+	for ( auto *cl : m_Clients )
 	{
-		CBaseClient *cl = m_Clients[ i ];
-
 		if ( (onlyActive && !cl->IsActive()) || !cl->IsSpawned() )
 		{
 			continue;
@@ -2240,11 +2204,11 @@ void CBaseServer::WriteTempEntities( CBaseClient *client, CFrameSnapshot *pCurre
 {
 	VPROF_BUDGET( "CBaseServer::WriteTempEntities", VPROF_BUDGETGROUP_OTHER_NETWORKING );
 
-	ALIGN4 char data[NET_MAX_PAYLOAD] ALIGN4_POST;
+	alignas(4) char data[NET_MAX_PAYLOAD];
 	SVC_TempEntities msg;
 	msg.m_DataOut.StartWriting( data, sizeof(data) );
 	bf_write &buffer = msg.m_DataOut; // shortcut
-	
+
 	CFrameSnapshot *pSnapshot;
 	CEventInfo *pLastEvent = NULL;
 
@@ -2277,7 +2241,7 @@ void CBaseServer::WriteTempEntities( CBaseClient *client, CFrameSnapshot *pCurre
 			sorted.Insert( event );
 			// More space still
 			if ( (int)sorted.Count() >= ev_max )
-				break;	
+				break;
 		}
 
 		// stop, we reached our current snapshot
@@ -2304,7 +2268,8 @@ void CBaseServer::WriteTempEntities( CBaseClient *client, CFrameSnapshot *pCurre
 		else
 		{
 			buffer.WriteOneBit( 1 );
-			buffer.WriteSBitLong( event->fire_delay*100.0f, 8 );
+			// dimhotepus: float -> int.
+			buffer.WriteSBitLong( static_cast<std::int32_t>( event->fire_delay * 100.0f ), 8 );
 		}
 
 		if ( pLastEvent && 
@@ -2312,7 +2277,7 @@ void CBaseServer::WriteTempEntities( CBaseClient *client, CFrameSnapshot *pCurre
 		{
 			buffer.WriteOneBit( 0 ); // delta against last temp entity
 
-			int startBit = bDebug ? buffer.GetNumBitsWritten() : 0;
+			intp startBit = bDebug ? buffer.GetNumBitsWritten() : 0;
 
 			SendTable_WriteAllDeltaProps( event->pSendTable, 
 				pLastEvent->pData,
@@ -2324,17 +2289,17 @@ void CBaseServer::WriteTempEntities( CBaseClient *client, CFrameSnapshot *pCurre
 
 			if ( bDebug )
 			{
-				int length = buffer.GetNumBitsWritten() - startBit;
-				DevMsg("TE %s delta bits: %i\n", event->pSendTable->GetName(), length );
+				intp length = buffer.GetNumBitsWritten() - startBit;
+				DevMsg("TE %s delta bits: %zd\n", event->pSendTable->GetName(), length );
 			}
 		}
 		else
 		{
-			 // full update, just compressed against zeros in MP
+			// full update, just compressed against zeros in MP
 
 			buffer.WriteOneBit( 1 );
 
-			int startBit = bDebug ? buffer.GetNumBitsWritten() : 0;
+			intp startBit = bDebug ? buffer.GetNumBitsWritten() : 0;
 
 			buffer.WriteUBitLong( event->classID, GetClassBits() );
 
@@ -2356,8 +2321,8 @@ void CBaseServer::WriteTempEntities( CBaseClient *client, CFrameSnapshot *pCurre
 
 			if ( bDebug )
 			{
-				int length = buffer.GetNumBitsWritten() - startBit;
-				DevMsg("TE %s full bits: %i\n", event->pSendTable->GetName(), length );
+				intp length = buffer.GetNumBitsWritten() - startBit;
+				DevMsg("TE %s full bits: %zd\n", event->pSendTable->GetName(), length );
 			}
 		}
 
@@ -2394,6 +2359,7 @@ void CBaseServer::RecalculateTags( void )
 		return;
 
 	bRecalculatingTags = true;
+	RunCodeAtScopeExit([&]() { bRecalculatingTags = false; });
 
 	// Games without this interface will have no tagged cvars besides "increased_maxplayers"
 	if ( serverGameTags )
@@ -2410,7 +2376,7 @@ void CBaseServer::RecalculateTags( void )
 			{
 				const char *pszDef = pConVar->GetDefault();
 				const char *pszCur = pConVar->GetString();
-				if ( Q_strcmp( pszDef, pszCur ) )
+				if ( !V_streq( pszDef, pszCur ) )
 				{
 					AddTag( p->GetString("tag") );
 				}
@@ -2454,8 +2420,6 @@ void CBaseServer::RecalculateTags( void )
 		RemoveTag( "replays" );
 	}
 #endif
-
-	bRecalculatingTags = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -2463,15 +2427,14 @@ void CBaseServer::RecalculateTags( void )
 //-----------------------------------------------------------------------------
 void CBaseServer::AddTag( const char *pszTag )
 {
-	CUtlVector<char*> TagList;
+	CUtlStringList TagList;
 	V_SplitString( sv_tags.GetString(), ",", TagList );
 	for ( const char *tag : TagList )
 	{
 		// Already in the tag list?
-		if ( !Q_stricmp(tag,pszTag) )
+		if ( V_strieq(tag,pszTag) )
 			return;
 	}
-	TagList.PurgeAndDeleteElementsArray();
 
 	// Append it
 	char tmptags[MAX_TAG_STRING_LENGTH];
@@ -2488,7 +2451,7 @@ void CBaseServer::AddTag( const char *pszTag )
 void CBaseServer::RemoveTag( const char *pszTag )
 {
 	const char *pszTags = sv_tags.GetString();
-	if ( !pszTags || !pszTags[0] )
+	if ( Q_isempty( pszTags ) )
 		return;
 
 	char tmptags[MAX_TAG_STRING_LENGTH];
@@ -2496,12 +2459,12 @@ void CBaseServer::RemoveTag( const char *pszTag )
 	
 	bool bFoundIt = false;
 
-	CUtlVector<char*> TagList;
+	CUtlStringList TagList;
 	V_SplitString( sv_tags.GetString(), ",", TagList );
 	for ( const char *tag : TagList )
 	{
 		// Keep any tags other than the specified one
-		if ( Q_stricmp(tag,pszTag) )
+		if ( !V_strieq( tag, pszTag ) )
 		{
 			V_strcat_safe( tmptags, tag );
 			V_strcat_safe( tmptags, "," );
@@ -2511,7 +2474,6 @@ void CBaseServer::RemoveTag( const char *pszTag )
 			bFoundIt = true;
 		}
 	}
-	TagList.PurgeAndDeleteElementsArray();
 
 	// Didn't find it in our list?
 	if ( !bFoundIt )

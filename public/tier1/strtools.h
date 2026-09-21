@@ -60,7 +60,41 @@ wchar_t*	_V_wcsupr	( const char* file, int line, INOUT_Z wchar_t *start );
 
 // ASCII-optimized functions which fall back to CRT only when necessary
 char *V_strupr( INOUT_Z char *start );
+// dimhotepus: Correctly work with signed/unsigned char.
+[[nodiscard]] inline char V_toupper(char ch)
+{
+	constexpr auto zMinusA = static_cast<unsigned char>('z' - 'a');
+	constexpr auto aMinusA = static_cast<unsigned char>('a' - 'A');
+
+	const auto uch = static_cast<unsigned char>(ch);
+
+	if (static_cast<unsigned char>(uch - static_cast<unsigned char>('a')) <=
+		zMinusA)
+		return static_cast<char>(uch - aMinusA);
+
+	if (uch >= 0x80)  // non-ASCII, fall back to CRT
+		return static_cast<char>(std::toupper(uch));
+
+	return ch;
+}
 char *V_strlower( INOUT_Z char *start );
+// dimhotepus: Correctly work with signed/unsigned char.
+[[nodiscard]] inline char V_tolower(char ch)
+{
+	constexpr auto zMinusA = static_cast<unsigned char>('Z' - 'A');
+	constexpr auto aMinusA = static_cast<unsigned char>('a' - 'A');
+
+	const auto uch = static_cast<unsigned char>(ch);
+
+	if (static_cast<unsigned char>(uch - static_cast<unsigned char>('A')) <=
+		zMinusA)
+		return static_cast<char>(uch + aMinusA);
+
+	if (uch >= 0x80)  // non-ASCII, fall back to CRT
+		return static_cast<char>(std::tolower(uch));
+
+	return ch;
+}
 [[nodiscard]] int V_stricmp( IN_Z const char *s1, IN_Z const char *s2 );
 [[nodiscard]] int V_strncmp( IN_Z const char *s1, IN_Z const char *s2, intp count );
 [[nodiscard]] int V_strnicmp( IN_Z const char *s1, IN_Z const char *s2, intp n );
@@ -184,6 +218,13 @@ void		V_qsort_s( INOUT_BYTECAP(num) void *base, size_t num, size_t width, int ( 
 [[nodiscard]] inline bool	StringHasPrefix             ( IN_Z const char *str, IN_Z const char *prefix ) { return StringAfterPrefix             ( str, prefix ) != nullptr; }
 [[nodiscard]] inline bool	StringHasPrefixCaseSensitive( IN_Z const char *str, IN_Z const char *prefix ) { return StringAfterPrefixCaseSensitive( str, prefix ) != nullptr; }
 
+[[nodiscard]] inline bool V_streq(IN_Z const char *l, IN_Z const char *r) {
+  return V_strcmp(l, r) == 0;
+}
+
+[[nodiscard]] inline bool V_strieq(IN_Z const char *l, IN_Z const char *r) {
+  return V_stricmp(l, r) == 0;
+}
 
 template< bool CASE_SENSITIVE >
 [[nodiscard]] inline bool _V_strEndsWithInner( IN_Z const char *pStr, IN_Z const char *pSuffix )
@@ -196,9 +237,9 @@ template< bool CASE_SENSITIVE >
 		return false;
 	pStr += nStringLen - nSuffixLen;
 	if ( CASE_SENSITIVE )
-		return !V_strcmp(  pStr, pSuffix );
+		return V_streq(  pStr, pSuffix );
 	else
-		return !V_stricmp( pStr, pSuffix );
+		return V_strieq( pStr, pSuffix );
 }
 
 // Does 'pStr' end with 'pSuffix'? (case sensitive/insensitive variants)
@@ -223,6 +264,8 @@ void V_normalizeFloatString( INOUT_Z char* pFloat );
 }
 
 [[nodiscard]] inline bool V_isempty( IN_OPT_Z const char* pszString ) { return !pszString || !pszString[ 0 ]; }
+// dimhotepus: Add wchar_t version.
+[[nodiscard]] inline bool V_isempty( IN_OPT_Z const wchar_t* pszString ) { return !pszString || !pszString[ 0 ]; }
 
 // The islower/isdigit/etc. functions all expect a parameter that is either
 // 0-0xFF or EOF. It is easy to violate this constraint simply by passing
@@ -1533,9 +1576,9 @@ size_t Q_URLDecode( OUT_CAP(nDecodeDestLen) char *pchDecodeDest, intp nDecodeDes
 #define Q_MakeRelativePath		V_MakeRelativePath
 #define Q_qsort_s				V_qsort_s
 
-[[nodiscard]] inline bool Q_isempty(IN_Z const char *v) { return V_isempty(v); }
+[[nodiscard]] inline bool Q_isempty(IN_OPT_Z const char *v) { return V_isempty(v); }
 
-[[nodiscard]] inline bool Q_isempty(IN_Z const wchar_t *v) { return v[0] == L'\0'; }
+[[nodiscard]] inline bool Q_isempty(IN_OPT_Z const wchar_t *v) { return V_isempty(v); }
 
 template<size_t size>
 [[nodiscard]] constexpr inline bool Q_isempty(IN_Z_ARRAY char (&v)[size]) { return v[0] == '\0'; }

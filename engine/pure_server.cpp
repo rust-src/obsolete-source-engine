@@ -202,18 +202,18 @@ bool CPureServerWhitelist::LoadCommandsFromKeyValues( KeyValues *kv )
 		for ( int i=0; i < mods.Count(); i++ )
 		{
 			if (
-				V_stricmp( mods[i], "from_steam" ) == 0
-				|| V_stricmp( mods[i], "trusted_source" ) == 0
+				V_strieq( mods[i], "from_steam" )
+				|| V_strieq( mods[i], "trusted_source" )
 			)
 				bFromTrustedSource = true;
-			else if ( V_stricmp( mods[i], "allow_from_disk" ) == 0 )
+			else if ( V_strieq( mods[i], "allow_from_disk" ) )
 				bAllowFromDisk = true;
 			else if (
-				V_stricmp( mods[i], "check_crc" ) == 0
-				|| V_stricmp( mods[i], "check_hash" ) == 0
+				V_strieq( mods[i], "check_crc" )
+				|| V_strieq( mods[i], "check_hash" )
 			)
 				bCheckCRC = true;
-			else if ( V_stricmp( mods[i], "any" ) == 0 )
+			else if ( V_strieq( mods[i], "any" ) )
 				bAny = true;
 			else
 				Warning( "Unknown modifier in whitelist file: %s.\n", mods[i] );
@@ -260,9 +260,9 @@ void CPureServerWhitelist::AddFileCommand( const char *pszFilePath, EPureServerF
 	// Figure out if they're referencing a file, a recursive directory, or a nonrecursive directory.		
 	CUtlDict<CCommand*,int> *pList;
 	const char *pEndPart = V_UnqualifiedFileName( pszFilePath );
-	if ( Q_stricmp( pEndPart, "..." ) == 0 )
+	if ( V_streq( pEndPart, "..." ) )
 		pList = &m_RecursiveDirCommands;
-	else if ( Q_stricmp( pEndPart, "*.*" ) == 0 )
+	else if ( V_streq( pEndPart, "*.*" ) )
 		pList = &m_NonRecursiveDirCommands;
 	else
 		pList = &m_FileCommands;
@@ -289,14 +289,14 @@ bool CPureServerWhitelist::LoadTrustedKeysFromKeyValues( KeyValues *kv )
 {
 	for ( KeyValues *pCurItem = kv->GetFirstTrueSubKey(); pCurItem; pCurItem = pCurItem->GetNextTrueSubKey() )
 	{
-		if ( V_stricmp( pCurItem->GetName(), "public_key" ) != 0 )
+		if ( !V_strieq( pCurItem->GetName(), "public_key" ) )
 		{
 			Warning( "Trusted key list has unexpected block '%s'; expected only 'public_key' blocks\n", pCurItem->GetName() );
 			continue;
 		}
 
 		const char *pszType = pCurItem->GetString( "type", "(none)" );
-		if ( V_stricmp( pszType, "rsa" ) != 0 )
+		if ( !V_strieq( pszType, "rsa" ) )
 		{
 			Warning( "Trusted key type '%s' not supported.\n", pszType );
 			continue;
@@ -590,11 +590,11 @@ CPureServerWhitelist::CCommand* CPureServerWhitelist::GetBestEntry( const char *
 		CCommand *pBestEntry = NULL;
 		
 		pBestEntry = CheckEntry( m_FileCommands, relativeFilename, pBestEntry );
-		if ( relativeDir[0] != 0 )
+		if ( !Q_isempty( relativeDir ) )
 		{
 			pBestEntry = CheckEntry( m_NonRecursiveDirCommands, relativeDir, pBestEntry );
 
-			while ( relativeDir[0] != 0 )
+			while ( !Q_isempty( relativeDir ) )
 			{
 				// Check for this directory.
 				pBestEntry = CheckEntry( m_RecursiveDirCommands, relativeDir, pBestEntry );

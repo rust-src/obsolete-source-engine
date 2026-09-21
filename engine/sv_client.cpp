@@ -282,7 +282,7 @@ bool CGameClient::ProcessFileCRCCheck( CLC_FileCRCCheck *msg )
 	}
 	else
 	{
-		V_snprintf( warningStr, sizeof( warningStr ), "Pure server: file [%s]\\%s does not match the server's file.", path, fileName );
+		V_sprintf_safe( warningStr, "Pure server: file [%s]\\%s does not match the server's file.", path, fileName );
 	}
 
 	// still ToDo:
@@ -542,7 +542,7 @@ bool CGameClient::ProcessIncomingLogo( const char *filename )
 	Q_snprintf( crcfilename, sizeof( crcfilename ), "materials/decals/downloads/%s.vtf", logohex );
 
 	// It's not a logo file?
-	if ( Q_strcasecmp( filename, crcfilename ) )
+	if ( !V_strieq( filename, crcfilename ) )
 	{
 		return false;
 	}
@@ -964,7 +964,8 @@ bool CGameClient::SendSignonData( void )
 		}
 		else
 		{
-			Disconnect( "Server uses different class tables" );
+			// dimhotepus: Dump more meaningful message.
+			Disconnect( "Server and client versions differ" );
 			return false;
 		}
 	}
@@ -1089,7 +1090,7 @@ bool CGameClient::IsEngineClientCommand( const CCommand &args ) const
 
 	for ( int i = 0; s_clcommands[i] != NULL; ++i )
 	{
-		if ( !Q_strcasecmp( args[0], s_clcommands[i] ) )
+		if ( V_strieq( args[0], s_clcommands[i] ) )
 			return true;
 	}
 
@@ -1180,7 +1181,7 @@ void CGameClient::SendSnapshot( CClientFrame * pFrame )
 		networkStringTableContainerServer->DirectUpdate( GetMaxAckTickCount() );
 #endif
 		
-		char *buf = (char *)_alloca( NET_MAX_PAYLOAD );
+		char *buf = stackallocT( char, NET_MAX_PAYLOAD );
 
 		// pack sounds to one message
 		if ( m_Sounds.Count() > 0 )
@@ -1214,7 +1215,7 @@ void CGameClient::SendSnapshot( CClientFrame * pFrame )
 		// copy string updates from server to replay stringtable
 		networkStringTableContainerServer->DirectUpdate( GetMaxAckTickCount() );
 #endif
-		char *buf = (char *)_alloca( NET_MAX_PAYLOAD );
+		char *buf = stackallocT( char, NET_MAX_PAYLOAD );
 
 		// pack sounds to one message
 		if ( m_Sounds.Count() > 0 )
@@ -1532,7 +1533,7 @@ void CTestSoundInfoNetworking::RunTest()
 
 	SVC_Sounds	msg;
 
-	char *buf = (char *)_alloca( NET_MAX_PAYLOAD );
+	char *buf = stackallocT( char, NET_MAX_PAYLOAD );
 
 	msg.m_DataOut.StartWriting( buf, NET_MAX_PAYLOAD );
 

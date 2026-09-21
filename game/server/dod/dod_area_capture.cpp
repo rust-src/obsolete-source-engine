@@ -425,9 +425,9 @@ void CAreaCapture::EndCapture( int team )
 	CDODTeam *pTeam = GetGlobalDODTeam(team);
 	if ( pTeam )
 	{
-		int iCount = pTeam->GetNumPlayers();
+		intp iCount = pTeam->GetNumPlayers();
 
-		for ( int i=0;i<iCount;i++ )
+		for ( intp i=0;i<iCount;i++ )
 		{
 			CDODPlayer *pPlayer = ToDODPlayer( pTeam->GetPlayer(i) );
 			if ( pPlayer )
